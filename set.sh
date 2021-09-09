@@ -21,6 +21,7 @@ if [ -f "$MYDOTFILES/.encrypted" ]; then
     credential_manager -d
     credential_manager -e
     git add "**/*_encrypted"
+    git add "*_encrypted"
     git commit -m "[script] auto encryption"
     git push
 fi
