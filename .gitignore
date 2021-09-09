@@ -35,3 +35,6 @@ mps-youtube/play_history.m3u
 
 # added by credential manager
 mps-youtube/playlist_v2
+
+# added by credential manager
+healthcheck.sh
