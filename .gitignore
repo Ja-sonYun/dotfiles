@@ -23,3 +23,15 @@ slack-term/config
 
 # added by credential manager
 slack-term/config.yml
+
+# added by credential manager
+mps-youtube/input_history
+
+# added by credential manager
+mps-youtube/play_history
+
+# added by credential manager
+mps-youtube/play_history.m3u
+
+# added by credential manager
+mps-youtube/playlist_v2
