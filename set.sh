@@ -5,24 +5,24 @@
 # - $2 : source file
 link_file () {
     if [ -f "$1" ]; then
-        # backup
-        old_file="$1""_old"
-        # remove old file if exists
-        if [ -f "$old_file" ]; then
-            rm $old_file
-        fi
-        mv $1 "$1""_old"
+        echo "[*] $1 exist. please remove it manually."
+    else
+        echo "[+] $1 -> $2"
+        ln -s $2 $1
     fi
-    ln -s $2 $1
 }
 
 # link dotfiles
 link_file $HOME/.zshrc $MYDOTFILES/zsh/zshrc
-link_file $HOME/.tmux.conf $MYDOTFILES/zsh/tmux.conf
+link_file $HOME/.tmux.conf $MYDOTFILES/tmux/tmux.conf
 
 # decrypt secret files if they're encrypted
 if [ -f "$MYDOTFILES/.encrypted" ]; then
     credential_manager -d
+    credential_manager -e
+    git add "**/*_encrypted"
+    git commit -m "[script] auto encryption"
+    git push
 fi
 
 # install dependencies
