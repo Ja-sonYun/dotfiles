@@ -1,4 +1,10 @@
 #!/bin/sh
 
-width=${2:-80%}
-tmux popup -d '#{pane_current_path}' -xC -yC -w$width -h80% -E "${1:-zsh}" || true
+session_name=`tmux display-message -p -F \"#{session_name}\"`
+
+if [ "$session_name" = "\"popup\"" ]; then
+    tmux detach-client
+else
+    width=${2:-80%}
+    tmux popup -d '#{pane_current_path}' -xC -yC -w$width -h80% -E "tmux attach -t popup || tmux new -s popup && tmux set status off" || true
+fi
