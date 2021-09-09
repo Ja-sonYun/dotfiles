@@ -1,0 +1,5 @@
+#!/bin/sh
+
+tmux new-session -d -s popup
+tmux send-keys -t popup "tmux set status off && clear" Enter
+tmux new-session -s default

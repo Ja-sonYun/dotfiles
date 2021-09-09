@@ -1,0 +1,33 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# redirect to wsl home if in wsl
+if [[ `pwd` == */mnt/c* ]]; then
+    cd $HOME
+fi
+
+export MYDOTFILES=~/.mydotfiles
+
+source $MYDOTFILES/zsh/module/theme.sh
+source $MYDOTFILES/zsh/module/export.sh
+source $MYDOTFILES/zsh/module/plugin.sh
+source $MYDOTFILES/zsh/module/cfunction.sh
+source $MYDOTFILES/zsh/module/vm.sh
+source $MYDOTFILES/zsh/module/alias.sh
+source $MYDOTFILES/zsh/module/fzf.sh
+source $MYDOTFILES/zsh/module/keybind.sh
+
+# for Mac
+if [[ `uname` == "Darwin" ]]; then
+    source $MYDOTFILES/zsh/module/homebrew.sh
+elif [[ `uname` == "Linux" ]]; then
+    export HOST_IP="$(ip route |awk '/^default/{print $3}')"
+    export PULSE_SERVER="tcp:$HOST_IP"
+fi
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

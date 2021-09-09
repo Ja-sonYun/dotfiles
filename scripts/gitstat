@@ -1,0 +1,18 @@
+#!/bin/zsh
+
+DIFF=`git status -s`
+
+MODIFIED=`echo $DIFF | grep -o "M " | wc -l`
+ADDED=`echo $DIFF | grep -o "?? " | wc -l`
+
+RESULT=""
+
+if [[ $MODIFIED != 0 ]]; then
+    RESULT="!$MODIFIED"
+fi
+
+if [[ $ADDED != 0 ]]; then
+    RESULT="$RESULT ?$ADDED"
+fi
+
+echo $RESULT

@@ -1,0 +1,15 @@
+tmux
+nvim
+gotop
+ripgrep
+brew install --HEAD universal-ctags/universal-ctags/universal-ctags
+tigs
+brew install clementtsang/bottom/bottom
+things.sh
+dasht
+brew cask install alacritty
+brew tap homebrew/cask-fonts
+brew install --cask font-fira-code
+
+
+sdsd

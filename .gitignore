@@ -1,0 +1,25 @@
+configstore
+coc/**
+nvm/**
+.key
+
+# added by credential manager
+wtf/config.yml
+
+# added by credential manager
+wtf/gcal-auth.json
+
+# added by credential manager
+credential/calendar_client_sercret.json
+
+# added by credential manager
+credential/slack_token
+
+# added by credential manager
+mps-youtube/config.json
+
+# added by credential manager
+slack-term/config
+
+# added by credential manager
+slack-term/config.yml

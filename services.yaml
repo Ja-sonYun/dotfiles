@@ -1,0 +1,5 @@
+web:
+    healthcheck:
+        - healthchecks.io
+    server:
+        - ec2
