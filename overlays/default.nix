@@ -71,6 +71,7 @@
     claude-code = final.callPackage ../pkgs/claude-code { };
     context7 = final.callPackage ../pkgs/context7 { };
     playwright-mcp = final.callPackage ../pkgs/playwright-mcp { };
+    chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
 
     # Pypi
     aws-documentation = final.callPackage ../pkgs/aws-documentation { };

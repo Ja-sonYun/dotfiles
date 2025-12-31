@@ -1,15 +1,15 @@
 { pkgs, ... }:
 let
-  outputHash = pkgs.hashfile."context7-mcp";
+  outputHash = pkgs.hashfile."chrome-devtools-mcp";
 in
 
 pkgs.lib.npm.mkNpmGlobalPackageDerivation {
   inherit pkgs outputHash;
-  name = "context7-mcp";
+  name = "chrome-devtools-mcp";
   packages = [
-    "@upstash/context7-mcp@2.0.1"
+    "chrome-devtools-mcp@0.12.1"
   ];
   exposedBinaries = [
-    "context7-mcp"
+    "chrome-devtools-mcp"
   ];
 }

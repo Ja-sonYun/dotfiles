@@ -26,6 +26,13 @@ let
     {
       name = "playwright";
       command = "${pkgs.playwright-mcp}/bin/mcp-server-playwright";
+      enabled = false;
+      args = [ ];
+      env = { };
+    }
+    {
+      name = "chrome-devtools";
+      command = "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp";
       args = [ ];
       env = { };
     }
