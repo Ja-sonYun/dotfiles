@@ -63,19 +63,18 @@ let
     ln -s ${pkgs.nodejs_24}/bin/node $out/bin/node
   '';
 
+  codexPath = [
+    nodeOnly
+    pythonWithPackages
+  ];
+
   codexWrapped = pkgs.symlinkJoin {
     name = "codex-wrapped";
     paths = [ pkgs.codex ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/codex \
-        --set PATH "${
-          lib.makeBinPath [
-            nodeOnly
-            pythonWithPackages
-            pkgs.tmux
-          ]
-        }:$PATH" \
+        --prefix PATH : "${lib.makeBinPath codexPath}" \
         --prefix PATH : "$out/bin" \
         --prefix PYTHONPATH : "${pythonWithPackages}/${pythonWithPackages.sitePackages}"
     '';
