@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 SPACE_ICONS=("1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15")
 
@@ -7,9 +7,8 @@ SPACE_ICONS=("1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15")
 
 sid=0
 spaces=()
-for i in "${!SPACE_ICONS[@]}"
-do
-  sid=$(($i+1))
+for (( i = 1; i <= ${#SPACE_ICONS}; i++ )); do
+  sid=$i
   sketchybar --add space      space.$sid left                               \
              --set space.$sid associated_space=$sid                         \
                               icon=${SPACE_ICONS[i]}                        \
@@ -25,7 +24,7 @@ do
                               label.background.color=$BACKGROUND_2          \
                               label.background.corner_radius=8              \
                               label.drawing=off                             \
-                              script="$PLUGIN_DIR/space.sh"                 \
+                              script="$PLUGIN_DIR/space.zsh"                \
             --subscribe       space.$sid mouse.clicked
 done
 

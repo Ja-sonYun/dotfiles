@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 POPUP_CLICK_SCRIPT="sketchybar --set \$NAME popup.drawing=toggle"
 
@@ -10,7 +10,7 @@ sketchybar --add       item            github.bell right                       \
                                        label=$LOADING                          \
                                        label.highlight_color=$BLUE             \
                                        popup.align=right                       \
-                                       script="$PLUGIN_DIR/toggle_status.sh"   \
+                                       script="$PLUGIN_DIR/toggle_status.zsh"  \
                                        click_script="$POPUP_CLICK_SCRIPT"      \
            --subscribe github.bell     mouse.entered                           \
                                        mouse.exited                            \

@@ -1,8 +1,8 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 window_state() {
-  source "$SKETCHYBAR_CONFIG_DIR/colors.sh"
-  source "$SKETCHYBAR_CONFIG_DIR/icons.sh"
+  source "$SKETCHYBAR_CONFIG_DIR/colors.zsh"
+  source "$SKETCHYBAR_CONFIG_DIR/icons.zsh"
 
   WINDOW=$(yabai -m query --windows --window)
   CURRENT=$(echo "$WINDOW" | jq '.["stack-index"]')
@@ -50,7 +50,7 @@ windows_on_spaces () {
       apps=$(yabai -m query --windows --space $space | jq -r ".[].app")
       if [ "$apps" != "" ]; then
         while IFS= read -r app; do
-          icon_strip+=" $($SKETCHYBAR_CONFIG_DIR/plugins/icon_map.sh "$app")"
+          icon_strip+=" $($SKETCHYBAR_CONFIG_DIR/plugins/icon_map.zsh "$app")"
         done <<< "$apps"
       fi
       args+=(--set space.$space label="$icon_strip" label.drawing=on)

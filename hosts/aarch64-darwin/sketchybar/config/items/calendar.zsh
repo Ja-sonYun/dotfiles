@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 sketchybar \
            --add item     calendar right                          \
@@ -11,7 +11,7 @@ sketchybar \
                           update_freq=30                          \
                           popup.align=right                       \
                           popup.height=25                         \
-                          script="$PLUGIN_DIR/calendar.sh"        \
+                          script="$PLUGIN_DIR/calendar.zsh"       \
                           click_script="open -a Calendar"         \
            --subscribe calendar                                   \
                           system_woke                             \
@@ -30,7 +30,7 @@ sketchybar \
                           y_offset=-10                            \
                           width=0                                 \
                           update_freq=270                         \
-                          script="$PLUGIN_DIR/calendar_event.sh"  \
+                          script="$PLUGIN_DIR/calendar_event.zsh" \
                           label.font="$FONT:Black:7.0"            \
                           icon.font="$FONT:Heavy:7.0"             \
                           icon.color=$ORANGE                      \

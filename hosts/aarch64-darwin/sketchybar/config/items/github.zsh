@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 POPUP_CLICK_SCRIPT="sketchybar --set \$NAME popup.drawing=toggle"
 
@@ -11,7 +11,7 @@ sketchybar --add       item            github.bell right                  \
                                        label=$LOADING                     \
                                        label.highlight_color=$BLUE        \
                                        popup.align=right                  \
-                                       script="$PLUGIN_DIR/github.sh"     \
+                                       script="$PLUGIN_DIR/github.zsh"    \
                                        click_script="open https://github.com/notifications" \
            --subscribe github.bell     mouse.entered                      \
                                        mouse.exited                       \

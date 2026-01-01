@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 zen_on() {
     sketchybar --set github.bell drawing=off     \

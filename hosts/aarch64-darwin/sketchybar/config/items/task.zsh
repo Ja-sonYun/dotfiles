@@ -1,14 +1,14 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 # Trigger the brew_udpate event when brew update or upgrade is run from cmdline
 # e.g. via function in .zshrc
 
 sketchybar --add       event          task_update                      \
            --add       item           task right                       \
-           --set       task           script="$PLUGIN_DIR/task.sh"     \
-                                      icon.color="$MAGENTA"              \
-                                      icon=􀷾                           \
-                                      label=?                          \
+           --set       task           script="$PLUGIN_DIR/task.zsh"    \
+                                      icon.color="$MAGENTA"            \
+                                      icon=􀷾                          \
+                                      label="?"                          \
                                       padding_right=10                 \
                                       popup.align=right                \
                                       popup.height=30                  \
@@ -27,4 +27,3 @@ sketchybar --add       event          task_update                      \
                                       icon.background.height=2         \
                                       icon.background.y_offset=-12
                                       # label.font="BigBlue_TerminalPlus Nerd Font:Book:10.0"
-

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 WIDTH=100
 
@@ -21,7 +21,7 @@ toggle_detail() {
 
 toggle_devices() {
   which SwitchAudioSource >/dev/null || exit 0
-  source "$SKETCHYBAR_CONFIG_DIR/colors.sh"
+  source "$SKETCHYBAR_CONFIG_DIR/colors.zsh"
 
   args=(--remove '/volume.device\.*/' --set "$NAME" popup.drawing=toggle)
   COUNTER=0

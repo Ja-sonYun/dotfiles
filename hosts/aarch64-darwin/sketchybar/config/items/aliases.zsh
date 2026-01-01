@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 function make_alias() {
     local name="$1"
@@ -14,7 +14,4 @@ function make_alias() {
         --subscribe "$1" mouse.entered
 }
 
-# make_alias "Control Center,com.apple.TextInputMenuAgent" "open /System/Library/PreferencePanes/Keyboard.prefPane"
-# make_alias "Control Center,FocusModes"                   "$PLUGIN_DIR/open_menubar_controlcenter"
 make_alias "Control Center,WiFi"                         "$PLUGIN_DIR/open_menubar_controlcenter"
-# make_alias "Control Center,com.apple.weather.menu"       "open /System/Applications/Weather.app"

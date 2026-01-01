@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
-source "$SKETCHYBAR_CONFIG_DIR/icons.sh"
-source "$SKETCHYBAR_CONFIG_DIR/colors.sh"
+source "$SKETCHYBAR_CONFIG_DIR/icons.zsh"
+source "$SKETCHYBAR_CONFIG_DIR/colors.zsh"
 
 PERCENTAGE=$(pmset -g batt | grep -Eo "\d+%" | cut -d% -f1)
 CHARGING=$(pmset -g batt | grep 'AC Power')

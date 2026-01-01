@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 sketchybar --add slider volume right                          \
-           --set volume script="$PLUGIN_DIR/volume.sh"        \
+           --set volume script="$PLUGIN_DIR/volume.zsh"       \
                         updates=on                            \
                         icon.drawing=off                      \
                         label.drawing=off                     \
@@ -23,7 +23,7 @@ sketchybar --add alias "Control Center,Sound" right                      \
                               padding_left=-5                            \
                               width=50                                   \
                               align=right                                \
-                              click_script="$PLUGIN_DIR/volume_click.sh"
+                              click_script="$PLUGIN_DIR/volume_click.zsh"
 
 sketchybar --add bracket status task github.bell volume volume_alias \
            --set status background.color=$BACKGROUND_1               \

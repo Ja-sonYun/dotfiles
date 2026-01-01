@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
-source "$SKETCHYBAR_CONFIG_DIR/colors.sh" # Loads all defined colors
-source "$SKETCHYBAR_CONFIG_DIR/icons.sh" # Loads all defined icons
+source "$SKETCHYBAR_CONFIG_DIR/colors.zsh" # Loads all defined colors
+source "$SKETCHYBAR_CONFIG_DIR/icons.zsh" # Loads all defined icons
 
 ITEM_DIR="$SKETCHYBAR_CONFIG_DIR/items" # Directory where the items are configured
 PLUGIN_DIR="$SKETCHYBAR_CONFIG_DIR/plugins" # Directory where all the plugin scripts are stored
@@ -12,8 +12,7 @@ PADDINGS=3 # All paddings use this value (icon, label, background)
 # Setting up and starting the helper process
 HELPER=git.felix.helper
 killall helper
-cd $SKETCHYBAR_CONFIG_DIR/helper && make
-$SKETCHYBAR_CONFIG_DIR/helper/helper $HELPER > /dev/null 2>&1 &
+"$SKETCHYBAR_HELPER_BIN" "$HELPER" > /dev/null 2>&1 &
 
 # Unload the macOS on screen indicator overlay for volume change
 launchctl unload -F /System/Library/LaunchAgents/com.apple.OSDUIHelper.plist > /dev/null 2>&1 &
@@ -48,23 +47,21 @@ sketchybar --bar     height=43                                         \
                      popup.background.shadow.drawing=on
 
 # Left
-source "$ITEM_DIR/apple.sh"
-source "$ITEM_DIR/spaces.sh"
-source "$ITEM_DIR/front_app.sh"
+source "$ITEM_DIR/apple.zsh"
+source "$ITEM_DIR/spaces.zsh"
+source "$ITEM_DIR/front_app.zsh"
 
 # Center
-source "$ITEM_DIR/toggle_native_bar.sh"
+source "$ITEM_DIR/toggle_native_bar.zsh"
 
 # Right
-source "$ITEM_DIR/calendar.sh"
-source "$ITEM_DIR/aliases.sh"
-# source "$ITEM_DIR/brew.sh"
-source "$ITEM_DIR/task.sh"
-source "$ITEM_DIR/github.sh"
-source "$ITEM_DIR/battery.sh"
-source "$ITEM_DIR/volume.sh"
-source "$ITEM_DIR/cpu.sh"
-# source "$ITEM_DIR/spotify.sh"
+source "$ITEM_DIR/calendar.zsh"
+source "$ITEM_DIR/aliases.zsh"
+source "$ITEM_DIR/task.zsh"
+source "$ITEM_DIR/github.zsh"
+source "$ITEM_DIR/battery.zsh"
+source "$ITEM_DIR/volume.zsh"
+source "$ITEM_DIR/cpu.zsh"
 
 # Forcing all item scripts to run (never do this outside of sketchybarrc)
 sketchybar --update
