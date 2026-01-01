@@ -5,7 +5,7 @@
 
 sketchybar --add       event          task_update                      \
            --add       item           task right                       \
-           --set       task           script="$PLUGIN_DIR/task.zsh"    \
+           --set       task           script="$PLUGIN_DIR/task"    \
                                       icon.color="$MAGENTA"            \
                                       icon=􀷾                          \
                                       label="?"                          \

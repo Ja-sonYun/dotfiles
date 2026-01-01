@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-source "$SKETCHYBAR_CONFIG_DIR/colors.zsh"
+source "$SKETCHYBAR_CONFIG_DIR/colors"
 
 function update() {
     left_todos=$(task count status:pending | tr -d ' ')
@@ -34,7 +34,7 @@ function update() {
                                                        --set task.items.$i \
                                                              icon=􀝜;       \
                                                    task done $id &&        \
-SENDER=forced /Users/jasony/config/window-management/mac/sketchybar/plugins/task.zsh")
+SENDER=forced /Users/jasony/config/window-management/mac/sketchybar/plugins/task")
     done <<< "$tasks"
 
     args+=(--clone task.items.fetcher task.template)

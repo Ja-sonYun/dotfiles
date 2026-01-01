@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 schedules=$(icalpal eventsToday \
   --iep type,title,sseconds,eseconds,all_day \
@@ -110,7 +110,7 @@ function current_event() {
       print $out;
     ' <<< "$events_name")
 
-    if [ "$events_name" == "" ]; then
+    if [ "$events_name" = "" ]; then
         args+=(--set calendar y_offset=0)
         args+=(--set calendar.event label="" drawing=on icon="")
     else

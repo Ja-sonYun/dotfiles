@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 sketchybar --add item battery right                             \
-           --set battery script="$PLUGIN_DIR/battery.zsh"       \
+           --set battery script="$PLUGIN_DIR/battery"       \
                          icon.font="$FONT:Regular:19.0"         \
                          padding_right=5                        \
                          padding_left=0                         \

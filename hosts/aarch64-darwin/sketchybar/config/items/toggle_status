@@ -10,7 +10,7 @@ sketchybar --add       item            github.bell right                       \
                                        label=$LOADING                          \
                                        label.highlight_color=$BLUE             \
                                        popup.align=right                       \
-                                       script="$PLUGIN_DIR/toggle_status.zsh"  \
+                                       script="$PLUGIN_DIR/toggle_status"  \
                                        click_script="$POPUP_CLICK_SCRIPT"      \
            --subscribe github.bell     mouse.entered                           \
                                        mouse.exited                            \

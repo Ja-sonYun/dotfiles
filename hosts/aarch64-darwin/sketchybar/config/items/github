@@ -11,7 +11,7 @@ sketchybar --add       item            github.bell right                  \
                                        label=$LOADING                     \
                                        label.highlight_color=$BLUE        \
                                        popup.align=right                  \
-                                       script="$PLUGIN_DIR/github.zsh"    \
+                                       script="$PLUGIN_DIR/github"    \
                                        click_script="open https://github.com/notifications" \
            --subscribe github.bell     mouse.entered                      \
                                        mouse.exited                       \

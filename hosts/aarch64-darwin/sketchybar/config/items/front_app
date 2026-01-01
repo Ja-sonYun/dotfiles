@@ -5,7 +5,7 @@ FRONT_APP_SCRIPT='sketchybar --set $NAME label="$INFO"'
 sketchybar --add       event        window_focus                   \
            --add       event        windows_on_spaces              \
            --add       item         system.yabai left              \
-           --set       system.yabai script="$PLUGIN_DIR/yabai.zsh" \
+           --set       system.yabai script="$PLUGIN_DIR/yabai" \
                                     icon.font="$FONT:Bold:16.0"    \
                                     label.drawing=off              \
                                     icon.width=30                  \

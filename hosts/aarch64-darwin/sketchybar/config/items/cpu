@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 sketchybar --add item        cpu.top right                 \
            --set cpu.top     label.font="$FONT:Semibold:7" \

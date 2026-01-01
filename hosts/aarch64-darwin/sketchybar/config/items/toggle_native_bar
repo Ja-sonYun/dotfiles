@@ -5,6 +5,6 @@ sketchybar --add       item            togglenativebar center             \
                                        icon.font="$FONT:Bold:15.0"        \
                                        icon=􀋰                             \
                                        icon.color=$BLUE                   \
-                                       script="$PLUGIN_DIR/togglenativebar.zsh"   \
-                                       click_script="$PLUGIN_DIR/togglenativebar.zsh" \
+                                       script="$PLUGIN_DIR/togglenativebar"   \
+                                       click_script="$PLUGIN_DIR/togglenativebar" \
            --subscribe togglenativebar mouse.entered

@@ -1,8 +1,8 @@
 #!/usr/bin/env zsh
 
 update() {
-  source "$SKETCHYBAR_CONFIG_DIR/colors.zsh"
-  source "$SKETCHYBAR_CONFIG_DIR/icons.zsh"
+  source "$SKETCHYBAR_CONFIG_DIR/colors"
+  source "$SKETCHYBAR_CONFIG_DIR/icons"
 
   NOTIFICATIONS="$(gh api notifications)"
   COUNT="$(echo "$NOTIFICATIONS" | jq 'length')"

@@ -1,8 +1,8 @@
 #!/usr/bin/env zsh
 
 window_state() {
-  source "$SKETCHYBAR_CONFIG_DIR/colors.zsh"
-  source "$SKETCHYBAR_CONFIG_DIR/icons.zsh"
+  source "$SKETCHYBAR_CONFIG_DIR/colors"
+  source "$SKETCHYBAR_CONFIG_DIR/icons"
 
   WINDOW=$(yabai -m query --windows --window)
   CURRENT=$(echo "$WINDOW" | jq '.["stack-index"]')

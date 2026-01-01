@@ -26,7 +26,7 @@ let
       runHook preInstall
       mkdir -p $out
       cp -R config $out/config
-      cp sketchybarrc.zsh $out/sketchybarrc.zsh
+      cp sketchybarrc $out/sketchybarrc
       chmod -R u+w $out
       find "$out" -type f -print | while IFS= read -r file; do
         if head -n 1 "$file" | grep -qE '^#!.*zsh'; then
@@ -59,7 +59,7 @@ in
       ProgramArguments = [
         "${pkgs.sketchybar}/bin/sketchybar"
         "-c"
-        "${sketchybarConfig}/sketchybarrc.zsh"
+        "${sketchybarConfig}/sketchybarrc"
       ];
 
       KeepAlive = true;

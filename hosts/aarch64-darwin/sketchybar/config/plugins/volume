@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 WIDTH=100
 
@@ -9,7 +9,7 @@ init() {
 
 volume_change() {
   sketchybar --set $NAME slider.percentage=$INFO \
-             --animate tanh 30 --set $NAME slider.width=$WIDTH 
+             --animate tanh 30 --set $NAME slider.width=$WIDTH
 
   sleep 2
 

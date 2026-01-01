@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 function update() {
     sketchybar --set calendar icon="$(date '+%a %d. %b')" label="$(date '+%H:%M')"

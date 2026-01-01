@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
 sketchybar --add item           apple.logo left                             \
            --set apple.logo     icon=$APPLE                                 \
