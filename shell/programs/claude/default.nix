@@ -5,6 +5,79 @@
 , ...
 }:
 let
+  mcpServers = {
+    # this consume too much token. why not just use gh
+    # github = {
+    #   command = pkgs.writeShellScript "github-mcp-wrapper" ''
+    #     export GITHUB_PERSONAL_ACCESS_TOKEN=$(cat ${config.age.secrets.github-token.path})
+    #     exec docker run -i --rm \
+    #       -e GITHUB_PERSONAL_ACCESS_TOKEN \
+    #       ghcr.io/github/github-mcp-server
+    #   '';
+    #   args = [ ];
+    #   env = { };
+    #   transportType = "stdio";
+    #   autoApprove = [
+    #     "get_file_contents"
+    #     "search_repositories"
+    #     "search_code"
+    #   ];
+    #   disabled = true;
+    # };
+    context7 = {
+      command = pkgs.writeShellScript "context7-mcp-wrapper" ''
+        ${pkgs.context7}/bin/context7-mcp \
+          --api-key "$(cat ${config.age.secrets.context7-api-key.path})"
+      '';
+      args = [ ];
+      env = { };
+      transportType = "stdio";
+      autoApprove = [
+        "resolve-library-id"
+        "get-library-docs"
+      ];
+    };
+    chrome-devtools = {
+      command = "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp";
+      args = [ ];
+      env = { };
+      transportType = "stdio";
+      autoApprove = [ ];
+    };
+    # playwright = {
+    #   command = "${pkgs.playwright-mcp}/bin/mcp-server-playwright";
+    #   args = [ ];
+    #   env = { };
+    #   transportType = "stdio";
+    #   autoApprove = [ ];
+    # };
+    aws-documentation = {
+      command = "${pkgs.aws-documentation}/bin/awslabs.aws-documentation-mcp-server";
+      args = [ ];
+      env = { };
+      transportType = "stdio";
+      autoApprove = [
+        "read_documentation"
+        "search_documentation"
+        "recommend"
+      ];
+    };
+    terraform = {
+      command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";
+      args = [ "stdio" ];
+      env = { };
+      transportType = "stdio";
+      autoApprove = [ ];
+    };
+    codex = {
+      command = "${pkgs.codex}/bin/codex";
+      args = [ "mcp-server" ];
+      env = { };
+      transportType = "stdio";
+      autoApprove = [ ];
+    };
+  };
+
   settings = {
     permissions = {
       allow = [
@@ -62,68 +135,11 @@ let
     };
   };
   managedSettingsFile = pkgs.writeText "claude-managed-settings.json" (builtins.toJSON settings);
-  mcpServers = {
-    # this consume too much token. why not just use gh
-    # github = {
-    #   command = pkgs.writeShellScript "github-mcp-wrapper" ''
-    #     export GITHUB_PERSONAL_ACCESS_TOKEN=$(cat ${config.age.secrets.github-token.path})
-    #     exec docker run -i --rm \
-    #       -e GITHUB_PERSONAL_ACCESS_TOKEN \
-    #       ghcr.io/github/github-mcp-server
-    #   '';
-    #   args = [ ];
-    #   env = { };
-    #   transportType = "stdio";
-    #   autoApprove = [
-    #     "get_file_contents"
-    #     "search_repositories"
-    #     "search_code"
-    #   ];
-    #   disabled = true;
-    # };
-    context7 = {
-      command = pkgs.writeShellScript "context7-mcp-wrapper" ''
-        ${pkgs.context7}/bin/context7-mcp \
-          --api-key "$(cat ${config.age.secrets.context7-api-key.path})"
-      '';
-      args = [ ];
-      env = { };
-      transportType = "stdio";
-      autoApprove = [
-        "resolve-library-id"
-        "get-library-docs"
-      ];
-      disabled = false;
-    };
-    playwright = {
-      command = "${pkgs.playwright-mcp}/bin/mcp-server-playwright";
-      args = [ ];
-      env = { };
-      transportType = "stdio";
-      autoApprove = [ ];
-      disabled = true;
-    };
-    aws-documentation = {
-      command = "${pkgs.aws-documentation}/bin/awslabs.aws-documentation-mcp-server";
-      args = [ ];
-      env = { };
-      transportType = "stdio";
-      autoApprove = [
-        "read_documentation"
-        "search_documentation"
-        "recommend"
-      ];
-      disabled = true;
-    };
-    terraform = {
-      command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";
-      args = [ "stdio" ];
-      env = { };
-      transportType = "stdio";
-      autoApprove = [ ];
-      disabled = false;
-    };
-  };
+  managedClaudeJson = pkgs.writeText "claude-managed.json" (
+    builtins.toJSON {
+      inherit mcpServers;
+    }
+  );
 
   claudeBundleSrc = "${agenix-secrets}/claude-bundle";
   claudeBundleEntries = builtins.readDir claudeBundleSrc;
@@ -160,19 +176,15 @@ in
   };
 
   home.activation.inject-claude-code-mcp = lib.hm.dag.entryAfter [ "installPackages" ] ''
-    ${pkgs.jq}/bin/jq                                                      \
-      -n                                                                   \
-      --slurpfile                                                          \
-      new ~/Library/Application\ Support/Claude/claude_desktop_config.json \
-        '(try input catch {}) | .mcpServers = $new[0].mcpServers'          \
-        ~/.claude.json > temp.json                                         \
-      && mv temp.json ~/.claude.json
+    ${pkgs.python3}/bin/python3 ${./merge-claude-json.py} \
+    ~/.claude.json \
+    ${managedClaudeJson}
   '';
 
   home.activation.inject-claude-code-settings = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     ${pkgs.python3}/bin/python3 ${./merge-claude-settings.py} \
-      ~/.claude/settings.json \
-      ${managedSettingsFile} \
-      ~/.claude/nix/settings.json
+    ~/.claude/settings.json \
+    ${managedSettingsFile} \
+    ~/.claude/nix/settings.json
   '';
 }

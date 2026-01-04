@@ -11,6 +11,7 @@ update() {
 }
 
 mouse_clicked() {
+  SID="${NAME#space.}"
   if [ "$BUTTON" = "right" ]; then
     yabai -m space --destroy $SID
     sketchybar --trigger space_change

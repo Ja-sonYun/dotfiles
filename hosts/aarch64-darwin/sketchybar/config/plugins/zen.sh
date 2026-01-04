@@ -9,9 +9,6 @@ zen_on() {
                --set separator drawing=off       \
                --set front_app drawing=off       \
                --set volume_alias drawing=off    \
-               --set spotify.anchor drawing=off  \
-               --set spotify.play updates=off    \
-               --set brew drawing=off            \
                --set task drawing=off
 }
 
@@ -24,8 +21,6 @@ zen_off() {
                --set front_app drawing=on        \
                --set system.yabai drawing=on     \
                --set volume_alias drawing=on     \
-               --set spotify.play updates=on     \
-               --set brew drawing=on             \
                --set task drawing=on
 }
 

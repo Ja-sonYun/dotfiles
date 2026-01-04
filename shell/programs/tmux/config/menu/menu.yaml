@@ -125,15 +125,15 @@ items:
   #       h: 55%
 
   - Menu:
-      name: "codex-chat"
+      name: "claude-chat"
       shortcut: a
-      command: mkdir -p $HOME/.chat && cd $HOME/.chat && codex
+      command: mkdir -p $HOME/.chat && cd $HOME/.chat && claude
       session: true
-      session_name: "codex-chat"
+      session_name: "claude-chat"
       session_on_dir: true
       run_on_git_root: true
       environment:
-        MULTI_SESSION_COMMAND: "cd $HOME/.chat && codex"
+        MULTI_SESSION_COMMAND: "cd $HOME/.chat && claude"
         NO_WINDOW_MGNT: "1"
         CTRL_C_AS_CLOSE: "1"
         MENU_POPUP: "1"
@@ -143,15 +143,15 @@ items:
         h: 55%
 
   - Menu:
-      name: "codex"
+      name: "claude"
       shortcut: c
-      command: _gen-close-hook codex && direnv exec . codex
+      command: _gen-close-hook claude && direnv exec . claude
       session: true
-      session_name: "codex"
+      session_name: "claude"
       session_on_dir: true
       run_on_git_root: true
       environment:
-        MULTI_SESSION_COMMAND: "direnv exec . codex"
+        MULTI_SESSION_COMMAND: "direnv exec . claude"
         NO_WINDOW_MGNT: "1"
         CTRL_C_AS_CLOSE: "1"
         MENU_POPUP: "1"

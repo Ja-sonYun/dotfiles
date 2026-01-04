@@ -1,21 +1,26 @@
 #!/usr/bin/env zsh
 
-source "$SKETCHYBAR_CONFIG_DIR/colors" # Loads all defined colors
-source "$SKETCHYBAR_CONFIG_DIR/icons" # Loads all defined icons
+source "$SKETCHYBAR_CONFIG_DIR/colors.sh"
+source "$SKETCHYBAR_CONFIG_DIR/icons.sh"
+source "$SKETCHYBAR_CONFIG_DIR/settings.sh"
+source "$SKETCHYBAR_CONFIG_DIR/utils.sh"
 
-ITEM_DIR="$SKETCHYBAR_CONFIG_DIR/items" # Directory where the items are configured
-PLUGIN_DIR="$SKETCHYBAR_CONFIG_DIR/plugins" # Directory where all the plugin scripts are stored
+ITEM_DIR="$SKETCHYBAR_CONFIG_DIR/items"
+PLUGIN_DIR="$SKETCHYBAR_CONFIG_DIR/plugins"
+SCRIPT_DIR="$SKETCHYBAR_CONFIG_DIR/scripts"
 
 FONT="SF Pro" # Needs to have Regular, Bold, Semibold, Heavy and Black variants
 PADDINGS=3 # All paddings use this value (icon, label, background)
 
 # Setting up and starting the helper process
 HELPER=git.felix.helper
-killall helper
+killall helper 2>/dev/null || true
 "$SKETCHYBAR_HELPER_BIN" "$HELPER" > /dev/null 2>&1 &
 
 # Unload the macOS on screen indicator overlay for volume change
-launchctl unload -F /System/Library/LaunchAgents/com.apple.OSDUIHelper.plist > /dev/null 2>&1 &
+if [[ -f /System/Library/LaunchAgents/com.apple.OSDUIHelper.plist ]]; then
+  launchctl unload -F /System/Library/LaunchAgents/com.apple.OSDUIHelper.plist > /dev/null 2>&1 &
+fi
 
 # Setting up the general bar appearance and default values
 sketchybar --bar     height=43                                         \
@@ -47,21 +52,21 @@ sketchybar --bar     height=43                                         \
                      popup.background.shadow.drawing=on
 
 # Left
-source "$ITEM_DIR/apple"
-source "$ITEM_DIR/spaces"
-source "$ITEM_DIR/front_app"
+source "$ITEM_DIR/apple.sh"
+source "$ITEM_DIR/spaces.sh"
+source "$ITEM_DIR/front_app.sh"
 
 # Center
-source "$ITEM_DIR/toggle_native_bar"
+source "$ITEM_DIR/toggle_native_bar.sh"
 
 # Right
-source "$ITEM_DIR/calendar"
-source "$ITEM_DIR/aliases"
-source "$ITEM_DIR/task"
-source "$ITEM_DIR/github"
-source "$ITEM_DIR/battery"
-source "$ITEM_DIR/volume"
-source "$ITEM_DIR/cpu"
+source "$ITEM_DIR/calendar.sh"
+source "$ITEM_DIR/aliases.sh"
+source "$ITEM_DIR/task.sh"
+source "$ITEM_DIR/github.sh"
+source "$ITEM_DIR/battery.sh"
+source "$ITEM_DIR/volume.sh"
+source "$ITEM_DIR/cpu.sh"
 
 # Forcing all item scripts to run (never do this outside of sketchybarrc)
 sketchybar --update

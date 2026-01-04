@@ -1,22 +1,25 @@
 #!/usr/bin/env zsh
 
-update() {
-  source "$SKETCHYBAR_CONFIG_DIR/colors"
-  source "$SKETCHYBAR_CONFIG_DIR/icons"
+source "$SKETCHYBAR_CONFIG_DIR/colors.sh"
+source "$SKETCHYBAR_CONFIG_DIR/icons.sh"
+source "$SKETCHYBAR_CONFIG_DIR/utils.sh"
 
-  NOTIFICATIONS="$(gh api notifications)"
+update() {
+  NOTIFICATIONS="$(gh api notifications 2>&1)" || {
+    sketchybar --set $NAME icon=$BELL label="!"
+    exit 0
+  }
+
   COUNT="$(echo "$NOTIFICATIONS" | jq 'length')"
-  args=()
+  local args=()
+
   if [ "$NOTIFICATIONS" = "[]" ]; then
     args+=(--set $NAME icon=$BELL label="0")
   else
     args+=(--set $NAME icon=$BELL_DOT label="$COUNT")
   fi
 
-  PREV_COUNT=$(sketchybar --query github.bell | jq -r .label.value)
-  # For sound to play around with:
-  # afplay /System/Library/Sounds/Morse.aiff
-
+  PREV_COUNT=$(sketchybar --query github.bell | jq -r .label.value 2>/dev/null)
   args+=(--remove '/github.notification\.*/')
 
   COUNTER=0
@@ -26,7 +29,7 @@ update() {
   while read -r repo url type title
   do
     COUNTER=$((COUNTER + 1))
-    IMPORTANT="$(echo "$title" | egrep -i "(deprecat|break|broke)")"
+    IMPORTANT="$(echo "$title" | grep -Ei "(deprecat|break|broke)")"
     COLOR=$BLUE
     PADDING=0
 
@@ -34,14 +37,31 @@ update() {
       repo="Note"
       title="No new notifications"
     fi
+
     case "${type}" in
-      "'Issue'") COLOR=$GREEN; ICON=$GIT_ISSUE; URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
+      "'Issue'")
+        COLOR=$GREEN
+        ICON=$GIT_ISSUE
+        URL="$(gh api "$(strip_quotes "$url")" | jq .html_url)"
       ;;
-      "'Discussion'") COLOR=$WHITE; ICON=$GIT_DISCUSSION; URL="https://www.github.com/notifications"
+      "'Discussion'")
+        COLOR=$WHITE
+        ICON=$GIT_DISCUSSION
+        URL="https://www.github.com/notifications"
       ;;
-      "'PullRequest'") COLOR=$MAGENTA; ICON=$GIT_PULL_REQUEST; URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
+      "'PullRequest'")
+        COLOR=$MAGENTA
+        ICON=$GIT_PULL_REQUEST
+        URL="$(gh api "$(strip_quotes "$url")" | jq .html_url)"
       ;;
-      "'Commit'") COLOR=$WHITE; ICON=$GIT_COMMIT; URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
+      "'Commit'")
+        COLOR=$WHITE
+        ICON=$GIT_COMMIT
+        URL="$(gh api "$(strip_quotes "$url")" | jq .html_url)"
+      ;;
+      *)
+        COLOR=$GREY
+        ICON=$GIT_INDICATOR
       ;;
     esac
 
@@ -52,8 +72,8 @@ update() {
     fi
 
     args+=(--clone github.notification.$COUNTER github.template \
-           --set github.notification.$COUNTER label="$(echo "$title" | sed -e "s/^'//" -e "s/'$//")" \
-                                            icon="$ICON $(echo "$repo" | sed -e "s/^'//" -e "s/'$//"):" \
+           --set github.notification.$COUNTER label="$(strip_quotes "$title")" \
+                                            icon="$ICON $(strip_quotes "$repo"):" \
                                             icon.padding_left="$PADDING" \
                                             label.padding_right="$PADDING" \
                                             icon.color=$COLOR \
@@ -71,17 +91,16 @@ update() {
   fi
 }
 
-popup() {
-  sketchybar --set $NAME popup.drawing=$1
-}
-
 case "$SENDER" in
-  "routine"|"forced") update
-  ;;
-  "mouse.entered") popup on
-  ;;
-  "mouse.exited"|"mouse.exited.global") popup off
-  ;;
-  "mouse.clicked") popup toggle
-  ;;
+  "routine"|"forced") update ;;
+  "mouse.entered")
+    cancel_popup_timer
+    popup on
+    start_popup_timer
+    ;;
+  "mouse.exited.global"|"mouse.exited")
+    cancel_popup_timer
+    popup off
+    ;;
+  "mouse.clicked") popup toggle ;;
 esac

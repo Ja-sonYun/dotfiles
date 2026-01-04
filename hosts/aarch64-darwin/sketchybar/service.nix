@@ -42,6 +42,7 @@ in
     path = with pkgs; [
       gh
       jq
+      gawk
       sketchybar
       config.environment.systemPath
       flock

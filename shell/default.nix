@@ -15,7 +15,7 @@
     ./programs/jujutsu
     ./programs/tmux
     ./programs/visidata
-    # ./programs/claude
+    ./programs/claude
     ./programs/codex
     ./programs/direnv
     ./programs/navi

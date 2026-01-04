@@ -1,10 +1,10 @@
 {
   "JasonYuns-MacBook-Pro": {
     "codex": "sha256-+hmEQ0RmxfRZci5DktQIb++7GOzSsZLkbEntG0JvLCg=",
-    "claude-code": "sha256-k/neWQKcdgWDVh5DyxQXyjZSAvwRrkpDfrmmrH8uSn8=",
+    "claude-code": "sha256-yW2zkvW5gmmgUGiEnr9NUudnAN5I5Ydor/efKGXEcQ0=",
     "awscli-local": "sha256-NXdITgADqz24OI4XuhSVYe/+c2mn3V8csD/wr9cY9GI=",
     "tmux-menu": "sha256-E0NLkq9vwfs9pYBMNA5wMnMrG4L8XLCAN+ZgqPzXi4Q=",
-    "context7-mcp": "sha256-rOxfoDAk+ACYMSo78VqRODEBoEZdNhkVH7QJzBTbnwg=",
+    "context7-mcp": "sha256-6aEvUt0R4z47h/nRyvLirGtQzfG167i+zMCfO8EMcIE=",
     "playwright-mcp": "sha256-OgawFgA6F63TOAQjjlyi86zBT7Frcgiyf/cF6DlMPXw=",
     "aws-documentation": "sha256-8YYcVocuAfdUfyICMEzhA5iLpGGojggnQZpeXsTjuek=",
     "chrome-devtools-mcp": "sha256-Hq9ZeRB+IvjZhnpY2CzxA3Zy9f2RvS4zRvby/ncKOug="
