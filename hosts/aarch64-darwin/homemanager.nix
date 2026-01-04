@@ -4,7 +4,9 @@
 , ...
 }:
 {
-  imports = (
+  imports = [
+    ./yabai-indicator
+  ] ++ (
     if machine == "main" then
       [
         ./taskwarrior
