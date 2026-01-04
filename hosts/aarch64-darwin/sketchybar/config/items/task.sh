@@ -3,6 +3,7 @@
 sketchybar --add event task_update
 
 task=(
+  update_freq=180
   script="$PLUGIN_DIR/task.sh"
   icon.color="$MAGENTA"
   icon=􀷾
@@ -10,7 +11,6 @@ task=(
   padding_right=10
   popup.align=right
   popup.height=30
-  click_script="flock -en /tmp/sketchybar_task_fetch.lock -c /etc/profiles/per-user/$(whoami)/bin/task-github-sync"
 )
 
 sketchybar --add item task right \

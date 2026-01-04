@@ -34,7 +34,7 @@ update() {
 }
 
 case "$SENDER" in
-  "routine"|"forced") update ;;
+  "routine"|"forced"|"task_update") update ;;
   "mouse.entered")
     cancel_popup_timer
     popup on

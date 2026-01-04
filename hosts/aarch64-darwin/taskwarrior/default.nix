@@ -1,73 +1,91 @@
 { pkgs
-, # userhome,
-  ...
+, lib
+, ...
 }:
-#let
-#  createTaskHook = filePath: target: {
-#    executable = true;
-#    target = ".task/hooks/${target}";
-#    text = ''
-#      #!${pkgs.python312}/bin/python
+let
+  hookPath =
+    lib.makeBinPath [
+      pkgs.jq
+      pkgs.sqlite
+      pkgs.sketchybar
+    ]
+    + ":/opt/homebrew/bin";
 
-#      import sys
-#      sys.path.append("${userhome}/.task/hooks")
+  makeHook = script: ''
+    #!${pkgs.zsh}/bin/zsh -f
+    export PATH="${hookPath}:$PATH"
+    source ${script}
+  '';
 
-#      ${builtins.readFile filePath}
-#    '';
-#  };
-#in
+  syncPath =
+    lib.makeBinPath [
+      pkgs.jq
+      pkgs.sqlite
+      pkgs.taskwarrior3
+      pkgs.coreutils
+      pkgs.flock
+      pkgs.python314
+    ]
+    + ":/opt/homebrew/bin";
+
+  task-sync = pkgs.writeScriptBin "task-sync" ''
+    #!${pkgs.zsh}/bin/zsh -f
+    export PATH="${syncPath}:$PATH"
+    LOCK_FILE="/tmp/task-sync.lock"
+    exec 9>"$LOCK_FILE"
+    if ! flock -en 9; then
+      echo "Another task-sync is running"
+      exit 0
+    fi
+    export TASK_SYNC_RUNNING=1
+    source ${./plugins/reminder-sync.sh}
+  '';
+
+  task-sync-cron = pkgs.writeShellApplication {
+    name = "task-sync-cron";
+    runtimeInputs = [
+      pkgs.tmux
+      task-sync
+    ];
+    text = ''
+      if tmux list-sessions &>/dev/null; then
+        task-sync
+      fi
+    '';
+  };
+in
 {
-  # imports = [
-  #   ../../../modules/zshFunc
-  # ];
-
   home.file."taskrc" = {
     target = ".taskrc";
-    source = toString ./taskrc;
+    source = ./taskrc;
   };
 
-  # home.file."task-hooks/on-add" = createTaskHook ./hooks/on-add.py "on-add";
-  # home.file."task-hooks/on-modify" = createTaskHook ./hooks/on-modify.py "on-modify";
-  # home.file."task-hooks/common" = createTaskHook ./hooks/common.py "common.py";
+  home.file."task-hooks/on-add" = {
+    executable = true;
+    target = ".task/hooks/on-add";
+    text = makeHook ./hooks/on-add.sh;
+  };
 
-  home.packages = with pkgs; [
-    taskwarrior3
-    taskwarrior-tui
+  home.file."task-hooks/on-modify" = {
+    executable = true;
+    target = ".task/hooks/on-modify";
+    text = makeHook ./hooks/on-modify.sh;
+  };
+
+  home.packages = [
+    pkgs.taskwarrior3
+    pkgs.taskwarrior-tui
+    task-sync
   ];
 
-  # programs.zshFunc = {
-  #   task-sync = {
-  #     description = "Sync taskwarrior tasks from reminder";
-  #     command =
-  #       let
-  #         pythonEnv = pkgs.python312.withPackages (
-  #           ps: with ps; [
-  #             rich
-  #           ]
-  #         );
-  #       in
-  #       ''
-  #         export TASKWARRIOR_BIN=${pkgs.taskwarrior3}/bin/task
-  #         ${pythonEnv}/bin/python ${toString ./plugins/task-sync.py}
-  #       '';
-  #   };
-
-  #   task-github-sync = {
-  #     description = "Sync taskwarrior tasks from github";
-  #     command =
-  #       let
-  #         pythonEnv = pkgs.python312.withPackages (
-  #           ps: with ps; [
-  #             rich
-  #             pygithub
-  #             openai
-  #           ]
-  #         );
-  #       in
-  #       ''
-  #         export TASKWARRIOR_BIN=${pkgs.taskwarrior3}/bin/task
-  #         ${pythonEnv}/bin/python ${toString ./plugins/github-todos.py}
-  #       '';
-  #   };
-  # };
+  launchd.agents.task-sync = {
+    enable = true;
+    config = {
+      Label = "com.user.task-sync";
+      ProgramArguments = [ "${task-sync-cron}/bin/task-sync-cron" ];
+      StartInterval = 3600;
+      StandardOutPath = "/tmp/task-sync.log";
+      StandardErrorPath = "/tmp/task-sync.log";
+    };
+  };
 }
