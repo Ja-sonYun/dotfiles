@@ -1,8 +1,13 @@
 { pkgs
 , lib
+, userhome
 , ...
 }:
 let
+  # Reminder lists to sync with taskwarrior
+  filterLists = [ "Avilen" "Todos" "Work" ];
+  filterListsStr = lib.concatStringsSep "|" filterLists;
+
   hookPath =
     lib.makeBinPath [
       pkgs.jq
@@ -13,8 +18,9 @@ let
 
   makeHook = script: ''
     #!${pkgs.zsh}/bin/zsh -f
-    export PATH="${hookPath}:$PATH"
-    source ${script}
+      export PATH="${hookPath}:$PATH"
+      export FILTER_LISTS="${filterListsStr}"
+      source ${script}
   '';
 
   syncPath =
@@ -30,15 +36,16 @@ let
 
   task-sync = pkgs.writeScriptBin "task-sync" ''
     #!${pkgs.zsh}/bin/zsh -f
-    export PATH="${syncPath}:$PATH"
-    LOCK_FILE="/tmp/task-sync.lock"
-    exec 9>"$LOCK_FILE"
-    if ! flock -en 9; then
-      echo "Another task-sync is running"
-      exit 0
-    fi
-    export TASK_SYNC_RUNNING=1
-    source ${./plugins/reminder-sync.sh}
+        export PATH="${syncPath}:$PATH"
+        export FILTER_LISTS="${filterListsStr}"
+        LOCK_FILE="/tmp/task-sync.lock"
+        exec 9>"$LOCK_FILE"
+        if ! flock -en 9; then
+        echo "Another task-sync is running"
+        exit 0
+        fi
+        export TASK_SYNC_RUNNING=1
+        source ${./plugins/reminder-sync.sh}
   '';
 
   task-sync-cron = pkgs.writeShellApplication {
@@ -49,7 +56,7 @@ let
     ];
     text = ''
       if tmux list-sessions &>/dev/null; then
-        task-sync
+      task-sync
       fi
     '';
   };
@@ -57,7 +64,18 @@ in
 {
   home.file."taskrc" = {
     target = ".taskrc";
-    source = ./taskrc;
+    text = ''
+      data.location=${userhome}/.task
+      news.version=${pkgs.taskwarrior3.version}
+
+      confirmation=no
+
+      color.project.Todos=yellow
+
+      color.tag.xteam=yellow
+      color.tag.urgent=bold red on gray
+      color.tag.waiting=blue
+    '';
   };
 
   home.file."task-hooks/on-add" = {

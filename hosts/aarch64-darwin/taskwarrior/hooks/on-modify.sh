@@ -4,7 +4,7 @@ set -e
 trap 'sketchybar --trigger task_update 2>/dev/null || true' EXIT
 
 SYNC_DB="$HOME/.task/reminder-syncer.sqlite3"
-FILTER_LISTS="Avilen|Todos"
+FILTER_LISTS="${FILTER_LISTS:-Avilen|Todos}"
 LOG_FILE="/tmp/taskwarrior-hooks.log"
 
 log() {

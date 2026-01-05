@@ -1,9 +1,6 @@
-{ cacheDir, pkgs, config, ... }:
+{ pkgs, ... }:
 let
   originalConfigFile = builtins.readFile ./skhdrc;
-  # NOTE: skhd spawn a new shell on running command.
-  # This will cause a problem when using PATH defined in plist.
-  # So just replace the path directly
   configFileContent = builtins.replaceStrings
     [ "%yabai%" "%skhd%" "%inputSourceSelector%" ]
     [ "${pkgs.yabai}/bin/yabai" "${pkgs.skhd}/bin/skhd" "${pkgs.inputSourceSelector}/bin/InputSourceSelector" ]
@@ -11,24 +8,23 @@ let
   configFile = pkgs.writeScript "skhdrc" configFileContent;
 in
 {
-  launchd.user.agents.skhd = {
-    path = with pkgs; [
-      skhd
-      config.environment.systemPath
-    ];
+  home.packages = [
+    pkgs.skhd
+  ];
 
-    serviceConfig = {
+  launchd.agents.skhd = {
+    enable = true;
+    config = {
+      Label = "com.user.skhd";
       ProgramArguments = [
         "${pkgs.skhd}/bin/skhd"
         "-c"
         (toString configFile)
       ];
-
       KeepAlive = true;
       RunAtLoad = true;
-
-      StandardOutPath = "${cacheDir}/logs/skhd.out.log";
-      StandardErrorPath = "${cacheDir}/logs/skhd.err.log";
+      StandardOutPath = "/tmp/skhd.out.log";
+      StandardErrorPath = "/tmp/skhd.err.log";
     };
   };
 }

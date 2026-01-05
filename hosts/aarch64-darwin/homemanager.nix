@@ -10,6 +10,9 @@
     if machine == "main" then
       [
         ./taskwarrior
+        ./skhd
+        ./yabai
+        ./sketchybar
       ]
     else
       [ ]

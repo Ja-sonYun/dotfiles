@@ -79,16 +79,20 @@ items:
         w: 40%
         h: 55%
 
-  # - Menu:
-  #     name: "weechat"
-  #     shortcut: w
-  #     command: weechat
-  #     session: true
-  #     session_name: "weechat"
+  - Menu:
+      name: "taskwarrior"
+      shortcut: t
+      command: taskwarrior-tui
+      session: true
+      session_name: "taskwarrior-tui"
+      environment:
+        NO_WINDOW_MGNT: "1"
+        CTRL_C_AS_CLOSE: "1"
+        MENU_POPUP: "1"
 
-  #     position:
-  #       w: 60%
-  #       h: 70%
+      position:
+        w: 60%
+        h: 70%
 
   # - Menu:
   #     name: "claude"
@@ -125,15 +129,15 @@ items:
   #       h: 55%
 
   - Menu:
-      name: "claude-chat"
+      name: "codex-chat"
       shortcut: a
-      command: mkdir -p $HOME/.chat && cd $HOME/.chat && claude
+      command: mkdir -p $HOME/.chat && cd $HOME/.chat && codex
       session: true
-      session_name: "claude-chat"
+      session_name: "codex-chat"
       session_on_dir: true
       run_on_git_root: true
       environment:
-        MULTI_SESSION_COMMAND: "cd $HOME/.chat && claude"
+        MULTI_SESSION_COMMAND: "cd $HOME/.chat && codex"
         NO_WINDOW_MGNT: "1"
         CTRL_C_AS_CLOSE: "1"
         MENU_POPUP: "1"
@@ -160,6 +164,23 @@ items:
         w: 60%
         h: 55%
 
+  - Menu:
+      name: "codex"
+      shortcut: C
+      command: _gen-close-hook codex && direnv exec . codex
+      session: true
+      session_name: "codex"
+      session_on_dir: true
+      run_on_git_root: true
+      environment:
+        MULTI_SESSION_COMMAND: "direnv exec . codex"
+        NO_WINDOW_MGNT: "1"
+        CTRL_C_AS_CLOSE: "1"
+        MENU_POPUP: "1"
+
+      position:
+        w: 60%
+        h: 55%
   # - Menu:
   #     name: "Record Meeting"
   #     shortcut: R

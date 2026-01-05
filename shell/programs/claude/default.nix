@@ -7,23 +7,22 @@
 let
   mcpServers = {
     # this consume too much token. why not just use gh
-    # github = {
-    #   command = pkgs.writeShellScript "github-mcp-wrapper" ''
-    #     export GITHUB_PERSONAL_ACCESS_TOKEN=$(cat ${config.age.secrets.github-token.path})
-    #     exec docker run -i --rm \
-    #       -e GITHUB_PERSONAL_ACCESS_TOKEN \
-    #       ghcr.io/github/github-mcp-server
-    #   '';
-    #   args = [ ];
-    #   env = { };
-    #   transportType = "stdio";
-    #   autoApprove = [
-    #     "get_file_contents"
-    #     "search_repositories"
-    #     "search_code"
-    #   ];
-    #   disabled = true;
-    # };
+    github = {
+      command = pkgs.writeShellScript "github-mcp-wrapper" ''
+        export GITHUB_PERSONAL_ACCESS_TOKEN=$(cat ${config.age.secrets.github-token.path})
+        exec docker run -i --rm \
+          -e GITHUB_PERSONAL_ACCESS_TOKEN \
+          ghcr.io/github/github-mcp-server
+      '';
+      args = [ ];
+      env = { };
+      transportType = "stdio";
+      autoApprove = [
+        "get_file_contents"
+        "search_repositories"
+        "search_code"
+      ];
+    };
     context7 = {
       command = pkgs.writeShellScript "context7-mcp-wrapper" ''
         ${pkgs.context7}/bin/context7-mcp \

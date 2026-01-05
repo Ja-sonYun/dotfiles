@@ -2,7 +2,7 @@
 set -e
 
 SYNC_DB="$HOME/.task/reminder-syncer.sqlite3"
-FILTER_LISTS="Avilen Todos"
+FILTER_LISTS="${FILTER_LISTS:-Todos|Work}"
 LOG_FILE="/tmp/taskwarrior-hooks.log"
 TASK_BIN="${TASKWARRIOR_BIN:-task}"
 
@@ -42,7 +42,7 @@ print("".join(result))
 ')
 
 # Process each list
-for list in ${=FILTER_LISTS}; do
+for list in ${(s:|:)FILTER_LISTS}; do
     log "Processing list: $list"
 
     # Filter reminders for this list
@@ -74,7 +74,6 @@ for list in ${=FILTER_LISTS}; do
 
             # Add due date if present
             if [ -n "$due_date" ]; then
-                # Convert ISO to taskwarrior format
                 due_tw=$(echo "$due_date" | sed 's/-//g; s/://g; s/\.[0-9]*Z/Z/')
                 import_json=$(echo "$import_json" | jq --arg due "$due_tw" '. + {due: $due}')
             fi
