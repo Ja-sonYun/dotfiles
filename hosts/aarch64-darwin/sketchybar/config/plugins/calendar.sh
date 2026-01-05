@@ -13,7 +13,7 @@ case "$SENDER" in
     popup on
     start_popup_timer
     ;;
-  "mouse.exited.global"|"mouse.exited")
+  "mouse.exited"|"mouse.exited.global")
     cancel_popup_timer
     popup off
     ;;

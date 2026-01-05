@@ -23,12 +23,14 @@ in
   home.file."Applications/YabaiIndicator.app".source =
     "${yabaiIndicator}/Applications/YabaiIndicator.app";
 
-  #   launchd.agents.yabai-indicator = {
-  #     enable = true;
-  #     config = {
-  #       ProgramArguments = [ "${yabaiIndicator}/Applications/YabaiIndicator.app/Contents/MacOS/YabaiIndicator" ];
-  #       RunAtLoad = true;
-  #       KeepAlive = false;
-  #     };
-  #   };
+  launchd.agents.yabai-indicator = {
+    enable = true;
+    config = {
+      ProgramArguments = [
+        "${yabaiIndicator}/Applications/YabaiIndicator.app/Contents/MacOS/YabaiIndicator"
+      ];
+      RunAtLoad = true;
+      KeepAlive = false;
+    };
+  };
 }

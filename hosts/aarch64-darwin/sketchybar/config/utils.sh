@@ -50,12 +50,15 @@ popup() {
 
 # Truncate string by display width (CJK = 2, ASCII = 1)
 truncate_width() {
-  local s="$1" max="$2" w=0 r="" c
-  for (( i=0; i<${#s}; i++ )); do
-    c="${s:i:1}"
-    [[ $c == [' '-'~'] ]] && ((w++)) || ((w+=2))
-    (( w > max )) && { r+="..."; break; }
-    r+="$c"
-  done
-  echo "$r"
+  gawk -v max="$2" 'BEGIN {
+    w = 0; r = ""
+    s = ARGV[1]; delete ARGV[1]
+    n = split(s, c, "")
+    for (i = 1; i <= n; i++) {
+      cw = (c[i] >= " " && c[i] <= "~") ? 1 : 2
+      if (w + cw > max) { r = r "..."; break }
+      w += cw; r = r c[i]
+    }
+    print r
+  }' "$1"
 }

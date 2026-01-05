@@ -40,6 +40,9 @@ calendar_event=(
   update_freq=270
   script="$PLUGIN_DIR/calendar_event.sh"
   label.font="$FONT:Black:7.0"
+  label.width=100
+  label.scroll_texts=on
+  label.scroll_duration=200
   icon.font="$FONT:Heavy:7.0"
   icon.color=$ORANGE
   icon.padding_right=-1
@@ -49,4 +52,5 @@ calendar_event=(
 )
 
 sketchybar --add item calendar.event right \
-           --set calendar.event "${calendar_event[@]}"
+           --set calendar.event "${calendar_event[@]}" \
+           --subscribe calendar.event mouse.entered mouse.exited mouse.exited.global
