@@ -82,7 +82,7 @@ items:
   - Menu:
       name: "taskwarrior"
       shortcut: t
-      command: taskwarrior-tui
+      command: cd ~/ && taskwarrior-tui
       session: true
       session_name: "taskwarrior-tui"
       environment:

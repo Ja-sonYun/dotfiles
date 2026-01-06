@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Written in [Amber](https://amber-lang.com/)
 # version: 0.4.0-alpha
-# date: 2025-12-13 10:06:14
+# date: 2026-01-07 04:37:54
 echo_info__0_v0() {
     local msg=$1
      tput bold; tput setaf 4; echo "${msg}"; tput sgr0 ;
@@ -197,7 +197,7 @@ fi
     debug__127_v0 "Building: ${abs_file} (key=${key}, hostname=${hostname})";
     __AF_debug127_v0__16_5="$__AF_debug127_v0";
     echo "$__AF_debug127_v0__16_5" > /dev/null 2>&1
-    __AMBER_VAL_11=$( mktemp -t build-pkg );
+    __AMBER_VAL_11=$( mktemp -t build-pkg.XXXXXX );
     __AS=$?;
     local tmpbase="${__AMBER_VAL_11}"
     local tmpfile="${tmpbase}.nix"
@@ -224,7 +224,7 @@ fi
     debug__127_v0 "Nix file: ${tmpfile}";
     __AF_debug127_v0__29_5="$__AF_debug127_v0";
     echo "$__AF_debug127_v0__29_5" > /dev/null 2>&1
-    __AMBER_VAL_13=$( mktemp -t build-pkg-out );
+    __AMBER_VAL_13=$( mktemp -t build-pkg-out.XXXXXX );
     __AS=$?;
     local outfile="${__AMBER_VAL_13}"
      nix build --impure --file "${tmpfile}" -L > "${outfile}" 2>&1 || true ;

@@ -1,36 +1,36 @@
 # Show system statistics
-# fn + rcmd - 1 : "${HOME}"/.config/%yabai%/scripts/show_cpu.sh
-# fn + rcmd - 2 : "${HOME}"/.config/%yabai%/scripts/show_mem.sh
-# fn + rcmd - 3 : "${HOME}"/.config/%yabai%/scripts/show_bat.sh
-# fn + rcmd - 4 : "${HOME}"/.config/%yabai%/scripts/show_disk.sh
-# fn + rcmd - 5 : "${HOME}"/.config/%yabai%/scripts/show_song.sh
+# fn + rcmd - 1 : "${HOME}"/.config/yabai/scripts/show_cpu.sh
+# fn + rcmd - 2 : "${HOME}"/.config/yabai/scripts/show_mem.sh
+# fn + rcmd - 3 : "${HOME}"/.config/yabai/scripts/show_bat.sh
+# fn + rcmd - 4 : "${HOME}"/.config/yabai/scripts/show_disk.sh
+# fn + rcmd - 5 : "${HOME}"/.config/yabai/scripts/show_song.sh
 
 # Navigation
-lalt - h : %yabai% -m window --focus west
-lalt - j : %yabai% -m window --focus south
-lalt - k : %yabai% -m window --focus north
-lalt - l : %yabai% -m window --focus east
+lalt - h : yabai -m window --focus west
+lalt - j : yabai -m window --focus south
+lalt - k : yabai -m window --focus north
+lalt - l : yabai -m window --focus east
 
 # Moving windows
-shift + lalt - h : %yabai% -m window --warp west
-shift + lalt - j : %yabai% -m window --warp south
-shift + lalt - k : %yabai% -m window --warp north
-shift + lalt - l : %yabai% -m window --warp east
+shift + lalt - h : yabai -m window --warp west
+shift + lalt - j : yabai -m window --warp south
+shift + lalt - k : yabai -m window --warp north
+shift + lalt - l : yabai -m window --warp east
 
 # Move focus container to workspace
-shift + rcmd - 1 : %yabai% -m window --space 1; %yabai% -m space --focus 1
-shift + rcmd - 2 : %yabai% -m window --space 2; %yabai% -m space --focus 2
-shift + rcmd - 3 : %yabai% -m window --space 3; %yabai% -m space --focus 3
-shift + rcmd - 4 : %yabai% -m window --space 4; %yabai% -m space --focus 4
-shift + rcmd - 5 : %yabai% -m window --space 5; %yabai% -m space --focus 5
+shift + rcmd - 1 : yabai -m window --space 1; yabai -m space --focus 1
+shift + rcmd - 2 : yabai -m window --space 2; yabai -m space --focus 2
+shift + rcmd - 3 : yabai -m window --space 3; yabai -m space --focus 3
+shift + rcmd - 4 : yabai -m window --space 4; yabai -m space --focus 4
+shift + rcmd - 5 : yabai -m window --space 5; yabai -m space --focus 5
 
 # TODO: When yabai support sa script comment out
-rcmd - a : %yabai% -m space --focus prev
-rcmd - d : %yabai% -m space --focus next
-# rcmd - a : %skhd% -k "ctrl - left"
-# rcmd - d : %skhd% -k "ctrl - right"
+rcmd - a : yabai -m space --focus prev
+rcmd - d : yabai -m space --focus next
+# rcmd - a : skhd -k "ctrl - left"
+# rcmd - d : skhd -k "ctrl - right"
 
-# rcmd - s : %yabai% -m space --focus last
+# rcmd - s : yabai -m space --focus last
 
 # Move focus
 # rcmd - 1 : skhd -k "ctrl + alt + cmd - 1"
@@ -41,71 +41,71 @@ rcmd - d : %yabai% -m space --focus next
 # rcmd - 6 : skhd -k "ctrl + alt + cmd - 6"
 # rcmd - 7 : skhd -k "ctrl + alt + cmd - 7"
 # rcmd - 8 : skhd -k "ctrl + alt + cmd - 8"
-rcmd - 1 : %yabai% -m space --focus 1
-rcmd - 2 : %yabai% -m space --focus 2
-rcmd - 3 : %yabai% -m space --focus 3
-rcmd - 4 : %yabai% -m space --focus 4
-rcmd - 5 : %yabai% -m space --focus 5
-rcmd - 6 : %yabai% -m space --focus 6
-rcmd - 7 : %yabai% -m space --focus 7
-# rcmd - n : %yabai% -m space --create
-# rcmd - d : %yabai% -m space --destroy
+rcmd - 1 : yabai -m space --focus 1
+rcmd - 2 : yabai -m space --focus 2
+rcmd - 3 : yabai -m space --focus 3
+rcmd - 4 : yabai -m space --focus 4
+rcmd - 5 : yabai -m space --focus 5
+rcmd - 6 : yabai -m space --focus 6
+rcmd - 7 : yabai -m space --focus 7
+# rcmd - n : yabai -m space --create
+# rcmd - d : yabai -m space --destroy
 
 # Resize windows
-ctrl + lalt - h : %yabai% -m window --resize left:-50:0; \
-                  %yabai% -m window --resize right:-50:0
-ctrl + lalt - j : %yabai% -m window --resize bottom:0:50; \
-                  %yabai% -m window --resize top:0:50
-ctrl + lalt - k : %yabai% -m window --resize top:0:-50; \
-                  %yabai% -m window --resize bottom:0:-50
-ctrl + lalt - l : %yabai% -m window --resize right:50:0; \
-                  %yabai% -m window --resize left:50:0
+ctrl + lalt - h : yabai -m window --resize left:-50:0; \
+                  yabai -m window --resize right:-50:0
+ctrl + lalt - j : yabai -m window --resize bottom:0:50; \
+                  yabai -m window --resize top:0:50
+ctrl + lalt - k : yabai -m window --resize top:0:-50; \
+                  yabai -m window --resize bottom:0:-50
+ctrl + lalt - l : yabai -m window --resize right:50:0; \
+                  yabai -m window --resize left:50:0
 
 # Equalize size of windows
-ctrl + rcmd - e : %yabai% -m space --balance
+ctrl + rcmd - e : yabai -m space --balance
 
 # Enable / Disable gaps in current workspace
-ctrl + rcmd - g : %yabai% -m space --toggle padding; %yabai% -m space --toggle gap
+ctrl + rcmd - g : yabai -m space --toggle padding; yabai -m space --toggle gap
 
 # Rotate windows clockwise and anticlockwise
-rcmd - r         : %yabai% -m space --rotate 270
-shift + rcmd - r : %yabai% -m space --rotate 90
+rcmd - r         : yabai -m space --rotate 270
+shift + rcmd - r : yabai -m space --rotate 90
 
 # Rotate on X and Y Axis
-shift + rcmd - x : %yabai% -m space --mirror x-axis
-shift + rcmd - y : %yabai% -m space --mirror y-axis
+shift + rcmd - x : yabai -m space --mirror x-axis
+shift + rcmd - y : yabai -m space --mirror y-axis
 
 # Set insertion point for focused container
-shift + ctrl + lalt - h : %yabai% -m window --insert west
-shift + ctrl + lalt - j : %yabai% -m window --insert south
-shift + ctrl + lalt - k : %yabai% -m window --insert north
-shift + ctrl + lalt - l : %yabai% -m window --insert east
+shift + ctrl + lalt - h : yabai -m window --insert west
+shift + ctrl + lalt - j : yabai -m window --insert south
+shift + ctrl + lalt - k : yabai -m window --insert north
+shift + ctrl + lalt - l : yabai -m window --insert east
 
 # Float / Unfloat window
 rcmd - f : \
-    %yabai% -m window --toggle float; \
-    %yabai% -m window --toggle border
+    yabai -m window --toggle float; \
+    yabai -m window --toggle border
 
-# Restart %yabai%
+# Restart yabai
 shift + ctrl + rcmd - r : \
     /usr/bin/env osascript <<< \
-        "display notification \"Restarting %yabai%\" with title \"%yabai%\""; \
-    launchctl kickstart -k "gui/${UID}/homebrew.mxcl.%yabai%"
+        "display notification \"Restarting yabai\" with title \"yabai\""; \
+    launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
 
 # Make window native fullscreen
-ctrl + cmd - f  : %yabai% -m window --toggle zoom-fullscreen
-shift + rcmd - f : %yabai% -m window --toggle native-fullscreen
+ctrl + cmd - f  : yabai -m window --toggle zoom-fullscreen
+shift + rcmd - f : yabai -m window --toggle native-fullscreen
 
 # --------
 # Cmd
-rcmd - q : %inputSourceSelector% select "com.apple.keylayout.ABC"
-rcmd - e : %inputSourceSelector% select "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"
-rcmd - r : %inputSourceSelector% select "com.apple.inputmethod.Korean.2SetKorean"
+rcmd - q : InputSourceSelector select "com.apple.keylayout.ABC"
+rcmd - e : InputSourceSelector select "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"
+rcmd - r : InputSourceSelector select "com.apple.inputmethod.Korean.2SetKorean"
 
 
-rcmd - w : %skhd% -k "ctrl - up"
+rcmd - w : skhd -k "ctrl - up"
 
-rcmd - k : %skhd% -k "left"
-rcmd - l : %skhd% -k "down"
-rcmd - o : %skhd% -k "up"
-rcmd - 0x29 : %skhd% -k "right"
+rcmd - k : skhd -k "left"
+rcmd - l : skhd -k "down"
+rcmd - o : skhd -k "up"
+rcmd - 0x29 : skhd -k "right"

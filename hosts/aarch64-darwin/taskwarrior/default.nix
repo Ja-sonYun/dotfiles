@@ -5,7 +5,11 @@
 }:
 let
   # Reminder lists to sync with taskwarrior
-  filterLists = [ "Avilen" "Todos" "Work" ];
+  filterLists = [
+    "Avilen"
+    "Todos"
+    "Work"
+  ];
   filterListsStr = lib.concatStringsSep "|" filterLists;
 
   hookPath =
@@ -60,6 +64,35 @@ let
       fi
     '';
   };
+
+  task-wrapper = pkgs.writeShellApplication {
+    name = "task";
+    runtimeInputs = [
+      pkgs.taskwarrior3
+      pkgs.git
+    ];
+    text = ''
+      for arg in "$@"; do
+        # Skip auto-project for completion commands (start with _)
+        if [[ "$arg" == _* ]]; then
+          exec ${pkgs.taskwarrior3}/bin/task "$@"
+        fi
+        # Skip auto-project if user explicitly passes project:
+        if [[ "$arg" == project:* ]]; then
+          exec ${pkgs.taskwarrior3}/bin/task "$@"
+        fi
+      done
+
+      if git rev-parse --is-inside-work-tree &>/dev/null; then
+        remote_url=$(git remote get-url origin 2>/dev/null)
+        owner=$(echo "$remote_url" | sed -E 's#.+[:/]([^/]+)/[^/]+\.git$#\1#')
+        repo_name=$(echo "$remote_url" | sed -E 's#.+/([^/]+)\.git$#\1#')
+        exec ${pkgs.taskwarrior3}/bin/task project:"$repo_name" +"$owner" "$@"
+      else
+        exec ${pkgs.taskwarrior3}/bin/task "$@"
+      fi
+    '';
+  };
 in
 {
   home.file."taskrc" = {
@@ -91,9 +124,10 @@ in
   };
 
   home.packages = [
-    pkgs.taskwarrior3
     pkgs.taskwarrior-tui
     task-sync
+    (lib.lowPrio pkgs.taskwarrior3)
+    task-wrapper
   ];
 
   launchd.agents.task-sync = {

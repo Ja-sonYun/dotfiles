@@ -1,11 +1,10 @@
 { pkgs, ... }:
 let
-  originalConfigFile = builtins.readFile ./skhdrc;
-  configFileContent = builtins.replaceStrings
-    [ "%yabai%" "%skhd%" "%inputSourceSelector%" ]
-    [ "${pkgs.yabai}/bin/yabai" "${pkgs.skhd}/bin/skhd" "${pkgs.inputSourceSelector}/bin/InputSourceSelector" ]
-    originalConfigFile;
-  configFile = pkgs.writeScript "skhdrc" configFileContent;
+  pathBin = pkgs.lib.makeBinPath [
+    pkgs.yabai
+    pkgs.skhd
+    pkgs.inputSourceSelector
+  ];
 in
 {
   home.packages = [
@@ -19,8 +18,11 @@ in
       ProgramArguments = [
         "${pkgs.skhd}/bin/skhd"
         "-c"
-        (toString configFile)
+        (toString ./skhdrc)
       ];
+      EnvironmentVariables = {
+        PATH = "${pathBin}:/usr/bin:/bin:/usr/sbin:/sbin";
+      };
       KeepAlive = true;
       RunAtLoad = true;
       StandardOutPath = "/tmp/skhd.out.log";

@@ -1,10 +1,10 @@
 { pkgs, ... }:
 let
-  originalConfigFile = builtins.readFile ./yabairc;
-  configFileContent =
-    builtins.replaceStrings [ "%sketchybar%" ] [ "${pkgs.sketchybar}/bin/sketchybar" ]
-      originalConfigFile;
-  configFile = pkgs.writeScript "yabairc" configFileContent;
+  pathBin = pkgs.lib.makeBinPath [
+    pkgs.yabai
+    pkgs.jq
+    pkgs.sketchybar
+  ];
 in
 {
   home.packages = [
@@ -18,8 +18,11 @@ in
       ProgramArguments = [
         "${pkgs.yabai}/bin/yabai"
         "-c"
-        (toString configFile)
+        (toString ./yabairc)
       ];
+      EnvironmentVariables = {
+        PATH = "${pathBin}:/usr/bin:/bin:/usr/sbin:/sbin";
+      };
       KeepAlive = true;
       RunAtLoad = true;
       StandardOutPath = "/tmp/yabai.out.log";

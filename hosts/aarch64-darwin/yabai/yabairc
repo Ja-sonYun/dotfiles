@@ -96,9 +96,9 @@ yabai -m rule --add app="System Settings" manage=off
 # yabai -m signal --add event=window_focused action="${ubersicht_spaces_refresh_command}"
 # yabai -m signal --add event=window_title_changed action="${ubersicht_spaces_refresh_command}"
 
-yabai -m signal --add event=window_focused action="%sketchybar% --trigger window_focus"
-yabai -m signal --add event=window_created action="%sketchybar% --trigger windows_on_spaces"
-yabai -m signal --add event=window_destroyed action="%sketchybar% --trigger windows_on_spaces"
+yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
+yabai -m signal --add event=window_created action="sketchybar --trigger windows_on_spaces"
+yabai -m signal --add event=window_destroyed action="sketchybar --trigger windows_on_spaces"
 
 NOTCH_UUID="37D8832A-2D66-02CA-B9F7-8F30A301B230"
 NORMAL_BAR=9

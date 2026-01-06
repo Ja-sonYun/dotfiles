@@ -15,7 +15,7 @@ pub fun nix_build(root_dir: Text, file: Text, key: Text): Text {
 
     debug("Building: {abs_file} (key={key}, hostname={hostname})")
 
-    let tmpbase = trust $ mktemp -t build-pkg $
+    let tmpbase = trust $ mktemp -t build-pkg.XXXXXX $
     let tmpfile = "{tmpbase}.nix"
     trust $ mv "{tmpbase}" "{tmpfile}" $
 
@@ -28,7 +28,7 @@ pub fun nix_build(root_dir: Text, file: Text, key: Text): Text {
     trust sed_inplace("s|__FILE__|{abs_file}|g", tmpfile)
     debug("Nix file: {tmpfile}")
 
-    let outfile = trust $ mktemp -t build-pkg-out $
+    let outfile = trust $ mktemp -t build-pkg-out.XXXXXX $
     trust $ nix build --impure --file "{tmpfile}" -L > "{outfile}" 2>&1 || true $
     let out = trust $ cat "{outfile}" $
     trust $ rm -f "{tmpfile}" "{outfile}" $
