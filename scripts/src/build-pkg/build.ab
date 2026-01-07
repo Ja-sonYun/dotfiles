@@ -57,7 +57,15 @@ pub fun update_hashfile(root_dir: Text, key: Text, hash: Text): Bool {
     return true
 }
 
-pub fun build_package(root_dir: Text, file: Text, key: Text): Bool {
+pub fun build_package(root_dir: Text, file: Text, key: Text, force: Bool): Bool {
+    if force {
+        echo_warning("Force mode: invalidating hash to trigger rebuild")
+        if not update_hashfile(root_dir, key, "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") {
+            echo_error("Failed to invalidate hash")
+            return false
+        }
+    }
+
     let out = nix_build(root_dir, file, key)
     let has_hash = text_contains(out, "got:")
     let has_error = text_contains(out, "error:")

@@ -6,17 +6,19 @@ import { detect_pkg_type, extract_hash_key } from "./detect.ab"
 import { build_package } from "./build.ab"
 
 fun print_usage(prog: Text): Null {
-    echo "Usage: {prog} [--debug] <nix-file>"
+    echo "Usage: {prog} [--debug] [--force] <nix-file>"
     echo ""
     echo "Arguments:"
     echo "  <nix-file>  Path to default.nix file (e.g., pkgs/codex/default.nix)"
     echo ""
     echo "Options:"
     echo "  --debug     Enable debug output"
+    echo "  --force     Force rebuild even if hash matches"
 }
 
 main (argv) {
     let debug_mode = false
+    let force_mode = false
     let nix_file = ""
     let show_help = false
 
@@ -24,10 +26,13 @@ main (argv) {
         if arg == "--debug" {
             debug_mode = true
         }
+        if arg == "--force" or arg == "-f" {
+            force_mode = true
+        }
         if arg == "--help" or arg == "-h" {
             show_help = true
         }
-        if arg != "--debug" and arg != "--help" and arg != "-h" and arg != argv[0] {
+        if arg != "--debug" and arg != "--force" and arg != "-f" and arg != "--help" and arg != "-h" and arg != argv[0] {
             if nix_file == "" {
                 nix_file = arg
             }
@@ -80,7 +85,7 @@ main (argv) {
 
     echo_info("Building {hash_key} ({pkg_type})...")
 
-    if build_package(root_dir, nix_file, hash_key) {
+    if build_package(root_dir, nix_file, hash_key, force_mode) {
         exit 0
     } else {
         exit 1

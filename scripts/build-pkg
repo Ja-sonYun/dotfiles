@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Written in [Amber](https://amber-lang.com/)
 # version: 0.4.0-alpha
-# date: 2026-01-07 04:37:54
+# date: 2026-01-07 10:43:15
 echo_info__0_v0() {
     local msg=$1
      tput bold; tput setaf 4; echo "${msg}"; tput sgr0 ;
@@ -277,110 +277,130 @@ build_package__152_v0() {
     local root_dir=$1
     local file=$2
     local key=$3
+    local force=$4
+    if [ ${force} != 0 ]; then
+        echo_warning__2_v0 "Force mode: invalidating hash to trigger rebuild";
+        __AF_echo_warning2_v0__62_9="$__AF_echo_warning2_v0";
+        echo "$__AF_echo_warning2_v0__62_9" > /dev/null 2>&1
+        update_hashfile__151_v0 "${root_dir}" "${key}" "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        __AF_update_hashfile151_v0__63_16="$__AF_update_hashfile151_v0";
+        if [ $(echo  '!' "$__AF_update_hashfile151_v0__63_16" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
+            echo_error__3_v0 "Failed to invalidate hash";
+            __AF_echo_error3_v0__64_13="$__AF_echo_error3_v0";
+            echo "$__AF_echo_error3_v0__64_13" > /dev/null 2>&1
+            __AF_build_package152_v0=0;
+            return 0
+fi
+fi
     nix_build__149_v0 "${root_dir}" "${file}" "${key}";
-    __AF_nix_build149_v0__61_15="${__AF_nix_build149_v0}";
-    local out="${__AF_nix_build149_v0__61_15}"
+    __AF_nix_build149_v0__69_15="${__AF_nix_build149_v0}";
+    local out="${__AF_nix_build149_v0__69_15}"
     text_contains__24_v0 "${out}" "got:";
-    __AF_text_contains24_v0__62_20="$__AF_text_contains24_v0";
-    local has_hash="$__AF_text_contains24_v0__62_20"
+    __AF_text_contains24_v0__70_20="$__AF_text_contains24_v0";
+    local has_hash="$__AF_text_contains24_v0__70_20"
     text_contains__24_v0 "${out}" "error:";
-    __AF_text_contains24_v0__63_21="$__AF_text_contains24_v0";
-    local has_error="$__AF_text_contains24_v0__63_21"
+    __AF_text_contains24_v0__71_21="$__AF_text_contains24_v0";
+    local has_error="$__AF_text_contains24_v0__71_21"
     if [ ${has_hash} != 0 ]; then
         extract_hash_from_output__150_v0 "${out}";
-        __AF_extract_hash_from_output150_v0__66_24="${__AF_extract_hash_from_output150_v0}";
-        local new_hash="${__AF_extract_hash_from_output150_v0__66_24}"
+        __AF_extract_hash_from_output150_v0__74_24="${__AF_extract_hash_from_output150_v0}";
+        local new_hash="${__AF_extract_hash_from_output150_v0__74_24}"
         if [ $([ "_${new_hash}" != "_" ]; echo $?) != 0 ]; then
             echo_error__3_v0 "Failed to extract hash from build output";
-            __AF_echo_error3_v0__68_13="$__AF_echo_error3_v0";
-            echo "$__AF_echo_error3_v0__68_13" > /dev/null 2>&1
+            __AF_echo_error3_v0__76_13="$__AF_echo_error3_v0";
+            echo "$__AF_echo_error3_v0__76_13" > /dev/null 2>&1
             __AF_build_package152_v0=0;
             return 0
 fi
         echo_warning__2_v0 "Hash mismatch detected. New hash: ${new_hash}";
-        __AF_echo_warning2_v0__72_9="$__AF_echo_warning2_v0";
-        echo "$__AF_echo_warning2_v0__72_9" > /dev/null 2>&1
+        __AF_echo_warning2_v0__80_9="$__AF_echo_warning2_v0";
+        echo "$__AF_echo_warning2_v0__80_9" > /dev/null 2>&1
         update_hashfile__151_v0 "${root_dir}" "${key}" "${new_hash}";
-        __AF_update_hashfile151_v0__74_16="$__AF_update_hashfile151_v0";
-        if [ $(echo  '!' "$__AF_update_hashfile151_v0__74_16" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
+        __AF_update_hashfile151_v0__82_16="$__AF_update_hashfile151_v0";
+        if [ $(echo  '!' "$__AF_update_hashfile151_v0__82_16" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
             echo_error__3_v0 "Failed to update hashfile";
-            __AF_echo_error3_v0__75_13="$__AF_echo_error3_v0";
-            echo "$__AF_echo_error3_v0__75_13" > /dev/null 2>&1
+            __AF_echo_error3_v0__83_13="$__AF_echo_error3_v0";
+            echo "$__AF_echo_error3_v0__83_13" > /dev/null 2>&1
             __AF_build_package152_v0=0;
             return 0
 fi
         echo_success__1_v0 "Updated hashfile.json with new hash";
-        __AF_echo_success1_v0__79_9="$__AF_echo_success1_v0";
-        echo "$__AF_echo_success1_v0__79_9" > /dev/null 2>&1
+        __AF_echo_success1_v0__87_9="$__AF_echo_success1_v0";
+        echo "$__AF_echo_success1_v0__87_9" > /dev/null 2>&1
         nix_build__149_v0 "${root_dir}" "${file}" "${key}";
-        __AF_nix_build149_v0__81_27="${__AF_nix_build149_v0}";
-        local rebuild_out="${__AF_nix_build149_v0__81_27}"
+        __AF_nix_build149_v0__89_27="${__AF_nix_build149_v0}";
+        local rebuild_out="${__AF_nix_build149_v0__89_27}"
         text_contains__24_v0 "${rebuild_out}" "got:";
-        __AF_text_contains24_v0__82_12="$__AF_text_contains24_v0";
-        if [ "$__AF_text_contains24_v0__82_12" != 0 ]; then
+        __AF_text_contains24_v0__90_12="$__AF_text_contains24_v0";
+        if [ "$__AF_text_contains24_v0__90_12" != 0 ]; then
             echo_error__3_v0 "Rebuild still failed after hash update";
-            __AF_echo_error3_v0__83_13="$__AF_echo_error3_v0";
-            echo "$__AF_echo_error3_v0__83_13" > /dev/null 2>&1
+            __AF_echo_error3_v0__91_13="$__AF_echo_error3_v0";
+            echo "$__AF_echo_error3_v0__91_13" > /dev/null 2>&1
              echo "${rebuild_out}" >&2 ;
             __AS=$?
             __AF_build_package152_v0=0;
             return 0
 fi
         text_contains__24_v0 "${rebuild_out}" "error:";
-        __AF_text_contains24_v0__88_12="$__AF_text_contains24_v0";
-        if [ "$__AF_text_contains24_v0__88_12" != 0 ]; then
+        __AF_text_contains24_v0__96_12="$__AF_text_contains24_v0";
+        if [ "$__AF_text_contains24_v0__96_12" != 0 ]; then
             echo_error__3_v0 "Build failed with error";
-            __AF_echo_error3_v0__89_13="$__AF_echo_error3_v0";
-            echo "$__AF_echo_error3_v0__89_13" > /dev/null 2>&1
+            __AF_echo_error3_v0__97_13="$__AF_echo_error3_v0";
+            echo "$__AF_echo_error3_v0__97_13" > /dev/null 2>&1
              echo "${rebuild_out}" >&2 ;
             __AS=$?
             __AF_build_package152_v0=0;
             return 0
 fi
         echo_success__1_v0 "Rebuild successful"'!'"";
-        __AF_echo_success1_v0__94_9="$__AF_echo_success1_v0";
-        echo "$__AF_echo_success1_v0__94_9" > /dev/null 2>&1
+        __AF_echo_success1_v0__102_9="$__AF_echo_success1_v0";
+        echo "$__AF_echo_success1_v0__102_9" > /dev/null 2>&1
         __AF_build_package152_v0=1;
         return 0
 fi
     if [ ${has_error} != 0 ]; then
         echo_error__3_v0 "Build failed";
-        __AF_echo_error3_v0__99_9="$__AF_echo_error3_v0";
-        echo "$__AF_echo_error3_v0__99_9" > /dev/null 2>&1
+        __AF_echo_error3_v0__107_9="$__AF_echo_error3_v0";
+        echo "$__AF_echo_error3_v0__107_9" > /dev/null 2>&1
         debug__127_v0 "Output: ${out}";
-        __AF_debug127_v0__100_9="$__AF_debug127_v0";
-        echo "$__AF_debug127_v0__100_9" > /dev/null 2>&1
+        __AF_debug127_v0__108_9="$__AF_debug127_v0";
+        echo "$__AF_debug127_v0__108_9" > /dev/null 2>&1
         __AF_build_package152_v0=0;
         return 0
 fi
     echo_success__1_v0 "Build successful (no hash update needed)";
-    __AF_echo_success1_v0__104_5="$__AF_echo_success1_v0";
-    echo "$__AF_echo_success1_v0__104_5" > /dev/null 2>&1
+    __AF_echo_success1_v0__112_5="$__AF_echo_success1_v0";
+    echo "$__AF_echo_success1_v0__112_5" > /dev/null 2>&1
     __AF_build_package152_v0=1;
     return 0
 }
 print_usage__154_v0() {
     local prog=$1
-    echo "Usage: ${prog} [--debug] <nix-file>"
+    echo "Usage: ${prog} [--debug] [--force] <nix-file>"
     echo ""
     echo "Arguments:"
     echo "  <nix-file>  Path to default.nix file (e.g., pkgs/codex/default.nix)"
     echo ""
     echo "Options:"
     echo "  --debug     Enable debug output"
+    echo "  --force     Force rebuild even if hash matches"
 }
 declare -r argv=("$0" "$@")
     debug_mode=0
+    force_mode=0
     nix_file=""
     show_help=0
     for arg in "${argv[@]}"; do
         if [ $([ "_${arg}" != "_--debug" ]; echo $?) != 0 ]; then
             debug_mode=1
 fi
+        if [ $(echo $([ "_${arg}" != "_--force" ]; echo $?) '||' $([ "_${arg}" != "_-f" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
+            force_mode=1
+fi
         if [ $(echo $([ "_${arg}" != "_--help" ]; echo $?) '||' $([ "_${arg}" != "_-h" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
             show_help=1
 fi
-        if [ $(echo $(echo $(echo $([ "_${arg}" == "_--debug" ]; echo $?) '&&' $([ "_${arg}" == "_--help" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') '&&' $([ "_${arg}" == "_-h" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') '&&' $([ "_${arg}" == "_${argv[0]}" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
+        if [ $(echo $(echo $(echo $(echo $(echo $([ "_${arg}" == "_--debug" ]; echo $?) '&&' $([ "_${arg}" == "_--force" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') '&&' $([ "_${arg}" == "_-f" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') '&&' $([ "_${arg}" == "_--help" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') '&&' $([ "_${arg}" == "_-h" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') '&&' $([ "_${arg}" == "_${argv[0]}" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
             if [ $([ "_${nix_file}" != "_" ]; echo $?) != 0 ]; then
                 nix_file="${arg}"
 fi
@@ -388,84 +408,84 @@ fi
 done
     if [ ${show_help} != 0 ]; then
         print_usage__154_v0 "${argv[0]}";
-        __AF_print_usage154_v0__38_9="$__AF_print_usage154_v0";
-        echo "$__AF_print_usage154_v0__38_9" > /dev/null 2>&1
+        __AF_print_usage154_v0__43_9="$__AF_print_usage154_v0";
+        echo "$__AF_print_usage154_v0__43_9" > /dev/null 2>&1
         exit 0
 fi
     if [ ${debug_mode} != 0 ]; then
         set_debug__126_v0 1;
-        __AF_set_debug126_v0__43_9="$__AF_set_debug126_v0";
-        echo "$__AF_set_debug126_v0__43_9" > /dev/null 2>&1
+        __AF_set_debug126_v0__48_9="$__AF_set_debug126_v0";
+        echo "$__AF_set_debug126_v0__48_9" > /dev/null 2>&1
 fi
     if [ $([ "_${nix_file}" != "_" ]; echo $?) != 0 ]; then
         echo_error__3_v0 "Missing required argument: <nix-file>";
-        __AF_echo_error3_v0__47_9="$__AF_echo_error3_v0";
-        echo "$__AF_echo_error3_v0__47_9" > /dev/null 2>&1
+        __AF_echo_error3_v0__52_9="$__AF_echo_error3_v0";
+        echo "$__AF_echo_error3_v0__52_9" > /dev/null 2>&1
         print_usage__154_v0 "${argv[0]}";
-        __AF_print_usage154_v0__48_9="$__AF_print_usage154_v0";
-        echo "$__AF_print_usage154_v0__48_9" > /dev/null 2>&1
+        __AF_print_usage154_v0__53_9="$__AF_print_usage154_v0";
+        echo "$__AF_print_usage154_v0__53_9" > /dev/null 2>&1
         exit 1
 fi
     require_cmd__123_v0 "nix";
-    __AF_require_cmd123_v0__52_5="$__AF_require_cmd123_v0";
-    echo "$__AF_require_cmd123_v0__52_5" > /dev/null 2>&1
+    __AF_require_cmd123_v0__57_5="$__AF_require_cmd123_v0";
+    echo "$__AF_require_cmd123_v0__57_5" > /dev/null 2>&1
     require_cmd__123_v0 "jq";
-    __AF_require_cmd123_v0__53_5="$__AF_require_cmd123_v0";
-    echo "$__AF_require_cmd123_v0__53_5" > /dev/null 2>&1
+    __AF_require_cmd123_v0__58_5="$__AF_require_cmd123_v0";
+    echo "$__AF_require_cmd123_v0__58_5" > /dev/null 2>&1
     require_cmd__123_v0 "rg";
-    __AF_require_cmd123_v0__54_5="$__AF_require_cmd123_v0";
-    echo "$__AF_require_cmd123_v0__54_5" > /dev/null 2>&1
+    __AF_require_cmd123_v0__59_5="$__AF_require_cmd123_v0";
+    echo "$__AF_require_cmd123_v0__59_5" > /dev/null 2>&1
     require_cmd__123_v0 "sed";
-    __AF_require_cmd123_v0__55_5="$__AF_require_cmd123_v0";
-    echo "$__AF_require_cmd123_v0__55_5" > /dev/null 2>&1
+    __AF_require_cmd123_v0__60_5="$__AF_require_cmd123_v0";
+    echo "$__AF_require_cmd123_v0__60_5" > /dev/null 2>&1
     __AMBER_VAL_17=$( test -f "${nix_file}" && echo "1" || echo "0" );
     __AS=$?;
     file_exists="${__AMBER_VAL_17}"
     if [ $([ "_${file_exists}" != "_0" ]; echo $?) != 0 ]; then
         echo_error__3_v0 "File not found: ${nix_file}";
-        __AF_echo_error3_v0__59_9="$__AF_echo_error3_v0";
-        echo "$__AF_echo_error3_v0__59_9" > /dev/null 2>&1
+        __AF_echo_error3_v0__64_9="$__AF_echo_error3_v0";
+        echo "$__AF_echo_error3_v0__64_9" > /dev/null 2>&1
         exit 1
 fi
     get_root_dir__6_v0 ;
-    __AF_get_root_dir6_v0__63_20="${__AF_get_root_dir6_v0}";
-    root_dir="${__AF_get_root_dir6_v0__63_20}"
+    __AF_get_root_dir6_v0__68_20="${__AF_get_root_dir6_v0}";
+    root_dir="${__AF_get_root_dir6_v0__68_20}"
     debug__127_v0 "ROOT_DIR: ${root_dir}";
-    __AF_debug127_v0__64_5="$__AF_debug127_v0";
-    echo "$__AF_debug127_v0__64_5" > /dev/null 2>&1
+    __AF_debug127_v0__69_5="$__AF_debug127_v0";
+    echo "$__AF_debug127_v0__69_5" > /dev/null 2>&1
     detect_pkg_type__131_v0 "${nix_file}";
-    __AF_detect_pkg_type131_v0__66_20="${__AF_detect_pkg_type131_v0}";
-    pkg_type="${__AF_detect_pkg_type131_v0__66_20}"
+    __AF_detect_pkg_type131_v0__71_20="${__AF_detect_pkg_type131_v0}";
+    pkg_type="${__AF_detect_pkg_type131_v0__71_20}"
     if [ $([ "_${pkg_type}" != "_" ]; echo $?) != 0 ]; then
         echo_error__3_v0 "Could not detect package type (npm/pip/cargo) in ${nix_file}";
-        __AF_echo_error3_v0__68_9="$__AF_echo_error3_v0";
-        echo "$__AF_echo_error3_v0__68_9" > /dev/null 2>&1
+        __AF_echo_error3_v0__73_9="$__AF_echo_error3_v0";
+        echo "$__AF_echo_error3_v0__73_9" > /dev/null 2>&1
         exit 1
 fi
     debug__127_v0 "Package type: ${pkg_type}";
-    __AF_debug127_v0__71_5="$__AF_debug127_v0";
-    echo "$__AF_debug127_v0__71_5" > /dev/null 2>&1
+    __AF_debug127_v0__76_5="$__AF_debug127_v0";
+    echo "$__AF_debug127_v0__76_5" > /dev/null 2>&1
     extract_hash_key__132_v0 "${nix_file}";
-    __AF_extract_hash_key132_v0__73_20="${__AF_extract_hash_key132_v0}";
-    hash_key="${__AF_extract_hash_key132_v0__73_20}"
+    __AF_extract_hash_key132_v0__78_20="${__AF_extract_hash_key132_v0}";
+    hash_key="${__AF_extract_hash_key132_v0__78_20}"
     if [ $([ "_${hash_key}" != "_" ]; echo $?) != 0 ]; then
         echo_error__3_v0 "Could not extract hash key from ${nix_file}";
-        __AF_echo_error3_v0__75_9="$__AF_echo_error3_v0";
-        echo "$__AF_echo_error3_v0__75_9" > /dev/null 2>&1
+        __AF_echo_error3_v0__80_9="$__AF_echo_error3_v0";
+        echo "$__AF_echo_error3_v0__80_9" > /dev/null 2>&1
         echo_info__0_v0 "Expected pattern: pkgs.hashfile.\"<key>\"";
-        __AF_echo_info0_v0__76_9="$__AF_echo_info0_v0";
-        echo "$__AF_echo_info0_v0__76_9" > /dev/null 2>&1
+        __AF_echo_info0_v0__81_9="$__AF_echo_info0_v0";
+        echo "$__AF_echo_info0_v0__81_9" > /dev/null 2>&1
         exit 1
 fi
     debug__127_v0 "Hash key: ${hash_key}";
-    __AF_debug127_v0__79_5="$__AF_debug127_v0";
-    echo "$__AF_debug127_v0__79_5" > /dev/null 2>&1
+    __AF_debug127_v0__84_5="$__AF_debug127_v0";
+    echo "$__AF_debug127_v0__84_5" > /dev/null 2>&1
     echo_info__0_v0 "Building ${hash_key} (${pkg_type})...";
-    __AF_echo_info0_v0__81_5="$__AF_echo_info0_v0";
-    echo "$__AF_echo_info0_v0__81_5" > /dev/null 2>&1
-    build_package__152_v0 "${root_dir}" "${nix_file}" "${hash_key}";
-    __AF_build_package152_v0__83_8="$__AF_build_package152_v0";
-    if [ "$__AF_build_package152_v0__83_8" != 0 ]; then
+    __AF_echo_info0_v0__86_5="$__AF_echo_info0_v0";
+    echo "$__AF_echo_info0_v0__86_5" > /dev/null 2>&1
+    build_package__152_v0 "${root_dir}" "${nix_file}" "${hash_key}" ${force_mode};
+    __AF_build_package152_v0__88_8="$__AF_build_package152_v0";
+    if [ "$__AF_build_package152_v0__88_8" != 0 ]; then
         exit 0
 else
         exit 1
