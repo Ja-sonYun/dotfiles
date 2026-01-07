@@ -10,6 +10,7 @@ let
       cp helper $out/bin/
     '';
   };
+
   sketchybarConfig = pkgs.stdenvNoCC.mkDerivation {
     name = "sketchybar-config";
     src = ./.;
@@ -32,40 +33,32 @@ let
       runHook postInstall
     '';
   };
-  pathBin = pkgs.lib.makeBinPath [
-    pkgs.gh
-    pkgs.jq
-    pkgs.gawk
-    pkgs.sketchybar
-    pkgs.flock
-    pkgs.yabai
-    pkgs.taskwarrior3
-    pkgs.icalPal
-  ];
 in
 {
-  home.packages = [
-    pkgs.sketchybar
-  ];
-
-  launchd.agents.sketchybar = {
+  services.sketchybar = {
     enable = true;
-    config = {
-      Label = "com.user.sketchybar";
-      ProgramArguments = [
-        "${pkgs.sketchybar}/bin/sketchybar"
-        "-c"
-        "${sketchybarConfig}/sketchybarrc"
-      ];
+    extraPackages = with pkgs; [
+      gh
+      jq
+      gawk
+      flock
+      yabai
+      taskwarrior3
+      icalPal
+    ];
+    config = ''
+      ${pkgs.zsh}/bin/zsh -f "${sketchybarConfig}/sketchybarrc"
+    '';
+  };
+
+  launchd.user.agents.sketchybar = {
+    serviceConfig = {
+      StandardOutPath = "/tmp/sketchybar.out.log";
+      StandardErrorPath = "/tmp/sketchybar.err.log";
       EnvironmentVariables = {
-        PATH = "${pathBin}:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin";
         SKETCHYBAR_CONFIG_DIR = "${sketchybarConfig}/config";
         SKETCHYBAR_HELPER_BIN = "${sketchybarHelper}/bin/helper";
       };
-      KeepAlive = true;
-      RunAtLoad = true;
-      StandardOutPath = "/tmp/sketchybar.out.log";
-      StandardErrorPath = "/tmp/sketchybar.err.log";
     };
   };
 }

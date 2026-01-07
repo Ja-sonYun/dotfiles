@@ -90,7 +90,7 @@ rcmd - f : \
 shift + ctrl + rcmd - r : \
     /usr/bin/env osascript <<< \
         "display notification \"Restarting yabai\" with title \"yabai\""; \
-    launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
+    launchctl kickstart -k "gui/${UID}/yabai"
 
 # Make window native fullscreen
 ctrl + cmd - f  : yabai -m window --toggle zoom-fullscreen
@@ -98,9 +98,9 @@ shift + rcmd - f : yabai -m window --toggle native-fullscreen
 
 # --------
 # Cmd
-rcmd - q : InputSourceSelector select "com.apple.keylayout.ABC"
-rcmd - e : InputSourceSelector select "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"
-rcmd - r : InputSourceSelector select "com.apple.inputmethod.Korean.2SetKorean"
+rcmd - q : @inputSourceSelector@ select "com.apple.keylayout.ABC"
+rcmd - e : @inputSourceSelector@ select "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"
+rcmd - r : @inputSourceSelector@ select "com.apple.inputmethod.Korean.2SetKorean"
 
 
 rcmd - w : skhd -k "ctrl - up"

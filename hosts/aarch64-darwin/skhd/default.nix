@@ -1,32 +1,22 @@
-{ pkgs, ... }:
+{ pkgs, lib, config, ... }:
 let
-  pathBin = pkgs.lib.makeBinPath [
+  extraPath = pkgs.lib.makeBinPath [
     pkgs.yabai
-    pkgs.skhd
     pkgs.inputSourceSelector
   ];
+  skhdrc = pkgs.replaceVars ./skhdrc {
+    inputSourceSelector = "${pkgs.inputSourceSelector}/bin/InputSourceSelector";
+  };
 in
 {
-  home.packages = [
-    pkgs.skhd
-  ];
-
-  launchd.agents.skhd = {
+  services.skhd = {
     enable = true;
-    config = {
-      Label = "com.user.skhd";
-      ProgramArguments = [
-        "${pkgs.skhd}/bin/skhd"
-        "-c"
-        (toString ./skhdrc)
-      ];
-      EnvironmentVariables = {
-        PATH = "${pathBin}:/usr/bin:/bin:/usr/sbin:/sbin";
-      };
-      KeepAlive = true;
-      RunAtLoad = true;
-      StandardOutPath = "/tmp/skhd.out.log";
-      StandardErrorPath = "/tmp/skhd.err.log";
-    };
+    skhdConfig = builtins.readFile skhdrc;
+  };
+
+  launchd.user.agents.skhd.serviceConfig = {
+    StandardOutPath = "/tmp/skhd.out.log";
+    StandardErrorPath = "/tmp/skhd.err.log";
+    EnvironmentVariables.PATH = lib.mkForce "${pkgs.skhd}/bin:${extraPath}:${config.environment.systemPath}";
   };
 }

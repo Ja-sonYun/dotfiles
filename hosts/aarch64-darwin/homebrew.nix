@@ -8,6 +8,7 @@ let
 
   brews = [
     "qemu"
+    "tccutil"
     "localstack/tap/localstack-cli"
   ]
   ++ (
