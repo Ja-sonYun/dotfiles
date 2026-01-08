@@ -6,7 +6,6 @@
 }:
 let
   mcpServers = {
-    # this consume too much token. why not just use gh
     github = {
       command = pkgs.writeShellScript "github-mcp-wrapper" ''
         export GITHUB_PERSONAL_ACCESS_TOKEN=$(cat ${config.age.secrets.github-token.path})
@@ -137,6 +136,7 @@ let
   managedClaudeJson = pkgs.writeText "claude-managed.json" (
     builtins.toJSON {
       inherit mcpServers;
+      language = "korean";
     }
   );
 
