@@ -1,5 +1,7 @@
 { pkgs
+, lib
 , configDir
+, purpose
 , ...
 }:
 {
@@ -64,8 +66,10 @@
 
     # My vim config
     vim-dev
-    say
     plot
+  ]
+  ++ lib.optionals (purpose == "main") [
+    say
 
     nh
     nix-output-monitor
