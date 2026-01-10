@@ -35,6 +35,12 @@
   };
 
   vim = inputs.vim.overlays.default;
+
+  # Override swift-format to skip build on Linux
+  swift-format-skip-linux = final: prev:
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
+      swift-format = prev.runCommand "swift-format-dummy" { } "mkdir -p $out/bin";
+    };
   say = inputs.say.overlays.default;
   plot = inputs.plot.overlays.default;
 

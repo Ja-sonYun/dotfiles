@@ -29,12 +29,15 @@ let
             url = mkRustUrl version targetSystem;
             sha256 = sha256."${mkRustUrl version targetSystem}";
           };
-          nativeBuildInputs = [ pkgs.xz ];
+          nativeBuildInputs = [ pkgs.xz ]
+            ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.autoPatchelfHook ];
+          buildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.stdenv.cc.cc.lib pkgs.zlib ];
           dontConfigure = true;
           dontBuild = true;
           installPhase = ''
             tar xf $src
             cd rust-${version}-${targetSystem}
+            patchShebangs install.sh
             ./install.sh \
               --prefix=$out \
               --components=rustc,rust-std-${targetSystem},cargo

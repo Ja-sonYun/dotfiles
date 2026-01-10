@@ -64,12 +64,7 @@
 
     cookiecutter
 
-    # My vim config
-    vim-dev
-    plot
-  ]
-  ++ lib.optionals (purpose == "main") [
-    say
+    cloudflared
 
     nh
     nix-output-monitor
@@ -77,7 +72,16 @@
     devenv
     awscli
     awscli-local
-    cloudflared
+
+    # My vim config
+    plot
+  ]
+  ++ lib.optionals (purpose == "main") [
+    say
+
+    vim-dev
+  ] ++ lib.optionals (purpose == "server") [
+    vim-pkg
   ];
 
   home.sessionVariables = {

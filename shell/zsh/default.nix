@@ -1,9 +1,22 @@
 { pkgs
+, lib
 , cacheDir
 , configDir
 , ...
 }:
 {
+  home.activation.setZshAsDefaultShell = lib.mkIf pkgs.stdenv.isLinux
+    (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+      ZSH_PATH="$HOME/.nix-profile/bin/zsh"
+      if [[ $(getent passwd $USER) != *"$ZSH_PATH"* ]]; then
+        if ! grep -q "$ZSH_PATH" /etc/shells; then
+          echo "$ZSH_PATH" | sudo tee -a /etc/shells
+        fi
+        sudo chsh -s "$ZSH_PATH" "$USER"
+      fi
+    '');
+
   imports = [
     ../../modules/zshFunc
 
