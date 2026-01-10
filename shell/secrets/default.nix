@@ -4,8 +4,6 @@
 , agenix
 , ...
 }:
-let
-in
 {
   home.packages = [ agenix.packages.${pkgs.system}.default ];
 

@@ -53,7 +53,7 @@ install: ## Install nix daemon
 	sh <(curl -L https://nixos.org/nix/install) --daemon
 
 deploy: add lock ## Deploy home-manager config
-	nix run nixpkgs#nh home switch .#homeConfigurations.$(HOSTNAME)
+	nix run home-manager -- switch --flake .#$(HOSTNAME)
 endif
 # ==================================================================================
 
@@ -71,6 +71,7 @@ show-derivations: ## Show derivation details
 
 deploy: build ## Deploy nix-darwin config
 	nix run nixpkgs#nh darwin switch .#darwinConfigurations.$(HOSTNAME)
+	sudo yabai --load-sa || true
 endif
 # ==================================================================================
 

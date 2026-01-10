@@ -12,6 +12,8 @@ let
   sha256 = {
     "https://nodejs.org/dist/v22.15.1/node-v22.15.1-darwin-arm64.tar.gz" =
       "sha256-0mibhrF+G1Hnb4Af/i2azKQiXnbtpLhDw9hDjUp81v4=";
+    "https://nodejs.org/dist/v22.15.1/node-v22.15.1-linux-x64.tar.gz" =
+      "sha256-9LjuxoNwissaKnPHGCui3lRmpd1fcFk0oIMJA98oghw=";
   };
   mkNpmUrl =
     version: targetSystem:

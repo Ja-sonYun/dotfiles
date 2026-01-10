@@ -13,45 +13,6 @@ let
     ${lib.optionalString (server ? enabled) "enabled = ${lib.boolToString server.enabled}"}
   '';
 
-  mcpServers = [
-    {
-      name = "context7";
-      command = pkgs.writeShellScript "context7-mcp-wrapper" ''
-        ${pkgs.context7}/bin/context7-mcp \
-          --api-key "$(cat ${config.age.secrets.context7-api-key.path})"
-      '';
-      args = [ ];
-      env = { };
-    }
-    {
-      name = "playwright";
-      command = "${pkgs.playwright-mcp}/bin/mcp-server-playwright";
-      enabled = false;
-      args = [ ];
-      env = { };
-    }
-    {
-      name = "chrome-devtools";
-      command = "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp";
-      args = [ ];
-      env = { };
-    }
-    {
-      name = "aws-documentation";
-      command = "${pkgs.aws-documentation}/bin/awslabs.aws-documentation-mcp-server";
-      args = [ ];
-      env = { };
-    }
-    {
-      name = "terraform";
-      command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";
-      args = [ "stdio" ];
-      env = { };
-    }
-  ];
-
-  codexMcpServersConfig = lib.concatMapStringsSep "\n" genCodexMcpServer mcpServers;
-
   pythonWithPackages = pkgs.python313.withPackages (ps: [
     ps.libtmux
     ps.pydantic
@@ -100,6 +61,51 @@ let
       })
       (builtins.attrNames codexBundleEntries)
   );
+
+  mcpServers = [
+    {
+      name = "context7";
+      command = pkgs.writeShellScript "context7-mcp-wrapper" ''
+        ${pkgs.context7}/bin/context7-mcp \
+          --api-key "$(cat ${config.age.secrets.context7-api-key.path})"
+      '';
+      args = [ ];
+      env = { };
+    }
+    {
+      name = "playwright";
+      command = "${pkgs.playwright-mcp}/bin/mcp-server-playwright";
+      enabled = false;
+      args = [ ];
+      env = { };
+    }
+    {
+      name = "chrome-devtools";
+      command = "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp";
+      args = [ ];
+      env = { };
+    }
+    {
+      name = "aws-documentation";
+      command = "${pkgs.aws-documentation}/bin/awslabs.aws-documentation-mcp-server";
+      args = [ ];
+      env = { };
+    }
+    {
+      name = "terraform";
+      command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";
+      args = [ "stdio" ];
+      env = { };
+    }
+    {
+      name = "codex";
+      command = "${codexWrapped}/bin/codex";
+      args = [ "mcp-server" ];
+      env = { };
+    }
+  ];
+
+  codexMcpServersConfig = lib.concatMapStringsSep "\n" genCodexMcpServer mcpServers;
 in
 {
   home.packages = [

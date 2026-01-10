@@ -105,6 +105,7 @@
           userhome = "/Users/jasonyun";
           configDir = "/Users/jasonyun/dotfiles";
           cacheDir = "/Users/jasonyun/.nixcache/jasony";
+          purpose = "main";
         };
         "Jasons-MacBook-Server" = {
           system = "aarch64-darwin";
@@ -114,6 +115,7 @@
           userhome = "/Users/jasonyun";
           configDir = "/Users/jasonyun/dotfiles";
           cacheDir = "/Users/jasonyun/.nixcache/jasony";
+          purpose = "server";
         };
         "linux-devel" = {
           system = "x86_64-linux";
@@ -123,15 +125,17 @@
           userhome = "/home/vagrant";
           configDir = "/home/vagrant/dotfiles";
           cacheDir = "/home/vagrant/.nixcache/jasony";
+          purpose = "server";
         };
-        "jason-win" = {
+        "Jasonyun-wsl-server" = {
           system = "x86_64-linux";
-          username = "jasony";
+          username = "jason";
           useremail = "jason@abex.dev";
-          hostname = "jason-win";
-          userhome = "/home/jasony";
-          configDir = "/home/jasony/dotfiles";
-          cacheDir = "/home/jasony/.nixcache/jasony";
+          hostname = "Jasonyun-wsl-server";
+          userhome = "/home/jason";
+          configDir = "/home/jason/dotfiles";
+          cacheDir = "/home/jason/.nixcache/jason";
+          purpose = "server";
         };
       };
       mkSpecialArgs =
@@ -149,6 +153,7 @@
             userhome
             configDir
             cacheDir
+            purpose
             ;
           inherit agenix agenix-secrets;
         };
@@ -212,9 +217,7 @@
 
       mkAarch64DarwinHomeConfiguration =
         hostname:
-        opts@{ machine ? "main"
-        , # "main" or "server"
-        }:
+        opts@{}:
         let
           pkgs = mkPkgsProvider system hostname;
           specialArgs = (mkSpecialArgs hostname pkgs) // opts;
@@ -282,21 +285,15 @@
       );
 
       darwinConfigurations."JasonYuns-MacBook-Pro" =
-        mkAarch64DarwinHomeConfiguration "JasonYuns-MacBook-Pro"
-          {
-            machine = "main";
-          };
+        mkAarch64DarwinHomeConfiguration "JasonYuns-MacBook-Pro" { };
       darwinConfigurations."Jasons-MacBook-Server" =
-        mkAarch64DarwinHomeConfiguration "Jasons-MacBook-Server"
-          {
-            machine = "server";
-          };
+        mkAarch64DarwinHomeConfiguration "Jasons-MacBook-Server" { };
 
       homeConfigurations."linux-devel" = mkX86_64LinuxHomeConfiguration "linux-devel" {
         useNvidia = false;
         isVM = true;
       };
-      homeConfigurations."jason-win" = mkX86_64LinuxHomeConfiguration "jason-win" {
+      homeConfigurations."Jasonyun-wsl-server" = mkX86_64LinuxHomeConfiguration "Jasonyun-wsl-server" {
         useNvidia = true;
         isVM = false;
       };

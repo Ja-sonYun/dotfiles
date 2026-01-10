@@ -15,6 +15,8 @@ let
   sha256 = {
     "https://static.rust-lang.org/dist/rust-1.75.0-aarch64-apple-darwin.tar.xz" =
       "sha256-aQmjlCw6uW0IBNuuC2or5CAa/3MJEcM9XD3HTtWgwNU=";
+    "https://static.rust-lang.org/dist/rust-1.75.0-x86_64-unknown-linux-gnu.tar.xz" =
+      "sha256-a/Fm3crVRaomqi0SoYZFTXaXEztSt/u9Jxzj7h7P7cY=";
   };
   mkRustUrl =
     version: targetSystem: "https://static.rust-lang.org/dist/rust-${version}-${targetSystem}.tar.xz";

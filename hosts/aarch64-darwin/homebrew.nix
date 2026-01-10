@@ -1,4 +1,4 @@
-{ lib, machine, ... }:
+{ lib, purpose, ... }:
 let
   packageBrews = [ ];
 
@@ -12,7 +12,7 @@ let
     "localstack/tap/localstack-cli"
   ]
   ++ (
-    if machine == "main" then
+    if purpose == "main" then
       [
         "keith/formulae/reminders-cli"
       ]
@@ -27,7 +27,7 @@ let
     "orbstack"
   ]
   ++ (
-    if machine == "main" then
+    if purpose == "main" then
       [
         "keycastr" # Show keystroke realtime
         "claude"
@@ -74,7 +74,7 @@ let
     "localstack/tap"
   ]
   ++ (
-    if machine == "main" then
+    if purpose == "main" then
       [
         "keith/formulae"
         "fastrepl/hyprnote"
@@ -93,7 +93,7 @@ in
     masApps =
       { }
       // (
-        if machine == "main" then
+        if purpose == "main" then
           { }
         else
           {
