@@ -1,13 +1,13 @@
 { username
 , userhome
-, machine
+, purpose
 , ...
 }:
 {
   imports = [
     ./yabai-indicator
   ] ++ (
-    if machine == "main" then
+    if purpose == "main" then
       [
         ./taskwarrior
       ]

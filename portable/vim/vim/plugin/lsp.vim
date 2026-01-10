@@ -31,12 +31,12 @@ def LoadAllLspConfigs(): list<dict<any>>
       if has_key(cfg, 'path') && type(cfg.path) == v:t_string
         if empty(cfg.path)
           var label = get(cfg, 'name', fnamemodify(path, ':t:r'))
-          echomsg printf('[LSP] executable not found for "%s"', label)
+          silent! echomsg printf('[LSP] executable not found for "%s"', label)
           continue
         endif
         if executable(cfg.path) == 0
           var label2 = get(cfg, 'name', fnamemodify(path, ':t:r'))
-          echomsg printf('[LSP] executable "%s" for "%s" is not runnable', cfg.path, label2)
+          silent! echomsg printf('[LSP] executable "%s" for "%s" is not runnable', cfg.path, label2)
           continue
         endif
       endif

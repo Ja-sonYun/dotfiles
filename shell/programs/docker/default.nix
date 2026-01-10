@@ -1,7 +1,5 @@
-{ pkgs
-, ...
-}:
-{
+{ lib, pkgs, ... }:
+lib.mkIf pkgs.stdenv.isLinux {
   home.packages = with pkgs; [
     colima
     docker-client

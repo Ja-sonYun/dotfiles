@@ -1,12 +1,12 @@
 { configDir
-, machine
+, purpose
 , username
 , ...
 }:
 
 let
   serverActiveScript =
-    if machine == "server" then
+    if purpose == "server" then
       ''
         pmset -a sleep 0
         pmset -a disablesleep 1

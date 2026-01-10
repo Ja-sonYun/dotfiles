@@ -9,13 +9,12 @@
 
     ./programs/git
     ./programs/git/utils.nix
-    # We'll use orbstack on macOS
-    # ./programs/docker
     ./programs/jujutsu
     ./programs/tmux
     ./programs/visidata
     ./programs/direnv
     ./programs/navi
+    ./programs/docker
   ]
   ++ lib.optionals (purpose == "main") [
     ./programs/ghostty

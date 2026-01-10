@@ -199,6 +199,7 @@
         hostname:
         opts@{ useNvidia ? false
         , isVM ? false
+        , isWsl ? false
         ,
         }:
         let
@@ -296,6 +297,7 @@
       homeConfigurations."Jasonyun-wsl-server" = mkX86_64LinuxHomeConfiguration "Jasonyun-wsl-server" {
         useNvidia = true;
         isVM = false;
+        isWsl = true;
       };
     };
 }
