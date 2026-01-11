@@ -75,6 +75,7 @@
     # Npm
     codex = final.callPackage ../pkgs/codex { };
     claude-code = final.callPackage ../pkgs/claude-code { };
+    opencode = final.callPackage ../pkgs/opencode { };
     context7 = final.callPackage ../pkgs/context7 { };
     playwright-mcp = final.callPackage ../pkgs/playwright-mcp { };
     chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };

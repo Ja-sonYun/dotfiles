@@ -46,7 +46,7 @@ let
     ${pythonWithPackages}/bin/python ${toString ./notify.py} "$@"
   '';
 
-  codexBundleSrc = "${agenix-secrets}/codex-bundle";
+  codexBundleSrc = "${agenix-secrets}/ai-bundle";
   codexBundleEntries = builtins.readDir codexBundleSrc;
 
   codexBundleFiles = lib.listToAttrs (
@@ -95,12 +95,6 @@ let
       name = "terraform";
       command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";
       args = [ "stdio" ];
-      env = { };
-    }
-    {
-      name = "codex";
-      command = "${codexWrapped}/bin/codex";
-      args = [ "mcp-server" ];
       env = { };
     }
   ];

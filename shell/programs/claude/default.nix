@@ -140,7 +140,7 @@ let
     }
   );
 
-  claudeBundleSrc = "${agenix-secrets}/claude-bundle";
+  claudeBundleSrc = "${agenix-secrets}/ai-bundle";
   claudeBundleEntries = builtins.readDir claudeBundleSrc;
 
   claudeBundleFiles = lib.listToAttrs (
@@ -163,6 +163,10 @@ in
   home.file = claudeBundleFiles // {
     ".claude/nix/settings.json" = {
       text = builtins.toJSON settings;
+      force = true;
+    };
+    ".claude/CLAUDE.md" = {
+      source = "${claudeBundleSrc}/AGENTS.md";
       force = true;
     };
     "Library/Application Support/Claude/claude_desktop_config.json" = {

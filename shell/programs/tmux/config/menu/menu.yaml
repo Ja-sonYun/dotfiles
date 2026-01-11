@@ -129,15 +129,33 @@ items:
   #       h: 55%
 
   - Menu:
-      name: "codex-chat"
+      name: "opencode-chat"
       shortcut: a
-      command: mkdir -p $HOME/.chat && cd $HOME/.chat && codex
+      command: mkdir -p $HOME/.chat && cd $HOME/.chat && opencode
       session: true
-      session_name: "codex-chat"
+      session_name: "opencode-chat"
       session_on_dir: true
       run_on_git_root: true
       environment:
-        MULTI_SESSION_COMMAND: "cd $HOME/.chat && codex"
+        MULTI_SESSION_COMMAND: "cd $HOME/.chat && opencode"
+        NO_WINDOW_MGNT: "1"
+        CTRL_C_AS_CLOSE: "1"
+        MENU_POPUP: "1"
+
+      position:
+        w: 60%
+        h: 55%
+
+  - Menu:
+      name: "opencode"
+      shortcut: c
+      command: _gen-close-hook opencode && direnv exec . opencode
+      session: true
+      session_name: "opencode"
+      session_on_dir: true
+      run_on_git_root: true
+      environment:
+        MULTI_SESSION_COMMAND: "direnv exec . opencode"
         NO_WINDOW_MGNT: "1"
         CTRL_C_AS_CLOSE: "1"
         MENU_POPUP: "1"
@@ -148,7 +166,7 @@ items:
 
   - Menu:
       name: "claude"
-      shortcut: c
+      shortcut: o
       command: _gen-close-hook claude && direnv exec . claude
       session: true
       session_name: "claude"
