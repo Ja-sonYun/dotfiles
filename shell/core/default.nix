@@ -73,6 +73,8 @@
     awscli
     awscli-local
 
+    ollama
+
     # My vim config
     plot
   ]

@@ -1,15 +1,15 @@
 { pkgs, ... }:
 let
-  outputHash = pkgs.hashfile."opencode";
+  outputHash = pkgs.hashfile."oh-my-opencode";
 in
 
 pkgs.lib.npm.mkNpmGlobalPackageDerivation {
   inherit pkgs outputHash;
-  name = "opencode";
+  name = "oh-my-opencode";
   packages = [
-    "opencode-ai@1.1.15"
+    "oh-my-opencode@2.14.0"
   ];
   exposedBinaries = [
-    "opencode"
+    "oh-my-opencode"
   ];
 }

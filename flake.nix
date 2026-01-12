@@ -11,7 +11,7 @@
     self.submodules = true;
 
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nixpkgs-prev.url = "github:NixOS/nixpkgs/f6b44b2401525650256b977063dbcf830f762369";
+    # nixpkgs-prev.url = "github:NixOS/nixpkgs/f6b44b2401525650256b977063dbcf830f762369";
     nixpkgs-stable.url = "github:NixOS/nixpkgs/release-25.05";
 
     home-manager = {
@@ -160,10 +160,14 @@
 
       mkPkgsProvider =
         system: hostname:
+        { cudaSupport ? false }:
         import nixpkgs {
           inherit system;
           overlays = builtins.attrValues (import ./overlays { inherit inputs hostname; });
-          config.allowUnfree = true;
+          config = {
+            allowUnfree = true;
+            inherit cudaSupport;
+          };
         };
 
       mkHomeManagerConfig =
@@ -197,15 +201,15 @@
 
       mkX86_64LinuxHomeConfiguration =
         hostname:
-        opts@{ useNvidia ? false
+        opts@{ cudaSupport ? false
         , isVM ? false
         , isWsl ? false
         ,
         }:
         let
-          pkgs = mkPkgsProvider system hostname;
+          system = specialArgsPrepared."${hostname}".system;
+          pkgs = mkPkgsProvider system hostname { inherit cudaSupport; };
           extraSpecialArgs = (mkSpecialArgs hostname pkgs) // opts;
-          system = extraSpecialArgs.system;
         in
         home-manager.lib.homeManagerConfiguration {
           inherit extraSpecialArgs pkgs;
@@ -220,9 +224,9 @@
         hostname:
         opts@{}:
         let
-          pkgs = mkPkgsProvider system hostname;
+          system = specialArgsPrepared."${hostname}".system;
+          pkgs = mkPkgsProvider system hostname { };
           specialArgs = (mkSpecialArgs hostname pkgs) // opts;
-          system = specialArgs.system;
         in
         darwin.lib.darwinSystem {
           inherit system specialArgs pkgs;
@@ -291,11 +295,11 @@
         mkAarch64DarwinHomeConfiguration "Jasons-MacBook-Server" { };
 
       homeConfigurations."linux-devel" = mkX86_64LinuxHomeConfiguration "linux-devel" {
-        useNvidia = false;
+        cudaSupport = false;
         isVM = true;
       };
       homeConfigurations."Jasonyun-wsl-server" = mkX86_64LinuxHomeConfiguration "Jasonyun-wsl-server" {
-        useNvidia = true;
+        cudaSupport = true;
         isVM = false;
         isWsl = true;
       };

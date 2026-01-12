@@ -10,8 +10,49 @@ let
     model = "anthropic/claude-opus-4-5";
     autoupdate = false;
     share = "disabled";
+
+    plugin = [ "./plugin/oh-my-opencode" ];
+
     permission = {
-      bash = "ask";
+      bash = {
+        "*" = "ask";
+        # file operations (read-only)
+        "ls *" = "allow";
+        "tree *" = "allow";
+        "cat *" = "allow";
+        "head *" = "allow";
+        "tail *" = "allow";
+        "wc *" = "allow";
+        "file *" = "allow";
+        "stat *" = "allow";
+        # search
+        "rg *" = "allow";
+        "fd *" = "allow";
+        "find *" = "allow";
+        "grep *" = "allow";
+        "which *" = "allow";
+        # info
+        "pwd" = "allow";
+        "echo *" = "allow";
+        # git (read-only)
+        "git status*" = "allow";
+        "git log*" = "allow";
+        "git diff*" = "allow";
+        "git branch*" = "allow";
+        "git show*" = "allow";
+        "git rev-parse*" = "allow";
+        "git remote*" = "allow";
+        # github cli (read-only)
+        "gh repo view*" = "allow";
+        "gh pr list*" = "allow";
+        "gh pr view*" = "allow";
+        "gh pr diff*" = "allow";
+        "gh issue list*" = "allow";
+        "gh issue view*" = "allow";
+        "gh search *" = "allow";
+        "gh status*" = "allow";
+        "gh auth status*" = "allow";
+      };
       edit = "ask";
     };
 
@@ -26,6 +67,13 @@ let
       anthropic = {
         models = {
           "claude-opus-4-5" = {
+            modalities = {
+              input = [
+                "image"
+                "text"
+              ];
+              output = [ "text" ];
+            };
             options = {
               thinking = {
                 type = "enabled";
@@ -38,6 +86,13 @@ let
       openai = {
         models = {
           "gpt-5.2-codex" = {
+            modalities = {
+              input = [
+                "image"
+                "text"
+              ];
+              output = [ "text" ];
+            };
             options = {
               reasoningEffort = "high";
             };
@@ -57,12 +112,6 @@ let
             ''
           ))
         ];
-      };
-
-      playwright = {
-        type = "local";
-        command = [ "${pkgs.playwright-mcp}/bin/mcp-server-playwright" ];
-        enabled = false;
       };
 
       chrome-devtools = {
@@ -100,10 +149,37 @@ let
         ];
         enabled = false;
       };
+
+      websearch = {
+        type = "remote";
+        url = "https://mcp.exa.ai/mcp";
+      };
+
+      grep_app = {
+        type = "remote";
+        url = "https://mcp.grep.app";
+      };
     };
   };
 
   opencodeBundleSrc = "${agenix-secrets}/ai-bundle";
+
+  ohMyOpencodeConfig = {
+    google_auth = false;
+
+    disabled_mcps = [
+      "context7"
+      "websearch"
+      "grep_app"
+    ];
+    agents = {
+      librarian = {
+        model = "anthropic/claude-sonnet-4-5";
+      };
+    };
+  };
+
+  ohMyOpencodePath = "${pkgs.oh-my-opencode}/node_modules/oh-my-opencode/lib/node_modules/oh-my-opencode";
 
   opencodeWrapped = pkgs.symlinkJoin {
     name = "opencode-wrapped";
@@ -128,19 +204,29 @@ in
     ".config/opencode/opencode.json" = {
       text = builtins.toJSON opencodeConfig;
     };
+    ".config/opencode/AGENTS.md" = {
+      source = "${opencodeBundleSrc}/AGENTS.md";
+    };
     ".config/opencode/agent" = {
       source = "${opencodeBundleSrc}/prompts";
       recursive = true;
-      force = true;
-    };
-    ".config/opencode/AGENTS.md" = {
-      source = "${opencodeBundleSrc}/AGENTS.md";
-      force = true;
     };
     ".config/opencode/skill" = {
       source = "${opencodeBundleSrc}/skills";
       recursive = true;
-      force = true;
+    };
+    ".config/opencode/plugin/md-table.ts" = {
+      source = ./plugins/md-table.ts;
+    };
+    ".config/opencode/plugin/notification.js" = {
+      source = ./plugins/notification.js;
+    };
+
+    ".config/opencode/plugin/oh-my-opencode" = {
+      source = ohMyOpencodePath;
+    };
+    ".config/opencode/oh-my-opencode.json" = {
+      text = builtins.toJSON ohMyOpencodeConfig;
     };
   };
 }
