@@ -34,7 +34,6 @@ set updatetime=250
 " ----- esc timing -----
 set ttimeout
 set ttimeoutlen=10
-set timeoutlen=400
 
 " ----- syntax / ft / indent -----
 syntax on
