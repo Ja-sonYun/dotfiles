@@ -77,13 +77,12 @@
 
     # My vim config
     plot
+
+    vim-pkg
   ]
   ++ lib.optionals (purpose == "main") [
     say
-
-    vim-dev
   ] ++ lib.optionals (purpose == "server") [
-    vim-pkg
   ];
 
   home.sessionVariables = {

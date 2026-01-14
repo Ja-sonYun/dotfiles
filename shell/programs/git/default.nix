@@ -126,6 +126,7 @@
       "AGENT.md"
       ".codex"
       ".codex*"
+      ".sisyphus"
     ];
 
     includes = [

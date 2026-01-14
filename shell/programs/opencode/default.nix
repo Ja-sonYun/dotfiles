@@ -7,11 +7,9 @@ let
   opencodeConfig = {
     "$schema" = "https://opencode.ai/config.json";
     theme = "gihtub";
-    model = "anthropic/claude-opus-4-5";
+    model = "openai/gpt-5.2-codex";
     autoupdate = false;
     share = "disabled";
-
-    plugin = [ "./plugin/oh-my-opencode" ];
 
     permission = {
       bash = {
@@ -25,6 +23,7 @@ let
         "wc *" = "allow";
         "file *" = "allow";
         "stat *" = "allow";
+        "diff *" = "allow";
         # search
         "rg *" = "allow";
         "fd *" = "allow";
@@ -42,6 +41,12 @@ let
         "git show*" = "allow";
         "git rev-parse*" = "allow";
         "git remote*" = "allow";
+        "git push*" = "deny";
+        "git commit*" = "deny";
+        "git checkout*" = "deny";
+        "git merge*" = "deny";
+        "git reset*" = "deny";
+        "git pull*" = "deny";
         # github cli (read-only)
         "gh repo view*" = "allow";
         "gh pr list*" = "allow";
@@ -52,6 +57,8 @@ let
         "gh search *" = "allow";
         "gh status*" = "allow";
         "gh auth status*" = "allow";
+        # terraform
+        "terraform apply*" = "deny";
       };
       edit = "ask";
     };
@@ -164,23 +171,6 @@ let
 
   opencodeBundleSrc = "${agenix-secrets}/ai-bundle";
 
-  ohMyOpencodeConfig = {
-    google_auth = false;
-
-    disabled_mcps = [
-      "context7"
-      "websearch"
-      "grep_app"
-    ];
-    agents = {
-      librarian = {
-        model = "anthropic/claude-sonnet-4-5";
-      };
-    };
-  };
-
-  ohMyOpencodePath = "${pkgs.oh-my-opencode}/node_modules/oh-my-opencode/lib/node_modules/oh-my-opencode";
-
   opencodeWrapped = pkgs.symlinkJoin {
     name = "opencode-wrapped";
     paths = [ pkgs.opencode ];
@@ -220,13 +210,6 @@ in
     };
     ".config/opencode/plugin/notification.js" = {
       source = ./plugins/notification.js;
-    };
-
-    ".config/opencode/plugin/oh-my-opencode" = {
-      source = ohMyOpencodePath;
-    };
-    ".config/opencode/oh-my-opencode.json" = {
-      text = builtins.toJSON ohMyOpencodeConfig;
     };
   };
 }

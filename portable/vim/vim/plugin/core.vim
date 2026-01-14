@@ -9,19 +9,12 @@ set shellredir=>%s\ 2>&1
 autocmd QuickFixCmdPost lgrep,lvimgrep lopen
 autocmd QuickFixCmdPost grep,grepadd,make copen
 
+if executable('rg')
+  set grepprg=rg\ --vimgrep\ --no-heading\ --color=never\ --fixed-strings\ --smart-case\ --glob\ '!**/.git/*'\ --
+  set grepformat=%f:%l:%c:%m
+endif
+
 if executable('rg') && executable('fzf')
-  let s:script =<< trim SCRIPT
-    pattern="$1"
-    file="$2"
-    rg --vimgrep --no-heading --smart-case --color=never --glob '!**/.git/*' '' $file \
-      | cut -d: -f1,2,4- \
-      | uniq \
-      | fzf --filter="$pattern" --ansi
-  SCRIPT
-  let &grepprg = script#Setup('grep', s:script) . ' '
-  set grepformat=%f:%l:%m
-
-
   function FindWithRg(cmdarg, cmdcomplete) abort
     let l:rg_findcmd = 'rg --files --hidden --color=never --glob "!**/.git/*"'
     if a:cmdarg ==# ''
