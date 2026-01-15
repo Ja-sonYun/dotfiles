@@ -7,21 +7,29 @@ export class Spec
   var numhl: string = ''
   var linehl: string = ''
 
-  def Define(group: string): void
-    var d: dict<any> = {}
+  def Definition(): dict<any>
+    var definition: dict<any> = {}
     if this.text !=# ''
-      d.text = this.text
+      definition.text = this.text
     endif
     if this.texthl !=# ''
-      d.texthl = this.texthl
+      definition.texthl = this.texthl
     endif
     if this.numhl !=# ''
-      d.numhl = this.numhl
+      definition.numhl = this.numhl
     endif
     if this.linehl !=# ''
-      d.linehl = this.linehl
+      definition.linehl = this.linehl
     endif
-    sign_define(group .. '_' .. this.kind, d)
+    return definition
+  enddef
+
+  def Signature(): list<any>
+    return [this.kind, this.text, this.texthl, this.numhl, this.linehl]
+  enddef
+
+  def Define(group: string): void
+    sign_define(group .. '_' .. this.kind, this.Definition())
   enddef
 endclass
 
@@ -31,10 +39,10 @@ export class Item
   var key: string = ''
 
   def Key(): string
-    if this.key !=# ''
-      return this.key
+    if this.key ==# ''
+      this.key = this.kind .. '@' .. string(this.lnum)
     endif
-    return this.kind .. '@' .. string(this.lnum)
+    return this.key
   enddef
 endclass
 
@@ -48,6 +56,10 @@ class Placed
 
   def Unplace(group: string, buf: number): void
     sign_unplace(group, { buffer: buf, id: this.id })
+  enddef
+
+  def Matches(kind: string, lnum: number): bool
+    return this.kind ==# kind && this.lnum == lnum
   enddef
 endclass
 
@@ -71,51 +83,187 @@ export class SignCol
   public var state: dict<State> = {}
 
   def new(this.group, specs: list<Spec>)
+    this.AssertSignApi()
     for spec in specs
       this.kinds[spec.kind] = spec
     endfor
     this.DefineKindsIfChanged()
   enddef
 
+  def AssertSignApi(): void
+    var missing: list<string> = []
+    if !exists('*sign_define')
+      add(missing, 'sign_define')
+    endif
+    if !exists('*sign_placelist')
+      add(missing, 'sign_placelist')
+    endif
+    if !exists('*sign_unplace')
+      add(missing, 'sign_unplace')
+    endif
+    if !exists('*sign_getplaced')
+      add(missing, 'sign_getplaced')
+    endif
+    if !empty(missing)
+      throw 'signcol: missing sign functions: ' .. join(missing, ', ')
+    endif
+  enddef
+
   def NameFor(kind: string): string
     return this.group .. '_' .. kind
   enddef
 
-  def DefineKindsIfChanged()
-    var sig = string(map(copy(this.kinds), (_, v) => [v.kind, v.text, v.texthl, v.numhl, v.linehl]))
-    var h = sha256(sig)
-    if get(SignCol.spec_hash, this.group, '') ==# h
+  def DefineKindsIfChanged(): void
+    var signatures: list<list<any>> = []
+    for spec in values(this.kinds)
+      add(signatures, spec.Signature())
+    endfor
+    var signatureText = string(signatures)
+    var hash = sha256(signatureText)
+    if get(SignCol.spec_hash, this.group, '') ==# hash
       return
     endif
-    for [_, sp] in items(this.kinds)
-      sp.Define(this.group)
+    for spec in values(this.kinds)
+      spec.Define(this.group)
     endfor
-    SignCol.spec_hash[this.group] = h
+    SignCol.spec_hash[this.group] = hash
   enddef
 
   def GetState(buf: number): State
-    var sb = string(buf)
-    if has_key(this.state, sb)
-      return this.state[sb]
+    var bufferKey = string(buf)
+    if has_key(this.state, bufferKey)
+      return this.state[bufferKey]
     endif
-    var st = State.new()
-    this.state[sb] = st
-    return st
+    var state = State.new()
+    this.state[bufferKey] = state
+    return state
   enddef
 
-  def ClampLnum(buf: number, l: number): number
-    var info = get(getbufinfo(buf), 0, {})
-    var maxln = get(info, 'linecount', 0)
-    if maxln <= 0
-      return l
+  def BufferLineCount(buf: number): number
+    if !bufexists(buf)
+      return 0
     endif
-    if l < 1
+    var info = get(getbufinfo(buf), 0, {})
+    return get(info, 'linecount', 0)
+  enddef
+
+  def ClampLnum(maxLine: number, lineNumber: number): number
+    if maxLine <= 0
+      return lineNumber
+    endif
+    if lineNumber < 1
       return 1
     endif
-    if l > maxln
-      return maxln
+    if lineNumber > maxLine
+      return maxLine
     endif
-    return l
+    return lineNumber
+  enddef
+
+  def BuildWanted(entries: list<Item>, maxLine: number): dict<dict<any>>
+    var wanted: dict<dict<any>> = {}
+    for entry in entries
+      if type(entry) != v:t_object
+        continue
+      endif
+      if !has_key(this.kinds, entry.kind)
+        continue
+      endif
+      var clamped = this.ClampLnum(maxLine, entry.lnum)
+      wanted[entry.Key()] = { kind: entry.kind, lnum: clamped }
+    endfor
+    return wanted
+  enddef
+
+  def KeepExisting(wanted: dict<dict<any>>, placed: dict<Placed>): dict<number>
+    var keepIds: dict<number> = {}
+    for [key, placedSign] in items(placed)
+      if !has_key(wanted, key)
+        continue
+      endif
+      var target = wanted[key]
+      if placedSign.Matches(target.kind, target.lnum)
+        keepIds[placedSign.id] = 1
+        remove(wanted, key)
+      endif
+    endfor
+    return keepIds
+  enddef
+
+  def FetchPlacedSigns(buf: number): list<dict<any>>
+    var placedInfo = sign_getplaced(buf, { group: this.group })
+    if empty(placedInfo) || !has_key(placedInfo[0], 'signs')
+      return []
+    endif
+    return placedInfo[0].signs
+  enddef
+
+  def UnplaceRemoved(buf: number, keepIds: dict<number>, signs: list<dict<any>>): void
+    for sign in signs
+      var signId = get(sign, 'id', 0)
+      if signId > 0 && !has_key(keepIds, signId)
+        sign_unplace(this.group, { buffer: buf, id: signId })
+      endif
+    endfor
+  enddef
+
+  def FindSignLnum(signs: list<dict<any>>, signId: number, fallback: number): number
+    for sign in signs
+      if get(sign, 'id', 0) == signId
+        return get(sign, 'lnum', fallback)
+      endif
+    endfor
+    return fallback
+  enddef
+
+  def SyncPlaced(placed: dict<Placed>, signs: list<dict<any>>): dict<Placed>
+    if empty(signs)
+      return {}
+    endif
+    var liveIds: dict<number> = {}
+    for sign in signs
+      var signId = get(sign, 'id', 0)
+      if signId > 0
+        liveIds[signId] = 1
+      endif
+    endfor
+    for [key, placedSign] in items(placed)
+      if !has_key(liveIds, placedSign.id)
+        remove(placed, key)
+      else
+        placedSign.lnum = this.FindSignLnum(signs, placedSign.id, placedSign.lnum)
+      endif
+    endfor
+    return placed
+  enddef
+
+  def PlaceWanted(buf: number, wanted: dict<dict<any>>, placed: dict<Placed>): dict<Placed>
+    if empty(wanted)
+      return placed
+    endif
+    var addList: list<dict<any>> = []
+    var addKeys: list<string> = []
+    for [key, value] in items(wanted)
+      add(addList, {
+        buffer: buf,
+        group: this.group,
+        id: 0,
+        name: this.NameFor(value.kind),
+        lnum: value.lnum,
+      })
+      add(addKeys, key)
+    endfor
+    var ids: list<number> = sign_placelist(addList)
+    for index in range(0, len(ids) - 1)
+      var newId = ids[index]
+      if newId > 0
+        var addKey = addKeys[index]
+        var signName = addList[index].name
+        var signKind = substitute(signName, '^' .. this.group .. '_', '', '')
+        placed[addKey] = Placed.new(newId, addList[index].lnum, signKind)
+      endif
+    endfor
+    return placed
   enddef
 
   def Update(buf: number, entries: list<Item>): void
@@ -123,118 +271,48 @@ export class SignCol
       return
     endif
 
-    var sb = string(buf)
-    var st: State = this.GetState(buf)
-    var placed: dict<Placed> = st.placed
-
-    var info = get(getbufinfo(buf), 0, {})
-    var maxln = get(info, 'linecount', 0)
-    if maxln <= 0
+    var maxLine = this.BufferLineCount(buf)
+    if maxLine <= 0
       return
     endif
 
-    var want: dict<dict<any>> = {}
-    for it in entries
-      if type(it) != v:t_object
-        continue
-      endif
-      if !has_key(this.kinds, it.kind)
-        continue
-      endif
-      var l = this.ClampLnum(buf, it.lnum)
-      want[it.Key()] = { kind: it.kind, lnum: l }
-    endfor
+    var bufferKey = string(buf)
+    var state = this.GetState(buf)
+    var placed = state.placed
 
-    var keep_ids: dict<number> = {}
-    for [k, pl] in items(placed)
-      if has_key(want, k)
-        var tgt = want[k]
-        if pl.lnum == tgt.lnum && pl.kind ==# tgt.kind
-          keep_ids[pl.id] = 1
-          remove(want, k)
-        endif
-      endif
-    endfor
+    var wanted = this.BuildWanted(entries, maxLine)
+    var keepIds = this.KeepExisting(wanted, placed)
 
-    var cur = sign_getplaced(buf, { group: this.group })
-    if !empty(cur) && has_key(cur[0], 'signs')
-      for s in cur[0].signs
-        var cid = get(s, 'id', 0)
-        if cid > 0 && !has_key(keep_ids, cid)
-          sign_unplace(this.group, { buffer: buf, id: cid })
-        endif
-      endfor
-    endif
+    var signs = this.FetchPlacedSigns(buf)
+    this.UnplaceRemoved(buf, keepIds, signs)
+    signs = this.FetchPlacedSigns(buf)
 
-    if !empty(cur) && has_key(cur[0], 'signs')
-      var live: dict<number> = {}
-      for s in cur[0].signs
-        var cid = get(s, 'id', 0)
-        if cid > 0
-          live[cid] = 1
-        endif
-      endfor
-      for [k2, pl2] in items(placed)
-        if !has_key(live, pl2.id)
-          remove(placed, k2)
-        else
-          var ln = filter(copy(cur[0].signs), (_, x) => get(x, 'id', 0) == pl2.id)
-          if !empty(ln)
-            placed[k2].lnum = get(ln[0], 'lnum', pl2.lnum)
-          endif
-        endif
-      endfor
-    else
-      placed = {}
-    endif
+    placed = this.SyncPlaced(placed, signs)
+    placed = this.PlaceWanted(buf, wanted, placed)
 
-    if !empty(want)
-      var add_list: list<dict<any>> = []
-      var add_keys: list<string> = []
-      for [k3, v3] in items(want)
-        add(add_list, {
-          buffer: buf,
-          group: this.group,
-          id: 0,
-          name: this.NameFor(v3.kind),
-          lnum: v3.lnum,
-        })
-        add(add_keys, k3)
-      endfor
-      var ids: list<number> = sign_placelist(add_list)
-      for i in range(0, len(ids) - 1)
-        if ids[i] > 0
-          var kk = add_keys[i]
-          var idn = ids[i]
-          var kind = substitute(add_list[i].name, '^' .. this.group .. '_', '', '')
-          placed[kk] = Placed.new(idn, add_list[i].lnum, kind)
-        endif
-      endfor
-    endif
-
-    st.placed = placed
-    this.state[sb] = st
+    state.placed = placed
+    this.state[bufferKey] = state
   enddef
 
 
   def Clear(buf: number): void
-    var sb = string(buf)
-    if has_key(this.state, sb)
-      this.state[sb].Clear(this.group, buf)
+    var bufferKey = string(buf)
+    if has_key(this.state, bufferKey)
+      this.state[bufferKey].Clear(this.group, buf)
     endif
   enddef
 
   def ClearAll(): void
-    for [b, st] in items(this.state)
-      st.Clear(this.group, str2nr(b))
+    for [bufferKey, state] in items(this.state)
+      state.Clear(this.group, str2nr(bufferKey))
     endfor
   enddef
 
   def Status(buf: number): dict<any>
     var count = 0
-    var sb = string(buf)
-    if has_key(this.state, sb)
-      count = len(keys(this.state[sb].placed))
+    var bufferKey = string(buf)
+    if has_key(this.state, bufferKey)
+      count = len(keys(this.state[bufferKey].placed))
     endif
     return { buffer: buf, placed: count, group: this.group }
   enddef

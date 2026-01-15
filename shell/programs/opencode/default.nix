@@ -67,7 +67,6 @@ let
       messages_half_page_up = "ctrl+u";
       messages_half_page_down = "ctrl+d";
       app_exit = "ctrl+c,<leader>q";
-      input_delete_to_line_start = "ctrl+shift+u";
     };
 
     provider = {
