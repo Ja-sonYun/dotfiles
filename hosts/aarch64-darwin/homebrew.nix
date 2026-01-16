@@ -61,6 +61,7 @@ let
         "cleanshot"
 
         "hyprnote"
+        "microsoft-remote-desktop"
 
         # TODO: Move to nix
         "macfuse"
