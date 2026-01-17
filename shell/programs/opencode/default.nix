@@ -10,6 +10,12 @@ let
     model = "openai/gpt-5.2-codex";
     autoupdate = false;
     share = "disabled";
+    default_agent = "plan";
+
+    compaction = {
+      auto = true;
+      prune = true;
+    };
 
     permission = {
       bash = {
@@ -179,8 +185,13 @@ let
         --prefix PATH : ${
           pkgs.lib.makeBinPath [
             pkgs.pyright
+            pkgs.ruff
+            pkgs.rustfmt
+            pkgs.shfmt
+            pkgs.prettier
             pkgs.terraform
             pkgs.rust-analyzer
+            pkgs.clang-tools
           ]
         }
     '';
@@ -197,7 +208,7 @@ in
       source = "${opencodeBundleSrc}/AGENTS.md";
     };
     ".config/opencode/agent" = {
-      source = "${opencodeBundleSrc}/prompts";
+      source = "${opencodeBundleSrc}/agents";
       recursive = true;
     };
     ".config/opencode/skill" = {
