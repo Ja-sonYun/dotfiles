@@ -43,6 +43,7 @@
     };
   say = inputs.say.overlays.default;
   plot = inputs.plot.overlays.default;
+  seqdia = inputs.sequence-diagram-cli.overlays.default;
 
   tmux-with-sixel = final: prev: {
     tmux = prev.tmux.overrideAttrs (old: rec {

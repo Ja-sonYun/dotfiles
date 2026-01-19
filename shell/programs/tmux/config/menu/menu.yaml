@@ -134,8 +134,6 @@ items:
       command: mkdir -p $HOME/.chat && cd $HOME/.chat && opencode
       session: true
       session_name: "opencode-chat"
-      session_on_dir: true
-      run_on_git_root: true
       environment:
         MULTI_SESSION_COMMAND: "cd $HOME/.chat && opencode"
         NO_WINDOW_MGNT: "1"

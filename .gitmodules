@@ -16,3 +16,6 @@
 [submodule ".mkutils"]
 	path = .mkutils
 	url = https://github.com/Ja-sonYun/mkutils
+[submodule "portable/sequence-diagram-cli"]
+	path = portable/sequence-diagram-cli
+	url = git@github.com:Ja-sonYun/sequence-diagram-cli.git

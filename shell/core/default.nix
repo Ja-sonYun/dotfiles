@@ -75,6 +75,8 @@
 
     ollama
 
+    seqdia
+
     # My vim config
     plot
 

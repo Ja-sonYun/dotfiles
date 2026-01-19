@@ -51,7 +51,7 @@ let
         "obs"
         "pdf-expert"
         "jump-desktop"
-        "utm"
+        "parallels"
         "kicad"
         "firefox"
         "raycast"
