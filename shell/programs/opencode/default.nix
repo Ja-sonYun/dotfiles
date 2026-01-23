@@ -9,9 +9,11 @@ let
     theme = "gihtub";
     # model = "openai/gpt-5.2-codex";
     model = "anthropic/claude-opus-4-5";
-    autoupdate = false;
     share = "disabled";
     default_agent = "plan";
+
+    autoupdate = false;
+    snapshot = false;
 
     compaction = {
       auto = true;
