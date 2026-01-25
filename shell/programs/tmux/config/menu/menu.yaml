@@ -128,6 +128,8 @@ items:
   #       w: 60%
   #       h: 55%
 
+  - Seperate: {}
+
   - Menu:
       name: "opencode-chat"
       shortcut: a
@@ -197,6 +199,21 @@ items:
       position:
         w: 60%
         h: 55%
+
+  - Seperate: {}
+
+  - Menu:
+      name: "notify watch"
+      shortcut: l
+      command: "$TMUX_CONFIG/menu/scripts/notify-watch.sh"
+      background: true
+
+  - Menu:
+      name: "notify cancel"
+      shortcut: L
+      command: "$TMUX_CONFIG/menu/scripts/notify-cancel.sh"
+      background: true
+
   # - Menu:
   #     name: "Record Meeting"
   #     shortcut: R
@@ -243,5 +260,5 @@ items:
 #   - Menu:
 #       name: "clear sendkey status"
 #       shortcut: P
-#       command: rm -f /tmp/tmux_popup_log
+#       command: rm -f /tmp/tmux-popup-log
 #       background: true

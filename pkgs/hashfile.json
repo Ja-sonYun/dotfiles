@@ -5,20 +5,18 @@
     "awscli-local": "sha256-2jebJApEf120WbM/5i5oUHFHHhQ+xRITlkU4kHeLE7s=",
     "tmux-menu": "sha256-P7aZyCwAUwp+zfJZIjwkVj+rNwdSGWhgqO69sbOV9zI=",
     "context7-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-    "playwright-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     "aws-documentation": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     "chrome-devtools-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
   },
   "JasonYuns-MacBook-Pro": {
     "codex": "sha256-TdAjBD7vFE8Pq+MaBfYLrAp7IW+S7h69kn6PJPZY0oU=",
-    "claude-code": "sha256-yqvT+I2u3WPvJmakRAbC7cBjSRp2E3SYOD8iDgLSisE=",
-    "awscli-local": "sha256-NXdITgADqz24OI4XuhSVYe/+c2mn3V8csD/wr9cY9GI=",
-    "tmux-menu": "sha256-E0NLkq9vwfs9pYBMNA5wMnMrG4L8XLCAN+ZgqPzXi4Q=",
+    "claude-code": "sha256-I5oASAsRoF5jhbNbxpqfKSWP7d/NQO7W4RjY1uEoOOE=",
+    "awscli-local": "sha256-p8vRl0WI5+oO8emdPVTWfYoEztB2K/fJJai7WgUgbLU=",
+    "tmux-menu": "sha256-baxazNev2VBQNC1qNDaOWdObZ8wd/l5g8jBueBX3CE4=",
     "context7-mcp": "sha256-kboURqH3hWtPs7JgDMV36J+cGFXVZ1srcZVy2MxMcPo=",
-    "playwright-mcp": "sha256-WoRXCqBqFXtHwDtpyBO3Z6N52Se/Dt+bI83tQ6Cco7M=",
     "aws-documentation": "sha256-mOLnS7L7F59LMS4R2duPf2nIuxuJo+WbvtSjRlwuNJk=",
     "chrome-devtools-mcp": "sha256-TOJXKFmwOliGxJzmVCXxesZ8577aRhUuT6WbmoQZgeA=",
-    "opencode": "sha256-ZNyT6K0BSzxDunehHQWPlBayZ+kLyWTNB5AVcHOiYzE="
+    "opencode": "sha256-T/DrkvenEj/ZjD/SP7xy0lx5N4w+FY2nLvc0Ome+YmU="
   },
   "Jasons-MacBook-Server": {
     "codex": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
@@ -26,7 +24,6 @@
     "awscli-local": "sha256-g+hS6GlybNrvfSUH7TNzACNlbsCj4auMY0au5+sMh6E=",
     "tmux-menu": "sha256-aPxtJE4YI4wZWvpIQ7Qv31gH8tDwGklt3isWNTZ/Adw=",
     "context7-mcp": "sha256-8ZpuEppidVkrbS6hlrtKFxwWeui5cDOsJT0di1L7gcA=",
-    "playwright-mcp": "sha256-KnHOzDHyysAxl2196/nwl5t3E9IVHBZrUCivVLfZSDI=",
     "aws-documentation": "sha256-yE2kddJNSGSvLBdKmIwA4/m+ed55YUEWy1/DYyxb6do=",
     "chrome-devtools-mcp": "sha256-gO14fwZ0SyTYdf5Ged3MmQmL2kyKvplC0mN0ayLuAP8="
   }

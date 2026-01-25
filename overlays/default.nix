@@ -10,6 +10,7 @@
     # Use stable for commonly broken packages
     gitui = stable.gitui;
     jujutsu = stable.jujutsu;
+    swift-format = stable.swift-format;
   };
 
   # prev-packages =
@@ -37,7 +38,8 @@
   vim = inputs.vim.overlays.default;
 
   # Override swift-format to skip build on Linux
-  swift-format-skip-linux = final: prev:
+  swift-format-skip-linux =
+    final: prev:
     prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
       swift-format = prev.runCommand "swift-format-dummy" { } "mkdir -p $out/bin";
     };
@@ -66,7 +68,7 @@
       allhashfile = builtins.fromJSON rawhashfile;
     in
     {
-      hashfile = allhashfile."${hostname}";
+      hashfile = allhashfile.${hostname} or { };
     };
   custom-packages = final: prev: {
     # Local custom packages
@@ -78,7 +80,6 @@
     claude-code = final.callPackage ../pkgs/claude-code { };
     opencode = final.callPackage ../pkgs/opencode { };
     context7 = final.callPackage ../pkgs/context7 { };
-    playwright-mcp = final.callPackage ../pkgs/playwright-mcp { };
     chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
 
     # Pypi

@@ -22,7 +22,6 @@ ifdef TRACE
 NIX_TRACE_ARGS := --show-trace
 endif
 
-
 # ==================================================================================
 ##@ Update
 
@@ -43,8 +42,6 @@ update: ## Full update with ulimit fix
 		$(MAKE) update-raw update-pkgs'
 # ==================================================================================
 
-
-
 # ==================================================================================
 ifeq ($(SYSTEM),Linux)
 ##@ Linux
@@ -56,8 +53,6 @@ deploy: add lock ## Deploy home-manager config
 	nix run home-manager -- switch --flake .#$(HOSTNAME)
 endif
 # ==================================================================================
-
-
 
 # ==================================================================================
 ifeq ($(SYSTEM),Darwin)
@@ -75,8 +70,6 @@ deploy: build ## Deploy nix-darwin config
 endif
 # ==================================================================================
 
-
-
 # ==================================================================================
 ##@ Maintenance
 
@@ -89,8 +82,6 @@ check: ## Run pre-commit checks
 clean: ## Clean nix store
 	nix run nixpkgs#nh clean
 # ==================================================================================
-
-
 
 # ==================================================================================
 ##@ Git
@@ -106,8 +97,6 @@ update-submodules: ## Update all submodules to latest
 	git submodule update --remote --recursive
 # ==================================================================================
 
-
-
 #---
 
 add:
@@ -117,3 +106,8 @@ lock: add
 	nix flake update vim
 	nix flake update server
 
+tccutil-ac:
+	sudo tccutil -e $(readlink $(which yabai))
+	sudo tccutil -e $(readlink $(which skhd))
+	sudo tccutil -e $(readlink $(which sketchybar))
+	sudo tccutil -s kTCCServiceScreenCapture -e $(readlink $(which sketchybar))

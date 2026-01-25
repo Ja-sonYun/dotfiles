@@ -23,7 +23,6 @@ let
   casks = [
     "ghostty"
     "aldente"
-    "vagrant"
     "orbstack"
   ]
   ++ (

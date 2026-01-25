@@ -282,8 +282,11 @@
         let pkgs = nixpkgs.legacyPackages.${system};
         in {
           default = pkgs.mkShell {
-            inherit (self.checks.${system}.pre-commit-check) shellHook;
-            buildInputs = self.checks.${system}.pre-commit-check.enabledPackages ++ [
+            # inherit (self.checks.${system}.pre-commit-check) shellHook;
+            # buildInputs = self.checks.${system}.pre-commit-check.enabledPackages ++ [
+            #   pkgs.amber-lang
+            # ];
+            buildInputs = [
               pkgs.amber-lang
             ];
           };

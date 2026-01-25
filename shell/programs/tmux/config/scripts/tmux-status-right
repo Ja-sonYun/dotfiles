@@ -42,7 +42,7 @@ function shorten-string {
     echo "${str:0:$start_len}…${str: -end_len}"
 }
 
-messages_dir="/tmp/tmux_status_messages"
+messages_dir="/tmp/tmux-status-messages"
 mkdir -p -- "$messages_dir"
 
 typeset -a files msgs
