@@ -6,22 +6,22 @@
 }:
 let
   mcpServers = {
-    github = {
-      command = pkgs.writeShellScript "github-mcp-wrapper" ''
-        export GITHUB_PERSONAL_ACCESS_TOKEN=$(cat ${config.age.secrets.github-token.path})
-        exec docker run -i --rm \
-          -e GITHUB_PERSONAL_ACCESS_TOKEN \
-          ghcr.io/github/github-mcp-server
-      '';
-      args = [ ];
-      env = { };
-      transportType = "stdio";
-      autoApprove = [
-        "get_file_contents"
-        "search_repositories"
-        "search_code"
-      ];
-    };
+    # github = {
+    #   command = pkgs.writeShellScript "github-mcp-wrapper" ''
+    #     export GITHUB_PERSONAL_ACCESS_TOKEN=$(cat ${config.age.secrets.github-token.path})
+    #     exec docker run -i --rm \
+    #       -e GITHUB_PERSONAL_ACCESS_TOKEN \
+    #       ghcr.io/github/github-mcp-server
+    #   '';
+    #   args = [ ];
+    #   env = { };
+    #   transportType = "stdio";
+    #   autoApprove = [
+    #     "get_file_contents"
+    #     "search_repositories"
+    #     "search_code"
+    #   ];
+    # };
     context7 = {
       command = pkgs.writeShellScript "context7-mcp-wrapper" ''
         ${pkgs.context7}/bin/context7-mcp \
@@ -35,13 +35,13 @@ let
         "get-library-docs"
       ];
     };
-    chrome-devtools = {
-      command = "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp";
-      args = [ ];
-      env = { };
-      transportType = "stdio";
-      autoApprove = [ ];
-    };
+    # chrome-devtools = {
+    #   command = "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp";
+    #   args = [ ];
+    #   env = { };
+    #   transportType = "stdio";
+    #   autoApprove = [ ];
+    # };
     # playwright = {
     #   command = "${pkgs.playwright-mcp}/bin/mcp-server-playwright";
     #   args = [ ];
@@ -63,13 +63,6 @@ let
     terraform = {
       command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";
       args = [ "stdio" ];
-      env = { };
-      transportType = "stdio";
-      autoApprove = [ ];
-    };
-    codex = {
-      command = "${pkgs.codex}/bin/codex";
-      args = [ "mcp-server" ];
       env = { };
       transportType = "stdio";
       autoApprove = [ ];
@@ -131,6 +124,11 @@ let
         }
       ];
     };
+    attribution = {
+      commit = "";
+      pr = "";
+    };
+    language = "korean";
   };
   managedSettingsFile = pkgs.writeText "claude-managed-settings.json" (builtins.toJSON settings);
   managedClaudeJson = pkgs.writeText "claude-managed.json" (
@@ -154,10 +152,31 @@ let
       })
       (builtins.attrNames claudeBundleEntries)
   );
+
+  claudeCodeWrapped = pkgs.symlinkJoin {
+    name = "claude-code-wrapped";
+    paths = [ pkgs.claude-code ];
+    buildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/claude \
+        --prefix PATH : ${
+          pkgs.lib.makeBinPath [
+            pkgs.pyright
+            pkgs.ruff
+            pkgs.rustfmt
+            pkgs.shfmt
+            pkgs.prettier
+            pkgs.terraform
+            pkgs.rust-analyzer
+            pkgs.clang-tools
+          ]
+        }
+    '';
+  };
 in
 {
   home.packages = [
-    pkgs.claude-code
+    claudeCodeWrapped
   ];
 
   home.file = claudeBundleFiles // {

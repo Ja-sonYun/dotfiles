@@ -22,5 +22,5 @@ setlocal winfixheight winfixwidth
 
 augroup FugitiveLocal
   autocmd! * <buffer>
-  autocmd BufWinEnter <buffer> if &filetype ==# 'fugitive' | wincmd J | vertical resize | resize 20 | endif
+  autocmd BufWinEnter <buffer> if &filetype ==# 'fugitive' | wincmd L | wincmd L | vertical resize 50 | endif
 augroup END

@@ -19,5 +19,5 @@ nnoremap <silent><buffer><nowait> t <Cmd>call <SID>TabCC(line('.'))<CR>
 
 augroup QuickfixLocal
   autocmd! * <buffer>
-  autocmd BufWinEnter <buffer> if &buftype ==# 'quickfix' | wincmd J | vertical resize | resize 10 | endif
+  autocmd BufWinEnter <buffer> if &buftype ==# 'quickfix' | wincmd J | wincmd J | vertical resize | resize 10 | endif
 augroup END

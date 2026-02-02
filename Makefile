@@ -1,6 +1,6 @@
 MAKEFLAGS += --no-print-directory
 
-include .mkutils/utils.mk
+include .mkutils/dist/utils.mk
 
 HELP_PROJECT_NAME := Dotfiles
 HELP_WIDTH := 20
