@@ -148,7 +148,7 @@ items:
 
   - Menu:
       name: "opencode"
-      shortcut: o
+      shortcut: c
       command: _gen-close-hook opencode && direnv exec . opencode
       session: true
       session_name: "opencode"
@@ -166,7 +166,7 @@ items:
 
   - Menu:
       name: "claude"
-      shortcut: c
+      shortcut: C
       command: _gen-close-hook claude && direnv exec . claude
       session: true
       session_name: "claude"
@@ -184,7 +184,7 @@ items:
 
   - Menu:
       name: "codex"
-      shortcut: C
+      shortcut: o
       command: _gen-close-hook codex && direnv exec . codex
       session: true
       session_name: "codex"

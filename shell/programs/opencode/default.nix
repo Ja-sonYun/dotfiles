@@ -7,8 +7,7 @@ let
   opencodeConfig = {
     "$schema" = "https://opencode.ai/config.json";
     theme = "gihtub";
-    # model = "openai/gpt-5.2-codex";
-    model = "anthropic/claude-opus-4-5";
+    model = "openai/gpt-5.2-codex";
     share = "disabled";
     default_agent = "plan";
 
@@ -80,44 +79,6 @@ let
       messages_half_page_up = "ctrl+u";
       messages_half_page_down = "ctrl+d";
       app_exit = "ctrl+c,<leader>q";
-    };
-
-    provider = {
-      anthropic = {
-        models = {
-          "claude-opus-4-5" = {
-            modalities = {
-              input = [
-                "image"
-                "text"
-              ];
-              output = [ "text" ];
-            };
-            options = {
-              thinking = {
-                type = "enabled";
-                budgetTokens = 16000;
-              };
-            };
-          };
-        };
-      };
-      openai = {
-        models = {
-          "gpt-5.2-codex" = {
-            modalities = {
-              input = [
-                "image"
-                "text"
-              ];
-              output = [ "text" ];
-            };
-            options = {
-              reasoningEffort = "high";
-            };
-          };
-        };
-      };
     };
 
     mcp = {
