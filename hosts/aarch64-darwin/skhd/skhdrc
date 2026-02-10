@@ -24,8 +24,8 @@ shift + lalt - 3 : yabai -m window --space 3; yabai -m space --focus 3; yabai -m
 shift + lalt - 4 : yabai -m window --space 4; yabai -m space --focus 4; yabai -m window --focus recent
 shift + lalt - 5 : yabai -m window --space 5; yabai -m space --focus 5; yabai -m window --focus recent
 
-rcmd - a : yabai -m space --focus prev
-rcmd - d : yabai -m space --focus next
+rcmd - a : yabai -m query --spaces --display | jq -e '.[0]."has-focus" == false' >/dev/null && yabai -m space --focus prev
+rcmd - d : yabai -m query --spaces --display | jq -e '.[-1]."has-focus" == false' >/dev/null && yabai -m space --focus next
 # rcmd - a : skhd -k "ctrl - left"
 # rcmd - d : skhd -k "ctrl - right"
 

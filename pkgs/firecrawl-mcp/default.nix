@@ -1,15 +1,15 @@
 { pkgs, ... }:
 let
-  outputHash = pkgs.hashfile."codex";
+  outputHash = pkgs.hashfile."firecrawl-mcp";
 in
 
 pkgs.lib.npm.mkNpmGlobalPackageDerivation {
   inherit pkgs outputHash;
-  name = "openai-codex";
+  name = "firecrawl-mcp";
   packages = [
-    "@openai/codex@0.98.0"
+    "firecrawl-mcp@3.7.4"
   ];
   exposedBinaries = [
-    "codex"
+    "firecrawl-mcp"
   ];
 }

@@ -1,6 +1,7 @@
 { pkgs, lib, config, ... }:
 let
   extraPath = pkgs.lib.makeBinPath [
+    pkgs.jq
     pkgs.yabai
     pkgs.inputSourceSelector
   ];

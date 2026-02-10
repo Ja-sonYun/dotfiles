@@ -6,17 +6,19 @@
     "tmux-menu": "sha256-P7aZyCwAUwp+zfJZIjwkVj+rNwdSGWhgqO69sbOV9zI=",
     "context7-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     "aws-documentation": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-    "chrome-devtools-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    "chrome-devtools-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    "firecrawl-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
   },
   "JasonYuns-MacBook-Pro": {
-    "codex": "sha256-OYy9O+s3TxgkJr7yMFbNe8qLBnyJqfDjSCfGxdDpPSg=",
-    "claude-code": "sha256-syEhNCFtCR+ISndWO6SJck/q2XRipesnNDEmF3kyk0E=",
+    "codex": "sha256-rmz/atUg84y8K3GU0zUTF2lEDlVHBIDhPx+qCyVyQY4=",
+    "claude-code": "sha256-dekUiikRopvJXffxTgHs9ixDg8I4oLd6RWtdBRxdgOE=",
     "awscli-local": "sha256-p8vRl0WI5+oO8emdPVTWfYoEztB2K/fJJai7WgUgbLU=",
     "tmux-menu": "sha256-baxazNev2VBQNC1qNDaOWdObZ8wd/l5g8jBueBX3CE4=",
     "context7-mcp": "sha256-RzkzfSytWwW3oDFN8FBa4zakdHoh/j3NIRD1B3hGUb4=",
-    "aws-documentation": "sha256-mOLnS7L7F59LMS4R2duPf2nIuxuJo+WbvtSjRlwuNJk=",
-    "chrome-devtools-mcp": "sha256-lPuqwOo6noLAtucXjmEGDccwZvuwR+ku2ltMMmPR5Uw=",
-    "opencode": "sha256-BJB0s6vqgz5GurGhECSiXtJxD7FHk+scWAwNwcdO7DM="
+    "aws-documentation": "sha256-sgxWuGB7LPE9XmDzE5SLDxLtWFPqXnIZHf9Jjn6YHJc=",
+    "chrome-devtools-mcp": "sha256-bYFT5cmfGzSuXrkTnchX+zRpIAPRvoSAK8PlF/rnXvw=",
+    "opencode": "sha256-eWH73MORitsnlxCTHX3hWo+wHMWOaz4AJKhkwF0L/PU=",
+    "firecrawl-mcp": "sha256-gstC+Vm6H0Xx44qh7GIY3e0TuteT+mM0VW87ftuTqMA="
   },
   "Jasons-MacBook-Server": {
     "codex": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
@@ -25,6 +27,7 @@
     "tmux-menu": "sha256-aPxtJE4YI4wZWvpIQ7Qv31gH8tDwGklt3isWNTZ/Adw=",
     "context7-mcp": "sha256-8ZpuEppidVkrbS6hlrtKFxwWeui5cDOsJT0di1L7gcA=",
     "aws-documentation": "sha256-yE2kddJNSGSvLBdKmIwA4/m+ed55YUEWy1/DYyxb6do=",
-    "chrome-devtools-mcp": "sha256-gO14fwZ0SyTYdf5Ged3MmQmL2kyKvplC0mN0ayLuAP8="
+    "chrome-devtools-mcp": "sha256-gO14fwZ0SyTYdf5Ged3MmQmL2kyKvplC0mN0ayLuAP8=",
+    "firecrawl-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
   }
 }

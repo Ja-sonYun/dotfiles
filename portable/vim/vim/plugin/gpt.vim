@@ -5,182 +5,190 @@ if exists('g:loaded_user_gpt')
 endif
 g:loaded_user_gpt = true
 
-import autoload 'utils/gpt.vim' as gpt
+import autoload 'utils/opencode.vim' as opencode
+import autoload 'utils/lockrange.vim' as lock
 
-def EnsureLockHighlight(): void
-  if hlexists('GptLockRange') == 0
-    execute 'highlight default GptLockRange ctermbg=238 guibg=#3a3a3a'
-  endif
+const MSG_CALLING = 'Calling GPT to process text...'
+const MSG_STATUS = 'refining...'
+const MSG_REPLACE_DONE = 'Text replacement completed.'
+const MSG_ASK_DONE = 'Ask completed.'
+const MSG_NO_RESPONSE = 'No response returned.'
+const MSG_FAIL_PREFIX = 'GPT request failed: '
+
+def CurrentFilePath(): string
+  const path = expand('%:p')
+  return path == '' ? '[No Name]' : path
 enddef
 
-def BuildLockPositions(start: number, end: number): list<list<number>>
-  var positions: list<list<number>> = []
-  for lnum in range(start, end)
-    add(positions, [lnum])
-  endfor
-  return positions
+def BuildFileHeader(): string
+  return 'File: ' .. CurrentFilePath() .. "\n\n"
 enddef
 
-def UpdateLockHighlight(start: number, end: number): void
-  if get(b:, 'gpt_lock_match', 0) != 0
-    matchdelete(b:gpt_lock_match)
+def EchoWith(hl: string, msg: string): void
+  if hl != ''
+    execute 'echohl ' .. hl
   endif
-  if start <= 0 || end < start
-    return
-  endif
-  b:gpt_lock_match = matchaddpos('GptLockRange', BuildLockPositions(start, end))
-enddef
-
-def UnlockGptRange(): void
-  if !get(b:, 'gpt_lock_active', false)
-    return
-  endif
-  b:gpt_lock_active = false
-  if get(b:, 'gpt_lock_match', 0) != 0
-    matchdelete(b:gpt_lock_match)
-  endif
-  if exists('b:gpt_lock_match')
-    unlet b:gpt_lock_match
-  endif
-  if exists('b:gpt_lock_lines')
-    unlet b:gpt_lock_lines
-  endif
-  if exists('b:gpt_lock_suppress')
-    unlet b:gpt_lock_suppress
-  endif
-  augroup GptSoftLock
-    autocmd! * <buffer>
-  augroup END
-enddef
-
-def SoftLockCheck(): void
-  if !get(b:, 'gpt_lock_active', false)
-    return
-  endif
-  if get(b:, 'gpt_lock_suppress', false)
-    return
-  endif
-  var start = line("'g")
-  var end = line("'h")
-  if start <= 0 || end <= 0
-    return
-  endif
-  if end < start
-    var tmp = start
-    start = end
-    end = tmp
-  endif
-  const original = get(b:, 'gpt_lock_lines', [])
-  const current = getline(start, end)
-  if current ==# original
-    UpdateLockHighlight(start, end)
-    return
-  endif
-  b:gpt_lock_suppress = true
-  deletebufline('%', start, end)
-  if len(original) > 0
-    append(start - 1, original)
-  endif
-  b:gpt_lock_suppress = false
-  setpos("'g", [bufnr('%'), start, 1, 0])
-  setpos("'h", [bufnr('%'), start + len(original) - 1, 1, 0])
-  UpdateLockHighlight(start, start + len(original) - 1)
-  echohl WarningMsg
-  echom 'Locked range cannot be modified.'
-  echohl None
-enddef
-
-def LockGptRange(start: number, end: number): bool
-  if get(b:, 'gpt_lock_active', false)
-    echohl WarningMsg
-    echom 'GPT request already in progress.'
+  echom msg
+  if hl != ''
     echohl None
-    return false
   endif
-  EnsureLockHighlight()
-  b:gpt_lock_active = true
-  b:gpt_lock_lines = getline(start, end)
-  b:gpt_lock_suppress = false
-  setpos("'g", [bufnr('%'), start, 1, 0])
-  setpos("'h", [bufnr('%'), end, 1, 0])
-  UpdateLockHighlight(start, end)
-  augroup GptSoftLock
-    autocmd! * <buffer>
-    autocmd TextChanged,TextChangedI <buffer> SoftLockCheck()
-  augroup END
-  return true
+enddef
+
+def CallAiAsync(
+  prompt: string,
+  system_prompt: string,
+  OnSuccess: func,
+  OnError: func
+): void
+  try
+    const model = get(g:, 'opencode_model', 'openai/gpt-5.2-codex')
+    opencode.CallAsync(
+      model,
+      prompt,
+      (result) => {
+        call(OnSuccess, [result])
+      },
+      {
+        system_prompt: system_prompt,
+        err_cb: (error_message) => {
+          call(OnError, [string(error_message)])
+        },
+      }
+    )
+  catch
+    call(OnError, [v:exception])
+  endtry
 enddef
 
 def GenerateReplacer(prompt: string, system_prompt: string): func<void>
   def InnerFunc(start: number, end: number): void
-    echom 'Calling GPT to process text...'
+    EchoWith('', MSG_CALLING)
     const text = join(getline(start, end), "\n")
-    const full_prompt = prompt .. '\n' .. text
+    const full_prompt = BuildFileHeader() .. prompt .. '\n' .. text
 
-    if !LockGptRange(start, end)
+    const ctx = lock.LockRange(start, end)
+    if type(ctx) == v:t_none
       return
     endif
+    ctx.SetStatus(MSG_STATUS)
 
-    try
-      gpt.CallAsync(
-        'gpt-5.2-codex',
-        full_prompt,
-        (result) => {
-          var lock_start = line("'g")
-          var lock_end = line("'h")
-          if lock_start <= 0 || lock_end <= 0
-            lock_start = start
-            lock_end = end
-          endif
-          if lock_end < lock_start
-            var tmp = lock_start
-            lock_start = lock_end
-            lock_end = tmp
-          endif
-          UnlockGptRange()
-          const lines = split(result, "\n")
-          deletebufline('%', lock_start, lock_end)
-          append(lock_start - 1, lines)
-          echohl MoreMsg
-          echom 'Text replacement completed.'
-          echohl None
-        },
-        {
-          system_prompt: system_prompt,
-          err_cb: (error_message) => {
-            UnlockGptRange()
-            echohl ErrorMsg
-            echom 'GPT request failed: ' .. string(error_message)
-            echohl None
-          },
-        }
-      )
-    catch
-      UnlockGptRange()
-      echohl ErrorMsg
-      echom v:exception
-      echohl None
-    endtry
+    def OnSuccess(result: string): void
+      const lines = split(result, "\n")
+      ctx.Replace(lines)
+      ApplyIndent(ctx)
+      ctx.Unlock()
+      EchoWith('MoreMsg', MSG_REPLACE_DONE)
+    enddef
+
+    def OnError(message: string): void
+      ctx.Unlock()
+      EchoWith('ErrorMsg', MSG_FAIL_PREFIX .. message)
+    enddef
+
+    CallAiAsync(full_prompt, system_prompt, OnSuccess, OnError)
   enddef
 
   return InnerFunc
 enddef
 
+def BuildCommentLines(text: string): list<string>
+  var cmt = &commentstring
+  if cmt == ''
+    cmt = '# %s'
+  endif
+  var parts = split(cmt, '%s', 1)
+  var prefix = parts[0]
+  var suffix = len(parts) > 1 ? parts[1] : ''
+  if prefix != '' && prefix !~ '\s$'
+    prefix ..= ' '
+  endif
+  var lines = split(text, "\n", 1)
+  var out: list<string> = []
+  for line in lines
+    add(out, prefix .. line .. suffix)
+  endfor
+  return out
+enddef
+
+def BuildAskPrompt(question: string, lines: list<string>): string
+  return BuildFileHeader() .. 'Question: ' .. question .. "\n\nCode:\n" .. join(lines, "\n")
+enddef
+
+def BuildAskReplacement(lines: list<string>, result: string): list<string>
+  return BuildCommentLines(result) + lines
+enddef
+
+def ApplyIndent(ctx: any): void
+  if &l:indentexpr == ''
+    return
+  endif
+
+  const r = ctx.Range()
+  const start = r[0]
+  const end_ = r[1]
+  if start <= 0 || end_ <= 0 || end_ < start
+    return
+  endif
+
+  const save_pos = getpos('.')
+  try
+    for lnum in range(start, end_)
+      keepjumps call cursor(lnum, 1)
+      silent! normal! ==
+    endfor
+  finally
+    keepjumps call setpos('.', save_pos)
+  endtry
+enddef
+
+def AskExplain(start: number, end: number, question: string): void
+  EchoWith('', MSG_CALLING)
+  const ctx = lock.LockRange(start, end)
+  if type(ctx) == v:t_none
+    return
+  endif
+  ctx.SetStatus(MSG_STATUS)
+  const original_lines = ctx.Lines()
+  const full_prompt = BuildAskPrompt(question, original_lines)
+  const system_prompt = 'You are a concise code assistant. Answer the user question about the code. Output only the explanation text. Do not use markdown or code fences. Output raw text only.'
+
+  def OnSuccess(result: string): void
+    if trim(result) == ''
+      ctx.Unlock()
+      EchoWith('WarningMsg', MSG_NO_RESPONSE)
+      return
+    endif
+    const new_lines = BuildAskReplacement(original_lines, result)
+    ctx.Replace(new_lines)
+    ApplyIndent(ctx)
+    ctx.Unlock()
+    EchoWith('MoreMsg', MSG_ASK_DONE)
+  enddef
+
+  def OnError(message: string): void
+    ctx.Unlock()
+    EchoWith('ErrorMsg', MSG_FAIL_PREFIX .. message)
+  enddef
+
+  CallAiAsync(full_prompt, system_prompt, OnSuccess, OnError)
+enddef
+
 const GrammarFix = GenerateReplacer(
   'Fix the grammar of the following text without changing meaning:',
-  'You are a precise grammar correction model. Output only corrected text.'
+  'You are a precise grammar correction model. Output only corrected text. Do not use markdown or code fences. Output raw text only.'
 )
 const AddComment = GenerateReplacer(
   'Add insightful comments to the following code to improve its readability:',
-  'You are an expert programmer who writes clear and concise comments. Output only the code with added comments. Do not change the original code functionality.'
+  'You are an expert programmer who writes clear and concise comments. Output only the code with added comments. Do not change the original code functionality. Do not use markdown or code fences. Output raw text only.'
 )
 const RefactorCode = GenerateReplacer(
   'Refactor the following code to improve its structure and readability without changing its functionality:',
-  'You are an expert programmer who refactors code for better structure and readability. Output only the refactored code.'
+  'You are an expert programmer who refactors code for better structure and readability. Output only the refactored code. Do not use markdown or code fences. Output raw text only.'
 )
 
-command! -range Fix      call GrammarFix(<line1>, <line2>)
-command! -range Com      call AddComment(<line1>, <line2>)
-command! -range Refactor call RefactorCode(<line1>, <line2>)
+command! -range Fix          call GrammarFix(<line1>, <line2>)
+command! -range Comment      call AddComment(<line1>, <line2>)
+command! -range Refactor     call RefactorCode(<line1>, <line2>)
+command! -range -nargs=+ Ask call AskExplain(<line1>, <line2>, <q-args>)
 
 defcompile

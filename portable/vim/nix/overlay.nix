@@ -72,6 +72,7 @@ let
       vim-fugitive
       vim-rhubarb
       vim-gitgutter
+      vim-cue
 
       undotree
       tagbar

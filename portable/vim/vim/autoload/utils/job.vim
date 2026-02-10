@@ -14,6 +14,7 @@ export class Result
   var code: number = -1
 endclass
 
+
 export class Job
   var job: job
 

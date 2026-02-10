@@ -97,6 +97,15 @@ let
       args = [ "stdio" ];
       env = { };
     }
+    {
+      name = "websearch";
+      command = pkgs.writeShellScript "firecrawl-mcp-wrapper" ''
+        export FIRECRAWL_API_URL="http://localhost:3002"
+        exec ${pkgs.firecrawl-mcp}/bin/firecrawl-mcp
+      '';
+      args = [ ];
+      env = { };
+    }
   ];
 
   codexMcpServersConfig = lib.concatMapStringsSep "\n" genCodexMcpServer mcpServers;
@@ -130,19 +139,22 @@ in
       target = ".codex/config.toml";
       force = true;
       text = ''
-        model = "gpt-5.2-codex"
+        model = "gpt-5.3-codex"
+        model_reasoning_effort = "high"
+
+        personality = "pragmatic"
 
         approval_policy = "untrusted"
         sandbox_mode = "workspace-write"
 
         hide_agent_reasoning = false
-        model_reasoning_effort = "high"
-        model_reasoning_summary = "detailed"
 
         project_doc_fallback_filenames = ["CLAUDE.md"]
 
         notify = ["${notifierScript}"]
         file_opener = "none"
+
+        web_search = "live"
 
         [sandbox_workspace_write]
         network_access = true
@@ -160,12 +172,6 @@ in
         exclude = ["*SECRET*", "*TOKEN*", "*KEY*", "*PASSWORD*"]
         set = {}
         include_only = []
-
-        [features]
-        web_search_request = true
-        view_image_tool = true
-        skills = true
-        tui2 = false
 
         [history]
         persistence = "save-all"

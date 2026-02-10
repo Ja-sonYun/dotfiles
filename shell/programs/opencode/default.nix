@@ -7,12 +7,12 @@ let
   opencodeConfig = {
     "$schema" = "https://opencode.ai/config.json";
     theme = "gihtub";
-    model = "openai/gpt-5.2-codex";
+    model = "openai/gpt-5.3-codex";
     share = "disabled";
     default_agent = "plan";
 
     autoupdate = false;
-    snapshot = false;
+    snapshot = true;
 
     compaction = {
       auto = true;
@@ -131,8 +131,15 @@ let
       };
 
       websearch = {
-        type = "remote";
-        url = "https://mcp.exa.ai/mcp";
+        type = "local";
+        command = [
+          (toString (
+            pkgs.writeShellScript "firecrawl-mcp-wrapper" ''
+              export FIRECRAWL_API_URL="http://localhost:3002"
+              exec ${pkgs.firecrawl-mcp}/bin/firecrawl-mcp
+            ''
+          ))
+        ];
       };
 
       grep_app = {

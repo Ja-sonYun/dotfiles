@@ -178,9 +178,8 @@
             name = "vim-devshell";
             buildInputs = [
               pkgs.vim-dev
-            ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
+            ];
             shellHook = ''
-              ${self.checks.${system}.pre-commit-check.shellHook}
               ln -Tfns "$PWD/vim" ~/.config/vim-dev
 
               mkdir -p ~/.config/vim-plugins/site/pack/dev/start
