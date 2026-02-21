@@ -14,6 +14,7 @@
     # Local custom packages
     git-wrapped = final.callPackage ../pkgs/git-wrapped { };
     awscli-local = final.callPackage ../pkgs/awscli-local { };
+    macnotesapp = final.callPackage ../pkgs/macnotesapp { };
 
     # Npm
     codex = final.callPackage ../pkgs/codex { };
@@ -30,6 +31,7 @@
     tmux-menu = final.callPackage ../pkgs/tmux-menu { };
 
     # Go
+    awsdac = final.callPackage ../pkgs/awsdac { };
     mermaid-ascii = final.callPackage ../pkgs/mermaid-ascii { };
 
     # Mac

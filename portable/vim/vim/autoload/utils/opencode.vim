@@ -2,9 +2,9 @@ vim9script
 
 import autoload 'utils/job.vim' as job
 
-const DEFAULT_MODEL = 'openai/gpt-5.2-codex'
+const DEFAULT_MODEL = 'openai/gpt-5.3-codex-spark'
 const DEFAULT_FORMAT = 'json'
-const DEFAULT_AGENT = 'chat'
+const DEFAULT_AGENT = 'code-readonly'
 
 var running_jobs: list<any> = []
 

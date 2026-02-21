@@ -106,6 +106,12 @@ let
         enabled = false;
       };
 
+      awsdac = {
+        type = "local";
+        command = [ "${pkgs.awsdac}/bin/awsdac-mcp-server" ];
+        enabled = false;
+      };
+
       terraform = {
         type = "local";
         command = [

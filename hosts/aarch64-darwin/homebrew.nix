@@ -53,6 +53,7 @@ let
         "parallels"
         "kicad"
         "firefox"
+        "notion"
         "raycast"
 
         "alfred"

@@ -142,8 +142,8 @@
         inputs = self.inputs;
         config = cfg;
         vim = {
-          rev = "v9.1.1975";
-          sha256 = "sha256-8/xtpRQU/IKu98HSHBNdKzOsv7wDcUi2Z8k+WW5k7Fs=";
+          rev = "v9.2.0010";
+          sha256 = "sha256-29dSi9KRs45xc+ZGnLeRPG5x9y8PXSi9XrWH2bNBk6g=";
         };
       };
 

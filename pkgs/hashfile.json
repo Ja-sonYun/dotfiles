@@ -10,15 +10,16 @@
     "firecrawl-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
   },
   "JasonYuns-MacBook-Pro": {
-    "codex": "sha256-rmz/atUg84y8K3GU0zUTF2lEDlVHBIDhPx+qCyVyQY4=",
-    "claude-code": "sha256-dekUiikRopvJXffxTgHs9ixDg8I4oLd6RWtdBRxdgOE=",
+    "codex": "sha256-Uwwai5pHGak/l3mC49ZBbS5YCt17HQHJSnDk0esMV+E=",
+    "claude-code": "sha256-UKXXGEEQYom1s+74j42sq2JDxGD1kny271sjkBhjMIM=",
     "awscli-local": "sha256-p8vRl0WI5+oO8emdPVTWfYoEztB2K/fJJai7WgUgbLU=",
     "tmux-menu": "sha256-baxazNev2VBQNC1qNDaOWdObZ8wd/l5g8jBueBX3CE4=",
     "context7-mcp": "sha256-RzkzfSytWwW3oDFN8FBa4zakdHoh/j3NIRD1B3hGUb4=",
-    "aws-documentation": "sha256-sgxWuGB7LPE9XmDzE5SLDxLtWFPqXnIZHf9Jjn6YHJc=",
-    "chrome-devtools-mcp": "sha256-bYFT5cmfGzSuXrkTnchX+zRpIAPRvoSAK8PlF/rnXvw=",
-    "opencode": "sha256-eWH73MORitsnlxCTHX3hWo+wHMWOaz4AJKhkwF0L/PU=",
-    "firecrawl-mcp": "sha256-gstC+Vm6H0Xx44qh7GIY3e0TuteT+mM0VW87ftuTqMA="
+    "aws-documentation": "sha256-4LLX057TNzo6+HtIgipg8v0Rzra+gKbAJWHbMUU+EUE=",
+    "chrome-devtools-mcp": "sha256-ONUiVoDx8ULs8w19Smk3HR281ebXQdKGKwfB7gs6zFY=",
+    "opencode": "sha256-SP9ut0nB49dqeeMfUQXFBx3q5Fxg9tUZnofhvUMnby8=",
+    "firecrawl-mcp": "sha256-W3YGx0r3B9aJnKHhE8tXxUIiYV+dO6Ijyuc6Nch09kQ=",
+    "macnotesapp": "sha256-RLLDVxgdqtN+iMeexTSsvVaZE3ezPsaTlkPmfwsStxE="
   },
   "Jasons-MacBook-Server": {
     "codex": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",

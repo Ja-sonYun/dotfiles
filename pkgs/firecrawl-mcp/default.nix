@@ -7,7 +7,7 @@ pkgs.lib.npm.mkNpmGlobalPackageDerivation {
   inherit pkgs outputHash;
   name = "firecrawl-mcp";
   packages = [
-    "firecrawl-mcp@3.7.4"
+    "firecrawl-mcp@3.9.0"
   ];
   exposedBinaries = [
     "firecrawl-mcp"

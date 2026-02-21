@@ -91,31 +91,8 @@ def GenerateReplacer(prompt: string, system_prompt: string): func<void>
   return InnerFunc
 enddef
 
-def BuildCommentLines(text: string): list<string>
-  var cmt = &commentstring
-  if cmt == ''
-    cmt = '# %s'
-  endif
-  var parts = split(cmt, '%s', 1)
-  var prefix = parts[0]
-  var suffix = len(parts) > 1 ? parts[1] : ''
-  if prefix != '' && prefix !~ '\s$'
-    prefix ..= ' '
-  endif
-  var lines = split(text, "\n", 1)
-  var out: list<string> = []
-  for line in lines
-    add(out, prefix .. line .. suffix)
-  endfor
-  return out
-enddef
-
-def BuildAskPrompt(question: string, lines: list<string>): string
-  return BuildFileHeader() .. 'Question: ' .. question .. "\n\nCode:\n" .. join(lines, "\n")
-enddef
-
-def BuildAskReplacement(lines: list<string>, result: string): list<string>
-  return BuildCommentLines(result) + lines
+def BuildAskPrompt(instruction: string, lines: list<string>): string
+  return BuildFileHeader() .. 'Instruction: ' .. instruction .. "\n\nCode:\n" .. join(lines, "\n")
 enddef
 
 def ApplyIndent(ctx: any): void
@@ -141,7 +118,7 @@ def ApplyIndent(ctx: any): void
   endtry
 enddef
 
-def AskExplain(start: number, end: number, question: string): void
+def AskAction(start: number, end: number, instruction: string): void
   EchoWith('', MSG_CALLING)
   const ctx = lock.LockRange(start, end)
   if type(ctx) == v:t_none
@@ -149,8 +126,8 @@ def AskExplain(start: number, end: number, question: string): void
   endif
   ctx.SetStatus(MSG_STATUS)
   const original_lines = ctx.Lines()
-  const full_prompt = BuildAskPrompt(question, original_lines)
-  const system_prompt = 'You are a concise code assistant. Answer the user question about the code. Output only the explanation text. Do not use markdown or code fences. Output raw text only.'
+  const full_prompt = BuildAskPrompt(instruction, original_lines)
+  const system_prompt = 'You are a concise code assistant. Apply the user instruction to the provided code. Return only the updated source code. Do not use markdown or code fences. Do not include explanations or prose. If the request cannot be satisfied, return a single comment line explaining why.'
 
   def OnSuccess(result: string): void
     if trim(result) == ''
@@ -158,7 +135,7 @@ def AskExplain(start: number, end: number, question: string): void
       EchoWith('WarningMsg', MSG_NO_RESPONSE)
       return
     endif
-    const new_lines = BuildAskReplacement(original_lines, result)
+    const new_lines = split(result, "\n", 1)
     ctx.Replace(new_lines)
     ApplyIndent(ctx)
     ctx.Unlock()
@@ -189,6 +166,6 @@ const RefactorCode = GenerateReplacer(
 command! -range Fix          call GrammarFix(<line1>, <line2>)
 command! -range Comment      call AddComment(<line1>, <line2>)
 command! -range Refactor     call RefactorCode(<line1>, <line2>)
-command! -range -nargs=+ Ask call AskExplain(<line1>, <line2>, <q-args>)
+command! -range -nargs=+ Ask call AskAction(<line1>, <line2>, <q-args>)
 
 defcompile
