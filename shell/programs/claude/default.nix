@@ -80,8 +80,7 @@ let
     };
     grep_app = {
       url = "https://mcp.grep.app";
-      transportType = "websocket";
-      autoApprove = [ ];
+      type = "http";
     };
   };
 
@@ -174,7 +173,9 @@ let
     paths = [ pkgs.claude-code ];
     buildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
-      wrapProgram $out/bin/claude \
+      mv $out/bin/claude $out/bin/claude-real
+
+      wrapProgram $out/bin/claude-real \
         --prefix PATH : ${
           pkgs.lib.makeBinPath [
             pkgs.pyright
@@ -187,6 +188,69 @@ let
             pkgs.clang-tools
           ]
         }
+
+      cat > $out/bin/claude <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      profile="oauth"
+      args=()
+
+      while [ "$#" -gt 0 ]; do
+        case "$1" in
+          --profile)
+            if [ "$#" -lt 2 ]; then
+              echo "Error: --profile requires a value (oauth|custom)" >&2
+              exit 1
+            fi
+            profile="$2"
+            shift 2
+            ;;
+          --profile=*)
+            profile="''${1#--profile=}"
+            shift
+            ;;
+          --)
+            args+=("$1")
+            shift
+            while [ "$#" -gt 0 ]; do
+              args+=("$1")
+              shift
+            done
+            ;;
+          *)
+            args+=("$1")
+            shift
+            ;;
+        esac
+      done
+
+      case "$profile" in
+        oauth)
+          unset ANTHROPIC_BASE_URL || true
+          unset ANTHROPIC_AUTH_TOKEN || true
+          unset ANTHROPIC_API_KEY || true
+          unset ANTHROPIC_DEFAULT_SONNET_MODEL || true
+          unset ANTHROPIC_DEFAULT_OPUS_MODEL || true
+          unset ANTHROPIC_DEFAULT_HAIKU_MODEL || true
+          ;;
+        custom)
+          export ANTHROPIC_BASE_URL="https://lmp.test0.zip"
+          export ANTHROPIC_AUTH_TOKEN="$(cat ${config.age.secrets.capi-key.path})"
+          export ANTHROPIC_DEFAULT_OPUS_MODEL="gpt-5.3-codex(xhigh)"
+          export ANTHROPIC_DEFAULT_SONNET_MODEL="gpt-5.3-codex(high)"
+          export ANTHROPIC_DEFAULT_HAIKU_MODEL="gpt-5.3-codex-spark"
+          ;;
+        *)
+          echo "Error: invalid profile '$profile'. Use 'oauth' or 'custom'." >&2
+          exit 1
+          ;;
+      esac
+
+      exec "$0-real" "''${args[@]}"
+      EOF
+
+      chmod +x $out/bin/claude
     '';
   };
 in
