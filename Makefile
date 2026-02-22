@@ -65,7 +65,7 @@ show-derivations: ## Show derivation details
 
 deploy: build ## Deploy nix-darwin config
 	nix run nixpkgs#nh darwin switch .#darwinConfigurations.$(HOSTNAME)
-	if command -v yabai >/dev/null 2>&1; then sudo yabai --load-sa || true; fi
+	@if command -v yabai >/dev/null 2>&1; then sudo yabai --load-sa || true; fi
 endif
 # ==================================================================================
 
