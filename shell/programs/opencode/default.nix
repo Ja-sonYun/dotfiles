@@ -141,7 +141,8 @@ let
         command = [
           (toString (
             pkgs.writeShellScript "firecrawl-mcp-wrapper" ''
-              export FIRECRAWL_API_URL="http://localhost:3002"
+              export FIRECRAWL_API_URL="https://firecrawl.test0.zip"
+              export FIRECRAWL_API_KEY="$(cat ${config.age.secrets.capi-key.path})"
               exec ${pkgs.firecrawl-mcp}/bin/firecrawl-mcp
             ''
           ))
