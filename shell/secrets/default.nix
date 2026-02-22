@@ -23,6 +23,12 @@
     deepseek-api-key = {
       file = "${agenix-secrets}/encrypted/deepseek-api-key.age";
     };
+    llm-proxy-api-key = {
+      file = "${agenix-secrets}/encrypted/llm-proxy-api-key.age";
+    };
+    common-key = {
+      file = "${agenix-secrets}/encrypted/common-key.age";
+    };
   };
 
   home.sessionVariables = {
