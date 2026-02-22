@@ -1,6 +1,12 @@
 { lib, purpose, ... }:
 let
-  packageBrews = [ ];
+  packageBrews =
+    if purpose == "server" then
+      [
+        (import ../../infra/service/aarch64-darwin/homebrew.nix { inherit purpose; })
+      ]
+    else
+      [ ];
 
   allBrews = lib.concatMap (pkg: pkg.homebrew.brews or [ ]) packageBrews;
   allCasks = lib.concatMap (pkg: pkg.homebrew.casks or [ ]) packageBrews;
