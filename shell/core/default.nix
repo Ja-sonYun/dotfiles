@@ -98,5 +98,6 @@
     cat = "bat";
     gsed = "sed";
     watch = "hwatch";
+    tunnel = "${configDir}/infra/cloudflare/generated/tunnel";
   };
 }
