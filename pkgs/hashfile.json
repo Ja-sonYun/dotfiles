@@ -29,6 +29,7 @@
     "context7-mcp": "sha256-8ZpuEppidVkrbS6hlrtKFxwWeui5cDOsJT0di1L7gcA=",
     "aws-documentation": "sha256-yE2kddJNSGSvLBdKmIwA4/m+ed55YUEWy1/DYyxb6do=",
     "chrome-devtools-mcp": "sha256-gO14fwZ0SyTYdf5Ged3MmQmL2kyKvplC0mN0ayLuAP8=",
-    "firecrawl-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    "firecrawl-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    "macnotesapp": "sha256-tdvMnXsrxnSOosxP8qe2zaFp7wCbKTQbw4vLfia570U="
   }
 }
