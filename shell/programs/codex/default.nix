@@ -7,9 +7,13 @@
 let
   genCodexMcpServer = server: ''
     [mcp_servers.${server.name}]
-    command = "${server.command}"
-    args = ${builtins.replaceStrings [ ''":"'' ] [ ''"="'' ] (builtins.toJSON server.args)}
-    env = ${builtins.replaceStrings [ ''":"'' ] [ ''"="'' ] (builtins.toJSON server.env)}
+    ${if server ? url then ''
+      url = "${server.url}"
+    '' else ''
+      command = "${server.command}"
+      args = ${builtins.replaceStrings [ ''":"'' ] [ ''"="'' ] (builtins.toJSON server.args)}
+      env = ${builtins.replaceStrings [ ''":"'' ] [ ''"="'' ] (builtins.toJSON server.env)}
+    ''}
     ${lib.optionalString (server ? enabled) "enabled = ${lib.boolToString server.enabled}"}
   '';
 
@@ -73,13 +77,6 @@ let
       env = { };
     }
     {
-      name = "playwright";
-      command = "${pkgs.playwright-mcp}/bin/mcp-server-playwright";
-      enabled = false;
-      args = [ ];
-      env = { };
-    }
-    {
       name = "chrome-devtools";
       command = "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp";
       args = [ ];
@@ -92,6 +89,12 @@ let
       env = { };
     }
     {
+      name = "awsdac";
+      command = "${pkgs.awsdac}/bin/awsdac-mcp-server";
+      args = [ ];
+      env = { };
+    }
+    {
       name = "terraform";
       command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";
       args = [ "stdio" ];
@@ -100,11 +103,16 @@ let
     {
       name = "websearch";
       command = pkgs.writeShellScript "firecrawl-mcp-wrapper" ''
-        export FIRECRAWL_API_URL="http://localhost:3002"
+        export FIRECRAWL_API_URL="https://firecrawl.test0.zip"
+        export FIRECRAWL_API_KEY="$(cat ${config.age.secrets.capi-key.path})"
         exec ${pkgs.firecrawl-mcp}/bin/firecrawl-mcp
       '';
       args = [ ];
       env = { };
+    }
+    {
+      name = "grep_app";
+      url = "https://mcp.grep.app";
     }
   ];
 

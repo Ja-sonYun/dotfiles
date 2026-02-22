@@ -67,6 +67,22 @@ let
       transportType = "stdio";
       autoApprove = [ ];
     };
+    websearch = {
+      command = pkgs.writeShellScript "firecrawl-mcp-wrapper" ''
+        export FIRECRAWL_API_URL="https://firecrawl.test0.zip"
+        export FIRECRAWL_API_KEY="$(cat ${config.age.secrets.capi-key.path})"
+        exec ${pkgs.firecrawl-mcp}/bin/firecrawl-mcp
+      '';
+      args = [ ];
+      env = { };
+      transportType = "stdio";
+      autoApprove = [ ];
+    };
+    grep_app = {
+      url = "https://mcp.grep.app";
+      transportType = "websocket";
+      autoApprove = [ ];
+    };
   };
 
   settings = {
