@@ -5,7 +5,7 @@ import sys
 import openai
 from pydantic import BaseModel
 
-api_key = os.environ.get("OPENAI_API_KEY")
+api_key = os.environ.get("CAPI_KEY")
 
 all_args = sys.argv[1:]
 input_text = " ".join(all_args).strip()
@@ -20,10 +20,13 @@ async def generate() -> str:
         print("No instruction provided to generate a command.", file=sys.stderr)
         sys.exit(1)
 
-    client = openai.AsyncClient(api_key=api_key)
+    client = openai.AsyncClient(
+        base_url="https://lmp.test0.zip/v1",
+        api_key=api_key,
+    )
     response = await client.beta.chat.completions.parse(
-        model="gpt-5-nano",
-        reasoning_effort="minimal",
+        model="gpt-5.3-codex-spark",
+        reasoning_effort="low",
         messages=[
             {
                 "role": "system",
