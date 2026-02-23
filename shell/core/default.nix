@@ -66,6 +66,12 @@
 
     cloudflared
 
+    (pkgs.writeShellScriptBin "tunnel" ''
+      set -euo pipefail
+      export PATH="${pkgs.age}/bin:${pkgs.cloudflared}/bin:$PATH"
+      exec "${configDir}/infra/cloudflare/generated/tunnel" "$@"
+    '')
+
     nh
     nix-output-monitor
 
@@ -98,6 +104,5 @@
     cat = "bat";
     gsed = "sed";
     watch = "hwatch";
-    tunnel = "${configDir}/infra/cloudflare/generated/tunnel";
   };
 }
