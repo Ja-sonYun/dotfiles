@@ -78,10 +78,10 @@ let
       transportType = "stdio";
       autoApprove = [ ];
     };
-    grep_app = {
-      url = "https://mcp.grep.app";
-      type = "http";
-    };
+    # grep_app = {
+    #   url = "https://mcp.grep.app";
+    #   type = "http";
+    # };
   };
 
   settings = {

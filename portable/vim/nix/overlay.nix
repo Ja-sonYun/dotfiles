@@ -109,7 +109,7 @@ let
       gnumake
       gawk
     ]
-    ++ pkgs.lib.optionals config.useCopilot [ (nodejs_22.override { enableNpm = false; }) ];
+    ++ pkgs.lib.optionals config.useCopilot [ nodejs_22 ];
 
   amberPackagesOpt = pkgs.lib.optionals config.useAmber (
     with pkgs;

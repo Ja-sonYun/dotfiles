@@ -21,7 +21,7 @@
     sqlmap
 
     # API - Fuzz
-    wfuzz
+    # wfuzz
     ffuf
     gospider
     arjun
