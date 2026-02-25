@@ -7,7 +7,7 @@ pkgs.lib.npm.mkNpmGlobalPackageDerivation {
   inherit pkgs outputHash;
   name = "chrome-devtools-mcp";
   packages = [
-    "chrome-devtools-mcp@0.17.3"
+    "chrome-devtools-mcp@0.18.1"
   ];
   exposedBinaries = [
     "chrome-devtools-mcp"
