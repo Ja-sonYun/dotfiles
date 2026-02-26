@@ -69,6 +69,8 @@ let
         "hyprnote"
         "microsoft-remote-desktop"
 
+        "protonvpn"
+
         # TODO: Move to nix
         "macfuse"
       ]
