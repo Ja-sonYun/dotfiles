@@ -14,13 +14,13 @@
     ./programs/visidata
     ./programs/direnv
     ./programs/navi
+    ./programs/opencode
   ]
   ++ lib.optionals (purpose == "main") [
     ./programs/ghostty
     ./programs/weechat
     ./programs/claude
     ./programs/codex
-    ./programs/opencode
   ];
 
   home.file.profile = {
