@@ -130,10 +130,6 @@ nnoremap <silent> <leader>a <Cmd>nohl<CR>
 nnoremap <silent> <leader>w <Cmd>write<CR>
 nnoremap <silent> <leader>r <Cmd>edit<CR>
 
-" Search for word under cursor
-nnoremap <silent> // <Cmd>vimgrep /<C-R><C-W>/g %<CR>
-xnoremap <silent> // y:execute 'vimgrep /' .. escape(@", '/\') .. '/g %'<CR>
-
 " Navigate
 nnoremap <silent> ]q <Cmd>cnext<CR>
 nnoremap <silent> [q <Cmd>cprev<CR>

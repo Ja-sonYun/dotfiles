@@ -84,12 +84,12 @@
     seqdia
 
     # My vim config
-    plot
+    # plot
 
     vim-pkg
   ]
   ++ lib.optionals (purpose == "main") [
-    say
+    # say
   ] ++ lib.optionals (purpose == "server") [
   ];
 
