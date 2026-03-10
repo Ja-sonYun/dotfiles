@@ -7,7 +7,7 @@ let
   opencodeConfig = {
     "$schema" = "https://opencode.ai/config.json";
     theme = "gihtub";
-    model = "openai/gpt-5.3-codex";
+    model = "openai/gpt-5.4";
     share = "disabled";
     default_agent = "plan";
 
