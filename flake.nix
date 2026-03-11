@@ -199,6 +199,7 @@
             [
               # Linux specific configurations, which isn't implemented yet
               ./hosts/x86_64-linux/homemanager.nix
+              ./hosts/x86_64-linux/services.nix
             ]
           else
             [ ]
