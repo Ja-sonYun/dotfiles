@@ -106,6 +106,7 @@
           configDir = "/Users/jasonyun/dotfiles";
           cacheDir = "/Users/jasonyun/.nixcache/jasony";
           purpose = "main";
+          hasgui = true;
         };
         "Jasons-MacBook-Server" = {
           system = "aarch64-darwin";
@@ -116,6 +117,7 @@
           configDir = "/Users/jasonyun/dotfiles";
           cacheDir = "/Users/jasonyun/.nixcache/jasony";
           purpose = "server";
+          hasgui = true;
         };
         "linux-devel" = {
           system = "x86_64-linux";
@@ -126,6 +128,7 @@
           configDir = "/home/vagrant/dotfiles";
           cacheDir = "/home/vagrant/.nixcache/jasony";
           purpose = "server";
+          hasgui = false;
         };
         "Jasonyun-wsl-server" = {
           system = "x86_64-linux";
@@ -136,6 +139,7 @@
           configDir = "/home/jason/dotfiles";
           cacheDir = "/home/jason/.nixcache/jason";
           purpose = "server";
+          hasgui = false;
         };
       };
       mkSpecialArgs =
@@ -154,6 +158,7 @@
             configDir
             cacheDir
             purpose
+            hasgui
             ;
           inherit agenix agenix-secrets;
         };

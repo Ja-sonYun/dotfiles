@@ -49,7 +49,8 @@ install: ## Install nix daemon
 	sh <(curl -L https://nixos.org/nix/install) --daemon
 
 deploy: add lock ## Deploy home-manager config
-	nix run home-manager -- switch --flake .#$(HOSTNAME)
+	$(NIX) build .#homeConfigurations.$(HOSTNAME).activationPackage $(NIX_TRACE_ARGS)
+	./result/activate
 endif
 # ==================================================================================
 

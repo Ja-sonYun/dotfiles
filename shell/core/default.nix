@@ -43,19 +43,19 @@
     # productivity
     glow # markdown previewer in terminal
     viu
-    mermaid-ascii
 
     lazygit
     lazysql
-
-    comma
 
     httpie
     wget
 
     hwatch
 
-    mermaid-cli
+    nh
+    comma
+    nix-output-monitor
+    devenv
 
     entr
     fd
@@ -72,10 +72,7 @@
       exec "${configDir}/infra/cloudflare/generated/tunnel" "$@"
     '')
 
-    nh
-    nix-output-monitor
 
-    devenv
     awscli
     awscli-local
 
@@ -90,6 +87,7 @@
   ]
   ++ lib.optionals (purpose == "main") [
     # say
+    mermaid-cli
   ] ++ lib.optionals (purpose == "server") [
   ];
 

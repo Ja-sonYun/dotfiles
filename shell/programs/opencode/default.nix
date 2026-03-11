@@ -1,7 +1,9 @@
-{ pkgs
-, config
-, agenix-secrets
-, ...
+{
+  pkgs,
+  config,
+  agenix-secrets,
+  hasgui,
+  ...
 }:
 let
   opencodeConfig = {
@@ -94,12 +96,6 @@ let
         ];
       };
 
-      chrome-devtools = {
-        type = "local";
-        command = [ "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp" ];
-        enabled = false;
-      };
-
       aws-documentation = {
         type = "local";
         command = [ "${pkgs.aws-documentation}/bin/awslabs.aws-documentation-mcp-server" ];
@@ -152,6 +148,13 @@ let
       grep_app = {
         type = "remote";
         url = "https://mcp.grep.app";
+      };
+    }
+    // pkgs.lib.optionalAttrs hasgui {
+      chrome-devtools = {
+        type = "local";
+        command = [ "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp" ];
+        enabled = false;
       };
     };
   };

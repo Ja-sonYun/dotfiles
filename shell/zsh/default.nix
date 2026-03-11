@@ -2,6 +2,7 @@
 , lib
 , cacheDir
 , configDir
+, purpose
 , ...
 }:
 {
@@ -215,18 +216,6 @@
     git = true;
     icons = "never";
     enableZshIntegration = true;
-  };
-
-  # terminal file manager
-  programs.yazi = {
-    enable = true;
-    enableZshIntegration = true;
-    settings = {
-      manager = {
-        show_hidden = true;
-        sort_dir_first = true;
-      };
-    };
   };
 
   # skim provides a single executable: sk.

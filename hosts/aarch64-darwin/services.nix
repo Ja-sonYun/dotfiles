@@ -1,7 +1,7 @@
-{ purpose, ... }:
+{ hostname, ... }:
 {
   imports = (
-    if purpose == "server" then
+    if hostname == "Jasons-MacBook-Server" then
       [
         ../../infra/service/aarch64-darwin
       ]

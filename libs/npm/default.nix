@@ -27,11 +27,26 @@ let
             url = mkNpmUrl version targetSystem;
             sha256 = sha256."${mkNpmUrl version targetSystem}";
           };
+          nativeBuildInputs = with pkgs; [
+            gnutar
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+            autoPatchelfHook
+          ];
+          buildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [
+            pkgs.stdenv.cc.cc.lib
+          ];
           installPhase = ''
             runHook preInstall
 
             mkdir -p $out
             tar -C $out --strip-components=1 -xzf $src
+
+            for bin in npm npx corepack; do
+              if [ -f "$out/bin/$bin" ]; then
+                substituteInPlace "$out/bin/$bin" \
+                  --replace-fail '#!/usr/bin/env node' "#!$out/bin/node"
+              fi
+            done
 
             runHook postInstall
           '';

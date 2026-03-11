@@ -1,7 +1,7 @@
-{ lib, purpose, ... }:
+{ lib, purpose, hostname, ... }:
 let
   packageBrews =
-    if purpose == "server" then
+    if hostname == "Jasons-MacBook-Server" then
       [
         (import ../../infra/service/aarch64-darwin/homebrew.nix { inherit purpose; })
       ]
