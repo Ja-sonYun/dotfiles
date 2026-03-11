@@ -1,7 +1,7 @@
-{ hostname, purpose, ... }:
+{ hostname, ... }:
 {
   imports =
-    if purpose == "server" && hostname == "Jasonyun-wsl-server" then
+    if hostname == "Jasonyun-wsl-server" then
       [
         ../../infra/service/Jasonyun-wsl-server
       ]

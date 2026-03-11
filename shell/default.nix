@@ -5,6 +5,8 @@
     ./core
     ./secrets # Agenix secrets management
 
+    ./analysis
+
     ./programs/git
     ./programs/git/utils.nix
     ./programs/jujutsu
@@ -12,15 +14,13 @@
     ./programs/direnv
     ./programs/navi
     ./programs/opencode
+    ./programs/visidata
   ]
   ++ lib.optionals (purpose == "main") [
-    ./analysis
-
     ./programs/ghostty
     ./programs/weechat
     ./programs/claude
     ./programs/codex
-    ./programs/visidata
   ];
 
   home.file.profile = {
