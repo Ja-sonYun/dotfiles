@@ -1,6 +1,7 @@
 { pkgs
 , lib
 , configDir
+, hostname
 , purpose
 , ...
 }:
@@ -88,7 +89,7 @@
   ++ lib.optionals (purpose == "main") [
     # say
     mermaid-cli
-  ] ++ lib.optionals (purpose == "server") [
+  ] ++ lib.optionals (hostname == "Jasons-MacBook-Server") [
   ];
 
   home.sessionVariables = {

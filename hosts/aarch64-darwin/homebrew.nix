@@ -3,7 +3,7 @@ let
   packageBrews =
     if hostname == "Jasons-MacBook-Server" then
       [
-        (import ../../infra/service/aarch64-darwin/homebrew.nix { inherit purpose; })
+        (import ../../infra/service/Jasons-MacBook-Server/homebrew.nix { inherit purpose; })
       ]
     else
       [ ];

@@ -3,7 +3,7 @@
   imports = (
     if hostname == "Jasons-MacBook-Server" then
       [
-        ../../infra/service/aarch64-darwin
+        ../../infra/service/Jasons-MacBook-Server
       ]
     else
       [

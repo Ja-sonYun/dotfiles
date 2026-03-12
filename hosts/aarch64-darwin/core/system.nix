@@ -1,12 +1,12 @@
 { configDir
-, purpose
+, hostname
 , username
 , ...
 }:
 
 let
   serverActiveScript =
-    if purpose == "server" then
+    if hostname == "Jasons-MacBook-Server" then
       ''
         pmset -a sleep 0
         pmset -a disablesleep 1
