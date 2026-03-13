@@ -62,6 +62,8 @@ let
         "firefox"
         "notion"
         "raycast"
+        "zotero"
+        "devonthink"
 
         "alfred"
         "aldente"
