@@ -30,6 +30,7 @@ let
     "ghostty"
     "aldente"
     "orbstack"
+    "obsidian"
   ]
   ++ (
     if purpose == "main" then
@@ -70,7 +71,6 @@ let
         "microsoft-remote-desktop"
 
         "protonvpn"
-        "obsidian"
 
         # TODO: Move to nix
         "macfuse"
