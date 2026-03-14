@@ -78,6 +78,7 @@
     awscli-local
 
     ollama
+    llmfit
 
     seqdia
 
