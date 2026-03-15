@@ -28,10 +28,10 @@
     "awscli-local": "sha256-g+hS6GlybNrvfSUH7TNzACNlbsCj4auMY0au5+sMh6E=",
     "tmux-menu": "sha256-aPxtJE4YI4wZWvpIQ7Qv31gH8tDwGklt3isWNTZ/Adw=",
     "context7-mcp": "sha256-wEa8Pw64NZEWQ/e9zozt/9IRugEggCBRYXo8/A/QhYs=",
-    "aws-documentation": "sha256-U/qemc+2nZv3S3gTLcBM6rmVvbaqD0QBAV3h2FWlefw=",
+    "aws-documentation": "sha256-p70f30dwgsLWdAk4l3PvA+fYXMI6g5Zh+Sg1ChF2dwI=",
     "chrome-devtools-mcp": "sha256-dZhhSfdJOS5AOpqfa2Sx8mEMT6AEPNob7QHJ4Gi6zEc=",
     "firecrawl-mcp": "sha256-yviAEnvId3JkuRWGI5A88OUdLJcXgAgPX59cj+jWOd0=",
     "macnotesapp": "sha256-tdvMnXsrxnSOosxP8qe2zaFp7wCbKTQbw4vLfia570U=",
-    "opencode": "sha256-0KSjpYKnds8xLzPi4CIkXqNgmEqSfYE9n7tWLGYY5xg="
+    "opencode": "sha256-QamwHJV7O2H3lWnyWIKvPHpK/Tqa3DQabhFNDAc4lMU="
   }
 }
