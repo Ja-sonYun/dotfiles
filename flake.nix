@@ -90,6 +90,7 @@
     , homebrew-core
     , homebrew-cask
     , vim
+    , server
     , agenix
     , agenix-secrets
     , git-hooks
@@ -160,6 +161,7 @@
             purpose
             hasgui
             ;
+          infraSrc = server;
           inherit agenix agenix-secrets;
         };
 

@@ -1,9 +1,9 @@
-{ hostname, ... }:
+{ hostname, infraSrc, ... }:
 {
   imports = (
     if hostname == "Jasons-MacBook-Server" then
       [
-        ../../infra/service/Jasons-MacBook-Server
+        (infraSrc + "/service/Jasons-MacBook-Server")
       ]
     else
       [
