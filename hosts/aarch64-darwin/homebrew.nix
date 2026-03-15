@@ -30,7 +30,6 @@ let
     "ghostty"
     "aldente"
     "orbstack"
-    "obsidian"
   ]
   ++ (
     if purpose == "main" then
@@ -62,7 +61,6 @@ let
         "firefox"
         "notion"
         "raycast"
-        "zotero"
         "devonthink"
 
         "alfred"
