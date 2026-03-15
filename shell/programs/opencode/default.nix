@@ -200,10 +200,10 @@ in
       source = "${opencodeBundleSrc}/skills";
       recursive = true;
     };
-    ".config/opencode/plugin/md-table.ts" = {
+    ".config/opencode/plugins/md-table.ts" = {
       source = ./plugins/md-table.ts;
     };
-    ".config/opencode/plugin/notification.js" = {
+    ".config/opencode/plugins/notification.js" = {
       source = ./plugins/notification.js;
     };
   };
