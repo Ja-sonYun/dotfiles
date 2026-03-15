@@ -1,5 +1,4 @@
 { username, userhome, isWsl ? false, ... }:
-
 let
   wslNvidiaLib = "/usr/lib/wsl/lib";
 in
