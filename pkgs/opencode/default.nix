@@ -7,7 +7,7 @@ pkgs.lib.npm.mkNpmGlobalPackageDerivation {
   inherit pkgs outputHash;
   name = "opencode";
   packages = [
-    "opencode-ai@1.2.26"
+    "opencode-ai@1.2.27"
   ];
   exposedBinaries = [
     "opencode"

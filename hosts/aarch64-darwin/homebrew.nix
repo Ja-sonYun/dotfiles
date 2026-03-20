@@ -30,6 +30,7 @@ let
     "ghostty"
     "aldente"
     "orbstack"
+    "obsidian"
   ]
   ++ (
     if purpose == "main" then

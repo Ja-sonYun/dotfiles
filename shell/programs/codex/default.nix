@@ -81,24 +81,28 @@ let
       command = "${pkgs.chrome-devtools-mcp}/bin/chrome-devtools-mcp";
       args = [ ];
       env = { };
+      enabled = false;
     }
     {
       name = "aws-documentation";
       command = "${pkgs.aws-documentation}/bin/awslabs.aws-documentation-mcp-server";
       args = [ ];
       env = { };
+      enabled = false;
     }
     {
       name = "awsdac";
       command = "${pkgs.awsdac}/bin/awsdac-mcp-server";
       args = [ ];
       env = { };
+      enabled = false;
     }
     {
       name = "terraform";
       command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";
       args = [ "stdio" ];
       env = { };
+      enabled = false;
     }
     {
       name = "websearch";
@@ -150,14 +154,10 @@ in
         model = "gpt-5.4"
         model_reasoning_effort = "high"
 
-        personality = "pragmatic"
-
-        approval_policy = "untrusted"
+        approval_policy = "on-request"
         sandbox_mode = "workspace-write"
 
-        hide_agent_reasoning = false
-
-        project_doc_fallback_filenames = ["CLAUDE.md"]
+        suppress_unstable_features_warning = true
 
         notify = ["${notifierScript}"]
         file_opener = "none"
@@ -166,30 +166,29 @@ in
 
         [sandbox_workspace_write]
         network_access = true
-        exclude_tmpdir_env_var = false
-        exclude_slash_tmp = false
-        writable_roots = []
+
+        [features]
+        unified_exec = true
+        shell_snapshot = true
+        multi_agent = true
+        personality = true
+        skill_mcp_dependency_install = false
+
+        [agents]
+        max_threads = 10
+        max_depth = 1
 
         [tui]
-        notifications = true
-        animations = true
-
-        [shell_environment_policy]
-        inherit = "all"
-        ignore_default_excludes = false
-        exclude = ["*SECRET*", "*TOKEN*", "*KEY*", "*PASSWORD*"]
-        set = {}
-        include_only = []
-
-        [history]
-        persistence = "save-all"
-        max_bytes = 10485760
+        status_line = ["model-with-reasoning", "context-remaining", "current-dir", "model-name", "git-branch", "context-used", "context-window-size", "used-tokens", "total-output-tokens", "five-hour-limit", "weekly-limit"]
 
         [profiles.fast]
         model_reasoning_effort = "low"
 
         [profiles.deep]
         model_reasoning_effort = "high"
+
+        [feedback]
+        enabled = false
 
         ${codexMcpServersConfig}
       '';
