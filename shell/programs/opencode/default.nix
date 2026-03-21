@@ -159,7 +159,7 @@ let
     };
   };
 
-  opencodeBundleSrc = "${agenix-secrets}/ai-bundle";
+  aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
 
   opencodeWrapped = pkgs.symlinkJoin {
     name = "opencode-wrapped";
@@ -190,14 +190,14 @@ in
       text = builtins.toJSON opencodeConfig;
     };
     ".config/opencode/AGENTS.md" = {
-      source = "${opencodeBundleSrc}/AGENTS.md";
+      source = aiBundle.agentsMdSrc;
     };
     ".config/opencode/agent" = {
-      source = "${opencodeBundleSrc}/agents";
+      source = aiBundle.agentsSrc;
       recursive = true;
     };
     ".config/opencode/skill" = {
-      source = "${opencodeBundleSrc}/skills";
+      source = aiBundle.skillsSrc;
       recursive = true;
     };
     ".config/opencode/plugins/md-table.ts" = {

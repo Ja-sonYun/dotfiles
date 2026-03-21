@@ -50,21 +50,7 @@ let
     ${pythonWithPackages}/bin/python ${toString ./notify.py} "$@"
   '';
 
-  codexBundleSrc = "${agenix-secrets}/ai-bundle";
-  codexBundleEntries = builtins.readDir codexBundleSrc;
-
-  codexBundleFiles = lib.listToAttrs (
-    map
-      (name: {
-        name = ".codex/${name}";
-        value = {
-          source = codexBundleSrc + "/${name}";
-          force = true;
-        }
-        // lib.optionalAttrs (codexBundleEntries.${name} == "directory") { recursive = true; };
-      })
-      (builtins.attrNames codexBundleEntries)
-  );
+  aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
 
   mcpServers = [
     {
@@ -127,26 +113,28 @@ in
     codexWrapped
   ];
 
-  # Remove this when codex supports specifying skills directory via linking
-  home.activation.codexSkillsOverride = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    set -euo pipefail
-    target="$HOME/.codex/skills"
+  home.activation.installCodexSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    target="$HOME/.agents/skills"
+
+    mkdir -p "$HOME/.agents"
     rm -rf "$target"
-    mkdir -p "$HOME/.codex"
-    ${pkgs.coreutils}/bin/cp -aL "${codexBundleSrc}/skills" "$target"
-    exec_list="$(${pkgs.coreutils}/bin/mktemp)"
-    ${pkgs.findutils}/bin/find "$target" -type f -perm /111 -print0 > "$exec_list"
-    ${pkgs.findutils}/bin/find "$target" -type d -exec ${pkgs.coreutils}/bin/chmod 0755 {} +
-    ${pkgs.findutils}/bin/find "$target" -type f -exec ${pkgs.coreutils}/bin/chmod 0444 {} +
-    if [ -s "$exec_list" ]; then
-      while IFS= read -r -d $'\0' file; do
-        ${pkgs.coreutils}/bin/chmod 0555 "$file"
-      done < "$exec_list"
-    fi
-    ${pkgs.coreutils}/bin/rm -f "$exec_list"
+    cp -RpL "${aiBundle.skillsSrc}" "$target"
+
+    find "$target" -type d -exec chmod 0555 {} +
+    find "$target" -type f -exec chmod 0444 {} +
+    find "$target" -type f -perm /111 -exec chmod 0555 {} +
   '';
 
-  home.file = codexBundleFiles // {
+  home.file = {
+    ".codex/AGENTS.md" = {
+      source = aiBundle.agentsMdSrc;
+      force = true;
+    };
+    ".codex/agents" = {
+      source = aiBundle.agentsSrc;
+      recursive = true;
+      force = true;
+    };
     "codex-config.toml" = {
       target = ".codex/config.toml";
       force = true;

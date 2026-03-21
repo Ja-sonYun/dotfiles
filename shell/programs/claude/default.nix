@@ -153,20 +153,7 @@ let
     }
   );
 
-  claudeBundleSrc = "${agenix-secrets}/ai-bundle";
-  claudeBundleEntries = builtins.readDir claudeBundleSrc;
-
-  claudeBundleFiles = lib.listToAttrs (
-    map
-      (name: {
-        name = ".claude/${name}";
-        value = {
-          source = claudeBundleSrc + "/${name}";
-        }
-        // lib.optionalAttrs (claudeBundleEntries.${name} == "directory") { recursive = true; };
-      })
-      (builtins.attrNames claudeBundleEntries)
-  );
+  aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
 
   claudeCodeWrapped = pkgs.symlinkJoin {
     name = "claude-code-wrapped";
@@ -259,13 +246,27 @@ in
     claudeCodeWrapped
   ];
 
-  home.file = claudeBundleFiles // {
+  home.file = {
+    ".claude/AGENTS.md" = {
+      source = aiBundle.agentsMdSrc;
+      force = true;
+    };
+    ".claude/agents" = {
+      source = aiBundle.agentsSrc;
+      recursive = true;
+      force = true;
+    };
     ".claude/nix/settings.json" = {
       text = builtins.toJSON settings;
       force = true;
     };
+    ".claude/skills" = {
+      source = aiBundle.skillsSrc;
+      recursive = true;
+      force = true;
+    };
     ".claude/CLAUDE.md" = {
-      source = "${claudeBundleSrc}/AGENTS.md";
+      source = aiBundle.agentsMdSrc;
       force = true;
     };
     "Library/Application Support/Claude/claude_desktop_config.json" = {
