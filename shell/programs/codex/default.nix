@@ -155,6 +155,8 @@ in
 
         web_search = "live"
 
+        profile = "deep-fast"
+
         [sandbox_workspace_write]
         network_access = true
 
@@ -167,15 +169,20 @@ in
 
         [agents]
         max_threads = 10
-        max_depth = 1
 
         [tui]
         status_line = ["model-with-reasoning", "context-remaining", "current-dir", "model-name", "git-branch", "context-used", "context-window-size", "used-tokens", "total-output-tokens", "five-hour-limit", "weekly-limit"]
 
         [profiles.fast]
+        service_tier = "fast"
         model_reasoning_effort = "low"
 
         [profiles.deep]
+        service_tier = "flex"
+        model_reasoning_effort = "high"
+
+        [profiles.deep-fast]
+        service_tier = "fast"
         model_reasoning_effort = "high"
 
         [feedback]
