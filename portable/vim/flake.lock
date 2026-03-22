@@ -25,11 +25,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1772893680,
-        "narHash": "sha256-JDqZMgxUTCq85ObSaFw0HhE+lvdOre1lx9iI6vYyOEs=",
+        "lastModified": 1774104215,
+        "narHash": "sha256-EAtviqz0sEAxdHS4crqu7JGR5oI3BwaqG0mw7CmXkO8=",
         "owner": "cachix",
         "repo": "git-hooks.nix",
-        "rev": "8baab586afc9c9b57645a734c820e4ac0a604af9",
+        "rev": "f799ae951fde0627157f40aec28dec27b22076d0",
         "type": "github"
       },
       "original": {
@@ -119,11 +119,11 @@
     "vim-lsp": {
       "flake": false,
       "locked": {
-        "lastModified": 1773847848,
-        "narHash": "sha256-q3gxDzDLqBEwH1VR7o7lwEd7169k2gPxB3eKqkGYmxw=",
+        "lastModified": 1774126510,
+        "narHash": "sha256-k46ddf/sy4gQESGZU1080OJDhMez1fyFng0rlrNxCvA=",
         "owner": "yegappan",
         "repo": "lsp",
-        "rev": "b64d92288db0099c4704be62f28bf476dce9f169",
+        "rev": "5afbcfb6080f9848861c9026002fb4da115518d0",
         "type": "github"
       },
       "original": {

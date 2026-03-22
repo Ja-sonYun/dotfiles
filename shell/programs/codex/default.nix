@@ -117,7 +117,10 @@ in
     target="$HOME/.agents/skills"
 
     mkdir -p "$HOME/.agents"
-    rm -rf "$target"
+    if [ -e "$target" ]; then
+      find "$target" -type d -exec chmod u+w {} +
+      rm -rf "$target"
+    fi
     cp -RpL "${aiBundle.skillsSrc}" "$target"
 
     find "$target" -type d -exec chmod 0555 {} +
