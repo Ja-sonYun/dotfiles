@@ -60,6 +60,16 @@ let
         "recommend"
       ];
     };
+    n8n-mcp = {
+      command = "${pkgs.n8n-mcp}/bin/n8n-mcp";
+      args = [ "stdio" ];
+      env = {
+        N8N_API_URL = "https://n8n.test0.zip";
+        N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZmYwN2ExNC1kOWE4LTRjYjItOTVkMS1kODE4ZjBjOTExNjciLCJpc3MiOiJuOG4iLCJhdWQiOiJtY3Atc2VydmVyLWFwaSIsImp0aSI6Ijc2MTVlNjhjLTg2ZDktNGY4MC05MmI0LWM3NzQ1NDY0ZDA4NyIsImlhdCI6MTc3NTQwMjA4NX0.j3mFb4S4_1SQckhDoZJxaCZRRIyf6KQro2P0vaMyiWE";
+      };
+      transportType = "stdio";
+      autoApprove = [ ];
+    };
     terraform = {
       command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";
       args = [ "stdio" ];

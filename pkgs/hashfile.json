@@ -20,7 +20,8 @@
     "chrome-devtools-mcp": "sha256-n6NqKxaDPPU8HuO6Wp7UMPUiljZBlcxMcZC7NfLRohU=",
     "opencode": "sha256-KAWBMYfNGpe6bjRf0w7dHOW+d0yv5V3f4XGM7tSlz2w=",
     "firecrawl-mcp": "sha256-8QtdevBUI1pCwpj1wgRR6ph5a2CUs7fSMMgiUgoqaag=",
-    "macnotesapp": "sha256-R3dt/mrdLKkLsv+n0eEiwwn1N7jGqQK/DTzKqAhq6l4="
+    "macnotesapp": "sha256-R3dt/mrdLKkLsv+n0eEiwwn1N7jGqQK/DTzKqAhq6l4=",
+    "n8n-mcp": "sha256-5xJ/Uy4ARfFi6RElfm6tP+8VgxU1gL8I83Jx9kh8+CY="
   },
   "Jasons-MacBook-Server": {
     "codex": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",

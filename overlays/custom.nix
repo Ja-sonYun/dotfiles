@@ -23,6 +23,7 @@
     context7 = final.callPackage ../pkgs/context7 { };
     chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
     firecrawl-mcp = final.callPackage ../pkgs/firecrawl-mcp { };
+    n8n-mcp = final.callPackage ../pkgs/n8n-mcp { };
 
     # Pypi
     aws-documentation = final.callPackage ../pkgs/aws-documentation { };
