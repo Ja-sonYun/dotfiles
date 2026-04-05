@@ -191,5 +191,9 @@ in
         ${codexMcpServersConfig}
       '';
     };
+    ".codex/rules/default.rules" = {
+      source = ./rules/default.rules;
+      force = true;
+    };
   };
 }

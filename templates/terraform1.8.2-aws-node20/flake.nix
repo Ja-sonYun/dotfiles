@@ -41,7 +41,7 @@
               awscli2
 
               nodejs_20
-              nodePackages.pnpm
+              pnpm
               yarn
             ];
           };

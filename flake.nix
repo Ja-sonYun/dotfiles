@@ -11,7 +11,7 @@
     self.submodules = true;
 
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    # nixpkgs-prev.url = "github:NixOS/nixpkgs/f6b44b2401525650256b977063dbcf830f762369";
+    nixpkgs-prev.url = "github:NixOS/nixpkgs/4724d5647207377bede08da3212f809cbd94a648";
     nixpkgs-stable.url = "github:NixOS/nixpkgs/release-25.05";
 
     home-manager = {

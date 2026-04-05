@@ -135,7 +135,7 @@ let
   nodePackagesOpt = pkgs.lib.optionals config.useNode (
     with pkgs;
     [
-      nodePackages.prettier
+      prettier
       typescript-language-server
     ]
   );
@@ -203,7 +203,7 @@ let
     with pkgs;
     [
       # marksman
-      nodePackages.prettier
+      prettier
     ]
   );
 

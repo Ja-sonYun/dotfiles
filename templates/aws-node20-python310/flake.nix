@@ -40,7 +40,7 @@
               rye
 
               nodejs_20
-              nodePackages.pnpm
+              pnpm
               yarn
 
               awscli2
