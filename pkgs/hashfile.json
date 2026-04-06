@@ -28,11 +28,11 @@
     "claude-code": "sha256-UgeXGz96rfkvgVt3agNLQvQ6/JUUN6isCh2JBhmcqQ4=",
     "awscli-local": "sha256-g+hS6GlybNrvfSUH7TNzACNlbsCj4auMY0au5+sMh6E=",
     "tmux-menu": "sha256-aPxtJE4YI4wZWvpIQ7Qv31gH8tDwGklt3isWNTZ/Adw=",
-    "context7-mcp": "sha256-wEa8Pw64NZEWQ/e9zozt/9IRugEggCBRYXo8/A/QhYs=",
+    "context7-mcp": "sha256-1MNKhnwkLquxzjDQphFO565Cp9FAQRThMYUkfQGYzc4=",
     "aws-documentation": "sha256-p70f30dwgsLWdAk4l3PvA+fYXMI6g5Zh+Sg1ChF2dwI=",
-    "chrome-devtools-mcp": "sha256-A8lUTYDGPAfvi/AcXkRpx6Ds6fL4b8M13Td+jeC26Gk=",
+    "chrome-devtools-mcp": "sha256-n6nF1iZLk1NBc0awj2wdZkY5VgOG8FhE/4TazokPXSk=",
     "firecrawl-mcp": "sha256-yviAEnvId3JkuRWGI5A88OUdLJcXgAgPX59cj+jWOd0=",
     "macnotesapp": "sha256-tdvMnXsrxnSOosxP8qe2zaFp7wCbKTQbw4vLfia570U=",
-    "opencode": "sha256-l5Q2vlHH0/YKU9a0xHXfm7RmNe2vC3UwQDiboqGJq+A="
+    "opencode": "sha256-CDN86ihl2swDMMMx35/UT0lVWp7bRaAlWMMcDvhNlNs="
   }
 }
