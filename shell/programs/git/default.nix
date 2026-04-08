@@ -141,6 +141,11 @@
       user = {
         name = "Ja-sonYun";
         email = "killa30867@gmail.com";
+        signingkey = "C3985C8834BE3D38";
+      };
+
+      commit = {
+        gpgsign = true;
       };
 
       alias = {

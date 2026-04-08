@@ -61,8 +61,15 @@ let
       ];
     };
     n8n-mcp = {
-      url = "https://n8n.test0.zip/mcp-server/http";
-      type = "http";
+      command = pkgs.writeShellScript "n8n-mcp-wrapper" ''
+        export N8N_API_URL="https://n8n.test0.zip"
+        export N8N_API_KEY="$(cat ${config.age.secrets.n8n-api-key.path})"
+        exec ${pkgs.n8n-mcp}/bin/n8n-mcp
+      '';
+      args = [ ];
+      env = { };
+      transportType = "stdio";
+      autoApprove = [ ];
     };
     terraform = {
       command = "${pkgs.terraform-mcp-server}/bin/terraform-mcp-server";

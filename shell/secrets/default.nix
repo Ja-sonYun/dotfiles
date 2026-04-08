@@ -26,6 +26,9 @@
     capi-key = {
       file = "${agenix-secrets}/encrypted/capi-key.age";
     };
+    n8n-api-key = {
+      file = "${agenix-secrets}/encrypted/n8n-api-key.age";
+    };
   };
 
   home.sessionVariables = {
