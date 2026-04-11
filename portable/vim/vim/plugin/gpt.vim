@@ -5,7 +5,7 @@ if exists('g:loaded_user_gpt')
 endif
 g:loaded_user_gpt = true
 
-import autoload 'utils/opencode.vim' as opencode
+import autoload 'utils/codex.vim' as codex
 import autoload 'utils/lockrange.vim' as lock
 
 const MSG_CALLING = 'Calling GPT to process text...'
@@ -41,8 +41,8 @@ def CallAiAsync(
   OnError: func
 ): void
   try
-    const model = get(g:, 'opencode_model', 'openai/gpt-5.2-codex')
-    opencode.CallAsync(
+    const model = get(g:, 'codex_model', 'gpt-5.4')
+    codex.CallAsync(
       model,
       prompt,
       (result) => {
