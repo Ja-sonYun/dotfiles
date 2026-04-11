@@ -37,6 +37,5 @@
     OPENAI_API_PKEY = "$(cat ${config.age.secrets.openai-api-pkey.path} 2>/dev/null || echo '')";
     DEEPSEEK_API_KEY = "$(cat ${config.age.secrets.deepseek-api-key.path} 2>/dev/null || echo '')";
     CAPI_KEY = "$(cat ${config.age.secrets.capi-key.path} 2>/dev/null || echo '')";
-    OPENCODE_SERVER_PASSWORD = "$(cat ${config.age.secrets.capi-key.path} 2>/dev/null || echo '')";
   };
 }

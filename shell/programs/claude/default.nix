@@ -7,21 +7,6 @@ let
   aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
 
   claudeMcpServers = {
-    context7 = config.programs.mcp.servers.context7 // {
-      type = "stdio";
-      autoApprove = [
-        "resolve-library-id"
-        "get-library-docs"
-      ];
-    };
-    aws-documentation = config.programs.mcp.servers.aws-documentation // {
-      type = "stdio";
-      autoApprove = [
-        "read_documentation"
-        "search_documentation"
-        "recommend"
-      ];
-    };
     codex = {
       type = "stdio";
       command = "${config.home.profileDirectory}/bin/codex";

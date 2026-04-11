@@ -13,7 +13,6 @@
     ./programs/tmux
     ./programs/direnv
     ./programs/navi
-    ./programs/opencode
     ./programs/visidata
   ]
   ++ lib.optionals (purpose == "main") [
