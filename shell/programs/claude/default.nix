@@ -89,6 +89,13 @@ let
       transportType = "stdio";
       autoApprove = [ ];
     };
+    codex = {
+      command = "${config.home.profileDirectory}/bin/codex";
+      args = [ "mcp-server" ];
+      env = { };
+      transportType = "stdio";
+      autoApprove = [ ];
+    };
     # grep_app = {
     #   url = "https://mcp.grep.app";
     #   type = "http";
@@ -115,6 +122,19 @@ let
         "Bash(echo :*)"
         "Bash(jq :*)"
         "Bash(yq :*)"
+        "Bash(xargs :*)"
+        "Bash(wc :*)"
+        "Bash(sort :*)"
+        "Bash(uniq :*)"
+        "Bash(diff :*)"
+        "Bash(file :*)"
+        "Bash(which :*)"
+        "Bash(stat :*)"
+        "Bash(du :*)"
+        "Bash(tree :*)"
+        "Bash(realpath :*)"
+        "Bash(dirname :*)"
+        "Bash(basename :*)"
         "Bash(make:*)"
         "Bash(nix build:*)"
         "Bash(nix log:*)"

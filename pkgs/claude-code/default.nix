@@ -7,7 +7,7 @@ pkgs.lib.npm.mkNpmGlobalPackageDerivation {
   inherit pkgs outputHash;
   name = "claude-code";
   packages = [
-    "@anthropic-ai/claude-code@2.1.94"
+    "@anthropic-ai/claude-code@2.1.101"
   ];
   exposedBinaries = [
     "claude"
@@ -18,8 +18,7 @@ pkgs.lib.npm.mkNpmGlobalPackageDerivation {
       --set DISABLE_INSTALLATION_CHECKS 1 \
       --set DISABLE_AUTOUPDATER         1 \
       --set DISABLE_ERROR_REPORTING     1 \
-      --set DISABLE_COST_WARNINGS       1 \
-      --set DISABLE_TELEMETRY           1
+      --set DISABLE_COST_WARNINGS       1
   '';
   postFixup =
     { node
