@@ -17,8 +17,6 @@
     macnotesapp = final.callPackage ../pkgs/macnotesapp { };
 
     # Npm
-    codex = final.callPackage ../pkgs/codex { };
-    claude-code = final.callPackage ../pkgs/claude-code { };
     opencode = final.callPackage ../pkgs/opencode { };
     context7 = final.callPackage ../pkgs/context7 { };
     chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
