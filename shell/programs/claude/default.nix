@@ -35,7 +35,6 @@ let
             pkgs.clang-tools
           ]
         } \
-        --set CLAUDE_CODE_NO_FLICKER      1 \
         --set DISABLE_BUG_COMMAND         1 \
         --set DISABLE_INSTALLATION_CHECKS 1 \
         --set DISABLE_AUTOUPDATER         1 \
