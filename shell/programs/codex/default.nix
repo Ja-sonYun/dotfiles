@@ -115,7 +115,6 @@ in
         enabled = false;
       };
 
-      mcp_servers = { };
     };
 
     custom-instructions = builtins.readFile aiBundle.agentsMdSrc;
