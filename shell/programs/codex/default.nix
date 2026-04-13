@@ -117,7 +117,7 @@ in
 
     };
 
-    custom-instructions = builtins.readFile aiBundle.agentsMdSrc;
+    context = builtins.readFile aiBundle.agentsMdSrc;
 
     skills = builtins.mapAttrs
       (name: _: aiBundle.skillsSrc + "/${name}")

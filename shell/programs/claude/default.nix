@@ -197,9 +197,9 @@ in
       effortLevel = "high";
     };
 
-    memory.source = aiBundle.agentsMdSrc;
-    agentsDir = aiBundle.agentsSrc;
-    skillsDir = aiBundle.skillsSrc;
+    context = aiBundle.agentsMdSrc;
+    agentsDir = "${aiBundle.agentsSrc}";
+    skills = "${aiBundle.skillsSrc}";
   };
 
   home.file = {
@@ -207,7 +207,7 @@ in
       target = "Library/Application Support/Claude/claude_desktop_config.json";
       force = true;
       text = builtins.toJSON {
-        mcpServers = config.programs.mcp.servers // claudeMcpServers;
+        mcpServers = removeAttrs config.programs.mcp.servers [ "grep_app" ] // claudeMcpServers;
       };
     };
   };
