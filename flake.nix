@@ -49,7 +49,7 @@
     # My packages
     # say.url = ./portable/say;
     # plot.url = ./portable/plot;
-    sequence-diagram-cli.url = ./portable/sequence-diagram-cli;
+    # sequence-diagram-cli.url = ./portable/sequence-diagram-cli;
     vim = {
       url = ./portable/vim;
       inputs.nixpkgs.follows = "nixpkgs";

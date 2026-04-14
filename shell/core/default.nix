@@ -80,8 +80,6 @@
     ollama
     llmfit
 
-    seqdia
-
     # My vim config
     # plot
 
