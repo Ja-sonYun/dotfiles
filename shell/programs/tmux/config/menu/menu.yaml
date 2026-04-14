@@ -177,7 +177,7 @@ items:
         NO_WINDOW_MGNT: "1"
         CTRL_C_AS_CLOSE: "1"
         MENU_POPUP: "1"
-        CLAUDE_NO_FLICKER: "1"
+        CLAUDE_CODE_NO_FLICKER: "1"
 
       position:
         w: 60%

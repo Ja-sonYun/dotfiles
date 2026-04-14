@@ -203,6 +203,20 @@ in
   };
 
   home.file = {
+    ".claude/keybindings.json" = {
+      text = builtins.toJSON {
+        bindings = [
+          {
+            context = "Scroll";
+            bindings = {
+              "ctrl+u" = "scroll:halfPageUp";
+              "ctrl+d" = "scroll:halfPageDown";
+            };
+          }
+        ];
+      };
+    };
+
     "Library/Application Support/Claude/claude_desktop_config.json" = {
       target = "Library/Application Support/Claude/claude_desktop_config.json";
       force = true;

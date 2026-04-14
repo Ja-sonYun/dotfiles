@@ -127,6 +127,7 @@
       ".codex"
       ".codex*"
       ".sisyphus"
+      "tfplan.bin"
     ];
 
     includes = [
