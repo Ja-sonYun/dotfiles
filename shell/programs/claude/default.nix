@@ -198,6 +198,7 @@ in
     };
 
     context = aiBundle.agentsMdSrc;
+    rulesDir = "${aiBundle.rulesSrc}";
     agentsDir = "${aiBundle.agentsSrc}";
     skills = "${aiBundle.skillsSrc}";
   };
@@ -209,8 +210,8 @@ in
           {
             context = "Scroll";
             bindings = {
-              "ctrl+u" = "scroll:halfPageUp";
-              "ctrl+d" = "scroll:halfPageDown";
+              "ctrl+y" = "scroll:halfPageUp";
+              "ctrl+e" = "scroll:halfPageDown";
             };
           }
         ];
