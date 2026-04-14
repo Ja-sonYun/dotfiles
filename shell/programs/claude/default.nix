@@ -210,8 +210,8 @@ in
           {
             context = "Scroll";
             bindings = {
-              "ctrl+y" = "scroll:halfPageUp";
-              "ctrl+e" = "scroll:halfPageDown";
+              "ctrl+k" = "scroll:halfPageUp";
+              "ctrl+j" = "scroll:halfPageDown";
             };
           }
         ];

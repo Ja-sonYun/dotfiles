@@ -33,6 +33,7 @@
 
   home.sessionVariables = {
     GITHUB_PAT = "$(cat ${config.age.secrets.github-token.path} 2>/dev/null || echo '')";
+    GITHUB_TOKEN = "$(cat ${config.age.secrets.github-token.path} 2>/dev/null || echo '')";
     OPENAI_API_KEY = "$(cat ${config.age.secrets.openai-api-key.path} 2>/dev/null || echo '')";
     OPENAI_API_PKEY = "$(cat ${config.age.secrets.openai-api-pkey.path} 2>/dev/null || echo '')";
     DEEPSEEK_API_KEY = "$(cat ${config.age.secrets.deepseek-api-key.path} 2>/dev/null || echo '')";
