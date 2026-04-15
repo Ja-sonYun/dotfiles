@@ -9,6 +9,15 @@ notify_error() {
 }
 
 case "$KEY" in
+"nC-d")
+    if tmux show-environment TMUX_REMAP_CTRL_D >/dev/null 2>&1; then
+        REMAP=$(tmux show-environment TMUX_REMAP_CTRL_D | cut -d= -f2-)
+        tmux send-keys "$REMAP" || notify_error "send-keys $REMAP"
+    else
+        tmux send-keys C-d || notify_error "send-keys C-d"
+    fi
+    ;;
+
 "nC-c")
     # Control-C handling for new window
     if tmux show-environment CTRL_C_AS_CLOSE >/dev/null 2>&1; then

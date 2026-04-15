@@ -200,7 +200,7 @@ in
     context = aiBundle.agentsMdSrc;
     rulesDir = "${aiBundle.rulesSrc}";
     agentsDir = "${aiBundle.agentsSrc}";
-    skills = "${aiBundle.skillsSrc}";
+    skills = builtins.mapAttrs (name: _: "${aiBundle.skillsSrc}/${name}") (builtins.readDir aiBundle.skillsSrc);
   };
 
   home.file = {
@@ -210,7 +210,7 @@ in
           {
             context = "Scroll";
             bindings = {
-              "ctrl+p" = "scroll:halfPageUp";
+              "ctrl+u" = "scroll:halfPageUp";
               "ctrl+n" = "scroll:halfPageDown";
             };
           }

@@ -7,7 +7,7 @@ pkgs.lib.npm.mkNpmGlobalPackageDerivation {
   inherit pkgs outputHash;
   name = "n8n-mcp";
   packages = [
-    "n8n-mcp@2.47.7"
+    "n8n-mcp@2.47.8"
   ];
   exposedBinaries = [
     "n8n-mcp"

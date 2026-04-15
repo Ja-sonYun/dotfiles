@@ -178,6 +178,7 @@ items:
         CTRL_C_AS_CLOSE: "1"
         MENU_POPUP: "1"
         CLAUDE_CODE_NO_FLICKER: "1"
+        TMUX_REMAP_CTRL_D: "C-n"
 
       position:
         w: 60%
