@@ -141,10 +141,10 @@
       overlays.default = import ./nix/overlay.nix {
         inputs = self.inputs;
         config = cfg;
-        vim = {
-          rev = "v9.2.0010";
-          sha256 = "sha256-29dSi9KRs45xc+ZGnLeRPG5x9y8PXSi9XrWH2bNBk6g=";
-        };
+        # vim = {
+        #   rev = "v9.2.0010";
+        #   sha256 = "sha256-29dSi9KRs45xc+ZGnLeRPG5x9y8PXSi9XrWH2bNBk6g=";
+        # };
       };
 
       checks = forAllSystems (
