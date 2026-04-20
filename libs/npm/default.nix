@@ -58,6 +58,7 @@ in
   mkNpmGlobalPackageDerivation =
     { pkgs
     , name
+    , version
     , packages ? [ ]
     , # List of packages to install, e.g. ["npm" "yarn" "express@latest"]
       exposedBinaries ? [ ]
@@ -74,10 +75,9 @@ in
     }:
     let
       packagesRequirements = pkgs.lib.concatStringsSep " " packages;
-      version = builtins.hashString "sha256" packagesRequirements;
-      pname = "${name}-${version}";
+      pname = name;
       tarball = pkgs.stdenv.mkDerivation {
-        name = "${pname}-tarball";
+        name = "${pname}-${version}-tarball";
         src = nodeBinary."${nodeVersion}";
         doCheck = false;
         dontFixup = true;
@@ -108,7 +108,8 @@ in
       };
     in
     pkgs.stdenv.mkDerivation {
-      inherit name version pname;
+      inherit version pname;
+      name = "${pname}-${version}";
       src = tarball;
       dontUnpack = true;
       nativeBuildInputs =

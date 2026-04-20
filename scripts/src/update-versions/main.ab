@@ -5,35 +5,104 @@ import { require_cmd } from "../lib/cmd.ab"
 import { debug, set_debug } from "../lib/debug.ab"
 import { process_npm_file } from "./npm.ab"
 import { process_pip_file } from "./pip.ab"
+import { extract_single_attr } from "../lib/package.ab"
+
+fun print_usage(prog: Text): Null {
+    echo "Usage: {prog} [--debug] [--path <path>] [--glob <glob>]"
+    echo ""
+    echo "Options:"
+    echo "  --debug        Enable debug output"
+    echo "  --path <path>  Search path relative to repo root, or absolute path"
+    echo "  --glob <glob>  Ripgrep glob for package files"
+    echo "  --help, -h     Show this help"
+}
 
 main (argv) {
     let debug_mode = false
+    let show_help = false
+    let search_path = "pkgs"
+    let search_glob = "default.nix"
+    let i = 1
 
-    for arg in argv {
+    loop {
+        if i >= len(argv) {
+            break
+        }
+
+        let arg = argv[i]
         if arg == "--debug" {
             debug_mode = true
+            i += 1
+            continue
         }
-        if arg != "--debug" and arg != argv[0] {
-            trust $ echo "Unknown option: {arg}" >&2 $
-            echo "Usage: {argv[0]} [--debug]"
-            exit 1
+
+        if arg == "--help" or arg == "-h" {
+            show_help = true
+            i += 1
+            continue
         }
+
+        if arg == "--path" {
+            if i + 1 >= len(argv) {
+                trust $ echo "Missing value for --path" >&2 $
+                print_usage(argv[0])
+                exit 1
+            }
+            search_path = argv[i + 1]
+            i += 2
+            continue
+        }
+
+        if arg == "--glob" {
+            if i + 1 >= len(argv) {
+                trust $ echo "Missing value for --glob" >&2 $
+                print_usage(argv[0])
+                exit 1
+            }
+            search_glob = argv[i + 1]
+            i += 2
+            continue
+        }
+
+        trust $ echo "Unknown option: {arg}" >&2 $
+        print_usage(argv[0])
+        exit 1
+    }
+
+    if show_help {
+        print_usage(argv[0])
+        exit 0
     }
 
     if debug_mode {
         set_debug(true)
     }
 
-    require_cmd("rg")
-    require_cmd("sed")
-    require_cmd("jq")
-    require_cmd("nix")
-    require_cmd("curl")
-
     let root_dir = get_root_dir()
     debug("ROOT_DIR: {root_dir}")
 
-    let files_raw = trust $ rg -l "pkgs\.lib\.(pip|npm|cargo)\.mk(.*)GlobalPackageDerivation" -g '!**/tmux-menu/**' "{root_dir}" $
+    let resolved_search_path = search_path
+    let is_abs = trust $ echo "{search_path}" | grep -q "^/" && echo "1" || echo "0" $
+    if is_abs == "0" {
+        resolved_search_path = "{root_dir}/{search_path}"
+    }
+
+    let search_path_exists = trust $ test -d "{resolved_search_path}" && echo "1" || echo "0" $
+    if search_path_exists == "0" {
+        trust $ echo "Search path not found: {resolved_search_path}" >&2 $
+        print_usage(argv[0])
+        exit 1
+    }
+
+    debug("Search path: {resolved_search_path}")
+    debug("Search glob: {search_glob}")
+
+    require_cmd("rg")
+    require_cmd("sed")
+    require_cmd("jq")
+    require_cmd("curl")
+
+    let files_raw = trust $ rg -l "pkgs\.lib\.mkPackageDerivation" -g "{search_glob}" "{resolved_search_path}" || true $
     let files = split(files_raw, "\n")
 
     let update_happened = false
@@ -43,22 +112,26 @@ main (argv) {
             continue
         }
 
-        let npm_check = trust $ rg -c "pkgs\.lib\.npm\.mkNpmGlobalPackageDerivation" "{f}" 2>/dev/null || echo "0" $
-        let pip_check = trust $ rg -c "pkgs\.lib\.pip\.mkPipGlobalPackageDerivation" "{f}" 2>/dev/null || echo "0" $
+        let package_manager = extract_single_attr(f, "packageManager")
 
-        if npm_check != "0" {
+        if package_manager == "npm" {
             debug("Processing NPM file: {f}")
             process_npm_file(update_happened, f)
+            continue
         }
-        if pip_check != "0" {
+        if package_manager == "pip" {
             debug("Processing PIP file: {f}")
             process_pip_file(update_happened, f)
+            continue
         }
+
+        trust $ echo "Unsupported packageManager: {package_manager} in {f}" >&2 $
+        exit 1
     }
 
     if update_happened {
-        echo_info("Updates applied. Review changes and commit if desired.")
+        echo_info("Package versions updated. Review changes and commit if desired.")
     } else {
-        echo_info("No updates necessary. All packages are current.")
+        echo_info("No package version updates necessary.")
     }
 }

@@ -1,5 +1,9 @@
 pub fun get_root_dir(): Text {
-    let script_dir = trust $ cd "\$(dirname "\$0")" && pwd $
-    let root = trust $ cd "{script_dir}/.." && pwd $
+    let script_dir = trust $
+        cd "\$(dirname "\$0")" && pwd
+    $
+    let root = trust $
+        cd "{script_dir}/.." && pwd
+    $
     return root
 }

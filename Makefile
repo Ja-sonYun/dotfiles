@@ -30,8 +30,10 @@ update-vim: ## Update vim flake
 update-raw: update-vim ## Update all flakes
 	nix flake update
 
-update-pkgs: update-raw ## Update flakes and package versions
+update-versions: ## Update package versions
 	./scripts/update-versions
+
+update-pkgs: update-versions ## Update package versions
 
 update: ## Full update with ulimit fix
 	@sh -c 'set -eu; \
@@ -41,6 +43,9 @@ update: ## Full update with ulimit fix
 		$(MAKE) update-raw update-pkgs'
 # ==================================================================================
 
+build-pkgs: ## Build packages that need hash updates
+	./scripts/build-pkgs
+
 # ==================================================================================
 ifeq ($(SYSTEM),Linux)
 ##@ Linux
@@ -48,7 +53,7 @@ ifeq ($(SYSTEM),Linux)
 install: ## Install nix daemon
 	sh <(curl -L https://nixos.org/nix/install) --daemon
 
-deploy: add lock ## Deploy home-manager config
+deploy: build-pkgs add lock ## Deploy home-manager config
 	$(NIX) build .#homeConfigurations.$(HOSTNAME).activationPackage $(NIX_TRACE_ARGS)
 	./result/activate
 endif
@@ -58,7 +63,7 @@ endif
 ifeq ($(SYSTEM),Darwin)
 ##@ Darwin
 
-build: add lock ## Build nix-darwin config
+build: build-pkgs add lock ## Build nix-darwin config
 	$(NIX) build .#darwinConfigurations.$(HOSTNAME).system $(NIX_TRACE_ARGS)
 
 show-derivations: ## Show derivation details

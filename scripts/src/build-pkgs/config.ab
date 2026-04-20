@@ -1,6 +1,10 @@
 pub fun get_root_dir(): Text {
-    let script_dir = trust $ cd "\$(dirname "\$0")" && pwd $
-    let root = trust $ cd "{script_dir}/.." && pwd $
+    let script_dir = trust $
+        cd "\$(dirname "\$0")" && pwd
+    $
+    let root = trust $
+        cd "{script_dir}/.." && pwd
+    $
     return root
 }
 
@@ -9,6 +13,8 @@ pub fun get_hashfile_path(root_dir: Text): Text {
 }
 
 pub fun get_hostname(): Text {
-    let h = trust $ hostname $
+    let h = trust $
+        hostname
+    $
     return h
 }

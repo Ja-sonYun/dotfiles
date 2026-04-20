@@ -1,7 +1,7 @@
-import { split, text_contains, starts_with } from "std/text"
 import { echo_info } from "../lib/echo.ab"
 import { debug } from "../lib/debug.ab"
 import { sed_inplace } from "../lib/sed.ab"
+import { extract_single_attr } from "../lib/package.ab"
 
 pub fun latest_pypi_version(name: Text): Text {
     let result = trust $ curl -sL "https://pypi.org/pypi/{name}/json" | jq -r '.info.version' $
@@ -9,43 +9,15 @@ pub fun latest_pypi_version(name: Text): Text {
 }
 
 pub fun process_pip_file(ref update_flag: Bool, file: Text): Null {
-    let packages_block = trust $ awk '/packages[[:space:]]*=[[:space:]]*\[/\{flag=1;next}/\]/\{flag=0}flag' "{file}" | sed -n 's/.*"\(.*\)".*/\1/p' $
-    let pkgs = split(packages_block, "\n")
+    let package_name = extract_single_attr(file, "packageName")
+    let package_version = extract_single_attr(file, "packageVersion")
+    let latest = latest_pypi_version(package_name)
 
-    debug("pip pkgs parsed from {file}: {len(pkgs)} items")
-
-    let changed = false
-
-    for i, full in pkgs {
-        if full == "" {
-            continue
-        }
-
-        if starts_with(full, "git+") {
-            continue
-        }
-
-        if text_contains(full, "==") {
-            let name = trust $ echo "{full}" | sed 's/==.*//' $
-            let ver = trust $ echo "{full}" | sed 's/.*==//' $
-
-            let latest = latest_pypi_version(name)
-
-            if latest != "" and latest != ver {
-                let pscript = "s|\"{name}==[^\"]*\"|\"{name}=={latest}\"|"
-                debug("pip sed: name={name} ver={ver} latest={latest}")
-                trust sed_inplace(pscript, file)
-                changed = true
-                update_flag = true
-                echo "Updated pip {name}: {ver} -> {latest} in {file}"
-            }
-        }
-    }
-
-    if changed {
-        let script_dir = trust $ cd "\$(dirname "\$0")" && pwd $
-        let build_pkg = "{script_dir}/build-pkg"
-        echo_info("Running build-pkg for {file}...")
-        trust $ "{build_pkg}" "{file}" $
+    if latest != "" and latest != "null" and latest != package_version {
+        let sed_script = "s|^\\([[:space:]]*packageVersion[[:space:]]*=[[:space:]]*\\)\"[^\"]*\";|\\1\"{latest}\";|"
+        debug("pip sed: packageName={package_name} packageVersion={package_version} latest={latest}")
+        trust sed_inplace(sed_script, file)
+        update_flag = true
+        echo "Updated pip {package_name}: {package_version} -> {latest} in {file}"
     }
 }

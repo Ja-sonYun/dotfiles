@@ -1,0 +1,596 @@
+#!/usr/bin/env bash
+# Written in [Amber](https://amber-lang.com/)
+# version: 0.5.1-alpha
+# We cannot import `bash_version` from `env.ab` because it imports `text.ab` making a circular dependency.
+# This is a workaround to avoid that issue and the import system should be improved in the future.
+split__5_v0() {
+    local text=$1
+    local delimiter=$2
+    result_57=()
+    IFS="${delimiter}" read -rd '' -a result_57 < <(printf %s "$text")
+    __status=$?
+    ret_split5_v0=("${result_57[@]}")
+    return 0
+}
+
+text_contains__17_v0() {
+    local source=$1
+    local search=$2
+    command_1="$(if [[ "${source}" == *"${search}"* ]]; then
+    echo 1
+  fi)"
+    __status=$?
+    result_47="${command_1}"
+    ret_text_contains17_v0="$([ "_${result_47}" != "_1" ]; echo $?)"
+    return 0
+}
+
+echo_info__32_v0() {
+    local msg=$1
+    tput bold; tput setaf 4; echo "${msg}"; tput sgr0
+    __status=$?
+}
+
+echo_success__33_v0() {
+    local msg=$1
+    tput bold; tput setaf 2; echo "${msg}"; tput sgr0
+    __status=$?
+}
+
+echo_warning__34_v0() {
+    local msg=$1
+    tput bold; tput setaf 3; echo "${msg}"; tput sgr0
+    __status=$?
+}
+
+echo_error__35_v0() {
+    local msg=$1
+    tput bold; tput setaf 1; echo "${msg}" >&2; tput sgr0
+    __status=$?
+}
+
+get_root_dir__38_v0() {
+    command_2="$(cd "$(dirname "$0")" && pwd)"
+    __status=$?
+    script_dir_14="${command_2}"
+    command_3="$(cd "${script_dir_14}/.." && pwd)"
+    __status=$?
+    root_15="${command_3}"
+    ret_get_root_dir38_v0="${root_15}"
+    return 0
+}
+
+get_hashfile_path__39_v0() {
+    local root_dir=$1
+    ret_get_hashfile_path39_v0="${root_dir}/pkgs/hashfile.json"
+    return 0
+}
+
+get_hostname__40_v0() {
+    command_4="$(hostname)"
+    __status=$?
+    h_27="${command_4}"
+    ret_get_hostname40_v0="${h_27}"
+    return 0
+}
+
+is_command__112_v0() {
+    local command=$1
+    [ -x "$(command -v "${command}")" ]
+    __status=$?
+    if [ "${__status}" != 0 ]; then
+        ret_is_command112_v0=0
+        return 0
+    fi
+    ret_is_command112_v0=1
+    return 0
+}
+
+printf__118_v0() {
+    local format=$1
+    local args=("${!2}")
+    args=("${format}" "${args[@]}")
+    __status=$?
+    printf "${args[@]}"
+    __status=$?
+}
+
+echo_error__128_v0() {
+    local message=$1
+    local exit_code=$2
+    array_5=("${message}")
+    printf__118_v0 "\\x1b[1;3;97;41m%s\\x1b[0m
+" array_5[@]
+    if [ "$(( ${exit_code} > 0 ))" != 0 ]; then
+        exit "${exit_code}"
+    fi
+}
+
+require_cmd__132_v0() {
+    local name=$1
+    is_command__112_v0 "${name}"
+    ret_is_command112_v0__5_12="${ret_is_command112_v0}"
+    if [ "$(( ! ${ret_is_command112_v0__5_12} ))" != 0 ]; then
+        echo_error__128_v0 "Missing command: ${name}" 1
+        exit 1
+    fi
+}
+
+g_debug_3=0
+set_debug__135_v0() {
+    local val=$1
+    g_debug_3="${val}"
+}
+
+debug__136_v0() {
+    local msg=$1
+    if [ "${g_debug_3}" != 0 ]; then
+        echo "[DEBUG] ${msg}" >&2
+        __status=$?
+    fi
+}
+
+g_debug_4=0
+debug__140_v0() {
+    local msg=$1
+    if [ "${g_debug_4}" != 0 ]; then
+        echo "[DEBUG] ${msg}" >&2
+        __status=$?
+    fi
+}
+
+echo_error__145_v0() {
+    local msg=$1
+    tput bold; tput setaf 1; echo "${msg}" >&2; tput sgr0
+    __status=$?
+}
+
+extract_single_attr__147_v0() {
+    local file=$1
+    local attr=$2
+    command_6="$(sed -n 's/^[[:space:]]*'"${attr}"'[[:space:]]*=[[:space:]]*"\([^"]*\)";.*/\1/p' "${file}")"
+    __status=$?
+    values_20="${command_6}"
+    command_7="$(printf '%s
+' "${values_20}" | sed '/^$/d' | wc -l | tr -d ' ')"
+    __status=$?
+    count_21="${command_7}"
+    if [ "$([ "_${count_21}" == "_1" ]; echo $?)" != 0 ]; then
+        echo_error__145_v0 "Expected exactly one ${attr} in ${file}, found ${count_21}"
+        exit 1
+    fi
+    command_8="$(printf '%s
+' "${values_20}" | sed '/^$/d' | head -n1)"
+    __status=$?
+    value_22="${command_8}"
+    debug__140_v0 "Extracted ${attr}: ${value_22}"
+    ret_extract_single_attr147_v0="${value_22}"
+    return 0
+}
+
+detect_pkg_type__148_v0() {
+    local file=$1
+    command_9="$(rg -c "pkgs\.lib\.mkPackageDerivation" "${file}" 2>/dev/null || echo "0")"
+    __status=$?
+    package_derivation_check_19="${command_9}"
+    if [ "$([ "_${package_derivation_check_19}" == "_0" ]; echo $?)" != 0 ]; then
+        extract_single_attr__147_v0 "${file}" "packageManager"
+        ret_detect_pkg_type148_v0="${ret_extract_single_attr147_v0}"
+        return 0
+    fi
+    ret_detect_pkg_type148_v0=""
+    return 0
+}
+
+extract_hash_key__149_v0() {
+    local file=$1
+    extract_single_attr__147_v0 "${file}" "hashKey"
+    ret_extract_hash_key149_v0="${ret_extract_single_attr147_v0}"
+    return 0
+}
+
+extract_package_version__150_v0() {
+    local file=$1
+    extract_single_attr__147_v0 "${file}" "packageVersion"
+    ret_extract_package_version150_v0="${ret_extract_single_attr147_v0}"
+    return 0
+}
+
+sed_inplace__161_v0() {
+    local script=$1
+    local file=$2
+    debug__140_v0 "sed_inplace on ${file}: ${script}"
+    command_10="$(sed --version 2>&1 | head -1 || echo "")"
+    __status=$?
+    gnu_check_43="${command_10}"
+    if [ "$([ "_${gnu_check_43}" == "_" ]; echo $?)" != 0 ]; then
+        sed -i -e "${script}" "${file}"
+        __status=$?
+        if [ "${__status}" != 0 ]; then
+            ret_sed_inplace161_v0=''
+            return "${__status}"
+        fi
+    else
+        sed -i '' -e "${script}" "${file}"
+        __status=$?
+        if [ "${__status}" != 0 ]; then
+            ret_sed_inplace161_v0=''
+            return "${__status}"
+        fi
+    fi
+}
+
+nix_build__166_v0() {
+    local root_dir=$1
+    local file=$2
+    local key=$3
+    get_hostname__40_v0 
+    hostname_36="${ret_get_hostname40_v0}"
+    abs_file_37="${file}"
+    command_11="$(echo "${file}" | grep -q "^/" && echo "1" || echo "0")"
+    __status=$?
+    is_abs_38="${command_11}"
+    if [ "$([ "_${is_abs_38}" != "_0" ]; echo $?)" != 0 ]; then
+        abs_file_37="${root_dir}/${file}"
+    fi
+    debug__136_v0 "Building: ${abs_file_37} (key=${key}, hostname=${hostname_36})"
+    command_12="$(mktemp -t build-pkgs.XXXXXX)"
+    __status=$?
+    tmpbase_39="${command_12}"
+    tmpfile_40="${tmpbase_39}.nix"
+    mv "${tmpbase_39}" "${tmpfile_40}"
+    __status=$?
+    command_13="$(cd "$(dirname "$0")" && pwd)"
+    __status=$?
+    script_dir_41="${command_13}"
+    template_42="${script_dir_41}/src/build-pkgs/template.nix"
+    cp "${template_42}" "${tmpfile_40}"
+    __status=$?
+    sed_inplace__161_v0 "s|__HOSTNAME__|${hostname_36}|g" "${tmpfile_40}"
+    __status=$?
+    sed_inplace__161_v0 "s|__ROOT_DIR__|${root_dir}|g" "${tmpfile_40}"
+    __status=$?
+    sed_inplace__161_v0 "s|__FILE__|${abs_file_37}|g" "${tmpfile_40}"
+    __status=$?
+    debug__136_v0 "Nix file: ${tmpfile_40}"
+    command_14="$(mktemp -t build-pkgs-out.XXXXXX)"
+    __status=$?
+    outfile_44="${command_14}"
+    nix build --impure --file "${tmpfile_40}" -L > "${outfile_44}" 2>&1 || true
+    __status=$?
+    command_15="$(cat "${outfile_44}")"
+    __status=$?
+    out_45="${command_15}"
+    rm -f "${tmpfile_40}" "${outfile_44}"
+    __status=$?
+    ret_nix_build166_v0="${out_45}"
+    return 0
+}
+
+extract_hash_from_output__167_v0() {
+    local out=$1
+    command_16="$(echo "${out}" |
+            sed -n 's/.*got: *\(sha256-[A-Za-z0-9+/=]\+\).*/\1/p' |
+            tail -n1)"
+    __status=$?
+    hash_50="${command_16}"
+    ret_extract_hash_from_output167_v0="${hash_50}"
+    return 0
+}
+
+update_hashfile__168_v0() {
+    local root_dir=$1
+    local key=$2
+    local version=$3
+    local hash=$4
+    get_hashfile_path__39_v0 "${root_dir}"
+    hashfile_32="${ret_get_hashfile_path39_v0}"
+    get_hostname__40_v0 
+    hostname_33="${ret_get_hostname40_v0}"
+    debug__136_v0 "Updating hashfile: ${hashfile_32}"
+    debug__136_v0 "Hostname: ${hostname_33}, Key: ${key}, Version: ${version}, Hash: ${hash}"
+    query_34="
+.[ \$host ][ \$key ].version = \$version |
+.[ \$host ][ \$key ].hash = \$hash
+"
+    command_17="$(jq             --arg host "${hostname_33}"             --arg key "${key}"             --arg version "${version}"             --arg hash "${hash}"             "${query_34}"             "${hashfile_32}")"
+    __status=$?
+    updated_35="${command_17}"
+    if [ "$([ "_${updated_35}" != "_" ]; echo $?)" != 0 ]; then
+        ret_update_hashfile168_v0=0
+        return 0
+    fi
+    echo "${updated_35}" > "${hashfile_32}"
+    __status=$?
+    ret_update_hashfile168_v0=1
+    return 0
+}
+
+build_package__169_v0() {
+    local root_dir=$1
+    local file=$2
+    local key=$3
+    local version=$4
+    local force=$5
+    if [ "${force}" != 0 ]; then
+        echo_warning__34_v0 "Force mode: invalidating hash for ${key} ${version}"
+        update_hashfile__168_v0 "${root_dir}" "${key}" "${version}" "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        ret_update_hashfile168_v0__99_16="${ret_update_hashfile168_v0}"
+        if [ "$(( ! ${ret_update_hashfile168_v0__99_16} ))" != 0 ]; then
+            echo_error__35_v0 "Failed to invalidate hash"
+            ret_build_package169_v0=0
+            return 0
+        fi
+    fi
+    nix_build__166_v0 "${root_dir}" "${file}" "${key}"
+    out_46="${ret_nix_build166_v0}"
+    text_contains__17_v0 "${out_46}" "got:"
+    has_hash_48="${ret_text_contains17_v0}"
+    text_contains__17_v0 "${out_46}" "error:"
+    has_error_49="${ret_text_contains17_v0}"
+    if [ "${has_hash_48}" != 0 ]; then
+        extract_hash_from_output__167_v0 "${out_46}"
+        new_hash_51="${ret_extract_hash_from_output167_v0}"
+        if [ "$([ "_${new_hash_51}" != "_" ]; echo $?)" != 0 ]; then
+            echo_error__35_v0 "Failed to extract hash from build output"
+            ret_build_package169_v0=0
+            return 0
+        fi
+        echo_warning__34_v0 "Hash mismatch detected for ${key} ${version}. New hash: ${new_hash_51}"
+        update_hashfile__168_v0 "${root_dir}" "${key}" "${version}" "${new_hash_51}"
+        ret_update_hashfile168_v0__118_16="${ret_update_hashfile168_v0}"
+        if [ "$(( ! ${ret_update_hashfile168_v0__118_16} ))" != 0 ]; then
+            echo_error__35_v0 "Failed to update hashfile"
+            ret_build_package169_v0=0
+            return 0
+        fi
+        echo_success__33_v0 "Updated hashfile.json for ${key} ${version}"
+        nix_build__166_v0 "${root_dir}" "${file}" "${key}"
+        rebuild_out_52="${ret_nix_build166_v0}"
+        text_contains__17_v0 "${rebuild_out_52}" "got:"
+        ret_text_contains17_v0__126_12="${ret_text_contains17_v0}"
+        if [ "${ret_text_contains17_v0__126_12}" != 0 ]; then
+            echo_error__35_v0 "Rebuild still failed after hash update"
+            echo "${rebuild_out_52}" >&2
+            __status=$?
+            ret_build_package169_v0=0
+            return 0
+        fi
+        text_contains__17_v0 "${rebuild_out_52}" "error:"
+        ret_text_contains17_v0__134_12="${ret_text_contains17_v0}"
+        if [ "${ret_text_contains17_v0__134_12}" != 0 ]; then
+            echo_error__35_v0 "Build failed with error"
+            echo "${rebuild_out_52}" >&2
+            __status=$?
+            ret_build_package169_v0=0
+            return 0
+        fi
+        echo_success__33_v0 "Rebuild successful"'!'""
+        ret_build_package169_v0=1
+        return 0
+    fi
+    if [ "${has_error_49}" != 0 ]; then
+        echo_error__35_v0 "Build failed"
+        debug__136_v0 "Output: ${out_46}"
+        ret_build_package169_v0=0
+        return 0
+    fi
+    echo_success__33_v0 "Build successful (no hash update needed)"
+    ret_build_package169_v0=1
+    return 0
+}
+
+hash_needs_build__173_v0() {
+    local root_dir=$1
+    local hash_key=$2
+    local package_version=$3
+    get_hashfile_path__39_v0 "${root_dir}"
+    hashfile_26="${ret_get_hashfile_path39_v0}"
+    get_hostname__40_v0 
+    hostname_28="${ret_get_hostname40_v0}"
+    fake_hash_29="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    query_30="
+.[ \$host ][ \$key ] as \$entry |
+if
+  (\$entry == null)
+  or ((\$entry | type) "'!'"= \"object\")
+  or ((\$entry.version // \"\") == \"\")
+  or ((\$entry.hash // \"\") == \"\")
+  or (\$entry.hash == \$fake)
+  or (\$entry.version "'!'"= \$version)
+then
+  \"1\"
+else
+  \"0\"
+end
+"
+    command_18="$(jq -r             --arg host "${hostname_28}"             --arg key "${hash_key}"             --arg version "${package_version}"             --arg fake "${fake_hash_29}"             "${query_30}"             "${hashfile_26}")"
+    __status=$?
+    result_31="${command_18}"
+    ret_hash_needs_build173_v0="$([ "_${result_31}" != "_1" ]; echo $?)"
+    return 0
+}
+
+print_usage__175_v0() {
+    local prog=$1
+    echo "Usage: ${prog} [--debug] [--force] [--path <path>] [--glob <glob>] [nix-file]"
+    echo ""
+    echo "Arguments:"
+    echo "  [nix-file]  Optional path to one default.nix file"
+    echo ""
+    echo "Options:"
+    echo "  --debug        Enable debug output"
+    echo "  --force        Force rebuild even if hash matches"
+    echo "  --path <path>  Search path relative to repo root, or absolute path"
+    echo "  --glob <glob>  Ripgrep glob for package files"
+    echo "  --help, -h     Show this help"
+}
+
+build_if_needed__176_v0() {
+    local build_happened=$1
+    local root_dir=$2
+    local nix_file=$3
+    local force_mode=$4
+    detect_pkg_type__148_v0 "${nix_file}"
+    pkg_type_23="${ret_detect_pkg_type148_v0}"
+    if [ "$([ "_${pkg_type_23}" != "_" ]; echo $?)" != 0 ]; then
+        echo_error__35_v0 "Could not detect pkgs.lib.mkPackageDerivation in ${nix_file}"
+        ret_build_if_needed176_v0=0
+        return 0
+    fi
+    extract_hash_key__149_v0 "${nix_file}"
+    hash_key_24="${ret_extract_hash_key149_v0}"
+    extract_package_version__150_v0 "${nix_file}"
+    package_version_25="${ret_extract_package_version150_v0}"
+    debug__136_v0 "Package type: ${pkg_type_23}"
+    debug__136_v0 "Hash key: ${hash_key_24}"
+    debug__136_v0 "Package version: ${package_version_25}"
+    hash_needs_build__173_v0 "${root_dir}" "${hash_key_24}" "${package_version_25}"
+    ret_hash_needs_build173_v0__37_31="${ret_hash_needs_build173_v0}"
+    if [ "$(( $(( ! ${force_mode} )) && $(( ! ${ret_hash_needs_build173_v0__37_31} )) ))" != 0 ]; then
+        debug__136_v0 "Hash is current for ${hash_key_24} ${package_version_25}"
+        ret_build_if_needed176_v0=1
+        return 0
+    fi
+    echo_info__32_v0 "Building ${hash_key_24} ${package_version_25} (${pkg_type_23})..."
+    eval "${build_happened}=1"
+    build_package__169_v0 "${root_dir}" "${nix_file}" "${hash_key_24}" "${package_version_25}" "${force_mode}"
+    ret_build_if_needed176_v0="${ret_build_package169_v0}"
+    return 0
+}
+
+declare -r argv_5=("$0" "$@")
+debug_mode_6=0
+force_mode_7=0
+show_help_8=0
+search_path_9="pkgs"
+search_glob_10="default.nix"
+nix_file_11=""
+i_12=1
+while :
+do
+    __length_20=("${argv_5[@]}")
+    if [ "$(( ${i_12} >= ${#__length_20[@]} ))" != 0 ]; then
+        break
+    fi
+    arg_13="${argv_5[${i_12}]}"
+    if [ "$([ "_${arg_13}" != "_--debug" ]; echo $?)" != 0 ]; then
+        debug_mode_6=1
+        i_12="$(( ${i_12} + 1 ))"
+        continue
+    fi
+    if [ "$(( $([ "_${arg_13}" != "_--force" ]; echo $?) || $([ "_${arg_13}" != "_-f" ]; echo $?) ))" != 0 ]; then
+        force_mode_7=1
+        i_12="$(( ${i_12} + 1 ))"
+        continue
+    fi
+    if [ "$(( $([ "_${arg_13}" != "_--help" ]; echo $?) || $([ "_${arg_13}" != "_-h" ]; echo $?) ))" != 0 ]; then
+        show_help_8=1
+        i_12="$(( ${i_12} + 1 ))"
+        continue
+    fi
+    if [ "$([ "_${arg_13}" != "_--path" ]; echo $?)" != 0 ]; then
+        __length_21=("${argv_5[@]}")
+        if [ "$(( $(( ${i_12} + 1 )) >= ${#__length_21[@]} ))" != 0 ]; then
+            echo "Missing value for --path" >&2
+            __status=$?
+            print_usage__175_v0 "${argv_5[0]}"
+            exit 1
+        fi
+        search_path_9="${argv_5[$(( ${i_12} + 1 ))]}"
+        i_12="$(( ${i_12} + 2 ))"
+        continue
+    fi
+    if [ "$([ "_${arg_13}" != "_--glob" ]; echo $?)" != 0 ]; then
+        __length_22=("${argv_5[@]}")
+        if [ "$(( $(( ${i_12} + 1 )) >= ${#__length_22[@]} ))" != 0 ]; then
+            echo "Missing value for --glob" >&2
+            __status=$?
+            print_usage__175_v0 "${argv_5[0]}"
+            exit 1
+        fi
+        search_glob_10="${argv_5[$(( ${i_12} + 1 ))]}"
+        i_12="$(( ${i_12} + 2 ))"
+        continue
+    fi
+    if [ "$([ "_${arg_13}" == "_${argv_5[0]}" ]; echo $?)" != 0 ]; then
+        if [ "$([ "_${nix_file_11}" != "_" ]; echo $?)" != 0 ]; then
+            nix_file_11="${arg_13}"
+            i_12="$(( ${i_12} + 1 ))"
+            continue
+        fi
+    fi
+    echo "Unknown option: ${arg_13}" >&2
+    __status=$?
+    print_usage__175_v0 "${argv_5[0]}"
+    exit 1
+done
+if [ "${show_help_8}" != 0 ]; then
+    print_usage__175_v0 "${argv_5[0]}"
+    exit 0
+fi
+if [ "${debug_mode_6}" != 0 ]; then
+    set_debug__135_v0 1
+fi
+require_cmd__132_v0 "nix"
+require_cmd__132_v0 "jq"
+require_cmd__132_v0 "rg"
+require_cmd__132_v0 "sed"
+get_root_dir__38_v0 
+root_dir_16="${ret_get_root_dir38_v0}"
+debug__136_v0 "ROOT_DIR: ${root_dir_16}"
+build_happened_17=0
+if [ "$([ "_${nix_file_11}" == "_" ]; echo $?)" != 0 ]; then
+    command_23="$(test -f "${nix_file_11}" && echo "1" || echo "0")"
+    __status=$?
+    file_exists_18="${command_23}"
+    if [ "$([ "_${file_exists_18}" != "_0" ]; echo $?)" != 0 ]; then
+        echo_error__35_v0 "File not found: ${nix_file_11}"
+        exit 1
+    fi
+    build_if_needed__176_v0 "build_happened_17" "${root_dir_16}" "${nix_file_11}" "${force_mode_7}"
+    ret_build_if_needed176_v0__140_12="${ret_build_if_needed176_v0}"
+    if [ "${ret_build_if_needed176_v0__140_12}" != 0 ]; then
+        if [ "$(( ! ${build_happened_17} ))" != 0 ]; then
+            echo_info__32_v0 "Package hashes are current."
+        fi
+        exit 0
+    else
+        exit 1
+    fi
+fi
+resolved_search_path_53="${search_path_9}"
+command_24="$(echo "${search_path_9}" | grep -q "^/" && echo "1" || echo "0")"
+__status=$?
+is_abs_54="${command_24}"
+if [ "$([ "_${is_abs_54}" != "_0" ]; echo $?)" != 0 ]; then
+    resolved_search_path_53="${root_dir_16}/${search_path_9}"
+fi
+command_25="$(test -d "${resolved_search_path_53}" && echo "1" || echo "0")"
+__status=$?
+search_path_exists_55="${command_25}"
+if [ "$([ "_${search_path_exists_55}" != "_0" ]; echo $?)" != 0 ]; then
+    echo_error__35_v0 "Search path not found: ${resolved_search_path_53}"
+    exit 1
+fi
+command_26="$(rg -l "pkgs\.lib\.mkPackageDerivation" -g "${search_glob_10}" "${resolved_search_path_53}" || true)"
+__status=$?
+files_raw_56="${command_26}"
+split__5_v0 "${files_raw_56}" "
+"
+files_58=("${ret_split5_v0[@]}")
+for f_59 in "${files_58[@]}"; do
+    if [ "$([ "_${f_59}" != "_" ]; echo $?)" != 0 ]; then
+        continue
+    fi
+    build_if_needed__176_v0 "build_happened_17" "${root_dir_16}" "${f_59}" "${force_mode_7}"
+    ret_build_if_needed176_v0__170_16="${ret_build_if_needed176_v0}"
+    if [ "$(( ! ${ret_build_if_needed176_v0__170_16} ))" != 0 ]; then
+        exit 1
+    fi
+done
+if [ "${build_happened_17}" != 0 ]; then
+    echo_info__32_v0 "Package hashes checked/updated."
+else
+    echo_info__32_v0 "Package hashes are current."
+fi

@@ -1,8 +1,8 @@
-import { split } from "std/text"
 import { echo_info } from "../lib/echo.ab"
 import { debug } from "../lib/debug.ab"
 import { sed_inplace } from "../lib/sed.ab"
 import { urlencode_npm_pkg } from "../lib/cmd.ab"
+import { extract_single_attr } from "../lib/package.ab"
 
 pub fun latest_npm_version(name: Text): Text {
     let enc = urlencode_npm_pkg(name)
@@ -11,40 +11,15 @@ pub fun latest_npm_version(name: Text): Text {
 }
 
 pub fun process_npm_file(ref update_flag: Bool, file: Text): Null {
-    let packages_block = trust $ awk '/packages[[:space:]]*=[[:space:]]*\[/\{flag=1;next}/\]/\{flag=0}flag' "{file}" | sed -n 's/.*"\(.*\)".*/\1/p' $
-    let pkgs = split(packages_block, "\n")
+    let package_name = extract_single_attr(file, "packageName")
+    let package_version = extract_single_attr(file, "packageVersion")
+    let latest = latest_npm_version(package_name)
 
-    debug("npm pkgs parsed from {file}: {len(pkgs)} items")
-
-    let changed = false
-
-    for i, full in pkgs {
-        if full == "" {
-            continue
-        }
-        let base = trust $ echo "{full}" | sed 's/@[^@]*\$//' $
-        let ver = trust $ echo "{full}" | sed 's/.*@//' $
-
-        if base == full {
-            continue
-        }
-
-        let latest = latest_npm_version(base)
-
-        if latest != "" and latest != ver {
-            let sed_script = "s|\"{base}@[^\"]*\"|\"{base}@{latest}\"|"
-            debug("npm sed: base={base} ver={ver} latest={latest}")
-            trust sed_inplace(sed_script, file)
-            changed = true
-            update_flag = true
-            echo "Updated npm {base}: {ver} -> {latest} in {file}"
-        }
-    }
-
-    if changed {
-        let script_dir = trust $ cd "\$(dirname "\$0")" && pwd $
-        let build_pkg = "{script_dir}/build-pkg"
-        echo_info("Running build-pkg for {file}...")
-        trust $ "{build_pkg}" "{file}" $
+    if latest != "" and latest != "null" and latest != package_version {
+        let sed_script = "s|^\\([[:space:]]*packageVersion[[:space:]]*=[[:space:]]*\\)\"[^\"]*\";|\\1\"{latest}\";|"
+        debug("npm sed: packageName={package_name} packageVersion={package_version} latest={latest}")
+        trust sed_inplace(sed_script, file)
+        update_flag = true
+        echo "Updated npm {package_name}: {package_version} -> {latest} in {file}"
     }
 }

@@ -1,14 +1,12 @@
 { pkgs, ... }:
-let
-  outputHash = pkgs.hashfile."context7-mcp";
-in
 
-pkgs.lib.npm.mkNpmGlobalPackageDerivation {
-  inherit pkgs outputHash;
+pkgs.lib.mkPackageDerivation {
+  inherit pkgs;
+  hashKey = "context7-mcp";
+  packageManager = "npm";
+  packageName = "@upstash/context7-mcp";
+  packageVersion = "2.1.8";
   name = "context7-mcp";
-  packages = [
-    "@upstash/context7-mcp@2.1.8"
-  ];
   exposedBinaries = [
     "context7-mcp"
   ];

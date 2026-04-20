@@ -119,11 +119,11 @@
     "vim-lsp": {
       "flake": false,
       "locked": {
-        "lastModified": 1776631792,
-        "narHash": "sha256-QO0EHI2+ZtVDFCoHiQm1qf1wwkZXLytWSZaNTh+lOAk=",
+        "lastModified": 1776653310,
+        "narHash": "sha256-gx13gm5R/WTLOklXC8dftH9FeeTRMJJ+ZE+qB9i/bD4=",
         "owner": "yegappan",
         "repo": "lsp",
-        "rev": "22fd97135fc23b2cf7a3884366eaa7b2a3a4d4b4",
+        "rev": "417ac93eac02db976cde75e0bd46af451071a479",
         "type": "github"
       },
       "original": {

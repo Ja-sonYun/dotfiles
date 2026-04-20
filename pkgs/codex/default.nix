@@ -2,12 +2,12 @@
 
 pkgs.lib.mkPackageDerivation {
   inherit pkgs;
-  hashKey = "n8n-mcp";
+  hashKey = "codex";
   packageManager = "npm";
-  packageName = "n8n-mcp";
-  packageVersion = "2.47.12";
-  name = "n8n-mcp";
+  packageName = "@openai/codex";
+  packageVersion = "0.121.0";
+  name = "codex";
   exposedBinaries = [
-    "n8n-mcp"
+    "codex"
   ];
 }

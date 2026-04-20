@@ -1,381 +1,391 @@
 #!/usr/bin/env bash
 # Written in [Amber](https://amber-lang.com/)
-# version: 0.4.0-alpha
-# date: 2025-12-13 10:06:13
-replace__0_v0() {
-    local source=$1
-    local search=$2
-    local replace=$3
-    __AF_replace0_v0="${source//${search}/${replace}}";
-    return 0
-}
-split__3_v0() {
-    local text=$1
-    local delimiter=$2
-    __AMBER_ARRAY_0=();
-    local result=("${__AMBER_ARRAY_0[@]}")
-     IFS="${delimiter}" read -rd '' -a result < <(printf %s "$text") ;
-    __AS=$?
-    __AF_split3_v0=("${result[@]}");
-    return 0
-}
-text_contains__14_v0() {
-    local text=$1
-    local phrase=$2
-    __AMBER_VAL_1=$( if [[ "${text}" == *"${phrase}"* ]]; then
-    echo 1
-  fi );
-    __AS=$?;
-    local result="${__AMBER_VAL_1}"
-    __AF_text_contains14_v0=$([ "_${result}" != "_1" ]; echo $?);
-    return 0
-}
-starts_with__20_v0() {
-    local text=$1
-    local prefix=$2
-    __AMBER_VAL_2=$( if [[ "${text}" == "${prefix}"* ]]; then
-    echo 1
-  fi );
-    __AS=$?;
-    local result="${__AMBER_VAL_2}"
-    __AF_starts_with20_v0=$([ "_${result}" != "_1" ]; echo $?);
-    return 0
-}
-echo_info__29_v0() {
-    local msg=$1
-     tput bold; tput setaf 4; echo "${msg}"; tput sgr0 ;
-    __AS=$?
-}
-get_root_dir__34_v0() {
-    __AMBER_VAL_3=$( cd "$(dirname "$0")" && pwd );
-    __AS=$?;
-    local script_dir="${__AMBER_VAL_3}"
-    __AMBER_VAL_4=$( cd "${script_dir}/.." && pwd );
-    __AS=$?;
-    local root="${__AMBER_VAL_4}"
-    __AF_get_root_dir34_v0="${root}";
+# version: 0.5.1-alpha
+# We cannot import `bash_version` from `env.ab` because it imports `text.ab` making a circular dependency.
+# This is a workaround to avoid that issue and the import system should be improved in the future.
+bash_version__0_v0() {
+    major_30="$(echo "${BASH_VERSINFO[0]}")"
+    minor_31="$(echo "${BASH_VERSINFO[1]}")"
+    command_2="$(echo "${BASH_VERSINFO[2]}")"
+    __status=$?
+    patch_32="${command_2}"
+    ret_bash_version0_v0=("${major_30}" "${minor_31}" "${patch_32}")
     return 0
 }
 
-is_command__102_v0() {
-    local command=$1
-     [ -x "$(command -v ${command})" ] ;
-    __AS=$?;
-if [ $__AS != 0 ]; then
-        __AF_is_command102_v0=0;
-        return 0
-fi
-    __AF_is_command102_v0=1;
+replace__1_v0() {
+    local source=$1
+    local search=$2
+    local replace=$3
+    # Here we use a command to avoid #646
+    result_29=""
+    bash_version__0_v0 
+    left_comp=("${ret_bash_version0_v0[@]}")
+    right_comp=(4 3)
+    comp="$(
+        # Compare if left array >= right array
+        len_comp="$( (( "${#left_comp[@]}" < "${#right_comp[@]}" )) && echo "${#left_comp[@]}"|| echo "${#right_comp[@]}")"
+        for (( i=0; i<len_comp; i++ )); do
+            left="${left_comp[i]:-0}"
+            right="${right_comp[i]:-0}"
+            if (( "${left}" > "${right}" )); then
+                echo 1
+                exit
+            elif (( "${left}" < "${right}" )); then
+                echo 0
+                exit
+            fi
+        done
+        (( "${#left_comp[@]}" == "${#right_comp[@]}" || "${#left_comp[@]}" > "${#right_comp[@]}" )) && echo 1 || echo 0
+)"
+    if [ "${comp}" != 0 ]; then
+        result_29="${source//"${search}"/"${replace}"}"
+        __status=$?
+    else
+        result_29="${source//"${search}"/${replace}}"
+        __status=$?
+    fi
+    ret_replace1_v0="${result_29}"
     return 0
 }
-printf__108_v0() {
+
+split__5_v0() {
+    local text=$1
+    local delimiter=$2
+    result_19=()
+    IFS="${delimiter}" read -rd '' -a result_19 < <(printf %s "$text")
+    __status=$?
+    ret_split5_v0=("${result_19[@]}")
+    return 0
+}
+
+echo_info__32_v0() {
+    local msg=$1
+    tput bold; tput setaf 4; echo "${msg}"; tput sgr0
+    __status=$?
+}
+
+get_root_dir__37_v0() {
+    command_6="$(cd "$(dirname "$0")" && pwd)"
+    __status=$?
+    script_dir_12="${command_6}"
+    command_7="$(cd "${script_dir_12}/.." && pwd)"
+    __status=$?
+    root_13="${command_7}"
+    ret_get_root_dir37_v0="${root_13}"
+    return 0
+}
+
+is_command__109_v0() {
+    local command=$1
+    [ -x "$(command -v "${command}")" ]
+    __status=$?
+    if [ "${__status}" != 0 ]; then
+        ret_is_command109_v0=0
+        return 0
+    fi
+    ret_is_command109_v0=1
+    return 0
+}
+
+printf__115_v0() {
     local format=$1
     local args=("${!2}")
-     args=("${format}" "${args[@]}") ;
-    __AS=$?
-     printf "${args[@]}" ;
-    __AS=$?
+    args=("${format}" "${args[@]}")
+    __status=$?
+    printf "${args[@]}"
+    __status=$?
 }
-echo_error__118_v0() {
+
+echo_error__125_v0() {
     local message=$1
     local exit_code=$2
-    __AMBER_ARRAY_5=("${message}");
-    printf__108_v0 "\x1b[1;3;97;41m%s\x1b[0m
-" __AMBER_ARRAY_5[@];
-    __AF_printf108_v0__162_5="$__AF_printf108_v0";
-    echo "$__AF_printf108_v0__162_5" > /dev/null 2>&1
-    if [ $(echo ${exit_code} '>' 0 | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
-        exit ${exit_code}
-fi
+    array_8=("${message}")
+    printf__115_v0 "\\x1b[1;3;97;41m%s\\x1b[0m
+" array_8[@]
+    if [ "$(( ${exit_code} > 0 ))" != 0 ]; then
+        exit "${exit_code}"
+    fi
 }
-require_cmd__121_v0() {
+
+require_cmd__129_v0() {
     local name=$1
-    is_command__102_v0 "${name}";
-    __AF_is_command102_v0__5_12="$__AF_is_command102_v0";
-    if [ $(echo  '!' "$__AF_is_command102_v0__5_12" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
-        echo_error__118_v0 "Missing command: ${name}" 1;
-        __AF_echo_error118_v0__6_9="$__AF_echo_error118_v0";
-        echo "$__AF_echo_error118_v0__6_9" > /dev/null 2>&1
+    is_command__109_v0 "${name}"
+    ret_is_command109_v0__5_12="${ret_is_command109_v0}"
+    if [ "$(( ! ${ret_is_command109_v0__5_12} ))" != 0 ]; then
+        echo_error__125_v0 "Missing command: ${name}" 1
         exit 1
-fi
+    fi
 }
-urlencode_npm_pkg__122_v0() {
+
+urlencode_npm_pkg__130_v0() {
     local name=$1
-    replace__0_v0 "${name}" "@" "%40";
-    __AF_replace0_v0__12_19="${__AF_replace0_v0}";
-    local encoded="${__AF_replace0_v0__12_19}"
-    replace__0_v0 "${encoded}" "/" "%2F";
-    __AF_replace0_v0__13_19="${__AF_replace0_v0}";
-    local encoded="${__AF_replace0_v0__13_19}"
-    __AF_urlencode_npm_pkg122_v0="${encoded}";
+    replace__1_v0 "${name}" "@" "%40"
+    encoded_33="${ret_replace1_v0}"
+    replace__1_v0 "${encoded_33}" "/" "%2F"
+    encoded_34="${ret_replace1_v0}"
+    ret_urlencode_npm_pkg130_v0="${encoded_34}"
     return 0
 }
-__0_g_debug=0
-set_debug__124_v0() {
+
+g_debug_3=0
+set_debug__132_v0() {
     local val=$1
-    __0_g_debug=${val}
+    g_debug_3="${val}"
 }
-debug__125_v0() {
-    local msg=$1
-    if [ ${__0_g_debug} != 0 ]; then
-         echo "[DEBUG] ${msg}" >&2 ;
-        __AS=$?
-fi
-}
-__1_g_debug=0
+
 debug__133_v0() {
     local msg=$1
-    if [ ${__1_g_debug} != 0 ]; then
-         echo "[DEBUG] ${msg}" >&2 ;
-        __AS=$?
-fi
+    if [ "${g_debug_3}" != 0 ]; then
+        echo "[DEBUG] ${msg}" >&2
+        __status=$?
+    fi
 }
-sed_inplace__135_v0() {
+
+g_debug_4=0
+debug__140_v0() {
+    local msg=$1
+    if [ "${g_debug_4}" != 0 ]; then
+        echo "[DEBUG] ${msg}" >&2
+        __status=$?
+    fi
+}
+
+sed_inplace__142_v0() {
     local script=$1
     local file=$2
-    debug__133_v0 "sed_inplace on ${file}: ${script}";
-    __AF_debug133_v0__5_5="$__AF_debug133_v0";
-    echo "$__AF_debug133_v0__5_5" > /dev/null 2>&1
-    __AMBER_VAL_6=$( sed --version 2>&1 | head -1 || echo "" );
-    __AS=$?;
-    local gnu_check="${__AMBER_VAL_6}"
-    if [ $([ "_${gnu_check}" == "_" ]; echo $?) != 0 ]; then
-         sed -i -e "${script}" "${file}" ;
-        __AS=$?;
-if [ $__AS != 0 ]; then
-__AF_sed_inplace135_v0=''
-return $__AS
-fi
-else
-         sed -i '' -e "${script}" "${file}" ;
-        __AS=$?;
-if [ $__AS != 0 ]; then
-__AF_sed_inplace135_v0=''
-return $__AS
-fi
-fi
+    debug__140_v0 "sed_inplace on ${file}: ${script}"
+    command_9="$(sed --version 2>&1 | head -1 || echo "")"
+    __status=$?
+    gnu_check_39="${command_9}"
+    if [ "$([ "_${gnu_check_39}" == "_" ]; echo $?)" != 0 ]; then
+        sed -i -e "${script}" "${file}"
+        __status=$?
+        if [ "${__status}" != 0 ]; then
+            ret_sed_inplace142_v0=''
+            return "${__status}"
+        fi
+    else
+        sed -i '' -e "${script}" "${file}"
+        __status=$?
+        if [ "${__status}" != 0 ]; then
+            ret_sed_inplace142_v0=''
+            return "${__status}"
+        fi
+    fi
 }
-latest_npm_version__139_v0() {
-    local name=$1
-    urlencode_npm_pkg__122_v0 "${name}";
-    __AF_urlencode_npm_pkg122_v0__8_15="${__AF_urlencode_npm_pkg122_v0}";
-    local enc="${__AF_urlencode_npm_pkg122_v0__8_15}"
-    __AMBER_VAL_7=$( curl -sL "https://registry.npmjs.org/${enc}" | jq -r '."dist-tags".latest' );
-    __AS=$?;
-    local result="${__AMBER_VAL_7}"
-    __AF_latest_npm_version139_v0="${result}";
+
+echo_error__150_v0() {
+    local msg=$1
+    tput bold; tput setaf 1; echo "${msg}" >&2; tput sgr0
+    __status=$?
+}
+
+extract_single_attr__152_v0() {
+    local file=$1
+    local attr=$2
+    command_10="$(sed -n 's/^[[:space:]]*'"${attr}"'[[:space:]]*=[[:space:]]*"\([^"]*\)";.*/\1/p' "${file}")"
+    __status=$?
+    values_23="${command_10}"
+    command_11="$(printf '%s
+' "${values_23}" | sed '/^$/d' | wc -l | tr -d ' ')"
+    __status=$?
+    count_24="${command_11}"
+    if [ "$([ "_${count_24}" == "_1" ]; echo $?)" != 0 ]; then
+        echo_error__150_v0 "Expected exactly one ${attr} in ${file}, found ${count_24}"
+        exit 1
+    fi
+    command_12="$(printf '%s
+' "${values_23}" | sed '/^$/d' | head -n1)"
+    __status=$?
+    value_25="${command_12}"
+    debug__140_v0 "Extracted ${attr}: ${value_25}"
+    ret_extract_single_attr152_v0="${value_25}"
     return 0
 }
-process_npm_file__140_v0() {
-    local update_flag=$1
-    local file=$2
-    __AMBER_VAL_8=$( awk '/packages[[:space:]]*=[[:space:]]*\[/{flag=1;next}/\]/{flag=0}flag' "${file}" | sed -n 's/.*"\(.*\)".*/\1/p' );
-    __AS=$?;
-    local packages_block="${__AMBER_VAL_8}"
-    split__3_v0 "${packages_block}" "
-";
-    __AF_split3_v0__15_16=("${__AF_split3_v0[@]}");
-    local pkgs=("${__AF_split3_v0__15_16[@]}")
-    debug__125_v0 "npm pkgs parsed from ${file}: ${#pkgs[@]} items";
-    __AF_debug125_v0__17_5="$__AF_debug125_v0";
-    echo "$__AF_debug125_v0__17_5" > /dev/null 2>&1
-    local changed=0
-    i=0;
-for full in "${pkgs[@]}"; do
-        if [ $([ "_${full}" != "_" ]; echo $?) != 0 ]; then
-            continue
-fi
-        __AMBER_VAL_9=$( echo "${full}" | sed 's/@[^@]*$//' );
-        __AS=$?;
-        local base="${__AMBER_VAL_9}"
-        __AMBER_VAL_10=$( echo "${full}" | sed 's/.*@//' );
-        __AS=$?;
-        local ver="${__AMBER_VAL_10}"
-        if [ $([ "_${base}" != "_${full}" ]; echo $?) != 0 ]; then
-            continue
-fi
-        latest_npm_version__139_v0 "${base}";
-        __AF_latest_npm_version139_v0__32_22="${__AF_latest_npm_version139_v0}";
-        local latest="${__AF_latest_npm_version139_v0__32_22}"
-        if [ $(echo $([ "_${latest}" == "_" ]; echo $?) '&&' $([ "_${latest}" == "_${ver}" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
-            local sed_script="s|\"${base}@[^\"]*\"|\"${base}@${latest}\"|"
-            debug__125_v0 "npm sed: base=${base} ver=${ver} latest=${latest}";
-            __AF_debug125_v0__36_13="$__AF_debug125_v0";
-            echo "$__AF_debug125_v0__36_13" > /dev/null 2>&1
-            sed_inplace__135_v0 "${sed_script}" "${file}";
-            __AS=$?;
-            __AF_sed_inplace135_v0__37_19="$__AF_sed_inplace135_v0";
-            echo "$__AF_sed_inplace135_v0__37_19" > /dev/null 2>&1
-            changed=1
-            eval "${update_flag}=1"
-            echo "Updated npm ${base}: ${ver} -> ${latest} in ${file}"
-fi
-    (( i++ )) || true
-done
-    if [ ${changed} != 0 ]; then
-        __AMBER_VAL_11=$( cd "$(dirname "$0")" && pwd );
-        __AS=$?;
-        local script_dir="${__AMBER_VAL_11}"
-        local build_pkg="${script_dir}/build-pkg"
-        echo_info__29_v0 "Running build-pkg for ${file}...";
-        __AF_echo_info29_v0__47_9="$__AF_echo_info29_v0";
-        echo "$__AF_echo_info29_v0__47_9" > /dev/null 2>&1
-         "${build_pkg}" "${file}" ;
-        __AS=$?
-fi
-}
-latest_pypi_version__148_v0() {
+
+latest_npm_version__157_v0() {
     local name=$1
-    __AMBER_VAL_12=$( curl -sL "https://pypi.org/pypi/${name}/json" | jq -r '.info.version' );
-    __AS=$?;
-    local result="${__AMBER_VAL_12}"
-    __AF_latest_pypi_version148_v0="${result}";
+    urlencode_npm_pkg__130_v0 "${name}"
+    enc_35="${ret_urlencode_npm_pkg130_v0}"
+    command_13="$(curl -sL "https://registry.npmjs.org/${enc_35}" | jq -r '."dist-tags".latest')"
+    __status=$?
+    result_36="${command_13}"
+    ret_latest_npm_version157_v0="${result_36}"
     return 0
 }
-process_pip_file__149_v0() {
+
+process_npm_file__158_v0() {
     local update_flag=$1
     local file=$2
-    __AMBER_VAL_13=$( awk '/packages[[:space:]]*=[[:space:]]*\[/{flag=1;next}/\]/{flag=0}flag' "${file}" | sed -n 's/.*"\(.*\)".*/\1/p' );
-    __AS=$?;
-    local packages_block="${__AMBER_VAL_13}"
-    split__3_v0 "${packages_block}" "
-";
-    __AF_split3_v0__13_16=("${__AF_split3_v0[@]}");
-    local pkgs=("${__AF_split3_v0__13_16[@]}")
-    debug__125_v0 "pip pkgs parsed from ${file}: ${#pkgs[@]} items";
-    __AF_debug125_v0__15_5="$__AF_debug125_v0";
-    echo "$__AF_debug125_v0__15_5" > /dev/null 2>&1
-    local changed=0
-    i=0;
-for full in "${pkgs[@]}"; do
-        if [ $([ "_${full}" != "_" ]; echo $?) != 0 ]; then
-            continue
-fi
-        starts_with__20_v0 "${full}" "git+";
-        __AF_starts_with20_v0__24_12="$__AF_starts_with20_v0";
-        if [ "$__AF_starts_with20_v0__24_12" != 0 ]; then
-            continue
-fi
-        text_contains__14_v0 "${full}" "==";
-        __AF_text_contains14_v0__28_12="$__AF_text_contains14_v0";
-        if [ "$__AF_text_contains14_v0__28_12" != 0 ]; then
-            __AMBER_VAL_14=$( echo "${full}" | sed 's/==.*//' );
-            __AS=$?;
-            local name="${__AMBER_VAL_14}"
-            __AMBER_VAL_15=$( echo "${full}" | sed 's/.*==//' );
-            __AS=$?;
-            local ver="${__AMBER_VAL_15}"
-            latest_pypi_version__148_v0 "${name}";
-            __AF_latest_pypi_version148_v0__32_26="${__AF_latest_pypi_version148_v0}";
-            local latest="${__AF_latest_pypi_version148_v0__32_26}"
-            if [ $(echo $([ "_${latest}" == "_" ]; echo $?) '&&' $([ "_${latest}" == "_${ver}" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
-                local pscript="s|\"${name}==[^\"]*\"|\"${name}==${latest}\"|"
-                debug__125_v0 "pip sed: name=${name} ver=${ver} latest=${latest}";
-                __AF_debug125_v0__36_17="$__AF_debug125_v0";
-                echo "$__AF_debug125_v0__36_17" > /dev/null 2>&1
-                sed_inplace__135_v0 "${pscript}" "${file}";
-                __AS=$?;
-                __AF_sed_inplace135_v0__37_23="$__AF_sed_inplace135_v0";
-                echo "$__AF_sed_inplace135_v0__37_23" > /dev/null 2>&1
-                changed=1
-                eval "${update_flag}=1"
-                echo "Updated pip ${name}: ${ver} -> ${latest} in ${file}"
-fi
-fi
-    (( i++ )) || true
-done
-    if [ ${changed} != 0 ]; then
-        __AMBER_VAL_16=$( cd "$(dirname "$0")" && pwd );
-        __AS=$?;
-        local script_dir="${__AMBER_VAL_16}"
-        local build_pkg="${script_dir}/build-pkg"
-        echo_info__29_v0 "Running build-pkg for ${file}...";
-        __AF_echo_info29_v0__48_9="$__AF_echo_info29_v0";
-        echo "$__AF_echo_info29_v0__48_9" > /dev/null 2>&1
-         "${build_pkg}" "${file}" ;
-        __AS=$?
-fi
+    extract_single_attr__152_v0 "${file}" "packageName"
+    package_name_27="${ret_extract_single_attr152_v0}"
+    extract_single_attr__152_v0 "${file}" "packageVersion"
+    package_version_28="${ret_extract_single_attr152_v0}"
+    latest_npm_version__157_v0 "${package_name_27}"
+    latest_37="${ret_latest_npm_version157_v0}"
+    if [ "$(( $(( $([ "_${latest_37}" == "_" ]; echo $?) && $([ "_${latest_37}" == "_null" ]; echo $?) )) && $([ "_${latest_37}" == "_${package_version_28}" ]; echo $?) ))" != 0 ]; then
+        sed_script_38="s|^\\([[:space:]]*packageVersion[[:space:]]*=[[:space:]]*\\)\"[^\"]*\";|\\1\"${latest_37}\";|"
+        debug__133_v0 "npm sed: packageName=${package_name_27} packageVersion=${package_version_28} latest=${latest_37}"
+        sed_inplace__142_v0 "${sed_script_38}" "${file}"
+        __status=$?
+        eval "${update_flag}=1"
+        echo "Updated npm ${package_name_27}: ${package_version_28} -> ${latest_37} in ${file}"
+    fi
 }
-declare -r argv=("$0" "$@")
-    debug_mode=0
-    for arg in "${argv[@]}"; do
-        if [ $([ "_${arg}" != "_--debug" ]; echo $?) != 0 ]; then
-            debug_mode=1
-fi
-        if [ $(echo $([ "_${arg}" == "_--debug" ]; echo $?) '&&' $([ "_${arg}" == "_${argv[0]}" ]; echo $?) | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//') != 0 ]; then
-             echo "Unknown option: ${arg}" >&2 ;
-            __AS=$?
-            echo "Usage: ${argv[0]} [--debug]"
+
+latest_pypi_version__164_v0() {
+    local name=$1
+    command_14="$(curl -sL "https://pypi.org/pypi/${name}/json" | jq -r '.info.version')"
+    __status=$?
+    result_42="${command_14}"
+    ret_latest_pypi_version164_v0="${result_42}"
+    return 0
+}
+
+process_pip_file__165_v0() {
+    local update_flag=$1
+    local file=$2
+    extract_single_attr__152_v0 "${file}" "packageName"
+    package_name_40="${ret_extract_single_attr152_v0}"
+    extract_single_attr__152_v0 "${file}" "packageVersion"
+    package_version_41="${ret_extract_single_attr152_v0}"
+    latest_pypi_version__164_v0 "${package_name_40}"
+    latest_43="${ret_latest_pypi_version164_v0}"
+    if [ "$(( $(( $([ "_${latest_43}" == "_" ]; echo $?) && $([ "_${latest_43}" == "_null" ]; echo $?) )) && $([ "_${latest_43}" == "_${package_version_41}" ]; echo $?) ))" != 0 ]; then
+        sed_script_44="s|^\\([[:space:]]*packageVersion[[:space:]]*=[[:space:]]*\\)\"[^\"]*\";|\\1\"${latest_43}\";|"
+        debug__133_v0 "pip sed: packageName=${package_name_40} packageVersion=${package_version_41} latest=${latest_43}"
+        sed_inplace__142_v0 "${sed_script_44}" "${file}"
+        __status=$?
+        eval "${update_flag}=1"
+        echo "Updated pip ${package_name_40}: ${package_version_41} -> ${latest_43} in ${file}"
+    fi
+}
+
+print_usage__168_v0() {
+    local prog=$1
+    echo "Usage: ${prog} [--debug] [--path <path>] [--glob <glob>]"
+    echo ""
+    echo "Options:"
+    echo "  --debug        Enable debug output"
+    echo "  --path <path>  Search path relative to repo root, or absolute path"
+    echo "  --glob <glob>  Ripgrep glob for package files"
+    echo "  --help, -h     Show this help"
+}
+
+declare -r argv_5=("$0" "$@")
+debug_mode_6=0
+show_help_7=0
+search_path_8="pkgs"
+search_glob_9="default.nix"
+i_10=1
+while :
+do
+    __length_16=("${argv_5[@]}")
+    if [ "$(( ${i_10} >= ${#__length_16[@]} ))" != 0 ]; then
+        break
+    fi
+    arg_11="${argv_5[${i_10}]}"
+    if [ "$([ "_${arg_11}" != "_--debug" ]; echo $?)" != 0 ]; then
+        debug_mode_6=1
+        i_10="$(( ${i_10} + 1 ))"
+        continue
+    fi
+    if [ "$(( $([ "_${arg_11}" != "_--help" ]; echo $?) || $([ "_${arg_11}" != "_-h" ]; echo $?) ))" != 0 ]; then
+        show_help_7=1
+        i_10="$(( ${i_10} + 1 ))"
+        continue
+    fi
+    if [ "$([ "_${arg_11}" != "_--path" ]; echo $?)" != 0 ]; then
+        __length_17=("${argv_5[@]}")
+        if [ "$(( $(( ${i_10} + 1 )) >= ${#__length_17[@]} ))" != 0 ]; then
+            echo "Missing value for --path" >&2
+            __status=$?
+            print_usage__168_v0 "${argv_5[0]}"
             exit 1
-fi
+        fi
+        search_path_8="${argv_5[$(( ${i_10} + 1 ))]}"
+        i_10="$(( ${i_10} + 2 ))"
+        continue
+    fi
+    if [ "$([ "_${arg_11}" != "_--glob" ]; echo $?)" != 0 ]; then
+        __length_18=("${argv_5[@]}")
+        if [ "$(( $(( ${i_10} + 1 )) >= ${#__length_18[@]} ))" != 0 ]; then
+            echo "Missing value for --glob" >&2
+            __status=$?
+            print_usage__168_v0 "${argv_5[0]}"
+            exit 1
+        fi
+        search_glob_9="${argv_5[$(( ${i_10} + 1 ))]}"
+        i_10="$(( ${i_10} + 2 ))"
+        continue
+    fi
+    echo "Unknown option: ${arg_11}" >&2
+    __status=$?
+    print_usage__168_v0 "${argv_5[0]}"
+    exit 1
 done
-    if [ ${debug_mode} != 0 ]; then
-        set_debug__124_v0 1;
-        __AF_set_debug124_v0__24_9="$__AF_set_debug124_v0";
-        echo "$__AF_set_debug124_v0__24_9" > /dev/null 2>&1
+if [ "${show_help_7}" != 0 ]; then
+    print_usage__168_v0 "${argv_5[0]}"
+    exit 0
 fi
-    require_cmd__121_v0 "rg";
-    __AF_require_cmd121_v0__27_5="$__AF_require_cmd121_v0";
-    echo "$__AF_require_cmd121_v0__27_5" > /dev/null 2>&1
-    require_cmd__121_v0 "sed";
-    __AF_require_cmd121_v0__28_5="$__AF_require_cmd121_v0";
-    echo "$__AF_require_cmd121_v0__28_5" > /dev/null 2>&1
-    require_cmd__121_v0 "jq";
-    __AF_require_cmd121_v0__29_5="$__AF_require_cmd121_v0";
-    echo "$__AF_require_cmd121_v0__29_5" > /dev/null 2>&1
-    require_cmd__121_v0 "nix";
-    __AF_require_cmd121_v0__30_5="$__AF_require_cmd121_v0";
-    echo "$__AF_require_cmd121_v0__30_5" > /dev/null 2>&1
-    require_cmd__121_v0 "curl";
-    __AF_require_cmd121_v0__31_5="$__AF_require_cmd121_v0";
-    echo "$__AF_require_cmd121_v0__31_5" > /dev/null 2>&1
-    get_root_dir__34_v0 ;
-    __AF_get_root_dir34_v0__33_20="${__AF_get_root_dir34_v0}";
-    root_dir="${__AF_get_root_dir34_v0__33_20}"
-    debug__125_v0 "ROOT_DIR: ${root_dir}";
-    __AF_debug125_v0__34_5="$__AF_debug125_v0";
-    echo "$__AF_debug125_v0__34_5" > /dev/null 2>&1
-    __AMBER_VAL_17=$( rg -l "pkgs\.lib\.(pip|npm|cargo)\.mk(.*)GlobalPackageDerivation" -g '!**/tmux-menu/**' "${root_dir}" );
-    __AS=$?;
-    files_raw="${__AMBER_VAL_17}"
-    split__3_v0 "${files_raw}" "
-";
-    __AF_split3_v0__37_17=("${__AF_split3_v0[@]}");
-    files=("${__AF_split3_v0__37_17[@]}")
-    update_happened=0
-    for f in "${files[@]}"; do
-        if [ $([ "_${f}" != "_" ]; echo $?) != 0 ]; then
-            continue
+if [ "${debug_mode_6}" != 0 ]; then
+    set_debug__132_v0 1
 fi
-        __AMBER_VAL_18=$( rg -c "pkgs\.lib\.npm\.mkNpmGlobalPackageDerivation" "${f}" 2>/dev/null || echo "0" );
-        __AS=$?;
-        npm_check="${__AMBER_VAL_18}"
-        __AMBER_VAL_19=$( rg -c "pkgs\.lib\.pip\.mkPipGlobalPackageDerivation" "${f}" 2>/dev/null || echo "0" );
-        __AS=$?;
-        pip_check="${__AMBER_VAL_19}"
-        if [ $([ "_${npm_check}" == "_0" ]; echo $?) != 0 ]; then
-            debug__125_v0 "Processing NPM file: ${f}";
-            __AF_debug125_v0__50_13="$__AF_debug125_v0";
-            echo "$__AF_debug125_v0__50_13" > /dev/null 2>&1
-            process_npm_file__140_v0 update_happened "${f}";
-            __AF_process_npm_file140_v0__51_13="$__AF_process_npm_file140_v0";
-            echo "$__AF_process_npm_file140_v0__51_13" > /dev/null 2>&1
+get_root_dir__37_v0 
+root_dir_14="${ret_get_root_dir37_v0}"
+debug__133_v0 "ROOT_DIR: ${root_dir_14}"
+resolved_search_path_15="${search_path_8}"
+command_19="$(echo "${search_path_8}" | grep -q "^/" && echo "1" || echo "0")"
+__status=$?
+is_abs_16="${command_19}"
+if [ "$([ "_${is_abs_16}" != "_0" ]; echo $?)" != 0 ]; then
+    resolved_search_path_15="${root_dir_14}/${search_path_8}"
 fi
-        if [ $([ "_${pip_check}" == "_0" ]; echo $?) != 0 ]; then
-            debug__125_v0 "Processing PIP file: ${f}";
-            __AF_debug125_v0__54_13="$__AF_debug125_v0";
-            echo "$__AF_debug125_v0__54_13" > /dev/null 2>&1
-            process_pip_file__149_v0 update_happened "${f}";
-            __AF_process_pip_file149_v0__55_13="$__AF_process_pip_file149_v0";
-            echo "$__AF_process_pip_file149_v0__55_13" > /dev/null 2>&1
+command_20="$(test -d "${resolved_search_path_15}" && echo "1" || echo "0")"
+__status=$?
+search_path_exists_17="${command_20}"
+if [ "$([ "_${search_path_exists_17}" != "_0" ]; echo $?)" != 0 ]; then
+    echo "Search path not found: ${resolved_search_path_15}" >&2
+    __status=$?
+    print_usage__168_v0 "${argv_5[0]}"
+    exit 1
 fi
+debug__133_v0 "Search path: ${resolved_search_path_15}"
+debug__133_v0 "Search glob: ${search_glob_9}"
+require_cmd__129_v0 "rg"
+require_cmd__129_v0 "sed"
+require_cmd__129_v0 "jq"
+require_cmd__129_v0 "curl"
+command_21="$(rg -l "pkgs\.lib\.mkPackageDerivation" -g "${search_glob_9}" "${resolved_search_path_15}" || true)"
+__status=$?
+files_raw_18="${command_21}"
+split__5_v0 "${files_raw_18}" "
+"
+files_20=("${ret_split5_v0[@]}")
+update_happened_21=0
+for f_22 in "${files_20[@]}"; do
+    if [ "$([ "_${f_22}" != "_" ]; echo $?)" != 0 ]; then
+        continue
+    fi
+    extract_single_attr__152_v0 "${f_22}" "packageManager"
+    package_manager_26="${ret_extract_single_attr152_v0}"
+    if [ "$([ "_${package_manager_26}" != "_npm" ]; echo $?)" != 0 ]; then
+        debug__133_v0 "Processing NPM file: ${f_22}"
+        process_npm_file__158_v0 "update_happened_21" "${f_22}"
+        continue
+    fi
+    if [ "$([ "_${package_manager_26}" != "_pip" ]; echo $?)" != 0 ]; then
+        debug__133_v0 "Processing PIP file: ${f_22}"
+        process_pip_file__165_v0 "update_happened_21" "${f_22}"
+        continue
+    fi
+    echo "Unsupported packageManager: ${package_manager_26} in ${f_22}" >&2
+    __status=$?
+    exit 1
 done
-    if [ ${update_happened} != 0 ]; then
-        echo_info__29_v0 "Updates applied. Review changes and commit if desired.";
-        __AF_echo_info29_v0__60_9="$__AF_echo_info29_v0";
-        echo "$__AF_echo_info29_v0__60_9" > /dev/null 2>&1
+if [ "${update_happened_21}" != 0 ]; then
+    echo_info__32_v0 "Package versions updated. Review changes and commit if desired."
 else
-        echo_info__29_v0 "No updates necessary. All packages are current.";
-        __AF_echo_info29_v0__62_9="$__AF_echo_info29_v0";
-        echo "$__AF_echo_info29_v0__62_9" > /dev/null 2>&1
+    echo_info__32_v0 "No package version updates necessary."
 fi

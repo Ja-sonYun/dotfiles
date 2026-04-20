@@ -25,7 +25,7 @@ let
     paths = [ pkgs.codex ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
-      rm $out/bin/.codex-wrapped
+      rm -f $out/bin/.codex-wrapped
       wrapProgram $out/bin/codex \
         --prefix PATH : "${lib.makeBinPath codexPath}" \
         --prefix PATH : "$out/bin" \

@@ -1,32 +1,116 @@
 {
   "Jasonyun-wsl-server": {
-    "awscli-local": "sha256-2jebJApEf120WbM/5i5oUHFHHhQ+xRITlkU4kHeLE7s=",
-    "tmux-menu": "sha256-P7aZyCwAUwp+zfJZIjwkVj+rNwdSGWhgqO69sbOV9zI=",
-    "context7-mcp": "sha256-MhjlEu3UXj1YXrQ1NPmY6UN3ELWWdALMTTnh+OxQMns=",
-    "aws-documentation": "sha256-z8/KYXr+hUSdHbYCYj0tGitsX9Z3oqb7Z8PM1ohqQms=",
-    "chrome-devtools-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-    "drawio-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-    "firecrawl-mcp": "sha256-HDjoglYMrR3nbWJyo272ObgmK0aRggAx+cPVL9mEthU="
+    "awscli-local": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "tmux-menu": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "codex": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "context7-mcp": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "aws-documentation": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "chrome-devtools-mcp": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "drawio-mcp": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "firecrawl-mcp": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    }
   },
   "JasonYuns-MacBook-Pro": {
-    "awscli-local": "sha256-HY8e7hCL5skVQDpZexcU5WaU5P532OLrCeTN4aKiF4k=",
-    "tmux-menu": "sha256-baxazNev2VBQNC1qNDaOWdObZ8wd/l5g8jBueBX3CE4=",
-    "context7-mcp": "sha256-87mSw1rtEsLrzZVY2rzknt/Q5KPZVN3PCDB4BAzi4ZU=",
-    "aws-documentation": "sha256-rg3YAsoHwKAKjoi5cvx/9waNQJHCh0LaCTyopMGgcbw=",
-    "chrome-devtools-mcp": "sha256-n6NqKxaDPPU8HuO6Wp7UMPUiljZBlcxMcZC7NfLRohU=",
-    "drawio-mcp": "sha256-EfY+F48+WuwxxeKj8gs+ZUZraqRV4E1eNAMkHqdlD7A=",
-    "firecrawl-mcp": "sha256-8QtdevBUI1pCwpj1wgRR6ph5a2CUs7fSMMgiUgoqaag=",
-    "macnotesapp": "sha256-R3dt/mrdLKkLsv+n0eEiwwn1N7jGqQK/DTzKqAhq6l4=",
-    "n8n-mcp": "sha256-RXQgQ6Fdz7TZjwP8YcRkIbZZrD3LXQVZi2JGG1NNYZk="
+    "awscli-local": {
+      "version": "0.22.2",
+      "hash": "sha256-Tvfgn9T/TEg5AQJ4ceLSpQFkh3VPVYYi804huIOUhX0="
+    },
+    "tmux-menu": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "codex": {
+      "version": "0.121.0",
+      "hash": "sha256-79+ZJ1s+19Q1utUeIxC4J/lmPSZON9si4GCcUfVxgYc="
+    },
+    "context7-mcp": {
+      "version": "2.1.8",
+      "hash": "sha256-6jDWr60Bz9kVbWA6yFhf34Tj/gTzKlG75B7Bv7yErqg="
+    },
+    "aws-documentation": {
+      "version": "1.1.20",
+      "hash": "sha256-j61aVFUJLZYobDij5hMGoZhG7FBvwA3TOaLc8WPT0sM="
+    },
+    "chrome-devtools-mcp": {
+      "version": "0.21.0",
+      "hash": "sha256-B0OdLWxa7WCbJJfu5I2vy+Z1Gd0kUx3fo8nzZAjHoJs="
+    },
+    "drawio-mcp": {
+      "version": "1.2.6",
+      "hash": "sha256-e1OP3ADIubFef63btlOKXyVweq6cBqGJjRykYwx2Ctw="
+    },
+    "firecrawl-mcp": {
+      "version": "3.11.0",
+      "hash": "sha256-Uvxu7ztMHgFYreXk4f5xQfZlOPIPPdJI/1SQvEKQKkQ="
+    },
+    "macnotesapp": {
+      "version": "0.8.2",
+      "hash": "sha256-DPyTtlt/gBlKtKmX0RZNC+6W9qJ4SoTOS6BGjL6Pu4Q="
+    },
+    "n8n-mcp": {
+      "version": "2.47.12",
+      "hash": "sha256-GvN+9holjXM+RFe2Qjt1P88WzUEQeLFqZVeJiOZK924="
+    }
   },
   "Jasons-MacBook-Server": {
-    "awscli-local": "sha256-g+hS6GlybNrvfSUH7TNzACNlbsCj4auMY0au5+sMh6E=",
-    "tmux-menu": "sha256-aPxtJE4YI4wZWvpIQ7Qv31gH8tDwGklt3isWNTZ/Adw=",
-    "context7-mcp": "sha256-1MNKhnwkLquxzjDQphFO565Cp9FAQRThMYUkfQGYzc4=",
-    "aws-documentation": "sha256-p70f30dwgsLWdAk4l3PvA+fYXMI6g5Zh+Sg1ChF2dwI=",
-    "chrome-devtools-mcp": "sha256-n6nF1iZLk1NBc0awj2wdZkY5VgOG8FhE/4TazokPXSk=",
-    "drawio-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-    "firecrawl-mcp": "sha256-yviAEnvId3JkuRWGI5A88OUdLJcXgAgPX59cj+jWOd0=",
-    "macnotesapp": "sha256-tdvMnXsrxnSOosxP8qe2zaFp7wCbKTQbw4vLfia570U="
+    "awscli-local": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "tmux-menu": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "codex": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "context7-mcp": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "aws-documentation": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "chrome-devtools-mcp": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "drawio-mcp": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "firecrawl-mcp": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "macnotesapp": {
+      "version": "0.0.1",
+      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    }
   }
 }

@@ -1,14 +1,12 @@
 { pkgs, ... }:
-let
-  outputHash = pkgs.hashfile."aws-documentation";
-in
 
-pkgs.lib.pip.mkPipGlobalPackageDerivation {
-  inherit pkgs outputHash;
+pkgs.lib.mkPackageDerivation {
+  inherit pkgs;
+  hashKey = "aws-documentation";
+  packageManager = "pip";
+  packageName = "awslabs.aws-documentation-mcp-server";
+  packageVersion = "1.1.20";
   name = "awslabs.aws-documentation-mcp-server";
-  packages = [
-    "awslabs.aws-documentation-mcp-server==1.1.20"
-  ];
   exposedBinaries = [
     "awslabs.aws-documentation-mcp-server"
   ];

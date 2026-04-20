@@ -1,0 +1,33 @@
+import { debug } from "./debug.ab"
+import { echo_error } from "./echo.ab"
+
+pub fun extract_single_attr(file: Text, attr: Text): Text {
+    let values = trust $ sed -n 's/^[[:space:]]*{attr}[[:space:]]*=[[:space:]]*"\([^"]*\)";.*/\1/p' "{file}" $
+    let count = trust $ printf '%s\n' "{values}" | sed '/^\$/d' | wc -l | tr -d ' ' $
+
+    if count != "1" {
+        echo_error("Expected exactly one {attr} in {file}, found {count}")
+        exit 1
+    }
+
+    let value = trust $ printf '%s\n' "{values}" | sed '/^\$/d' | head -n1 $
+    debug("Extracted {attr}: {value}")
+    return value
+}
+
+pub fun detect_pkg_type(file: Text): Text {
+    let package_derivation_check = trust $ rg -c "pkgs\.lib\.mkPackageDerivation" "{file}" 2>/dev/null || echo "0" $
+    if package_derivation_check != "0" {
+        return extract_single_attr(file, "packageManager")
+    }
+
+    return ""
+}
+
+pub fun extract_hash_key(file: Text): Text {
+    return extract_single_attr(file, "hashKey")
+}
+
+pub fun extract_package_version(file: Text): Text {
+    return extract_single_attr(file, "packageVersion")
+}

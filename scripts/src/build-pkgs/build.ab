@@ -8,59 +8,95 @@ pub fun nix_build(root_dir: Text, file: Text, key: Text): Text {
     let hostname = get_hostname()
 
     let abs_file = file
-    let is_abs = trust $ echo "{file}" | grep -q "^/" && echo "1" || echo "0" $
+    let is_abs = trust $
+        echo "{file}" | grep -q "^/" && echo "1" || echo "0"
+    $
     if is_abs == "0" {
         abs_file = "{root_dir}/{file}"
     }
 
     debug("Building: {abs_file} (key={key}, hostname={hostname})")
 
-    let tmpbase = trust $ mktemp -t build-pkg.XXXXXX $
+    let tmpbase = trust $
+        mktemp -t build-pkgs.XXXXXX
+    $
     let tmpfile = "{tmpbase}.nix"
-    trust $ mv "{tmpbase}" "{tmpfile}" $
+    trust $
+        mv "{tmpbase}" "{tmpfile}"
+    $
 
-    let script_dir = trust $ cd "\$(dirname "\$0")" && pwd $
-    let template = "{script_dir}/src/build-pkg/template.nix"
+    let script_dir = trust $
+        cd "\$(dirname "\$0")" && pwd
+    $
+    let template = "{script_dir}/src/build-pkgs/template.nix"
 
-    trust $ cp "{template}" "{tmpfile}" $
+    trust $
+        cp "{template}" "{tmpfile}"
+    $
     trust sed_inplace("s|__HOSTNAME__|{hostname}|g", tmpfile)
     trust sed_inplace("s|__ROOT_DIR__|{root_dir}|g", tmpfile)
     trust sed_inplace("s|__FILE__|{abs_file}|g", tmpfile)
     debug("Nix file: {tmpfile}")
 
-    let outfile = trust $ mktemp -t build-pkg-out.XXXXXX $
-    trust $ nix build --impure --file "{tmpfile}" -L > "{outfile}" 2>&1 || true $
-    let out = trust $ cat "{outfile}" $
-    trust $ rm -f "{tmpfile}" "{outfile}" $
+    let outfile = trust $
+        mktemp -t build-pkgs-out.XXXXXX
+    $
+    trust $
+        nix build --impure --file "{tmpfile}" -L > "{outfile}" 2>&1 || true
+    $
+    let out = trust $
+        cat "{outfile}"
+    $
+    trust $
+        rm -f "{tmpfile}" "{outfile}"
+    $
     return out
 }
 
 pub fun extract_hash_from_output(out: Text): Text {
-    let hash = trust $ echo "{out}" | sed -n 's/.*got: *\(sha256-[A-Za-z0-9+/=]\+\).*/\1/p' | tail -n1 $
+    let hash = trust $
+        echo "{out}" |
+            sed -n 's/.*got: *\(sha256-[A-Za-z0-9+/=]\+\).*/\1/p' |
+            tail -n1
+    $
     return hash
 }
 
-pub fun update_hashfile(root_dir: Text, key: Text, hash: Text): Bool {
+pub fun update_hashfile(root_dir: Text, key: Text, version: Text, hash: Text): Bool {
     let hashfile = get_hashfile_path(root_dir)
     let hostname = get_hostname()
 
     debug("Updating hashfile: {hashfile}")
-    debug("Hostname: {hostname}, Key: {key}, Hash: {hash}")
+    debug("Hostname: {hostname}, Key: {key}, Version: {version}, Hash: {hash}")
 
-    let updated = trust $ jq --arg host "{hostname}" --arg key "{key}" --arg hash "{hash}" '.[\$host][\$key] = \$hash' "{hashfile}" $
+    let query = "
+.[ $host ][ $key ].version = $version |
+.[ $host ][ $key ].hash = $hash
+"
+    let updated = trust $
+        jq \
+            --arg host "{hostname}" \
+            --arg key "{key}" \
+            --arg version "{version}" \
+            --arg hash "{hash}" \
+            "{query}" \
+            "{hashfile}"
+    $
 
     if updated == "" {
         return false
     }
 
-    trust $ echo "{updated}" > "{hashfile}" $
+    trust $
+        echo "{updated}" > "{hashfile}"
+    $
     return true
 }
 
-pub fun build_package(root_dir: Text, file: Text, key: Text, force: Bool): Bool {
+pub fun build_package(root_dir: Text, file: Text, key: Text, version: Text, force: Bool): Bool {
     if force {
-        echo_warning("Force mode: invalidating hash to trigger rebuild")
-        if not update_hashfile(root_dir, key, "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") {
+        echo_warning("Force mode: invalidating hash for {key} {version}")
+        if not update_hashfile(root_dir, key, version, "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") {
             echo_error("Failed to invalidate hash")
             return false
         }
@@ -77,25 +113,29 @@ pub fun build_package(root_dir: Text, file: Text, key: Text, force: Bool): Bool 
             return false
         }
 
-        echo_warning("Hash mismatch detected. New hash: {new_hash}")
+        echo_warning("Hash mismatch detected for {key} {version}. New hash: {new_hash}")
 
-        if not update_hashfile(root_dir, key, new_hash) {
+        if not update_hashfile(root_dir, key, version, new_hash) {
             echo_error("Failed to update hashfile")
             return false
         }
 
-        echo_success("Updated hashfile.json with new hash")
+        echo_success("Updated hashfile.json for {key} {version}")
 
         let rebuild_out = nix_build(root_dir, file, key)
         if text_contains(rebuild_out, "got:") {
             echo_error("Rebuild still failed after hash update")
-            trust $ echo "{rebuild_out}" >&2 $
+            trust $
+                echo "{rebuild_out}" >&2
+            $
             return false
         }
 
         if text_contains(rebuild_out, "error:") {
             echo_error("Build failed with error")
-            trust $ echo "{rebuild_out}" >&2 $
+            trust $
+                echo "{rebuild_out}" >&2
+            $
             return false
         }
 

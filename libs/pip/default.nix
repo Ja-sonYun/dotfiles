@@ -84,6 +84,7 @@ in
   mkPipGlobalPackageDerivation =
     { pkgs
     , name
+    , version
     , pythonVersion ? "312"
     , preInstall ? [ ]
     , # List of packages to install before pip packages, e.g. ["hatchling"]
@@ -104,11 +105,10 @@ in
     let
       pipRequirements = pkgs.lib.concatStringsSep " " packages;
       preInstallPipRequirements = pkgs.lib.concatStringsSep " " preInstall;
-      version = builtins.hashString "sha256" (pipRequirements + preInstallPipRequirements);
-      pname = "${name}-${version}";
+      pname = name;
 
       tarball = pkgs.stdenv.mkDerivation {
-        name = "${pname}-tarball";
+        name = "${pname}-${version}-tarball";
         phases = [ "buildPhase" ];
         nativeBuildInputs = with pkgs; [
           cacert
@@ -155,7 +155,8 @@ in
       wheelhousePipRequirements = pkgs.lib.concatStringsSep " " _pipRequirementsList;
     in
     pkgs.stdenv.mkDerivation {
-      inherit name version pname;
+      inherit version pname;
+      name = "${pname}-${version}";
       src = tarball;
       dontUnpack = true;
       nativeBuildInputs =

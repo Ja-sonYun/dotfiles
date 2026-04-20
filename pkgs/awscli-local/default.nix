@@ -1,15 +1,16 @@
 { pkgs, ... }:
-let
-  outputHash = pkgs.hashfile."awscli-local";
-in
 
-pkgs.lib.pip.mkPipGlobalPackageDerivation {
-  inherit pkgs outputHash;
+pkgs.lib.mkPackageDerivation rec {
+  inherit pkgs;
+  hashKey = "awscli-local";
+  packageManager = "pip";
+  packageName = "awscli-local";
+  packageVersion = "0.22.2";
   name = "awscli-local";
   pythonVersion = "312";
-  packages = [
+  packageSpec = "'awscli-local[ver1]'==${packageVersion}";
+  extraPackages = [
     "setuptools>=40.8.0"
-    "'awscli-local[ver1]'==0.22.2"
   ];
   exposedBinaries = [
     "awslocal"

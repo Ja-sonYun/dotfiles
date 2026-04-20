@@ -1,14 +1,12 @@
 { pkgs, ... }:
-let
-  outputHash = pkgs.hashfile."firecrawl-mcp";
-in
 
-pkgs.lib.npm.mkNpmGlobalPackageDerivation {
-  inherit pkgs outputHash;
+pkgs.lib.mkPackageDerivation {
+  inherit pkgs;
+  hashKey = "firecrawl-mcp";
+  packageManager = "npm";
+  packageName = "firecrawl-mcp";
+  packageVersion = "3.11.0";
   name = "firecrawl-mcp";
-  packages = [
-    "firecrawl-mcp@3.11.0"
-  ];
   exposedBinaries = [
     "firecrawl-mcp"
   ];

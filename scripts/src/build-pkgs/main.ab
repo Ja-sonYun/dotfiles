@@ -1,0 +1,180 @@
+import { split } from "std/text"
+import { echo_error, echo_info } from "../lib/echo.ab"
+import { get_root_dir } from "./config.ab"
+import { require_cmd } from "../lib/cmd.ab"
+import { debug, set_debug } from "../lib/debug.ab"
+import { detect_pkg_type, extract_hash_key, extract_package_version } from "../lib/package.ab"
+import { build_package } from "./build.ab"
+import { hash_needs_build } from "./hashfile.ab"
+
+fun print_usage(prog: Text): Null {
+    echo "Usage: {prog} [--debug] [--force] [--path <path>] [--glob <glob>] [nix-file]"
+    echo ""
+    echo "Arguments:"
+    echo "  [nix-file]  Optional path to one default.nix file"
+    echo ""
+    echo "Options:"
+    echo "  --debug        Enable debug output"
+    echo "  --force        Force rebuild even if hash matches"
+    echo "  --path <path>  Search path relative to repo root, or absolute path"
+    echo "  --glob <glob>  Ripgrep glob for package files"
+    echo "  --help, -h     Show this help"
+}
+
+fun build_if_needed(ref build_happened: Bool, root_dir: Text, nix_file: Text, force_mode: Bool): Bool {
+    let pkg_type = detect_pkg_type(nix_file)
+    if pkg_type == "" {
+        echo_error("Could not detect pkgs.lib.mkPackageDerivation in {nix_file}")
+        return false
+    }
+
+    let hash_key = extract_hash_key(nix_file)
+    let package_version = extract_package_version(nix_file)
+    debug("Package type: {pkg_type}")
+    debug("Hash key: {hash_key}")
+    debug("Package version: {package_version}")
+
+    if not force_mode and not hash_needs_build(root_dir, hash_key, package_version) {
+        debug("Hash is current for {hash_key} {package_version}")
+        return true
+    }
+
+    echo_info("Building {hash_key} {package_version} ({pkg_type})...")
+    build_happened = true
+
+    return build_package(root_dir, nix_file, hash_key, package_version, force_mode)
+}
+
+main (argv) {
+    let debug_mode = false
+    let force_mode = false
+    let show_help = false
+    let search_path = "pkgs"
+    let search_glob = "default.nix"
+    let nix_file = ""
+    let i = 1
+
+    loop {
+        if i >= len(argv) {
+            break
+        }
+
+        let arg = argv[i]
+        if arg == "--debug" {
+            debug_mode = true
+            i += 1
+            continue
+        }
+        if arg == "--force" or arg == "-f" {
+            force_mode = true
+            i += 1
+            continue
+        }
+        if arg == "--help" or arg == "-h" {
+            show_help = true
+            i += 1
+            continue
+        }
+
+        if arg == "--path" {
+            if i + 1 >= len(argv) {
+                trust $ echo "Missing value for --path" >&2 $
+                print_usage(argv[0])
+                exit 1
+            }
+            search_path = argv[i + 1]
+            i += 2
+            continue
+        }
+
+        if arg == "--glob" {
+            if i + 1 >= len(argv) {
+                trust $ echo "Missing value for --glob" >&2 $
+                print_usage(argv[0])
+                exit 1
+            }
+            search_glob = argv[i + 1]
+            i += 2
+            continue
+        }
+
+        if arg != argv[0] {
+            if nix_file == "" {
+                nix_file = arg
+                i += 1
+                continue
+            }
+        }
+
+        trust $ echo "Unknown option: {arg}" >&2 $
+        print_usage(argv[0])
+        exit 1
+    }
+
+    if show_help {
+        print_usage(argv[0])
+        exit 0
+    }
+
+    if debug_mode {
+        set_debug(true)
+    }
+
+    require_cmd("nix")
+    require_cmd("jq")
+    require_cmd("rg")
+    require_cmd("sed")
+
+    let root_dir = get_root_dir()
+    debug("ROOT_DIR: {root_dir}")
+
+    let build_happened = false
+
+    if nix_file != "" {
+        let file_exists = trust $ test -f "{nix_file}" && echo "1" || echo "0" $
+        if file_exists == "0" {
+            echo_error("File not found: {nix_file}")
+            exit 1
+        }
+
+        if build_if_needed(build_happened, root_dir, nix_file, force_mode) {
+            if not build_happened {
+                echo_info("Package hashes are current.")
+            }
+            exit 0
+        } else {
+            exit 1
+        }
+    }
+
+    let resolved_search_path = search_path
+    let is_abs = trust $ echo "{search_path}" | grep -q "^/" && echo "1" || echo "0" $
+    if is_abs == "0" {
+        resolved_search_path = "{root_dir}/{search_path}"
+    }
+
+    let search_path_exists = trust $ test -d "{resolved_search_path}" && echo "1" || echo "0" $
+    if search_path_exists == "0" {
+        echo_error("Search path not found: {resolved_search_path}")
+        exit 1
+    }
+
+    let files_raw = trust $ rg -l "pkgs\.lib\.mkPackageDerivation" -g "{search_glob}" "{resolved_search_path}" || true $
+    let files = split(files_raw, "\n")
+
+    for f in files {
+        if f == "" {
+            continue
+        }
+
+        if not build_if_needed(build_happened, root_dir, f, force_mode) {
+            exit 1
+        }
+    }
+
+    if build_happened {
+        echo_info("Package hashes checked/updated.")
+    } else {
+        echo_info("Package hashes are current.")
+    }
+}

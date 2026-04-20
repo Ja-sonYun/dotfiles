@@ -1,14 +1,12 @@
 { pkgs, ... }:
-let
-  outputHash = pkgs.hashfile."chrome-devtools-mcp";
-in
 
-pkgs.lib.npm.mkNpmGlobalPackageDerivation {
-  inherit pkgs outputHash;
+pkgs.lib.mkPackageDerivation {
+  inherit pkgs;
+  hashKey = "chrome-devtools-mcp";
+  packageManager = "npm";
+  packageName = "chrome-devtools-mcp";
+  packageVersion = "0.21.0";
   name = "chrome-devtools-mcp";
-  packages = [
-    "chrome-devtools-mcp@0.21.0"
-  ];
   exposedBinaries = [
     "chrome-devtools-mcp"
   ];
