@@ -19,6 +19,7 @@
     # Npm
     context7 = final.callPackage ../pkgs/context7 { };
     chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
+    drawio-mcp = final.callPackage ../pkgs/drawio-mcp { };
     firecrawl-mcp = final.callPackage ../pkgs/firecrawl-mcp { };
     n8n-mcp = final.callPackage ../pkgs/n8n-mcp { };
 

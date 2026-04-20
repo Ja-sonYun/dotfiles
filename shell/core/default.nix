@@ -80,6 +80,8 @@
     ollama
     llmfit
 
+    (ledger.override { usePython = true; })
+
     # My vim config
     # plot
 

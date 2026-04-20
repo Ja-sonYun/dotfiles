@@ -5,6 +5,7 @@
     "context7-mcp": "sha256-MhjlEu3UXj1YXrQ1NPmY6UN3ELWWdALMTTnh+OxQMns=",
     "aws-documentation": "sha256-z8/KYXr+hUSdHbYCYj0tGitsX9Z3oqb7Z8PM1ohqQms=",
     "chrome-devtools-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    "drawio-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     "firecrawl-mcp": "sha256-HDjoglYMrR3nbWJyo272ObgmK0aRggAx+cPVL9mEthU="
   },
   "JasonYuns-MacBook-Pro": {
@@ -13,6 +14,7 @@
     "context7-mcp": "sha256-87mSw1rtEsLrzZVY2rzknt/Q5KPZVN3PCDB4BAzi4ZU=",
     "aws-documentation": "sha256-rg3YAsoHwKAKjoi5cvx/9waNQJHCh0LaCTyopMGgcbw=",
     "chrome-devtools-mcp": "sha256-n6NqKxaDPPU8HuO6Wp7UMPUiljZBlcxMcZC7NfLRohU=",
+    "drawio-mcp": "sha256-EfY+F48+WuwxxeKj8gs+ZUZraqRV4E1eNAMkHqdlD7A=",
     "firecrawl-mcp": "sha256-8QtdevBUI1pCwpj1wgRR6ph5a2CUs7fSMMgiUgoqaag=",
     "macnotesapp": "sha256-R3dt/mrdLKkLsv+n0eEiwwn1N7jGqQK/DTzKqAhq6l4=",
     "n8n-mcp": "sha256-RXQgQ6Fdz7TZjwP8YcRkIbZZrD3LXQVZi2JGG1NNYZk="
@@ -23,6 +25,7 @@
     "context7-mcp": "sha256-1MNKhnwkLquxzjDQphFO565Cp9FAQRThMYUkfQGYzc4=",
     "aws-documentation": "sha256-p70f30dwgsLWdAk4l3PvA+fYXMI6g5Zh+Sg1ChF2dwI=",
     "chrome-devtools-mcp": "sha256-n6nF1iZLk1NBc0awj2wdZkY5VgOG8FhE/4TazokPXSk=",
+    "drawio-mcp": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     "firecrawl-mcp": "sha256-yviAEnvId3JkuRWGI5A88OUdLJcXgAgPX59cj+jWOd0=",
     "macnotesapp": "sha256-tdvMnXsrxnSOosxP8qe2zaFp7wCbKTQbw4vLfia570U="
   }
