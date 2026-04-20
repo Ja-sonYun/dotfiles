@@ -4,10 +4,6 @@
       "version": "0.0.1",
       "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     },
-    "tmux-menu": {
-      "version": "0.0.1",
-      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    },
     "codex": {
       "version": "0.0.1",
       "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
@@ -24,10 +20,6 @@
       "version": "0.0.1",
       "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     },
-    "drawio-mcp": {
-      "version": "0.0.1",
-      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    },
     "firecrawl-mcp": {
       "version": "0.0.1",
       "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
@@ -37,10 +29,6 @@
     "awscli-local": {
       "version": "0.22.2",
       "hash": "sha256-Tvfgn9T/TEg5AQJ4ceLSpQFkh3VPVYYi804huIOUhX0="
-    },
-    "tmux-menu": {
-      "version": "0.0.1",
-      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     },
     "codex": {
       "version": "0.121.0",
@@ -57,10 +45,6 @@
     "chrome-devtools-mcp": {
       "version": "0.21.0",
       "hash": "sha256-B0OdLWxa7WCbJJfu5I2vy+Z1Gd0kUx3fo8nzZAjHoJs="
-    },
-    "drawio-mcp": {
-      "version": "1.2.6",
-      "hash": "sha256-e1OP3ADIubFef63btlOKXyVweq6cBqGJjRykYwx2Ctw="
     },
     "firecrawl-mcp": {
       "version": "3.11.0",
@@ -80,10 +64,6 @@
       "version": "0.0.1",
       "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     },
-    "tmux-menu": {
-      "version": "0.0.1",
-      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    },
     "codex": {
       "version": "0.0.1",
       "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
@@ -97,10 +77,6 @@
       "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     },
     "chrome-devtools-mcp": {
-      "version": "0.0.1",
-      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    },
-    "drawio-mcp": {
       "version": "0.0.1",
       "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     },

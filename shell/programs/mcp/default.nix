@@ -53,9 +53,7 @@
         env = { };
       };
       drawio = {
-        command = "${pkgs.drawio-mcp}/bin/drawio-mcp";
-        args = [ ];
-        env = { };
+        url = "https://mcp.draw.io/mcp";
       };
       grep_app = {
         url = "https://mcp.grep.app";
