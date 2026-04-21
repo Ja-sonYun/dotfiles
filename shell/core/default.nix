@@ -73,6 +73,7 @@
       exec "${configDir}/infra/cloudflare/generated/tunnel" "$@"
     '')
 
+    awsdac
 
     awscli
     awscli-local

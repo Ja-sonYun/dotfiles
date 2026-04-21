@@ -31,8 +31,8 @@
       "hash": "sha256-Tvfgn9T/TEg5AQJ4ceLSpQFkh3VPVYYi804huIOUhX0="
     },
     "codex": {
-      "version": "0.121.0",
-      "hash": "sha256-79+ZJ1s+19Q1utUeIxC4J/lmPSZON9si4GCcUfVxgYc="
+      "version": "0.122.0",
+      "hash": "sha256-N/TAGFgo9p1n1TMOYYbqxJSJtFdhtf5uY7sYmvBeZMc="
     },
     "context7-mcp": {
       "version": "2.1.8",
@@ -55,8 +55,8 @@
       "hash": "sha256-DPyTtlt/gBlKtKmX0RZNC+6W9qJ4SoTOS6BGjL6Pu4Q="
     },
     "n8n-mcp": {
-      "version": "2.47.12",
-      "hash": "sha256-GvN+9holjXM+RFe2Qjt1P88WzUEQeLFqZVeJiOZK924="
+      "version": "2.47.13",
+      "hash": "sha256-Uvlkl3855XzGmCI058RGyNNjhYFbtK8DwsAiNIQmzJs="
     }
   },
   "Jasons-MacBook-Server": {
