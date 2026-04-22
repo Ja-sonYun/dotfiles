@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "chrome-devtools-mcp";
   packageManager = "npm";
   packageName = "chrome-devtools-mcp";
-  packageVersion = "0.21.0";
+  packageVersion = "0.22.0";
   name = "chrome-devtools-mcp";
   exposedBinaries = [
     "chrome-devtools-mcp"

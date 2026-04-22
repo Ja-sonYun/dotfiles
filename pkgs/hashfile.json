@@ -39,12 +39,12 @@
       "hash": "sha256-6jDWr60Bz9kVbWA6yFhf34Tj/gTzKlG75B7Bv7yErqg="
     },
     "aws-documentation": {
-      "version": "1.1.20",
-      "hash": "sha256-j61aVFUJLZYobDij5hMGoZhG7FBvwA3TOaLc8WPT0sM="
+      "version": "1.1.21",
+      "hash": "sha256-uE7UWEhN1wMZHnvFlfk7vvj2o+Z0/6anYMI3Addpqfs="
     },
     "chrome-devtools-mcp": {
-      "version": "0.21.0",
-      "hash": "sha256-B0OdLWxa7WCbJJfu5I2vy+Z1Gd0kUx3fo8nzZAjHoJs="
+      "version": "0.22.0",
+      "hash": "sha256-Ljvl6DcSceU8mUG3PHRVhzAQap1smZYdAhq1MVPBdcw="
     },
     "firecrawl-mcp": {
       "version": "3.11.0",
@@ -55,8 +55,8 @@
       "hash": "sha256-DPyTtlt/gBlKtKmX0RZNC+6W9qJ4SoTOS6BGjL6Pu4Q="
     },
     "n8n-mcp": {
-      "version": "2.47.13",
-      "hash": "sha256-Uvlkl3855XzGmCI058RGyNNjhYFbtK8DwsAiNIQmzJs="
+      "version": "2.47.14",
+      "hash": "sha256-EjYwrLT+GCDcq1B17bGZ5T7esfgUU1XL23k9Ul+ClR0="
     }
   },
   "Jasons-MacBook-Server": {
