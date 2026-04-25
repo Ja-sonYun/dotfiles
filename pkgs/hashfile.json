@@ -31,20 +31,20 @@
       "hash": "sha256-Tvfgn9T/TEg5AQJ4ceLSpQFkh3VPVYYi804huIOUhX0="
     },
     "codex": {
-      "version": "0.122.0",
-      "hash": "sha256-N/TAGFgo9p1n1TMOYYbqxJSJtFdhtf5uY7sYmvBeZMc="
+      "version": "0.125.0",
+      "hash": "sha256-DxO/YIINyligel3KdIfhpxOuZ7YSE/WZSuXruhd5+38="
     },
     "context7-mcp": {
-      "version": "2.1.8",
-      "hash": "sha256-6jDWr60Bz9kVbWA6yFhf34Tj/gTzKlG75B7Bv7yErqg="
+      "version": "2.2.0",
+      "hash": "sha256-w0fJlauZ8x2SuXewmJtg1VSgWYsGX6Ru56QQbR8dKcM="
     },
     "aws-documentation": {
       "version": "1.1.21",
       "hash": "sha256-uE7UWEhN1wMZHnvFlfk7vvj2o+Z0/6anYMI3Addpqfs="
     },
     "chrome-devtools-mcp": {
-      "version": "0.22.0",
-      "hash": "sha256-Ljvl6DcSceU8mUG3PHRVhzAQap1smZYdAhq1MVPBdcw="
+      "version": "0.23.0",
+      "hash": "sha256-yKLp01BJGgHiaxpG8yveQf5a6bJuOhqPZnR8laUDKYI="
     },
     "firecrawl-mcp": {
       "version": "3.11.0",

@@ -98,15 +98,6 @@ in
       ];
     };
 
-    zplug = {
-      enable = true;
-
-      zplugHome = "${cacheDir}/zplug";
-      plugins = [
-        { name = "jeffreytse/zsh-vi-mode"; }
-      ];
-    };
-
     shellAliases = {
       urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
       urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
@@ -152,6 +143,8 @@ in
             eval "$(${pkgs.navi}/bin/navi widget zsh)"
           fi
         }
+
+        source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
 
         [ -f "$HOME/.zle_widgets" ] && source "$HOME/.zle_widgets"
 

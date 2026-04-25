@@ -5,9 +5,6 @@
 }:
 let
   pythonWithPackages = pkgs.python313.withPackages (ps: [
-    ps.libtmux
-    ps.pydantic
-    ps.pydantic-settings
   ]);
 
   nodeOnly = pkgs.runCommand "nodejs-24-node-only" { } ''
@@ -47,7 +44,7 @@ in
     enableMcpIntegration = true;
 
     settings = {
-      model = "gpt-5.4";
+      model = "gpt-5.5";
       model_reasoning_effort = "high";
 
       approval_policy = "on-request";
@@ -123,7 +120,7 @@ in
       (builtins.readDir aiBundle.skillsSrc);
 
     rules = {
-      default = ./rules/default.rules;
+      managed = ./rules/managed.rules;
     };
   };
 
