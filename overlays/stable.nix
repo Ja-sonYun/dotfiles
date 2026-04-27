@@ -13,9 +13,6 @@
     swift-format = stable.swift-format;
 
     direnv = stable.direnv;
-
-    # Broken on 260425
-    atuin = stable.atuin;
   };
 
   # prev-packages = final: prev: rec {

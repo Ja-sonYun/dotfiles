@@ -76,6 +76,8 @@ yabai -m rule --add label="Claude" title="^Claude$" manage=off
 yabai -m rule --add label="About This Mac" app="System Information" title="About This Mac" manage=off
 yabai -m rule --add app="Preview" manage=off
 yabai -m rule --add app="Python" manage=off
+yabai -m rule --add app="Messages" manage=off
+yabai -m rule --add app="FaceTime" manage=off
 # yabai -m rule --add app="Reminders" manage=off
 # yabai -m rule --add app="Calendar" manage=off
 yabai -m rule --add app="System Settings" manage=off

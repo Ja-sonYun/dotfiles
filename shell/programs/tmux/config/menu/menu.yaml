@@ -48,7 +48,7 @@ items:
   - Menu:
       name: "shell"
       shortcut: s
-      command: _gen-close-hook subshell && zsh
+      command: _gen-close-hook subshell && /bin/zsh
       session: true
       session_name: "subshell"
       session_on_dir: true
