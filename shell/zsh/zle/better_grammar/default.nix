@@ -32,8 +32,8 @@
           RBUFFER=""
         '';
       bindkeys = ''
-        bindkey -M viins '^X^o' _fix-grammar-with-openai
-        bindkey -M viins '^Xo' _fix-grammar-with-openai
+        bindkey '^X^o' _fix-grammar-with-openai
+        bindkey '^Xo' _fix-grammar-with-openai
       '';
     };
   };

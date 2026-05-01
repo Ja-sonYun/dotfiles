@@ -31,12 +31,12 @@
       "hash": "sha256-Tvfgn9T/TEg5AQJ4ceLSpQFkh3VPVYYi804huIOUhX0="
     },
     "codex": {
-      "version": "0.125.0",
-      "hash": "sha256-DxO/YIINyligel3KdIfhpxOuZ7YSE/WZSuXruhd5+38="
+      "version": "0.128.0",
+      "hash": "sha256-WQY5MB4T/aFhNc6wRPDaYx2iTRtVVT6xn86A8f4h5r0="
     },
     "context7-mcp": {
-      "version": "2.2.0",
-      "hash": "sha256-w0fJlauZ8x2SuXewmJtg1VSgWYsGX6Ru56QQbR8dKcM="
+      "version": "2.2.3",
+      "hash": "sha256-BK+VMAeU2LwCoZp8bFRs2mxTlPbTJ//p/z9q4nUeXls="
     },
     "aws-documentation": {
       "version": "1.1.21",
@@ -55,8 +55,8 @@
       "hash": "sha256-DPyTtlt/gBlKtKmX0RZNC+6W9qJ4SoTOS6BGjL6Pu4Q="
     },
     "n8n-mcp": {
-      "version": "2.47.14",
-      "hash": "sha256-EjYwrLT+GCDcq1B17bGZ5T7esfgUU1XL23k9Ul+ClR0="
+      "version": "2.49.0",
+      "hash": "sha256-E2loXJ6lQ9dtO6hSSmNuddO3eFFlQeSyUkTmTNwP7qI="
     }
   },
   "Jasons-MacBook-Server": {

@@ -1,8 +1,6 @@
 { pkgs
 , lib
-, cacheDir
 , configDir
-, purpose
 , ...
 }:
 let
@@ -88,15 +86,6 @@ in
     autosuggestion.enable = true;
     enableCompletion = true;
     syntaxHighlighting.enable = true;
-    historySubstringSearch.enable = true;
-
-    oh-my-zsh = {
-      enable = true;
-      plugins = [
-        "git"
-        "sudo"
-      ];
-    };
 
     shellAliases = {
       urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
@@ -116,41 +105,51 @@ in
 
     localVariables = { };
 
-    initContent =
-      let
+    initContent = lib.mkMerge [
+      (lib.mkOrder 550 ''
+        fpath+=("$HOME/.zsh/completions")
+      '')
+
+      (lib.mkOrder 900 ''
+        autoload -U history-search-end
+
+        zle -N history-beginning-search-backward-end history-search-end
+        zle -N history-beginning-search-forward-end history-search-end
+
+        bindkey '^[[A' history-beginning-search-backward-end
+        bindkey '^[[B' history-beginning-search-forward-end
+        bindkey '^[OA' history-beginning-search-backward-end
+        bindkey '^[OB' history-beginning-search-forward-end
+      '')
+
+      (let
         PS1 =
           let
             promptTime = "[%D{%d/%m,%H:%M:%S}]";
-            jobStatus = "%{$fg[red]%}%(1j.%U•%j%u|.)%{$reset_color%}";
+            jobStatus = "%F{red}%(1j.%U•%j%u|.)%f";
             directory = "$(shorten-pwd)";
-            symbol = " %{$fg[green]%}$%{$reset_color%}";
+            symbol = " %F{green}$%f";
           in
           "${promptTime}${jobStatus}${directory}${symbol} ";
       in
       ''
-        fpath+=("$HOME/.zsh/completions")
-
         set -o ignoreeof
+        setopt prompt_subst
 
+        # Remove / and - from WORDCHARS
+        WORDCHARS=''${WORDCHARS//\/}
+        WORDCHARS=''${WORDCHARS//-}
+
+        # Export PATH additions for user-installed binaries
         export PATH="$PATH:$HOME/.bin:$HOME/.local/bin:$HOME/go/bin"
-
-        function zvm_after_init() {
-          if [[ $options[zle] = on ]]; then
-            source ${pkgs.fzf}/share/fzf/completion.zsh
-            source ${pkgs.fzf}/share/fzf/key-bindings.zsh
-
-            eval "$(${pkgs.atuin}/bin/atuin init zsh --disable-up-arrow)"
-            eval "$(${pkgs.navi}/bin/navi widget zsh)"
-          fi
-        }
-
-        source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
 
         [ -f "$HOME/.zle_widgets" ] && source "$HOME/.zle_widgets"
 
         # Initialize ps1 after source zshfuncs since we're using it
         PS1='${PS1}'
+      '')
 
+      (lib.mkOrder 1000 ''
         find_hooks_dir() {
             local dir="$1"
             while [[ "$dir" != "/" ]]; do
@@ -234,7 +233,8 @@ in
           echo "echo 'You have left $(basename \"$PWD\")'" > .hooks/on_leave/leave.sh
           echo "echo 'You have exited $(basename \"$PWD\")'" > .hooks/on_exit/exit.sh
         }
-      '';
+      '')
+    ];
 
     envExtra = '''';
     profileExtra = '''';
@@ -245,15 +245,20 @@ in
     enableZshIntegration = true;
   };
 
+  programs.zoxide = {
+    enable = true;
+    enableZshIntegration = true;
+    options = [ "--cmd cd" ];
+  };
+
   programs.atuin = {
     enable = true;
-    flags = [
-      "--disable-up-arrow"
-    ];
-    # Will manually enable in the zsh initContent
+    enableZshIntegration = true;
+    flags = [ "--disable-up-arrow" ];
     settings = {
       auto_sync = false;
-      sync_address = "http://localhost:8080"; # Override dummy address
+      sync_address = "http://localhost:8080"; # Override with dummy
+      style = "compact";
       show_help = false;
       show_tabs = false;
     };
@@ -261,20 +266,11 @@ in
 
   programs.bat.enable = true;
 
-  # A modern replacement for ‘ls’
-  # useful in bash/zsh prompt, not in nushell.
   programs.eza = {
     enable = true;
     git = true;
     icons = "never";
     enableZshIntegration = true;
-  };
-
-  # skim provides a single executable: sk.
-  # Basically anywhere you would want to use grep, try sk instead.
-  programs.skim = {
-    enable = true;
-    enableBashIntegration = true;
   };
 
   programs.zshFunc = {

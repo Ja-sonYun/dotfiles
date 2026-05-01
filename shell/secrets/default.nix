@@ -5,7 +5,7 @@
 , ...
 }:
 {
-  home.packages = [ agenix.packages.${pkgs.system}.default ];
+  home.packages = [ agenix.packages.${pkgs.stdenv.hostPlatform.system}.default ];
 
   age.secrets = {
     github-token = {

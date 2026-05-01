@@ -25,7 +25,7 @@ final: prev:
 let
   pkgs = final;
   unstable = import inputs.nixpkgs-unstable {
-    inherit (final) system;
+    system = final.stdenv.hostPlatform.system;
     config.allowUnfree = true;
   };
 
@@ -172,7 +172,7 @@ let
   nixPackagesOpt = pkgs.lib.optionals config.useNix (
     with pkgs;
     [
-      nixfmt-rfc-style
+      nixfmt
       nil
     ]
   );

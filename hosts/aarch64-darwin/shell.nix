@@ -3,6 +3,7 @@
   environment.shells = [
     pkgs.zsh
   ];
+  environment.pathsToLink = [ "/share/zsh" ];
 
   time.timeZone = "Asia/Tokyo";
 

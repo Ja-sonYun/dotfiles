@@ -19,6 +19,7 @@
     enable = true;
     package = pkgs.git-wrapped;
     lfs.enable = true;
+    signing.format = "openpgp";
 
     ignores = [
       # Compiled source #

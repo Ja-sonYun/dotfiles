@@ -99,7 +99,12 @@ in
 
   # Create /etc/zshrc that loads the nix-darwin environment.
   # this is required if you want to use darwin's default shell - zsh
-  programs.zsh.enable = true;
+  programs.zsh = {
+    enable = true;
+    # Home Manager initializes completion after user fpath entries are added.
+    enableGlobalCompInit = false;
+    enableBashCompletion = false;
+  };
 
   # Further configurations are defined in ./shell/system.nix
   fonts.packages = [

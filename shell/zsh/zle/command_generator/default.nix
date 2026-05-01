@@ -36,8 +36,8 @@
           RBUFFER=""
         '';
       bindkeys = ''
-        bindkey -M viins '^X^m' _generate-shell-command-with-openai
-        bindkey -M viins '^Xm' _generate-shell-command-with-openai
+        bindkey '^X^m' _generate-shell-command-with-openai
+        bindkey '^Xm' _generate-shell-command-with-openai
       '';
     };
   };
