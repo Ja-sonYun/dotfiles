@@ -47,16 +47,16 @@
       "hash": "sha256-yKLp01BJGgHiaxpG8yveQf5a6bJuOhqPZnR8laUDKYI="
     },
     "firecrawl-mcp": {
-      "version": "3.11.0",
-      "hash": "sha256-Uvxu7ztMHgFYreXk4f5xQfZlOPIPPdJI/1SQvEKQKkQ="
+      "version": "3.14.1",
+      "hash": "sha256-PBNZQ7xHq9grBR0EEKfBh4NzN4RZqsNfCmp388QJxAY="
     },
     "macnotesapp": {
       "version": "0.8.2",
       "hash": "sha256-DPyTtlt/gBlKtKmX0RZNC+6W9qJ4SoTOS6BGjL6Pu4Q="
     },
     "n8n-mcp": {
-      "version": "2.49.0",
-      "hash": "sha256-E2loXJ6lQ9dtO6hSSmNuddO3eFFlQeSyUkTmTNwP7qI="
+      "version": "2.50.0",
+      "hash": "sha256-itEHKVBHZgWFHBl0CeLBq28IVVFpEmpAesahHEoat8s="
     }
   },
   "Jasons-MacBook-Server": {
