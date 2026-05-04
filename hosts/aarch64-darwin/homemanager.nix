@@ -2,19 +2,14 @@
 , userhome
 , purpose
 , pkgs
+, lib
 , ...
 }:
 {
-  imports = [
+  imports = lib.optionals (purpose == "main") [
+    ./taskwarrior
     ./yabai-indicator
-  ] ++ (
-    if purpose == "main" then
-      [
-        ./taskwarrior
-      ]
-    else
-      [ ]
-  );
+  ];
 
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
