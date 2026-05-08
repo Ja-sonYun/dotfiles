@@ -31,8 +31,8 @@
       "hash": "sha256-Tvfgn9T/TEg5AQJ4ceLSpQFkh3VPVYYi804huIOUhX0="
     },
     "codex": {
-      "version": "0.128.0",
-      "hash": "sha256-WQY5MB4T/aFhNc6wRPDaYx2iTRtVVT6xn86A8f4h5r0="
+      "version": "0.129.0",
+      "hash": "sha256-BlfFfAqYLADMatQmnIgxt75vNWmCeX4KFLSJrE8BhU0="
     },
     "context7-mcp": {
       "version": "2.2.4",
@@ -43,8 +43,8 @@
       "hash": "sha256-uE7UWEhN1wMZHnvFlfk7vvj2o+Z0/6anYMI3Addpqfs="
     },
     "chrome-devtools-mcp": {
-      "version": "0.24.0",
-      "hash": "sha256-uHfkT3E330I6NHiAJOD5c0Je374rhq25fwoBoimtFZY="
+      "version": "0.25.0",
+      "hash": "sha256-dA/txF7HcTcsEffsuZ9cmHLNLz/zt4MI4h1YTwMgguI="
     },
     "firecrawl-mcp": {
       "version": "3.15.0",
@@ -55,8 +55,8 @@
       "hash": "sha256-DPyTtlt/gBlKtKmX0RZNC+6W9qJ4SoTOS6BGjL6Pu4Q="
     },
     "n8n-mcp": {
-      "version": "2.51.0",
-      "hash": "sha256-tfQuIV6ZztqHkU7tuVA5HvvJDgR6NAC0QlhArY9Nsr4="
+      "version": "2.51.1",
+      "hash": "sha256-BRBDGVy+JYvduqWbQbJx/efUcMPT28pE72i45M1QzFc="
     }
   },
   "Jasons-MacBook-Server": {
