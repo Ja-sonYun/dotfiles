@@ -14,7 +14,7 @@ pub fun get_hashfile_path(root_dir: Text): Text {
 
 pub fun get_hostname(): Text {
     let h = trust $
-        hostname
+        hostname -s
     $
     return h
 }

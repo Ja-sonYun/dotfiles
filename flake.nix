@@ -32,6 +32,7 @@
     # Nix-Homebrew to install casks
     nix-homebrew = {
       url = "github:zhaofengli/nix-homebrew";
+      inputs.brew-src.url = "github:Homebrew/brew/master";
     };
     homebrew-bundle = {
       url = "github:homebrew/homebrew-bundle";
@@ -98,14 +99,14 @@
     }:
     let
       specialArgsPrepared = {
-        "JasonYuns-MacBook-Pro" = {
+        "Jays-MacBook-Pro" = {
           system = "aarch64-darwin";
-          username = "jasonyun";
+          username = "jaykuroyanagi";
           useremail = "jason@abex.dev";
-          hostname = "JasonYuns-MacBook-Pro";
-          userhome = "/Users/jasonyun";
-          configDir = "/Users/jasonyun/dotfiles";
-          cacheDir = "/Users/jasonyun/.nixcache/jasony";
+          hostname = "Jays-MacBook-Pro";
+          userhome = "/Users/jaykuroyanagi";
+          configDir = "/Users/jaykuroyanagi/dotfiles";
+          cacheDir = "/Users/jaykuroyanagi/.nixcache/jaykuroyanagi";
           purpose = "main";
           hasgui = true;
         };
@@ -300,8 +301,8 @@
         }
       );
 
-      darwinConfigurations."JasonYuns-MacBook-Pro" =
-        mkAarch64DarwinHomeConfiguration "JasonYuns-MacBook-Pro" { };
+      darwinConfigurations."Jays-MacBook-Pro" =
+        mkAarch64DarwinHomeConfiguration "Jays-MacBook-Pro" { };
       darwinConfigurations."Jasons-MacBook-Server" =
         mkAarch64DarwinHomeConfiguration "Jasons-MacBook-Server" { };
 

@@ -38,16 +38,16 @@
     "brew-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1776478798,
-        "narHash": "sha256-ERStG27tf83VbCfYMxtDSs+sa8FUMJ/3jSu/QfX9rKE=",
+        "lastModified": 1778233640,
+        "narHash": "sha256-OhfmuFih6rUNdhAkl6krZzk3BI5ZnqOn9WVD+0xHGao=",
         "owner": "Homebrew",
         "repo": "brew",
-        "rev": "3aae056b8d072624255bc8fd27febb7f327b2265",
+        "rev": "af5efa3f213529e32ed517a15f3b7ef242c7f15b",
         "type": "github"
       },
       "original": {
         "owner": "Homebrew",
-        "ref": "5.1.7",
+        "ref": "master",
         "repo": "brew",
         "type": "github"
       }
@@ -296,11 +296,11 @@
     "homebrew-cask": {
       "flake": false,
       "locked": {
-        "lastModified": 1778200605,
-        "narHash": "sha256-npyBfyrMD6Yf3oAGkV0BfXfiOqsg9/wAovUq5Vvk/pI=",
+        "lastModified": 1778235136,
+        "narHash": "sha256-9sRL0N3RVfohkBfW0vGfqtFfUm5/hA2Kz8CHS+OOgMA=",
         "owner": "homebrew",
         "repo": "homebrew-cask",
-        "rev": "73bec34d9bcc7b013867917aa67aad82c084c48c",
+        "rev": "e61fe0a5abb0a451aa7aec0206ce8780b06fe11e",
         "type": "github"
       },
       "original": {
@@ -312,11 +312,11 @@
     "homebrew-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1778201908,
-        "narHash": "sha256-TUKfUy8hjaLQ24nUoEaj/zmVZKtdl+ip9/gAbaFhd0U=",
+        "lastModified": 1778233720,
+        "narHash": "sha256-z/X2KHSb7pQX+EiIbQdSONt0UVMd/PiRsylgKDlll7c=",
         "owner": "homebrew",
         "repo": "homebrew-core",
-        "rev": "d768411762edab3447313b953f3eb1508b3c3854",
+        "rev": "1970b49da35ad31a83e9a50ae491f042d42cc336",
         "type": "github"
       },
       "original": {
@@ -476,11 +476,11 @@
     "vim-eskk": {
       "flake": false,
       "locked": {
-        "lastModified": 1778152307,
-        "narHash": "sha256-pW3lVMPpWTYYurXaD/AFkKbKMHA7io2Hnig3SE+woWE=",
+        "lastModified": 1778232885,
+        "narHash": "sha256-8ngOwP+wxKSrMOsFVIFpZMw2wZrokUuMThuuUt8JvTg=",
         "owner": "vim-skk",
         "repo": "eskk.vim",
-        "rev": "6b23c463b8c6060ab62c88294597ae6b2c444f4f",
+        "rev": "60b95cbd6412434304cbf0a9534a92a39e0adf8b",
         "type": "github"
       },
       "original": {

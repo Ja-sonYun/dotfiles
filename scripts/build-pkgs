@@ -67,7 +67,7 @@ get_hashfile_path__39_v0() {
 }
 
 get_hostname__40_v0() {
-    command_4="$(hostname)"
+    command_4="$(hostname -s)"
     __status=$?
     h_27="${command_4}"
     ret_get_hostname40_v0="${h_27}"

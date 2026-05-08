@@ -1,5 +1,6 @@
 { configDir
 , hostname
+, pkgs
 , username
 , ...
 }:
@@ -65,6 +66,11 @@ in
         Sound = true;
       };
 
+      WindowManager = {
+        EnableStandardClickToShowDesktop = false; # Disable click wallpaper to reveal desktop
+        GloballyEnabled = false; # Disable Stage Manager
+      };
+
       dock = {
         autohide = true;
 
@@ -108,6 +114,7 @@ in
 
   # Further configurations are defined in ./shell/system.nix
   fonts.packages = [
+    pkgs.sketchybar-app-font
     "${configDir}/misc/fonts"
   ];
 }
