@@ -52,6 +52,10 @@ Install Rosetta before deploying because this config manages Homebrew packages.
 softwareupdate --install-rosetta --agree-to-license
 ```
 
+Add Terminal to:
+
+`System Settings > Privacy & Security > App Management`
+
 Enter a bootstrap shell with the tools needed before the managed environment is
 available.
 
@@ -66,10 +70,6 @@ activation creates managed `/etc/zshrc` and `/etc/bashrc` files.
 sudo mv /etc/bashrc /etc/bashrc.before-nix-darwin
 sudo mv /etc/zshrc /etc/zshrc.before-nix-darwin
 ```
-
-Before running the first deploy, add Terminal to:
-
-`System Settings > Privacy & Security > App Management`
 
 ### 5. Deploy
 
