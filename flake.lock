@@ -38,11 +38,11 @@
     "brew-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1778233640,
-        "narHash": "sha256-OhfmuFih6rUNdhAkl6krZzk3BI5ZnqOn9WVD+0xHGao=",
+        "lastModified": 1778263932,
+        "narHash": "sha256-f1Qnk2qwoYdOaKk1a14HeqplWFs6c7pJiFG4kZ49XE4=",
         "owner": "Homebrew",
         "repo": "brew",
-        "rev": "af5efa3f213529e32ed517a15f3b7ef242c7f15b",
+        "rev": "2b422bebcb8156d0ad5f8cfd3c78495f6430aec4",
         "type": "github"
       },
       "original": {
@@ -264,11 +264,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1778144356,
-        "narHash": "sha256-dGM+QCstz/DyLB68+JK5GWyMx4QSqmOJEVgZmy63d/g=",
+        "lastModified": 1778248595,
+        "narHash": "sha256-dhFgEjoeJMYN/7OY6xfxS799YB4IjbbYXTjyGIJyLpc=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "e4419d3123b780d5f4c0bceeace450424387638c",
+        "rev": "fdb2ccba9d5e1238d32e0c4a3ec1a277efa80c1d",
         "type": "github"
       },
       "original": {
@@ -296,11 +296,11 @@
     "homebrew-cask": {
       "flake": false,
       "locked": {
-        "lastModified": 1778235136,
-        "narHash": "sha256-9sRL0N3RVfohkBfW0vGfqtFfUm5/hA2Kz8CHS+OOgMA=",
+        "lastModified": 1778290279,
+        "narHash": "sha256-Z400aV5MfhiEU/z80eygrFoKrZ7IDov68tJiniQ09Uw=",
         "owner": "homebrew",
         "repo": "homebrew-cask",
-        "rev": "e61fe0a5abb0a451aa7aec0206ce8780b06fe11e",
+        "rev": "1d49b3ccba1d059a7a3c951a48313e50f0694c8f",
         "type": "github"
       },
       "original": {
@@ -312,11 +312,11 @@
     "homebrew-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1778233720,
-        "narHash": "sha256-z/X2KHSb7pQX+EiIbQdSONt0UVMd/PiRsylgKDlll7c=",
+        "lastModified": 1778289676,
+        "narHash": "sha256-c8zFSoPQuwinVuZXnzSPIQ/sGqLu0svsMjV5Na0Dha4=",
         "owner": "homebrew",
         "repo": "homebrew-core",
-        "rev": "1970b49da35ad31a83e9a50ae491f042d42cc336",
+        "rev": "0092f4a4741d32f5758b69c862b1cc823e036934",
         "type": "github"
       },
       "original": {
@@ -476,11 +476,11 @@
     "vim-eskk": {
       "flake": false,
       "locked": {
-        "lastModified": 1778232885,
-        "narHash": "sha256-8ngOwP+wxKSrMOsFVIFpZMw2wZrokUuMThuuUt8JvTg=",
+        "lastModified": 1778238625,
+        "narHash": "sha256-oU3NBlBxH9WcMUafExgOdiIFAG4SSs/HSFjjUQN1j1I=",
         "owner": "vim-skk",
         "repo": "eskk.vim",
-        "rev": "60b95cbd6412434304cbf0a9534a92a39e0adf8b",
+        "rev": "8564c7ece26dbc53f6f22896fbe50093ae9d932c",
         "type": "github"
       },
       "original": {

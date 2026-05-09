@@ -103,11 +103,11 @@
     "vim-eskk": {
       "flake": false,
       "locked": {
-        "lastModified": 1778232885,
-        "narHash": "sha256-8ngOwP+wxKSrMOsFVIFpZMw2wZrokUuMThuuUt8JvTg=",
+        "lastModified": 1778238625,
+        "narHash": "sha256-oU3NBlBxH9WcMUafExgOdiIFAG4SSs/HSFjjUQN1j1I=",
         "owner": "vim-skk",
         "repo": "eskk.vim",
-        "rev": "60b95cbd6412434304cbf0a9534a92a39e0adf8b",
+        "rev": "8564c7ece26dbc53f6f22896fbe50093ae9d932c",
         "type": "github"
       },
       "original": {

@@ -91,7 +91,7 @@
   ++ lib.optionals (purpose == "main") [
     # say
     mermaid-cli
-  ] ++ lib.optionals (hostname == "Jasons-MacBook-Server") [
+  ] ++ lib.optionals (hostname == "Jays-MacBook-Pro-Server") [
   ];
 
   home.sessionVariables = {

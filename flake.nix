@@ -110,14 +110,14 @@
           purpose = "main";
           hasgui = true;
         };
-        "Jasons-MacBook-Server" = {
+        "Jays-MacBook-Pro-Server" = {
           system = "aarch64-darwin";
-          username = "jasonyun";
+          username = "jaykuroyanagi";
           useremail = "jason@abex.dev";
-          hostname = "Jasons-MacBook-Server";
-          userhome = "/Users/jasonyun";
-          configDir = "/Users/jasonyun/dotfiles";
-          cacheDir = "/Users/jasonyun/.nixcache/jasony";
+          hostname = "Jays-MacBook-Pro-Server";
+          userhome = "/Users/jaykuroyanagi";
+          configDir = "/Users/jaykuroyanagi/dotfiles";
+          cacheDir = "/Users/jaykuroyanagi/.nixcache/jaykuroyanagi";
           purpose = "server";
           hasgui = true;
         };
@@ -246,8 +246,11 @@
             ./hosts/aarch64-darwin/core/nix-core.nix
             ./hosts/aarch64-darwin/core/system.nix
             ./hosts/aarch64-darwin/core/host-users.nix
+            ./hosts/aarch64-darwin/core/spotlight
+            ./hosts/aarch64-darwin/core/menubar
 
             ./hosts/aarch64-darwin/homebrew.nix
+            ./hosts/aarch64-darwin/core/display
             ./hosts/aarch64-darwin/services.nix
 
             # home manager
@@ -303,8 +306,8 @@
 
       darwinConfigurations."Jays-MacBook-Pro" =
         mkAarch64DarwinHomeConfiguration "Jays-MacBook-Pro" { };
-      darwinConfigurations."Jasons-MacBook-Server" =
-        mkAarch64DarwinHomeConfiguration "Jasons-MacBook-Server" { };
+      darwinConfigurations."Jays-MacBook-Pro-Server" =
+        mkAarch64DarwinHomeConfiguration "Jays-MacBook-Pro-Server" { };
 
       homeConfigurations."linux-devel" = mkX86_64LinuxHomeConfiguration "linux-devel" {
         cudaSupport = false;

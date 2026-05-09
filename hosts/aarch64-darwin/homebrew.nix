@@ -1,9 +1,9 @@
 { lib, purpose, hostname, ... }:
 let
   packageBrews =
-    if hostname == "Jasons-MacBook-Server" then
+    if hostname == "Jays-MacBook-Pro-Server" then
       [
-        (import ../../infra/service/Jasons-MacBook-Server/homebrew.nix { inherit purpose; })
+        (import ../../infra/service/Jays-MacBook-Pro-Server/homebrew.nix { inherit purpose; })
       ]
     else
       [ ];
@@ -20,6 +20,7 @@ let
   ++ (
     if purpose == "main" then
       [
+        "displayplacer"
         "keith/formulae/reminders-cli"
       ]
     else
