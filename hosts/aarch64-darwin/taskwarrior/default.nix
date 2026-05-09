@@ -84,13 +84,17 @@ let
       done
 
       if git rev-parse --is-inside-work-tree &>/dev/null; then
-        remote_url=$(git remote get-url origin 2>/dev/null)
-        owner=$(echo "$remote_url" | sed -E 's#.+[:/]([^/]+)/[^/]+\.git$#\1#')
-        repo_name=$(echo "$remote_url" | sed -E 's#.+/([^/]+)\.git$#\1#')
-        exec ${pkgs.taskwarrior3}/bin/task project:"$repo_name" +"$owner" "$@"
-      else
-        exec ${pkgs.taskwarrior3}/bin/task "$@"
+        remote_url=$(git remote get-url origin 2>/dev/null || true)
+        remote_path=''${remote_url%.git}
+        owner=$(echo "$remote_path" | sed -E 's#.*[:/]([^/]+)/[^/]+$#\1#')
+        repo_name=$(echo "$remote_path" | sed -E 's#.*[:/]([^/]+)$#\1#')
+
+        if [ -n "$remote_url" ] && [ -n "$owner" ] && [ -n "$repo_name" ] && [ "$owner" != "$remote_path" ] && [ "$repo_name" != "$remote_path" ]; then
+          exec ${pkgs.taskwarrior3}/bin/task project:"$repo_name" +"$owner" "$@"
+        fi
       fi
+
+      exec ${pkgs.taskwarrior3}/bin/task "$@"
     '';
   };
 in

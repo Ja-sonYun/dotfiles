@@ -10,6 +10,43 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') [sync] $1" >>"$LOG_FILE"
 }
 
+build_import_json() {
+    local uuid="$1"
+    local title="$2"
+    local list="$3"
+    local due_date="$4"
+    local priority="$5"
+    local notes="$6"
+    local import_json
+    local due_tw
+
+    import_json=$(jq -n \
+        --arg uuid "$uuid" \
+        --arg desc "$title" \
+        --arg proj "$list" \
+        '{uuid: $uuid, description: $desc, project: $proj, status: "pending"}')
+
+    if [ -n "$due_date" ]; then
+        due_tw=$(echo "$due_date" | sed 's/-//g; s/://g; s/\.[0-9]*Z/Z/')
+        import_json=$(echo "$import_json" | jq --arg due "$due_tw" '. + {due: $due}')
+    fi
+
+    if [ "$priority" -eq 1 ]; then
+        import_json=$(echo "$import_json" | jq '. + {priority: "H"}')
+    elif [ "$priority" -eq 5 ]; then
+        import_json=$(echo "$import_json" | jq '. + {priority: "M"}')
+    elif [ "$priority" -eq 9 ]; then
+        import_json=$(echo "$import_json" | jq '. + {priority: "L"}')
+    fi
+
+    if [ -n "$notes" ]; then
+        import_json=$(echo "$import_json" | jq --arg notes "$notes" \
+            '. + {annotations: [{entry: (now | strftime("%Y%m%dT%H%M%SZ")), description: $notes}]}')
+    fi
+
+    echo "$import_json"
+}
+
 # Initialize DB
 sqlite3 "$SYNC_DB" "CREATE TABLE IF NOT EXISTS sync_keys (
   id INTEGER PRIMARY KEY,
@@ -46,7 +83,7 @@ for list in ${(s:|:)FILTER_LISTS}; do
     log "Processing list: $list"
 
     # Filter reminders for this list
-    list_reminders=$(print -r -- "$all_reminders" | jq -c ".[] | select(.list == \"$list\" and .isCompleted == false)")
+    list_reminders=$(print -r -- "$all_reminders" | jq -c --arg list "$list" '.[] | select(.list == $list and .isCompleted == false)')
 
     echo "$list_reminders" | while IFS= read -r reminder; do
         [ -z "$reminder" ] && continue
@@ -65,34 +102,7 @@ for list in ${(s:|:)FILTER_LISTS}; do
         if [ -n "$existing_uuid" ]; then
             log "Already tracked with uuid: $existing_uuid, updating..."
 
-            # Build import JSON for update
-            import_json=$(jq -n \
-                --arg uuid "$existing_uuid" \
-                --arg desc "$title" \
-                --arg proj "$list" \
-                '{uuid: $uuid, description: $desc, project: $proj, status: "pending"}')
-
-            # Add due date if present
-            if [ -n "$due_date" ]; then
-                due_tw=$(echo "$due_date" | sed 's/-//g; s/://g; s/\.[0-9]*Z/Z/')
-                import_json=$(echo "$import_json" | jq --arg due "$due_tw" '. + {due: $due}')
-            fi
-
-            # Add priority if present
-            if [ "$priority" -eq 1 ]; then
-                import_json=$(echo "$import_json" | jq '. + {priority: "H"}')
-            elif [ "$priority" -eq 5 ]; then
-                import_json=$(echo "$import_json" | jq '. + {priority: "M"}')
-            elif [ "$priority" -eq 9 ]; then
-                import_json=$(echo "$import_json" | jq '. + {priority: "L"}')
-            fi
-
-            # Add notes as annotation if present
-            if [ -n "$notes" ]; then
-                import_json=$(echo "$import_json" | jq --arg notes "$notes" \
-                    '. + {annotations: [{entry: (now | strftime("%Y%m%dT%H%M%SZ")), description: $notes}]}')
-            fi
-
+            import_json=$(build_import_json "$existing_uuid" "$title" "$list" "$due_date" "$priority" "$notes")
             log "Import JSON: $import_json"
             echo "$import_json" | "$TASK_BIN" import 2>/dev/null || log "Failed to import task"
 
@@ -102,31 +112,7 @@ for list in ${(s:|:)FILTER_LISTS}; do
             # Generate new UUID
             new_uuid=$(uuidgen | tr '[:upper:]' '[:lower:]')
 
-            # Build import JSON
-            import_json=$(jq -n \
-                --arg uuid "$new_uuid" \
-                --arg desc "$title" \
-                --arg proj "$list" \
-                '{uuid: $uuid, description: $desc, project: $proj, status: "pending"}')
-
-            if [ -n "$due_date" ]; then
-                due_tw=$(echo "$due_date" | sed 's/-//g; s/://g; s/\.[0-9]*Z/Z/')
-                import_json=$(echo "$import_json" | jq --arg due "$due_tw" '. + {due: $due}')
-            fi
-
-            if [ "$priority" -eq 1 ]; then
-                import_json=$(echo "$import_json" | jq '. + {priority: "H"}')
-            elif [ "$priority" -eq 5 ]; then
-                import_json=$(echo "$import_json" | jq '. + {priority: "M"}')
-            elif [ "$priority" -eq 9 ]; then
-                import_json=$(echo "$import_json" | jq '. + {priority: "L"}')
-            fi
-
-            if [ -n "$notes" ]; then
-                import_json=$(echo "$import_json" | jq --arg notes "$notes" \
-                    '. + {annotations: [{entry: (now | strftime("%Y%m%dT%H%M%SZ")), description: $notes}]}')
-            fi
-
+            import_json=$(build_import_json "$new_uuid" "$title" "$list" "$due_date" "$priority" "$notes")
             log "Import JSON: $import_json"
             echo "$import_json" | "$TASK_BIN" import 2>/dev/null || log "Failed to import task"
 
@@ -144,11 +130,11 @@ sqlite3 "$SYNC_DB" "SELECT uuid, external_id, list FROM sync_keys WHERE tracking
     [ -z "$uuid" ] && continue
 
     # Check if reminder still exists and is not completed
-    exists=$(print -r -- "$all_reminders" | jq -r ".[] | select(.externalId == \"$external_id\" and .isCompleted == false) | .externalId" | head -1)
+    exists=$(print -r -- "$all_reminders" | jq -r --arg external_id "$external_id" '.[] | select(.externalId == $external_id and .isCompleted == false) | .externalId' | head -1)
 
     if [ -z "$exists" ]; then
         # Check if completed
-        completed=$(print -r -- "$all_reminders" | jq -r ".[] | select(.externalId == \"$external_id\" and .isCompleted == true) | .externalId" | head -1)
+        completed=$(print -r -- "$all_reminders" | jq -r --arg external_id "$external_id" '.[] | select(.externalId == $external_id and .isCompleted == true) | .externalId' | head -1)
 
         if [ -n "$completed" ]; then
             log "Reminder $external_id completed, completing task $uuid"

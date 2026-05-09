@@ -11,9 +11,10 @@ in
     defaults = {
       controlcenter = {
         AirDrop = false;
-        Bluetooth = true;
-        Display = true;
-        NowPlaying = true;
+        Bluetooth = false;
+        Display = false;
+        NowPlaying = false;
+        Sound = false;
       };
 
       CustomUserPreferences = {
@@ -29,7 +30,7 @@ in
           "NSStatusItem VisibleCC BentoBox-0" = 1;
           "NSStatusItem VisibleCC Clock" = 1;
           "NSStatusItem VisibleCC FocusModes" = 1;
-          "NSStatusItem VisibleCC Sound" = 1;
+          "NSStatusItem VisibleCC Sound" = 0;
           "NSStatusItem VisibleCC WiFi" = 1;
         };
 

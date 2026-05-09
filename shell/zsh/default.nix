@@ -346,30 +346,6 @@ in
         echo "Extraction completed: $output_dir"
       '';
     };
-    flake-ignore = {
-      description = "Ignore flake in git repository";
-      command = ''
-        if [ -f "flake.nix" ]; then
-          git add --intent-to-add flake.nix
-          git update-index --assume-unchanged flake.nix
-        fi
-        if [ -f "flake.lock" ]; then
-          git add --intent-to-add flake.lock
-          git update-index --assume-unchanged flake.lock
-        fi
-      '';
-    };
-    flake-undo-ignore = {
-      description = "Ignore flake in git repository";
-      command = ''
-        if [ -f "flake.nix" ]; then
-          git update-index assume-unchanged flake.nix
-        fi
-        if [ -f "flake.lock" ]; then
-          git update-index assume-unchanged flake.lock
-        fi
-      '';
-    };
     templates = {
       description = "Manage flake dev environment templates. Subcommands: list, init, info, search, direnv, echo";
       command = ''
