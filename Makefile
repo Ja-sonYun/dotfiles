@@ -71,7 +71,6 @@ show-derivations: ## Show derivation details
 
 deploy: build ## Deploy nix-darwin config
 	nix run nixpkgs#nh darwin switch .#darwinConfigurations.$(HOSTNAME)
-	@if command -v yabai >/dev/null 2>&1; then sudo yabai --load-sa || true; fi
 endif
 # ==================================================================================
 
@@ -110,9 +109,3 @@ add:
 lock: add
 	nix flake update vim
 	nix flake update server
-
-tccutil-ac:
-	sudo tccutil -e $(readlink $(which yabai))
-	sudo tccutil -e $(readlink $(which skhd))
-	sudo tccutil -e $(readlink $(which sketchybar))
-	sudo tccutil -s kTCCServiceScreenCapture -e $(readlink $(which sketchybar))

@@ -7,6 +7,7 @@
 }:
 {
   imports = lib.optionals (purpose == "main") [
+    ./core/finder-sidebar.nix
     ./taskwarrior
     ./yabai-indicator
   ];

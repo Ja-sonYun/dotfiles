@@ -29,7 +29,6 @@ let
 
   casks = [
     "ghostty"
-    "aldente"
     "orbstack"
     "obsidian"
   ]
@@ -62,14 +61,10 @@ let
         "kicad"
         "firefox"
         "notion"
-        "raycast"
         "devonthink"
 
-        "alfred"
-        "aldente"
         "cleanshot"
 
-        "hyprnote"
         "microsoft-remote-desktop"
 
         "protonvpn"
@@ -89,7 +84,6 @@ let
     if purpose == "main" then
       [
         "keith/formulae"
-        "fastrepl/hyprnote"
       ]
     else
       [ ]
