@@ -108,9 +108,7 @@ in
         if purpose == "main" then
           { }
         else
-          {
-            Amphetamine = 937984704;
-          }
+          { }
       );
     onActivation = {
       # "zap" removes manually installed brews and casks
