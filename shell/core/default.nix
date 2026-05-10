@@ -75,7 +75,7 @@
 
     awsdac
 
-    awscli
+    awscli2
     awscli-local
 
     ollama

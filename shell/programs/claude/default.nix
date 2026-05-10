@@ -88,7 +88,7 @@ let
           ;;
         custom)
           export ANTHROPIC_BASE_URL="https://lmp.test0.zip"
-          export ANTHROPIC_AUTH_TOKEN="$(cat ${config.age.secrets.capi-key.path})"
+          export ANTHROPIC_AUTH_TOKEN="${config.home.sessionVariables.CAPI_KEY}"
           export ANTHROPIC_DEFAULT_OPUS_MODEL="gpt-5.3-codex(xhigh)"
           export ANTHROPIC_DEFAULT_SONNET_MODEL="gpt-5.3-codex(high)"
           export ANTHROPIC_DEFAULT_HAIKU_MODEL="gpt-5.3-codex-spark"

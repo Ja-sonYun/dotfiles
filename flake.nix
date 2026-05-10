@@ -182,6 +182,7 @@
         [
           # Agenix for secrets management
           agenix.homeManagerModules.default
+          (import "${agenix-secrets}/home-manager.nix")
           # Common configurations
           ./shell
           ./misc/fonts

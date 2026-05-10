@@ -3,7 +3,6 @@
   imports = [
     ./zsh
     ./core
-    ./secrets # Agenix secrets management
 
     ./analysis
 

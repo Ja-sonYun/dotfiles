@@ -14,7 +14,19 @@ else
   NIX := nom
 endif
 
-NIX_CONFIG ?= experimental-features = nix-command flakes
+ifndef NIX_CONFIG
+NIX_GITHUB_TOKEN := $(shell command -v gh >/dev/null 2>&1 && gh auth token 2>/dev/null || true)
+ifeq ($(NIX_GITHUB_TOKEN),)
+define NIX_CONFIG
+experimental-features = nix-command flakes
+endef
+else
+define NIX_CONFIG
+experimental-features = nix-command flakes
+access-tokens = github.com=$(NIX_GITHUB_TOKEN)
+endef
+endif
+endif
 export NIX_CONFIG
 
 ifdef TRACE
