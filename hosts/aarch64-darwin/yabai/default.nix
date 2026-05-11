@@ -148,6 +148,14 @@ let
       action = "${sketchybar} --trigger windows_on_spaces";
     }
     {
+      event = "window_moved";
+      action = "${sketchybar} --trigger windows_on_spaces";
+    }
+    {
+      event = "space_changed";
+      action = "${sketchybar} --trigger windows_on_spaces";
+    }
+    {
       event = "display_added";
       action = "${notchExternalBar}/bin/yabai-apply-external-bar";
     }

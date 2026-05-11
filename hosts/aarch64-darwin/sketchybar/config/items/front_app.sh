@@ -13,6 +13,7 @@ system_yabai=(
   icon=$YABAI_GRID
   icon.color=$ORANGE
   associated_display=active
+  updates=on
 )
 
 sketchybar --add item system.yabai left \

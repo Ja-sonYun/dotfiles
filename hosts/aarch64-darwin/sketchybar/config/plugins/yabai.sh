@@ -47,7 +47,7 @@ windows_on_spaces () {
     for space in ${=line}
     do
       icon_strip=" "
-      apps=$(yabai -m query --windows --space $space | jq -r ".[].app")
+      apps=$(yabai -m query --windows --space $space | jq -r '.[] | select(.["is-hidden"] == false and .["is-minimized"] == false and .["has-ax-reference"] == true and .["can-move"] == true and .["can-resize"] == true) | .app')
       if [ "$apps" != "" ]; then
         while IFS= read -r app; do
           icon_strip+=" $($SKETCHYBAR_CONFIG_DIR/plugins/icon_map.sh "$app")"

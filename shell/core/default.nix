@@ -95,7 +95,7 @@
   ];
 
   home.sessionVariables = {
-    EDITOR = "${pkgs.vim-dev}/bin/vim";
+    EDITOR = "${pkgs.vim-pkg}/bin/vim";
     # PAGER = "${pkgs.moor}/bin/moor";
     FLAKE_TEMPLATES_DIR = "${configDir}/templates";
   };
