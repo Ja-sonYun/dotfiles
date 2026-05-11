@@ -132,6 +132,10 @@ let
 
   signals = [
     {
+      event = "dock_did_restart";
+      action = "/usr/bin/sudo ${pkgs.yabai}/bin/yabai --load-sa";
+    }
+    {
       event = "window_focused";
       action = "${sketchybar} --trigger window_focus";
     }
