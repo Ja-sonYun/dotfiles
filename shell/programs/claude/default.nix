@@ -164,6 +164,17 @@ in
       };
       alwaysThinkingEnabled = true;
       hooks = {
+        PreToolUse = [
+          {
+            matcher = "Bash";
+            hooks = [
+              {
+                type = "command";
+                command = "rtk hook claude";
+              }
+            ];
+          }
+        ];
         Notification = [
           {
             matcher = "permission_prompt";
@@ -197,7 +208,7 @@ in
       effortLevel = "high";
     };
 
-    context = aiBundle.agentsMdSrc;
+    context = (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc)) + "\n\n@RTK.md\n";
     rulesDir = "${aiBundle.rulesSrc}";
     agentsDir = "${aiBundle.agentsSrc}";
     skills = builtins.mapAttrs (name: _: "${aiBundle.skillsSrc}/${name}") (builtins.readDir aiBundle.skillsSrc);

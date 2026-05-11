@@ -136,7 +136,7 @@ in
 
     };
 
-    context = builtins.readFile aiBundle.agentsMdSrc;
+    context = (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc)) + "\n\n@${config.home.homeDirectory}/.codex/RTK.md\n";
 
     skills = builtins.mapAttrs
       (name: _: aiBundle.skillsSrc + "/${name}")

@@ -14,7 +14,7 @@ in
         Bluetooth = false;
         Display = false;
         NowPlaying = false;
-        Sound = false;
+        Sound = true;
       };
 
       CustomUserPreferences = {
@@ -30,7 +30,7 @@ in
           "NSStatusItem VisibleCC BentoBox-0" = 1;
           "NSStatusItem VisibleCC Clock" = 1;
           "NSStatusItem VisibleCC FocusModes" = 1;
-          "NSStatusItem VisibleCC Sound" = 0;
+          "NSStatusItem VisibleCC Sound" = 1;
           "NSStatusItem VisibleCC WiFi" = 1;
         };
 
