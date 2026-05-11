@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+pane_id="${1:-${TMUX_PANE:-}}"
+pane_path="${2:-}"
+
+if [[ -z "$pane_id" ]]; then
+    pane_id="$(tmux display-message -p '#{pane_id}' 2>/dev/null)"
+fi
+
+if [[ -z "$pane_id" ]]; then
+    exit 0
+fi
+
+if [[ -z "$pane_path" ]]; then
+    pane_path="$(tmux display-message -pt "$pane_id" '#{pane_current_path}' 2>/dev/null)"
+fi
+
+if [[ -z "$pane_path" ]]; then
+    exit 0
+fi
+
+case "$pane_path" in
+    "~")
+        pane_path="$HOME"
+        ;;
+    "~/"*)
+        pane_path="$HOME/${pane_path#"~/"}"
+        ;;
+esac
+
+git_root="$(git -C "$pane_path" rev-parse --show-toplevel 2>/dev/null)"
+if [[ -n "$git_root" ]]; then
+    pane_title="$(basename "$git_root")"
+else
+    pane_title="$(basename "$pane_path")"
+fi
+
+current_title="$(tmux display-message -pt "$pane_id" '#{pane_title}' 2>/dev/null)"
+if [[ "$current_title" != "$pane_title" ]]; then
+    tmux select-pane -t "$pane_id" -T "$pane_title" 2>/dev/null
+fi

@@ -4,7 +4,13 @@ window_state() {
   source "$SKETCHYBAR_CONFIG_DIR/colors.sh"
   source "$SKETCHYBAR_CONFIG_DIR/icons.sh"
 
-  WINDOW=$(yabai -m query --windows --window)
+  WINDOW=$(yabai -m query --windows --window 2>/dev/null)
+  if [[ -z "$WINDOW" ]]; then
+    sketchybar -m --set "$NAME" icon="$YABAI_GRID" icon.color="$ORANGE" label.drawing=off
+    yabai -m config active_window_border_color "$WHITE" > /dev/null 2>&1 &
+    return
+  fi
+
   CURRENT=$(echo "$WINDOW" | jq '.["stack-index"]')
 
   args=()
@@ -58,6 +64,7 @@ windows_on_spaces () {
   done <<< "$CURRENT_SPACES"
 
   sketchybar -m "${args[@]}"
+  window_state
 }
 
 mouse_clicked() {

@@ -59,8 +59,56 @@ let
       "sub-layer" = "normal";
     }
     {
+      label = "Mail";
+      app = "^Mail$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
       label = "Slack";
       app = "^Slack$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
+      label = "Notion";
+      app = "^Notion$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
+      label = "ChatGPT Atlas";
+      app = "^ChatGPT Atlas$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
+      label = "Discord";
+      app = "^Discord$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
+      label = "draw.io";
+      app = "^draw.io$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
+      label = "PDF Expert";
+      app = "^PDF Expert$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
+      label = "Jump Desktop";
+      app = "^Jump Desktop$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
+      label = "Microsoft Remote Desktop";
+      app = "^Microsoft Remote Desktop$";
       manage = "on";
       "sub-layer" = "normal";
     }

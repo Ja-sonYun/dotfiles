@@ -61,27 +61,12 @@ else
 fi
 
 # if current project is child of git project, show git branch
-is_git=$(git rev-parse --is-inside-work-tree)
+is_git=$(git rev-parse --is-inside-work-tree 2>/dev/null)
 
 if [[ $is_git == "true" ]]; then
-    FOLDER_NAME=$(basename $(git rev-parse --show-toplevel))
-    GIT_BRANCH=$(shorten-string 20 $(git branch --show-current))
+    GIT_BRANCH=$(shorten-string 20 "$(git branch --show-current)")
     buf="#[fg=red]${GIT_BRANCH}#[fg=default]"
     buf="#[fg=red]Git#[fg=default]($buf):"
-
-    window_name="$FOLDER_NAME"
-else
-    window_name="$(basename $PWD)"
-fi
-
-session_name=$(tmux display-message -p '#S')
-if [[ "$session_name" == "main" || "$session_name" == "popup" ]]; then
-    if [[ -n "$window_name" ]]; then
-        current_window_name=$(tmux display-message -p '#W')
-        if [[ "$current_window_name" != "$window_name" ]]; then
-            tmux rename-window "$window_name"
-        fi
-    fi
 fi
 
 PWD=$(shorten-pwd)

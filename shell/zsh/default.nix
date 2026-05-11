@@ -145,6 +145,14 @@ in
 
         [ -f "$HOME/.zle_widgets" ] && source "$HOME/.zle_widgets"
 
+        _tmux_update_pane_title() {
+          [[ -n "$TMUX" && -n "$TMUX_CONFIG" && -n "$TMUX_PANE" ]] || return
+          "$TMUX_CONFIG/scripts/tmux-update-pane-title" "$TMUX_PANE" "$PWD" >/dev/null 2>&1
+        }
+
+        autoload -Uz add-zsh-hook
+        add-zsh-hook precmd _tmux_update_pane_title
+
         # Initialize ps1 after source zshfuncs since we're using it
         PS1='${PS1}'
       '')
@@ -192,6 +200,8 @@ in
                     done
                 fi
             fi
+
+            _tmux_update_pane_title
         }
 
         zshexit() {

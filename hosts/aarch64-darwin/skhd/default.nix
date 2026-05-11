@@ -2,6 +2,7 @@
 let
   extraPath = pkgs.lib.makeBinPath [
     pkgs.jq
+    pkgs.sketchybar
     pkgs.yabai
     pkgs.inputSourceSelector
   ];
