@@ -5,6 +5,16 @@
 }:
 let
   aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
+  claudeTopShelfHookPath = "/Users/jaykuroyanagi/Library/Application Support/Bartender/NotchBar/AgentStatus/hooks/claude-event-hook.sh";
+  claudeTopShelfHook = state: {
+    type = "command";
+    command = "'${claudeTopShelfHookPath}' ${state} # notchbar-agents-claude-hook";
+  };
+  claudeTopShelfHookGroup = state: {
+    hooks = [
+      (claudeTopShelfHook state)
+    ];
+  };
 
   claudeMcpServers = {
     codex = {
@@ -164,6 +174,12 @@ in
       };
       alwaysThinkingEnabled = true;
       hooks = {
+        SessionStart = [
+          (claudeTopShelfHookGroup "Idle")
+        ];
+        UserPromptSubmit = [
+          (claudeTopShelfHookGroup "Working")
+        ];
         PreToolUse = [
           {
             matcher = "Bash";
@@ -172,8 +188,15 @@ in
                 type = "command";
                 command = "rtk hook claude";
               }
+              (claudeTopShelfHook "Working")
             ];
           }
+        ];
+        PostToolUse = [
+          (claudeTopShelfHookGroup "Auto")
+        ];
+        PostToolUseFailure = [
+          (claudeTopShelfHookGroup "ToolFail")
         ];
         Notification = [
           {
@@ -194,6 +217,13 @@ in
               }
             ];
           }
+          (claudeTopShelfHookGroup "Waiting")
+        ];
+        Stop = [
+          (claudeTopShelfHookGroup "Idle")
+        ];
+        SessionEnd = [
+          (claudeTopShelfHookGroup "Ended")
         ];
       };
       attribution = {

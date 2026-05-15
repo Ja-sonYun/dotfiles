@@ -37,6 +37,19 @@ let
   '';
 
   aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
+  codexTopShelfHookPath = "/Users/jaykuroyanagi/Library/Application Support/Bartender/NotchBar/AgentStatus/hooks/codex-notify-hook.sh";
+  codexTopShelfHookCommand = "'${codexTopShelfHookPath}' # notchbar-agents-codex-hook";
+  codexTopShelfHook = { matcher ? null }:
+    {
+      hooks = [
+        {
+          type = "command";
+          command = codexTopShelfHookCommand;
+        }
+      ];
+    } // lib.optionalAttrs (matcher != null) {
+      inherit matcher;
+    };
 in
 {
   programs.codex = {
@@ -84,6 +97,8 @@ in
       };
 
       features = {
+        # notchbar-agents-managed-codex-hooks
+        codex_hooks = true;
         unified_exec = true;
         shell_snapshot = true;
         multi_agent = true;
@@ -152,6 +167,29 @@ in
       source = aiBundle.agentsSrc;
       recursive = true;
       force = true;
+    };
+
+    ".codex/hooks.json" = {
+      force = true;
+      text = builtins.toJSON {
+        hooks = {
+          SessionStart = [
+            (codexTopShelfHook { matcher = "startup|resume"; })
+          ];
+          UserPromptSubmit = [
+            (codexTopShelfHook { })
+          ];
+          PreToolUse = [
+            (codexTopShelfHook { matcher = "Bash"; })
+          ];
+          PostToolUse = [
+            (codexTopShelfHook { matcher = "Bash"; })
+          ];
+          Stop = [
+            (codexTopShelfHook { })
+          ];
+        };
+      };
     };
   };
 }
