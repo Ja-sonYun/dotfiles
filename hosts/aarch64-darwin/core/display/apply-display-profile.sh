@@ -100,6 +100,7 @@ mapfile -t display_args < <(
       current_res = ""
       current_scaling = ""
       mode_count = 0
+      delete mode_num
       delete mode_res
       delete mode_scaling
     }
@@ -120,6 +121,7 @@ mapfile -t display_args < <(
       display_mode_count[display_count] = mode_count
 
       for (i = 1; i <= mode_count; i++) {
+        display_mode_num[display_count, i] = mode_num[i]
         display_mode_res[display_count, i] = mode_res[i]
         display_mode_scaling[display_count, i] = mode_scaling[i]
       }
@@ -173,10 +175,11 @@ mapfile -t display_args < <(
       return 0
     }
 
-    function choose_resolution(profile_index, display_index,   i, target_res, target_scaling, best_res, best_area, parts, area) {
+    function choose_resolution(profile_index, display_index,   i, target_res, target_scaling, best_res, best_area, best_mode, parts, area) {
       target_res = profile_resolution[profile_index]
       target_scaling = profile_scaling[profile_index]
       resolved_scaling = target_scaling
+      resolved_mode = ""
 
       if (target_res == "current") {
         resolved_scaling = display_current_scaling[display_index]
@@ -195,8 +198,10 @@ mapfile -t display_args < <(
           if (area > best_area) {
             best_area = area
             best_res = display_mode_res[display_index, i]
+            best_mode = display_mode_num[display_index, i]
           }
         }
+        resolved_mode = best_mode
         return best_res
       }
 
@@ -229,6 +234,10 @@ mapfile -t display_args < <(
       target_degree = display_degree[display_index]
       if (profile_degree[profile_index] != "") {
         target_degree = profile_degree[profile_index]
+      }
+
+      if (resolved_mode != "") {
+        return "id:" display_id[display_index] " mode:" resolved_mode " enabled:true origin:" target_origin " degree:" target_degree
       }
 
       return "id:" display_id[display_index] " res:" target_res " enabled:true scaling:" resolved_scaling " origin:" target_origin " degree:" target_degree
@@ -341,6 +350,9 @@ mapfile -t display_args < <(
       if ($0 ~ /^[[:space:]]*mode[[:space:]][0-9]+:/) {
         if (match($0, /res:([0-9]+)x([0-9]+)/, res_match)) {
           mode_count++
+          if (match($0, /^[[:space:]]*mode[[:space:]]+([0-9]+):/, mode_match)) {
+            mode_num[mode_count] = mode_match[1]
+          }
           mode_res[mode_count] = res_match[1] "x" res_match[2]
 
           if (match($0, /scaling:(on|off)/, scaling_match)) {

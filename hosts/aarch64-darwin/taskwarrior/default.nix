@@ -16,7 +16,6 @@ let
     lib.makeBinPath [
       pkgs.jq
       pkgs.sqlite
-      pkgs.sketchybar
     ]
     + ":/opt/homebrew/bin";
 

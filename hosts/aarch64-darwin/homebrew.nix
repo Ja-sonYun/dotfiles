@@ -31,6 +31,7 @@ let
     "ghostty"
     "orbstack"
     "obsidian"
+    "codex-app"
   ]
   ++ (
     if purpose == "main" then

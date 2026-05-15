@@ -27,36 +27,36 @@
   },
   "Jays-MacBook-Pro": {
     "aws-documentation": {
-      "version": "1.1.23",
-      "hash": "sha256-TD+GONI94QCqYZEyKqW14hu9BIS0kRqf2Pnho3uSDpw="
+      "version": "1.1.24",
+      "hash": "sha256-zhr70WS239eCFdIM0XcXzsv7bUzehfyeTjYHZIIFWdU="
     },
     "n8n-mcp": {
-      "version": "2.51.1",
-      "hash": "sha256-GPlEda//lsBsDtJaTbzun7jmmd9xfq5NN0teNDghAWM="
+      "version": "2.53.0",
+      "hash": "sha256-XAD0G1PcMnjGTkEm0oJXvPDRG9E4xBwBpGTWVeBZdKk="
     },
     "macnotesapp": {
       "version": "0.8.2",
       "hash": "sha256-8OAjjrgeurnNuVDAuQm0zecLS90N9cHKFbHzyRUgZvM="
     },
     "firecrawl-mcp": {
-      "version": "3.15.0",
-      "hash": "sha256-I2NE8k1PuA0ErsLZ0m/UHXKN8wLGpzf4y7X4+qpBYdM="
+      "version": "3.16.0",
+      "hash": "sha256-P6JxsJrZvqm4jFwaI7uN4OdGyjtbewR8m+aNVeA+lZc="
     },
     "awscli-local": {
       "version": "0.22.2",
       "hash": "sha256-DNAdRYUv5+Ug5kDwzBwjP/OaoI1VipO4sA5W+XBdSxE="
     },
     "chrome-devtools-mcp": {
-      "version": "0.25.0",
-      "hash": "sha256-GxYtkaJq27Cfa8fVSxRfLPN3vcM92Bh+G/O14zlt0fs="
+      "version": "0.26.0",
+      "hash": "sha256-0PUaMmWlfvJMqpwHo7YTsXh+rbcU/xs9fX4b8y+tLpo="
     },
     "codex": {
       "version": "0.130.0",
       "hash": "sha256-4I6jY0FbGRCkeY/c7ozrlakB3M7YW175c5auAl/jKdA="
     },
     "context7-mcp": {
-      "version": "2.2.4",
-      "hash": "sha256-+i2DkVuFSgMZAozHtGu2X8NKQTQ0D4e8s26Gd7CGnCo="
+      "version": "2.2.5",
+      "hash": "sha256-MFkZa94PFQng1qkBIc1ueAemetYX6jYAVhnKPy3dpi0="
     }
   },
   "Jays-MacBook-Pro-Server": {

@@ -2,13 +2,13 @@
 
 let
   notchDisplayUuid = "37D8832A-2D66-02CA-B9F7-8F30A301B230";
-  normalBar = 9;
+  normalBar = 0;
   notchBar = 0;
 
   yabaiSettings = {
     layout = "bsp";
 
-    top_padding = 7;
+    top_padding = 4;
     bottom_padding = 8;
     left_padding = 4;
     right_padding = 4;
@@ -20,16 +20,11 @@ let
     window_opacity = "off";
     window_shadow = "float";
 
-    window_border = "on";
-    window_border_width = 2;
-
-    active_window_border_color = "0xfff00031";
-    normal_window_border_color = "0x00FFFFFF";
+    window_border = "off";
     insert_feedback_color = "0xE02d74da";
 
     active_window_opacity = "0.0";
     normal_window_opacity = "0.0";
-    window_border_blur = "off";
     split_ratio = "0.50";
 
     auto_balance = "off";
@@ -169,39 +164,17 @@ let
     ];
     text = ''
       if yabai -m query --displays | jq -e --arg uuid ${lib.escapeShellArg notchDisplayUuid} 'any(.[]; .uuid == $uuid)' >/dev/null; then
-        yabai -m config external_bar ${lib.escapeShellArg "main:${toString notchBar}:0"}
+        yabai -m config external_bar ${lib.escapeShellArg "all:${toString notchBar}:0"}
       else
-        yabai -m config external_bar ${lib.escapeShellArg "main:${toString normalBar}:0"}
+        yabai -m config external_bar ${lib.escapeShellArg "all:${toString normalBar}:0"}
       fi
     '';
   };
-
-  sketchybar = "${pkgs.sketchybar}/bin/sketchybar";
 
   signals = [
     {
       event = "dock_did_restart";
       action = "/usr/bin/sudo ${pkgs.yabai}/bin/yabai --load-sa";
-    }
-    {
-      event = "window_focused";
-      action = "${sketchybar} --trigger window_focus";
-    }
-    {
-      event = "window_created";
-      action = "${sketchybar} --trigger windows_on_spaces";
-    }
-    {
-      event = "window_destroyed";
-      action = "${sketchybar} --trigger windows_on_spaces";
-    }
-    {
-      event = "window_moved";
-      action = "${sketchybar} --trigger windows_on_spaces";
-    }
-    {
-      event = "space_changed";
-      action = "${sketchybar} --trigger windows_on_spaces";
     }
     {
       event = "display_added";

@@ -1,7 +1,6 @@
 #!/usr/bin/env zsh -f
 
 set -e
-trap 'sketchybar --trigger task_update 2>/dev/null || true' EXIT
 
 SYNC_DB="$HOME/.task/reminder-syncer.sqlite3"
 FILTER_LISTS="${FILTER_LISTS:-Avilen|Todos}"

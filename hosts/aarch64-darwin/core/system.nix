@@ -60,6 +60,11 @@ in
       NSGlobalDomain = {
         InitialKeyRepeat = 17;
         KeyRepeat = 2;
+
+        NSAutomaticSpellingCorrectionEnabled = false;
+        NSAutomaticCapitalizationEnabled = false;
+        NSAutomaticInlinePredictionEnabled = true;
+        NSAutomaticPeriodSubstitutionEnabled = false;
       };
 
       loginwindow = {
@@ -154,7 +159,6 @@ in
 
   # Further configurations are defined in ./shell/system.nix
   fonts.packages = [
-    pkgs.sketchybar-app-font
     "${configDir}/misc/fonts"
   ];
 }

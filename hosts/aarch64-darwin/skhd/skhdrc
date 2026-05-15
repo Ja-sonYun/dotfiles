@@ -74,10 +74,7 @@ shift + ctrl + lalt - k : yabai -m window --insert north
 shift + ctrl + lalt - l : yabai -m window --insert east
 
 # Float / Unfloat window
-rcmd - f : \
-    yabai -m window --toggle float; \
-    yabai -m window --toggle border; \
-    sketchybar --trigger window_focus
+rcmd - f : yabai -m window --toggle float
 
 # Restart yabai
 shift + ctrl + rcmd - r : \

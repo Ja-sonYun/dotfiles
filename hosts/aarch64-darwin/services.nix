@@ -10,7 +10,6 @@
       [
         ./yabai
         ./skhd
-        ./sketchybar
       ]
   );
 }
