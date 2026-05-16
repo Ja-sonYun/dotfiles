@@ -63,6 +63,7 @@ let
         "firefox"
         "notion"
         "devonthink"
+        "alcove"
 
         "cleanshot"
 
