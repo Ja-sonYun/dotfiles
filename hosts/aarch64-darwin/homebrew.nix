@@ -32,6 +32,7 @@ let
     "orbstack"
     "obsidian"
     "codex-app"
+    "appcleaner"
   ]
   ++ (
     if purpose == "main" then
@@ -41,6 +42,7 @@ let
         "gimp"
         "sf-symbols"
         "discord"
+        "wallspace"
         "google-chrome"
         "slack"
         "appcleaner"
