@@ -3,6 +3,10 @@
 , ...
 }:
 {
+  home.packages = [
+    pkgs.semble
+  ];
+
   programs.mcp = {
     enable = true;
     servers = {
@@ -49,6 +53,11 @@
       };
       awsdac = {
         command = "${pkgs.awsdac}/bin/awsdac-mcp-server";
+        args = [ ];
+        env = { };
+      };
+      semble = {
+        command = "${pkgs.semble}/bin/semble";
         args = [ ];
         env = { };
       };

@@ -45,6 +45,7 @@
 
     # Pypi
     aws-documentation = final.callPackage ../pkgs/aws-documentation { };
+    semble = final.callPackage ../pkgs/semble { };
 
     # Cargo
     tmux-menu = final.callPackage ../pkgs/tmux-menu { };

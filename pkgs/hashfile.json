@@ -39,8 +39,8 @@
       "hash": "sha256-8OAjjrgeurnNuVDAuQm0zecLS90N9cHKFbHzyRUgZvM="
     },
     "firecrawl-mcp": {
-      "version": "3.16.0",
-      "hash": "sha256-P6JxsJrZvqm4jFwaI7uN4OdGyjtbewR8m+aNVeA+lZc="
+      "version": "3.17.0",
+      "hash": "sha256-1DW3cY3dhIgw1DTsFwqZTXDdRR4EbzUm3ZQvHiCu8Rc="
     },
     "awscli-local": {
       "version": "0.22.2",
@@ -57,6 +57,10 @@
     "context7-mcp": {
       "version": "2.2.5",
       "hash": "sha256-MFkZa94PFQng1qkBIc1ueAemetYX6jYAVhnKPy3dpi0="
+    },
+    "semble": {
+      "version": "0.1.7",
+      "hash": "sha256-AJm7vLhGpz7fdIA984gNhgoVX/IT76nUCMbQeoevd6c="
     }
   },
   "Jays-MacBook-Pro-Server": {

@@ -16,6 +16,7 @@ let
     "qemu"
     "tccutil"
     "localstack/tap/localstack-cli"
+    "bitwarden-cli"
   ]
   ++ (
     if purpose == "main" then
@@ -40,6 +41,7 @@ let
         "keycastr" # Show keystroke realtime
         "claude"
         "gimp"
+        "bitwarden"
         "sf-symbols"
         "discord"
         "wallspace"
@@ -66,11 +68,8 @@ let
         "notion"
         "devonthink"
         "alcove"
-
         "cleanshot"
-
         "microsoft-remote-desktop"
-
         "protonvpn"
 
         # TODO: Move to nix
