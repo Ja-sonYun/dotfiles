@@ -58,6 +58,8 @@ in
       };
 
       NSGlobalDomain = {
+        AppleShowScrollBars = "WhenScrolling";
+
         InitialKeyRepeat = 17;
         KeyRepeat = 2;
 
