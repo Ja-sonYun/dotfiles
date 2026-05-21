@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "semble";
   packageManager = "pip";
   packageName = "semble";
-  packageVersion = "0.1.10";
+  packageVersion = "0.2.0";
   packageSpec = "'semble[mcp]==0.1.7'";
   name = "semble";
   exposedBinaries = [

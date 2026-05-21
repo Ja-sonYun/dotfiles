@@ -19,3 +19,6 @@
 [submodule "portable/sequence-diagram-cli"]
 	path = portable/sequence-diagram-cli
 	url = git@github.com:Ja-sonYun/sequence-diagram-cli.git
+[submodule "libs/nixlib"]
+	path = libs/nixlib
+	url = git@github.com:Ja-sonYun/nixlib.git

@@ -55,12 +55,12 @@
       "hash": "sha256-pn0l05/fGOiSXg2+3jPJEW0h1IU3YVV3tg+3SjZNbCk="
     },
     "context7-mcp": {
-      "version": "2.2.5",
-      "hash": "sha256-MFkZa94PFQng1qkBIc1ueAemetYX6jYAVhnKPy3dpi0="
+      "version": "2.3.0",
+      "hash": "sha256-DEdlJpWdcSmoqC9csLiTFYp+s6WwawEsk+qLDjxx9o0="
     },
     "semble": {
-      "version": "0.1.10",
-      "hash": "sha256-C6xZ/OVVXKznWsDyLuKmmzSl2OANscUfkvQIhO918SI="
+      "version": "0.2.0",
+      "hash": "sha256-muQwmRSLBGTqvrG0bXmod2uN002vNdK9V68IEqn90MU="
     }
   },
   "Jays-MacBook-Pro-Server": {
