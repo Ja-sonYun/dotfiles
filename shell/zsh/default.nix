@@ -1,7 +1,8 @@
-{ pkgs
-, lib
-, configDir
-, ...
+{
+  pkgs,
+  lib,
+  configDir,
+  ...
 }:
 let
   templateMeta = import ../../templates/meta.nix;
@@ -17,8 +18,7 @@ let
   templateInfoFile = pkgs.writeText "template-info" (
     lib.concatStringsSep "\n" (
       lib.mapAttrsToList (
-        name: meta:
-        "${name}\t${meta.description}\t${builtins.concatStringsSep "," meta.tags}"
+        name: meta: "${name}\t${meta.description}\t${builtins.concatStringsSep "," meta.tags}"
       ) templateMeta
     )
   );
@@ -61,8 +61,8 @@ let
 in
 {
   home.file.".zsh/completions/_templates".source = completionScript;
-  home.activation.setZshAsDefaultShell = lib.mkIf pkgs.stdenv.isLinux
-    (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.setZshAsDefaultShell = lib.mkIf pkgs.stdenv.isLinux (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
       ZSH_PATH="$HOME/.nix-profile/bin/zsh"
       if [[ $(getent passwd $USER) != *"$ZSH_PATH"* ]]; then
@@ -71,7 +71,8 @@ in
         fi
         sudo chsh -s "$ZSH_PATH" "$USER"
       fi
-    '');
+    ''
+  );
 
   imports = [
     ../../modules/zshFunc
@@ -105,149 +106,169 @@ in
 
     localVariables = { };
 
-    initContent = lib.mkMerge [
-      (lib.mkOrder 550 ''
-        fpath+=("$HOME/.zsh/completions")
-      '')
-
-      (lib.mkOrder 900 ''
-        autoload -U history-search-end
-
-        zle -N history-beginning-search-backward-end history-search-end
-        zle -N history-beginning-search-forward-end history-search-end
-
-        bindkey '^[[A' history-beginning-search-backward-end
-        bindkey '^[[B' history-beginning-search-forward-end
-        bindkey '^[OA' history-beginning-search-backward-end
-        bindkey '^[OB' history-beginning-search-forward-end
-      '')
-
-      (let
-        PS1 =
-          let
-            promptTime = "[%D{%d/%m,%H:%M:%S}]";
-            jobStatus = "%F{red}%(1j.%U•%j%u|.)%f";
-            directory = "$(shorten-pwd)";
-            symbol = " %F{green}$%f";
-          in
-          "${promptTime}${jobStatus}${directory}${symbol} ";
+    initContent =
+      let
+        cursorShape = "033[5 q"; # Use a blinking bar cursor to indicate normal mode
       in
-      ''
-        set -o ignoreeof
-        setopt prompt_subst
+      lib.mkMerge [
+        (lib.mkOrder 550 ''
+          fpath+=("$HOME/.zsh/completions")
+        '')
 
-        # Remove / and - from WORDCHARS
-        WORDCHARS=''${WORDCHARS//\/}
-        WORDCHARS=''${WORDCHARS//-}
+        (lib.mkOrder 900 ''
+          autoload -U history-search-end
+          autoload -Uz edit-command-line
 
-        # Export PATH additions for user-installed binaries
-        export PATH="$PATH:$HOME/.bin:$HOME/.local/bin:$HOME/go/bin"
+          zle -N history-beginning-search-backward-end history-search-end
+          zle -N history-beginning-search-forward-end history-search-end
 
-        [ -f "$HOME/.zle_widgets" ] && source "$HOME/.zle_widgets"
+          _edit-command-line-with-vim() {
+            local EDITOR=vim
+            local VISUAL=vim
+            edit-command-line
+            local ret=$?
+            printf '\${cursorShape}'
+            zle reset-prompt
+            return $ret
+          }
+          zle -N _edit-command-line-with-vim
 
-        _tmux_update_pane_title() {
-          [[ -n "$TMUX" && -n "$TMUX_CONFIG" && -n "$TMUX_PANE" ]] || return
-          "$TMUX_CONFIG/scripts/tmux-update-pane-title" "$TMUX_PANE" "$PWD" >/dev/null 2>&1
-        }
+          bindkey '^[[A' history-beginning-search-backward-end
+          bindkey '^[[B' history-beginning-search-forward-end
+          bindkey '^[OA' history-beginning-search-backward-end
+          bindkey '^[OB' history-beginning-search-forward-end
+          bindkey '^V' _edit-command-line-with-vim
+        '')
 
-        autoload -Uz add-zsh-hook
-        add-zsh-hook precmd _tmux_update_pane_title
+        (
+          let
+            PS1 =
+              let
+                promptTime = "[%D{%d/%m,%H:%M:%S}]";
+                jobStatus = "%F{red}%(1j.%U•%j%u|.)%f";
+                directory = "$(shorten-pwd)";
+                symbol = " %F{green}$%f";
+              in
+              "${promptTime}${jobStatus}${directory}${symbol} ";
+          in
+          ''
+            set -o ignoreeof
+            setopt prompt_subst
 
-        # Initialize ps1 after source zshfuncs since we're using it
-        PS1='${PS1}'
-      '')
+            # Remove /, -, and . from WORDCHARS
+            WORDCHARS=''${WORDCHARS//\/}
+            WORDCHARS=''${WORDCHARS//-}
+            WORDCHARS=''${WORDCHARS//.}
 
-      (lib.mkOrder 1000 ''
-        find_hooks_dir() {
-            local dir="$1"
-            while [[ "$dir" != "/" ]]; do
-                if [[ -d "$dir/.hooks" ]]; then
-                    echo "$dir/.hooks"
-                    return 0
-                fi
-                dir=$(dirname "$dir")
-            done
-            return 1
-        }
+            # Export PATH additions for user-installed binaries
+            export PATH="$PATH:$HOME/.bin:$HOME/.local/bin:$HOME/go/bin"
 
-        chpwd() {
-            [[ -n "$VIM" ]] && return
-            local old_hooks=""
-            local new_hooks=""
+            [ -f "$HOME/.zle_widgets" ] && source "$HOME/.zle_widgets"
 
-            # Find hooks directories
-            [[ -n "$OLDPWD" ]] && old_hooks=$(find_hooks_dir "$OLDPWD")
-            new_hooks=$(find_hooks_dir "$PWD")
+            _tmux_update_pane_title() {
+              [[ -n "$TMUX" && -n "$TMUX_CONFIG" && -n "$TMUX_PANE" ]] || return
+              "$TMUX_CONFIG/scripts/tmux-update-pane-title" "$TMUX_PANE" "$PWD" >/dev/null 2>&1
+            }
 
-            # Only run hooks if we're changing between different hook contexts
-            if [[ "$old_hooks" != "$new_hooks" ]]; then
-                # Run on_leave hooks
-                if [[ -n "$old_hooks" && -d "$old_hooks/on_leave" ]]; then
-                    setopt localoptions nullglob
-                    for file in "$old_hooks/on_leave/"*; do
-                        if [[ -f "$file" ]]; then
-                            source "$file"
-                        fi
-                    done
-                fi
-                # Run on_enter hooks
-                if [[ -n "$new_hooks" && -d "$new_hooks/on_enter" ]]; then
-                    setopt localoptions nullglob
-                    for file in "$new_hooks/on_enter/"*; do
-                        if [[ -f "$file" ]]; then
-                            source "$file"
-                        fi
-                    done
-                fi
-            fi
+            autoload -Uz add-zsh-hook
+            add-zsh-hook precmd _tmux_update_pane_title
 
-            _tmux_update_pane_title
-        }
+            # Initialize ps1 after source zshfuncs since we're using it
+            PS1='${PS1}'
+          ''
+        )
 
-        zshexit() {
-            [[ -n "$VIM" ]] && return
-            local current_hooks=$(find_hooks_dir "$PWD")
+        (lib.mkOrder 1000 ''
+          find_hooks_dir() {
+              local dir="$1"
+              while [[ "$dir" != "/" ]]; do
+                  if [[ -d "$dir/.hooks" ]]; then
+                      echo "$dir/.hooks"
+                      return 0
+                  fi
+                  dir=$(dirname "$dir")
+              done
+              return 1
+          }
 
-            if [[ -n "$current_hooks" && -d "$current_hooks/on_exit" ]]; then
-                export OLDPWD="$PWD"
-                setopt localoptions nullglob
-                for file in "$current_hooks/on_exit/"*; do
-                    if [[ -f "$file" ]]; then
-                        source "$file"
-                    fi
-                done
-            fi
-        }
+          chpwd() {
+              [[ -n "$VIM" ]] && return
+              local old_hooks=""
+              local new_hooks=""
 
-        ask_yes_no() {
-            local prompt="''${1:-Continue}"
-            local answer
+              # Find hooks directories
+              [[ -n "$OLDPWD" ]] && old_hooks=$(find_hooks_dir "$OLDPWD")
+              new_hooks=$(find_hooks_dir "$PWD")
 
-            while true; do
-                echo -n "$prompt (y/n): "
-                read -k1 answer
-                echo
-                if [[ $answer == "y" || $answer == "Y" ]]; then
-                    return 0
-                elif [[ $answer == "n" || $answer == "N" ]]; then
-                    return 1
-                else
-                    echo "Please enter y or n."
-                fi
-            done
-        }
+              # Only run hooks if we're changing between different hook contexts
+              if [[ "$old_hooks" != "$new_hooks" ]]; then
+                  # Run on_leave hooks
+                  if [[ -n "$old_hooks" && -d "$old_hooks/on_leave" ]]; then
+                      setopt localoptions nullglob
+                      for file in "$old_hooks/on_leave/"*; do
+                          if [[ -f "$file" ]]; then
+                              source "$file"
+                          fi
+                      done
+                  fi
+                  # Run on_enter hooks
+                  if [[ -n "$new_hooks" && -d "$new_hooks/on_enter" ]]; then
+                      setopt localoptions nullglob
+                      for file in "$new_hooks/on_enter/"*; do
+                          if [[ -f "$file" ]]; then
+                              source "$file"
+                          fi
+                      done
+                  fi
+              fi
 
-        chpwd-hook-init() {
-          mkdir -p .hooks/on_enter .hooks/on_leave
-          echo "echo 'You have entered $(basename \"$PWD\")'" > .hooks/on_enter/enter.sh
-          echo "echo 'You have left $(basename \"$PWD\")'" > .hooks/on_leave/leave.sh
-          echo "echo 'You have exited $(basename \"$PWD\")'" > .hooks/on_exit/exit.sh
-        }
-      '')
-    ];
+              _tmux_update_pane_title
+          }
 
-    envExtra = '''';
-    profileExtra = '''';
+          zshexit() {
+              [[ -n "$VIM" ]] && return
+              local current_hooks=$(find_hooks_dir "$PWD")
+
+              if [[ -n "$current_hooks" && -d "$current_hooks/on_exit" ]]; then
+                  export OLDPWD="$PWD"
+                  setopt localoptions nullglob
+                  for file in "$current_hooks/on_exit/"*; do
+                      if [[ -f "$file" ]]; then
+                          source "$file"
+                      fi
+                  done
+              fi
+          }
+
+          ask_yes_no() {
+              local prompt="''${1:-Continue}"
+              local answer
+
+              while true; do
+                  echo -n "$prompt (y/n): "
+                  read -k1 answer
+                  echo
+                  if [[ $answer == "y" || $answer == "Y" ]]; then
+                      return 0
+                  elif [[ $answer == "n" || $answer == "N" ]]; then
+                      return 1
+                  else
+                      echo "Please enter y or n."
+                  fi
+              done
+          }
+
+          chpwd-hook-init() {
+            mkdir -p .hooks/on_enter .hooks/on_leave
+            echo "echo 'You have entered $(basename \"$PWD\")'" > .hooks/on_enter/enter.sh
+            echo "echo 'You have left $(basename \"$PWD\")'" > .hooks/on_leave/leave.sh
+            echo "echo 'You have exited $(basename \"$PWD\")'" > .hooks/on_exit/exit.sh
+          }
+        '')
+      ];
+
+    envExtra = "";
+    profileExtra = "";
   };
 
   programs.fzf = {

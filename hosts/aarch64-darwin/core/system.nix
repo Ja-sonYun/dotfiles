@@ -1,6 +1,5 @@
 { configDir
 , hostname
-, pkgs
 , userhome
 , username
 , ...

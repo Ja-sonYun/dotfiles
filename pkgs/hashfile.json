@@ -31,8 +31,8 @@
       "hash": "sha256-zhr70WS239eCFdIM0XcXzsv7bUzehfyeTjYHZIIFWdU="
     },
     "n8n-mcp": {
-      "version": "2.54.0",
-      "hash": "sha256-V16/SF+aXirlUj0TEqSHpDFG58QrjhC2Hsjq90xWbLg="
+      "version": "2.56.0",
+      "hash": "sha256-auf8fr7juzpnTgvB3x6f65d2coTIAzg3oYtynRA5J8o="
     },
     "macnotesapp": {
       "version": "0.8.2",
@@ -47,20 +47,16 @@
       "hash": "sha256-DNAdRYUv5+Ug5kDwzBwjP/OaoI1VipO4sA5W+XBdSxE="
     },
     "chrome-devtools-mcp": {
-      "version": "1.0.1",
-      "hash": "sha256-dWvoJT+cBOfiObL8nifXs9A5wb8hOdukH3GHZXfGtMg="
+      "version": "1.1.0",
+      "hash": "sha256-TbLrWvAbKNS6DJTDbcqf4FA3u6V/kQE9ev6+Qy0Djb4="
     },
     "codex": {
-      "version": "0.132.0",
-      "hash": "sha256-pn0l05/fGOiSXg2+3jPJEW0h1IU3YVV3tg+3SjZNbCk="
+      "version": "0.134.0",
+      "hash": "sha256-dDVuIHz/JP5rm2/+SOxPcjxsB4r9MzgQiBbrO23/dck="
     },
     "context7-mcp": {
-      "version": "2.3.0",
-      "hash": "sha256-DEdlJpWdcSmoqC9csLiTFYp+s6WwawEsk+qLDjxx9o0="
-    },
-    "semble": {
-      "version": "0.2.0",
-      "hash": "sha256-muQwmRSLBGTqvrG0bXmod2uN002vNdK9V68IEqn90MU="
+      "version": "3.0.0",
+      "hash": "sha256-k/evk/MJDtwDfo3eSetR7ItMVAw5eW4XVnqoYs40Nyk="
     }
   },
   "Jays-MacBook-Pro-Server": {

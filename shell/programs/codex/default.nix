@@ -1,8 +1,9 @@
-{ pkgs
-, lib
-, config
-, agenix-secrets
-, ...
+{
+  pkgs,
+  lib,
+  config,
+  agenix-secrets,
+  ...
 }:
 let
   pythonWithPackages = pkgs.python313.withPackages (ps: [
@@ -37,6 +38,15 @@ let
   '';
 
   aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
+
+  codexHooks = import ./hooks.nix {
+    inherit
+      pkgs
+      lib
+      config
+      agenix-secrets
+      ;
+  };
 in
 {
   programs.codex = {
@@ -47,7 +57,7 @@ in
     settings = {
       model = "gpt-5.5";
       model_reasoning_effort = "high";
-      plan_mode_reasoning_effort = "xhigh";
+      plan_mode_reasoning_effort = "high";
       model_verbosity = "medium";
       developer_instructions = ''
         # Response Readability
@@ -77,7 +87,7 @@ in
 
       web_search = "live";
 
-      profile = "deep-fast";
+      service_tier = "fast";
 
       sandbox_workspace_write = {
         network_access = true;
@@ -97,50 +107,38 @@ in
 
       tui = {
         status_line = [
-          "model-with-reasoning"
           "context-remaining"
           "current-dir"
-          "model-name"
-          "git-branch"
-          "five-hour-limit"
-          "weekly-limit"
+          "model-with-reasoning"
         ];
-      };
-
-      profiles = {
-        fast = {
-          service_tier = "fast";
-          model_reasoning_effort = "low";
-        };
-        deep = {
-          service_tier = "flex";
-          model_reasoning_effort = "high";
-        };
-        deep-fast = {
-          service_tier = "fast";
-          model_reasoning_effort = "high";
-        };
       };
 
       feedback = {
         enabled = false;
       };
 
+      hooks = codexHooks;
+
       mcp_servers = {
         claude = {
           command = "${config.home.profileDirectory}/bin/claude";
-          args = [ "mcp" "serve" ];
+          args = [
+            "mcp"
+            "serve"
+          ];
           env = { };
         };
       };
 
     };
 
-    context = (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc)) + "\n\n@${config.home.homeDirectory}/.codex/RTK.md\n";
+    context =
+      (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc))
+      + "\n\n@${config.home.homeDirectory}/.codex/RTK.md\n";
 
-    skills = builtins.mapAttrs
-      (name: _: aiBundle.skillsSrc + "/${name}")
-      (builtins.readDir aiBundle.skillsSrc);
+    skills = builtins.mapAttrs (name: _: aiBundle.skillsSrc + "/${name}") (
+      builtins.readDir aiBundle.skillsSrc
+    );
 
     rules = {
       managed = ./rules/managed.rules;

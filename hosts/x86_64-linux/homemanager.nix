@@ -6,7 +6,7 @@ in
   home = {
     username = username;
     homeDirectory = userhome;
-    stateVersion = "24.11";
+    stateVersion = "26.05";
 
     sessionVariables = { } // (if isWsl then {
       LD_LIBRARY_PATH = wslNvidiaLib;
