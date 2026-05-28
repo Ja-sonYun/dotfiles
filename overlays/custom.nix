@@ -33,6 +33,7 @@
     git-wrapped = final.callPackage ../pkgs/git-wrapped { };
     awscli-local = final.callPackage ../pkgs/awscli-local { };
     macnotesapp = final.callPackage ../pkgs/macnotesapp { };
+    agenix-utils = final.callPackage ../libs/nixlib/pkg/agenix-utils { };
 
     # Npm
     codex = final.callPackage ../pkgs/codex {

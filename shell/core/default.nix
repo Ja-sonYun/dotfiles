@@ -87,6 +87,8 @@
     # plot
 
     vim-pkg
+
+    agenix-utils
   ]
   ++ lib.optionals (purpose == "main") [
     # say

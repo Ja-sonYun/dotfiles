@@ -72,6 +72,11 @@
       flake = false;
     };
 
+    nixlib = {
+      url = ./libs/nixlib;
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Git hooks for pre-commit
     git-hooks = {
       url = "github:cachix/git-hooks.nix";
@@ -80,22 +85,24 @@
   };
 
   outputs =
-    inputs@{ self
-    , nixpkgs
-    , home-manager
-    , nixpkgs-stable
-    , home-manager-stable
-    , darwin
-    , nix-homebrew
-    , homebrew-bundle
-    , homebrew-core
-    , homebrew-cask
-    , vim
-    , server
-    , agenix
-    , agenix-secrets
-    , git-hooks
-    , ...
+    inputs@{
+      self,
+      nixpkgs,
+      nixlib,
+      home-manager,
+      nixpkgs-stable,
+      home-manager-stable,
+      darwin,
+      nix-homebrew,
+      homebrew-bundle,
+      homebrew-core,
+      homebrew-cask,
+      vim,
+      server,
+      agenix,
+      agenix-secrets,
+      git-hooks,
+      ...
     }:
     let
       specialArgsPrepared = {
@@ -163,10 +170,14 @@
 
       mkPkgsProvider =
         system: hostname:
-        { cudaSupport ? false }:
+        {
+          cudaSupport ? false,
+        }:
         import nixpkgs {
           inherit system;
-          overlays = builtins.attrValues (import ./overlays { inherit inputs hostname; });
+          overlays =
+            builtins.attrValues (import ./overlays { inherit inputs hostname; })
+            ++ builtins.attrValues nixlib.overlays;
           config = {
             allowUnfree = true;
             inherit cudaSupport;
@@ -182,7 +193,7 @@
         [
           # Agenix for secrets management
           agenix.homeManagerModules.default
-          (import "${agenix-secrets}/home-manager.nix")
+          (import "${agenix-secrets}/homemanager.nix")
           # Common configurations
           ./shell
           ./misc/fonts
@@ -206,10 +217,10 @@
 
       mkX86_64LinuxHomeConfiguration =
         hostname:
-        opts@{ cudaSupport ? false
-        , isVM ? false
-        , isWsl ? false
-        ,
+        opts@{
+          cudaSupport ? false,
+          isVM ? false,
+          isWsl ? false,
         }:
         let
           system = specialArgsPrepared."${hostname}".system;
@@ -227,7 +238,7 @@
 
       mkAarch64DarwinHomeConfiguration =
         hostname:
-        opts@{}:
+        opts@{ }:
         let
           system = specialArgsPrepared."${hostname}".system;
           pkgs = mkPkgsProvider system hostname { };
@@ -273,7 +284,10 @@
           ];
         };
 
-      supportedSystems = [ "aarch64-darwin" "x86_64-linux" ];
+      supportedSystems = [
+        "aarch64-darwin"
+        "x86_64-linux"
+      ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
@@ -285,9 +299,12 @@
           };
         };
       });
-      devShells = forAllSystems (system:
-        let pkgs = nixpkgs.legacyPackages.${system};
-        in {
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
           default = pkgs.mkShell {
             # inherit (self.checks.${system}.pre-commit-check) shellHook;
             # buildInputs = self.checks.${system}.pre-commit-check.enabledPackages ++ [
@@ -300,10 +317,10 @@
         }
       );
 
-      darwinConfigurations."Jays-MacBook-Pro" =
-        mkAarch64DarwinHomeConfiguration "Jays-MacBook-Pro" { };
+      darwinConfigurations."Jays-MacBook-Pro" = mkAarch64DarwinHomeConfiguration "Jays-MacBook-Pro" { };
       darwinConfigurations."Jays-MacBook-Pro-Server" =
-        mkAarch64DarwinHomeConfiguration "Jays-MacBook-Pro-Server" { };
+        mkAarch64DarwinHomeConfiguration "Jays-MacBook-Pro-Server"
+          { };
 
       homeConfigurations."linux-devel" = mkX86_64LinuxHomeConfiguration "linux-devel" {
         cudaSupport = false;

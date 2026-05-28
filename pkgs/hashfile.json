@@ -39,16 +39,16 @@
       "hash": "sha256-8OAjjrgeurnNuVDAuQm0zecLS90N9cHKFbHzyRUgZvM="
     },
     "firecrawl-mcp": {
-      "version": "3.17.0",
-      "hash": "sha256-1DW3cY3dhIgw1DTsFwqZTXDdRR4EbzUm3ZQvHiCu8Rc="
+      "version": "3.19.1",
+      "hash": "sha256-2RQYzaxZTRmDj2FuvyTSpsd28ObAh0oLAvrfN2cwu/4="
     },
     "awscli-local": {
       "version": "0.22.2",
       "hash": "sha256-DNAdRYUv5+Ug5kDwzBwjP/OaoI1VipO4sA5W+XBdSxE="
     },
     "chrome-devtools-mcp": {
-      "version": "1.1.0",
-      "hash": "sha256-TbLrWvAbKNS6DJTDbcqf4FA3u6V/kQE9ev6+Qy0Djb4="
+      "version": "1.1.1",
+      "hash": "sha256-7WyvOu+sinVjvAxndMPsyDho9vA9hh/0YrIvEdceV4Y="
     },
     "codex": {
       "version": "0.134.0",
