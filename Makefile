@@ -36,6 +36,9 @@ endif
 # ==================================================================================
 ##@ Update
 
+push-agenix: ## Push agenix secrets to git
+	(cd ./shell/secrets/agenix && make push) || true
+
 update-vim: ## Update vim flake
 	cd ./portable/vim && nix flake update
 
@@ -47,7 +50,7 @@ update-versions: ## Update package versions
 
 update-pkgs: update-versions ## Update package versions
 
-update: ## Full update with ulimit fix
+update: push-agenix ## Full update with ulimit fix
 	@sh -c 'set -eu; \
 	orig_ulimit=$$(ulimit -n || echo 0); \
 	trap "ulimit -n $$orig_ulimit >/dev/null 2>&1 || true" EXIT; \
