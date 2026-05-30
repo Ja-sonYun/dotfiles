@@ -109,9 +109,9 @@ in
       );
     onActivation = {
       # "zap" removes manually installed brews and casks
-      cleanup = "zap";
+      cleanup = "none";
       autoUpdate = false;
-      upgrade = false;
+      upgrade = true;
     };
     brews = brews ++ allBrews;
     casks = casks ++ allCasks;

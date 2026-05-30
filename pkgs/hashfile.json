@@ -39,8 +39,8 @@
       "hash": "sha256-8OAjjrgeurnNuVDAuQm0zecLS90N9cHKFbHzyRUgZvM="
     },
     "firecrawl-mcp": {
-      "version": "3.19.1",
-      "hash": "sha256-2RQYzaxZTRmDj2FuvyTSpsd28ObAh0oLAvrfN2cwu/4="
+      "version": "3.20.1",
+      "hash": "sha256-CDlgHMQ9PYsGdbNzq2dadQdFTBJUR/8ye42SW4ZjrnQ="
     },
     "awscli-local": {
       "version": "0.22.2",
@@ -51,8 +51,12 @@
       "hash": "sha256-7WyvOu+sinVjvAxndMPsyDho9vA9hh/0YrIvEdceV4Y="
     },
     "codex": {
-      "version": "0.134.0",
-      "hash": "sha256-dDVuIHz/JP5rm2/+SOxPcjxsB4r9MzgQiBbrO23/dck="
+      "version": "0.135.0",
+      "hash": "sha256-BK4d5LtW+gBVbNLEpaGkF7KAGNgKh4F3RYnFGGwrqr4="
+    },
+    "claude-code": {
+      "version": "2.1.158",
+      "hash": "sha256-8GkyGuANtjMfUf+E2B0rO0R1m4PVeyqAEZREnIh4W7U="
     },
     "context7-mcp": {
       "version": "3.0.0",

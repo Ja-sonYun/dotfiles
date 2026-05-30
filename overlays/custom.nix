@@ -36,9 +36,8 @@
     agenix-utils = final.callPackage ../libs/nixlib/pkg/agenix-utils { };
 
     # Npm
-    codex = final.callPackage ../pkgs/codex {
-      codex = prev.codex;
-    };
+    claude-code = final.callPackage ../pkgs/claude-code { };
+    codex = final.callPackage ../pkgs/codex { };
     context7 = final.callPackage ../pkgs/context7 { };
     chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
     firecrawl-mcp = final.callPackage ../pkgs/firecrawl-mcp { };

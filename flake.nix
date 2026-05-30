@@ -248,6 +248,9 @@
           inherit system specialArgs pkgs;
           modules = [
             # System configurations
+            agenix.darwinModules.default
+            (import "${agenix-secrets}/systemmanager.nix")
+
             ./hosts/aarch64-darwin/shell.nix
 
             ./hosts/aarch64-darwin/core/nix-core.nix

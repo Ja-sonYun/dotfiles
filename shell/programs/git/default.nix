@@ -129,6 +129,7 @@
       ".codex*"
       ".sisyphus"
       "tfplan.bin"
+      "out.tfplan"
     ];
 
     includes = [

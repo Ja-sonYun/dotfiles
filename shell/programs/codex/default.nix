@@ -28,7 +28,8 @@ let
       wrapProgram $out/bin/codex \
         --prefix PATH : "${lib.makeBinPath codexPath}" \
         --prefix PATH : "$out/bin" \
-        --prefix PYTHONPATH : "${pythonWithPackages}/${pythonWithPackages.sitePackages}"
+        --prefix PYTHONPATH : "${pythonWithPackages}/${pythonWithPackages.sitePackages}" \
+        --run "set -- --config 'projects.''''\"\$PWD\"''''.trust_level=\"trusted\"'"
     '';
   };
 
