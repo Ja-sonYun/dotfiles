@@ -17,6 +17,7 @@ let
     "tccutil"
     "localstack/tap/localstack-cli"
     "bitwarden-cli"
+    "mole"
   ]
   ++ (
     if purpose == "main" then
