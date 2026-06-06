@@ -31,16 +31,16 @@
       "hash": "sha256-zhr70WS239eCFdIM0XcXzsv7bUzehfyeTjYHZIIFWdU="
     },
     "n8n-mcp": {
-      "version": "2.56.0",
-      "hash": "sha256-auf8fr7juzpnTgvB3x6f65d2coTIAzg3oYtynRA5J8o="
+      "version": "2.57.1",
+      "hash": "sha256-FY/6L1cRbCDUzXXAuvNZ1q/j/ZmYojpt05XbOM2MJoY="
     },
     "macnotesapp": {
       "version": "0.8.2",
       "hash": "sha256-8OAjjrgeurnNuVDAuQm0zecLS90N9cHKFbHzyRUgZvM="
     },
     "firecrawl-mcp": {
-      "version": "3.20.1",
-      "hash": "sha256-CDlgHMQ9PYsGdbNzq2dadQdFTBJUR/8ye42SW4ZjrnQ="
+      "version": "3.20.2",
+      "hash": "sha256-AuddnC2INu1xE8eld5Z1USdo4bdUZVUCtUGmML7/UYw="
     },
     "awscli-local": {
       "version": "0.22.2",
@@ -51,16 +51,16 @@
       "hash": "sha256-7WyvOu+sinVjvAxndMPsyDho9vA9hh/0YrIvEdceV4Y="
     },
     "codex": {
-      "version": "0.135.0",
-      "hash": "sha256-BK4d5LtW+gBVbNLEpaGkF7KAGNgKh4F3RYnFGGwrqr4="
+      "version": "0.137.0",
+      "hash": "sha256-71EWFffpb8ith4jIIXlOmK0FDrJsXFJMZgXbyqdUk8A="
     },
     "claude-code": {
-      "version": "2.1.158",
-      "hash": "sha256-8GkyGuANtjMfUf+E2B0rO0R1m4PVeyqAEZREnIh4W7U="
+      "version": "2.1.167",
+      "hash": "sha256-AiRyDXj/qCzfzBhdU8dvkuN3yoyr3HC4oHRSlbMk2Cs="
     },
     "context7-mcp": {
-      "version": "3.0.0",
-      "hash": "sha256-k/evk/MJDtwDfo3eSetR7ItMVAw5eW4XVnqoYs40Nyk="
+      "version": "3.1.0",
+      "hash": "sha256-7Sa7yzNqnXP5v4ys9GjACEzot5os0g00IUkdMxFYtIk="
     }
   },
   "Jays-MacBook-Pro-Server": {

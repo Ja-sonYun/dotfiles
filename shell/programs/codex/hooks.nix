@@ -3,6 +3,7 @@
   lib,
   config,
   agenix-secrets,
+  codexHome,
 }:
 let
   codexHookDir = "${agenix-secrets}/ai-bundle/hooks";
@@ -14,16 +15,29 @@ let
         { file = "user-prompt-submit.sh"; }
       ];
     };
+    PermissionRequest = {
+      eventName = "permission_request";
+      entries = [
+        {
+          command = "PATH=${pkgs.terminal-notifier}/bin:$PATH ${pkgs.python3}/bin/python ${toString ./notify.py} '{\"type\":\"permission-request\",\"thread-id\":\"permission\",\"message\":\"Permission requested\"}'";
+          timeout = 30;
+        }
+      ];
+    };
   };
 
-  mkCommandHook = file: {
+  mkCommandHook = entry: {
     type = "command";
-    command = "CODEX_HOOK_DIR=${codexHookDir} CODEX_HOOK_PYTHON=${pkgs.python3}/bin/python ${pkgs.bash}/bin/bash ${codexHookDir}/${file}";
+    command =
+      if entry ? command then
+        entry.command
+      else
+        "CODEX_HOOK_DIR=${codexHookDir} CODEX_HOOK_PYTHON=${pkgs.python3}/bin/python ${pkgs.bash}/bin/bash ${codexHookDir}/${entry.file}";
   };
 
   mkHook =
     entry:
-    (mkCommandHook entry.file)
+    (mkCommandHook entry)
     // lib.optionalAttrs (entry ? timeout) {
       timeout = entry.timeout;
     }
@@ -52,7 +66,7 @@ let
 
   mkStateKey =
     eventName: index:
-    "${config.home.homeDirectory}/.codex/config.toml:${eventName}:${toString index}:0";
+    "${codexHome}/config.toml:${eventName}:${toString index}:0";
 
   mkHookStateFor =
     definition:

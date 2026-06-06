@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "firecrawl-mcp";
   packageManager = "npm";
   packageName = "firecrawl-mcp";
-  packageVersion = "3.20.1";
+  packageVersion = "3.20.2";
   name = "firecrawl-mcp";
   exposedBinaries = [
     "firecrawl-mcp"

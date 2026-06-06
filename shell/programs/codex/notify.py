@@ -8,6 +8,10 @@ import sys
 
 MAX_TITLE_LEN = 120
 MAX_MESSAGE_LEN = 2000
+NOTIFICATION_SOUNDS = {
+    "agent-turn-complete": "Glass",
+    "permission-request": "Funk",
+}
 
 
 def _sanitize_text(value: str, max_len: int) -> str:
@@ -57,6 +61,10 @@ def main() -> int:
                 title = f"Codex: {assistant_message}"
             else:
                 title = "Codex: Turn Complete!"
+        case "permission-request":
+            assistant_message = None
+            title = "Codex: Approval"
+            message = notification.get("message", "Permission requested")
         case _:
             print(f"not sending a push notification for: {notification_type}")
             return 0
@@ -76,6 +84,8 @@ def main() -> int:
             title,
             "-message",
             message,
+            "-sound",
+            NOTIFICATION_SOUNDS[notification_type],
             "-group",
             "codex-" + str(thread_id),
             "-ignoreDnD",
