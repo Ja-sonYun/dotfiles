@@ -18,6 +18,7 @@ let
     "localstack/tap/localstack-cli"
     "bitwarden-cli"
     "mole"
+    "ollama"
   ]
   ++ (
     if purpose == "main" then

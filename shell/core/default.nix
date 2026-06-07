@@ -63,6 +63,8 @@
     dua
     glance
 
+    btop
+
     cookiecutter
 
     cloudflared
@@ -78,7 +80,6 @@
     awscli2
     awscli-local
 
-    ollama
     llmfit
 
     (ledger.override { usePython = true; })
