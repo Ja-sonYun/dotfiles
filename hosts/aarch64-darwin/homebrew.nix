@@ -19,6 +19,7 @@ let
     "bitwarden-cli"
     "mole"
     "ollama"
+    "container"
   ]
   ++ (
     if purpose == "main" then
@@ -73,6 +74,7 @@ let
         "cleanshot"
         "microsoft-remote-desktop"
         "protonvpn"
+        "bambu-studio"
 
         # TODO: Move to nix
         "macfuse"

@@ -21,6 +21,7 @@
     ./programs/rtk
     ./programs/claude
     ./programs/codex
+    ./programs/open-code-review
   ];
 
   home.file.profile = {
