@@ -55,9 +55,6 @@
       # drawio = {
       #   url = "https://mcp.draw.io/mcp";
       # };
-      grep_app = {
-        url = "https://mcp.grep.app";
-      };
     };
   };
 }

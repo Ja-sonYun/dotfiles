@@ -1,9 +1,8 @@
 {
   pkgs,
   lib,
-  config,
   agenix-secrets,
-  codexHome,
+  codexConfigFile,
 }:
 let
   codexHookDir = "${agenix-secrets}/ai-bundle/hooks";
@@ -66,7 +65,7 @@ let
 
   mkStateKey =
     eventName: index:
-    "${codexHome}/config.toml:${eventName}:${toString index}:0";
+    "${codexConfigFile}:${eventName}:${toString index}:0";
 
   mkHookStateFor =
     definition:

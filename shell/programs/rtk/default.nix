@@ -20,6 +20,6 @@ in
 
   home.file = {
     ".claude/RTK.md".source = claudeRtkAwareness;
-    ".codex-cli/RTK.md".source = codexRtkAwareness;
+    ".codex/RTK.md".source = codexRtkAwareness;
   };
 }

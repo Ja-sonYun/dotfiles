@@ -19,11 +19,7 @@ let
     pythonWithPackages
   ];
 
-  codexConfigDir = ".codex-cli";
-  codexConfigGuiDir = ".codex";
-  codexHome = "${config.home.homeDirectory}/${codexConfigDir}";
-  skillsDir = "${codexConfigDir}/skills";
-  tomlFormat = pkgs.formats.toml { };
+  codexConfigFile = "${config.home.homeDirectory}/.codex/config.toml";
 
   codexWrapped = pkgs.symlinkJoin {
     name = "codex-wrapped-${lib.getVersion pkgs.codex}";
@@ -32,7 +28,6 @@ let
     postBuild = ''
       rm -f $out/bin/.codex-wrapped
       wrapProgram $out/bin/codex \
-        --set CODEX_HOME "${codexHome}" \
         --prefix PATH : "${lib.makeBinPath codexPath}" \
         --prefix PATH : "$out/bin" \
         --prefix PYTHONPATH : "${pythonWithPackages}/${pythonWithPackages.sitePackages}" \
@@ -51,9 +46,8 @@ let
     inherit
       pkgs
       lib
-      config
       agenix-secrets
-      codexHome
+      codexConfigFile
       ;
   };
 
@@ -141,58 +135,23 @@ let
 
   codexContext =
     (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc))
-    + "\n\n@${codexHome}/RTK.md\n";
+    + "\n\n@${config.home.homeDirectory}/.codex/RTK.md\n";
 
   codexSkills = builtins.mapAttrs (name: _: aiBundle.skillsSrc + "/${name}") (
     builtins.readDir aiBundle.skillsSrc
   );
-
-  codexRules = {
-    managed = ./rules/managed.rules;
-  };
-
-  mkSkillEntry = name: source: lib.nameValuePair "${skillsDir}/${name}" { inherit source; };
-
-  mkRuleEntry =
-    name: source:
-    lib.nameValuePair "${codexConfigDir}/rules/${name}.rules" { inherit source; };
-
-  transformedMcpServers = lib.optionalAttrs config.programs.mcp.enable (
-    lib.mapAttrs (
-      _name: server:
-      (lib.removeAttrs server [
-        "disabled"
-        "headers"
-      ])
-      // (lib.optionalAttrs (server ? headers && !(server ? http_headers)) {
-        http_headers = server.headers;
-      })
-      // {
-        enabled = !(server.disabled or false);
-      }
-    ) config.programs.mcp.servers
-  );
-
-  settingMcpServers = lib.attrByPath [ "mcp_servers" ] { } codexSettings;
-  mergedMcpServers = transformedMcpServers // settingMcpServers;
-  mergedSettings =
-    codexSettings // lib.optionalAttrs (mergedMcpServers != { }) { mcp_servers = mergedMcpServers; };
 in
 {
-  home.packages = [ codexWrapped ];
+  programs.codex = {
+    enable = true;
+    package = codexWrapped;
+    enableMcpIntegration = true;
 
-  home.file =
-    {
-      "${codexConfigDir}/config.toml".source = tomlFormat.generate "codex-config" mergedSettings;
-      "${codexConfigDir}/AGENTS.md".text = codexContext;
-      "${codexConfigGuiDir}/AGENTS.md".text = codexContext;
-
-      "${codexConfigDir}/agents" = {
-        source = aiBundle.agentsSrc;
-        recursive = true;
-        force = true;
-      };
-    }
-    // lib.mapAttrs' mkSkillEntry codexSkills
-    // lib.mapAttrs' mkRuleEntry codexRules;
+    context = codexContext;
+    skills = codexSkills;
+    rules = {
+      managed = ./rules/managed.rules;
+    };
+    settings = codexSettings;
+  };
 }
