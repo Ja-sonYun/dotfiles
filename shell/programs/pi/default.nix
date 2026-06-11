@@ -26,9 +26,27 @@ let
     pkgs.pi-subagents.piExtensionPath
     pkgs.pi-permission-system.piExtensionPath
     pkgs.pi-mcp-adapter.piExtensionPath
-    pkgs.pi-lens.piExtensionPath
     pkgs.piolium.piExtensionPath
   ];
+
+  piLocalExtensionEntries = lib.filterAttrs
+    (name: type:
+      (type == "regular" && (lib.hasSuffix ".ts" name || lib.hasSuffix ".json" name)) || type == "directory")
+    (builtins.readDir ./extensions);
+
+  piLocalExtensionHomeFiles = lib.mapAttrs'
+    (name: _type: lib.nameValuePair ".pi/agent/extensions/${name}" {
+      force = true;
+      source = ./extensions + "/${name}";
+    })
+    piLocalExtensionEntries;
+
+  piExtensionHomeFiles = piLocalExtensionHomeFiles // {
+    ".pi/agent/extensions/pi-permission-system/config.json" = {
+      force = true;
+      text = piPermissionConfigJson;
+    };
+  };
 
   extensionFlags = lib.concatMapStringsSep " \\\n        "
     (
@@ -91,23 +109,25 @@ in
     piWithExtensions
   ];
 
-  home.file.".pi/agent/AGENTS.md" = {
-    force = true;
-    text = piAgentsMd;
-  };
+  home.file = piExtensionHomeFiles // {
+    ".pi/agent/AGENTS.md" = {
+      force = true;
+      text = piAgentsMd;
+    };
 
-  home.file.".pi/agent/settings.json" = {
-    force = true;
-    text = builtins.toJSON piSettings;
-  };
+    ".pi/agent/agents" = {
+      force = true;
+      source = aiBundle.agentsSrc;
+    };
 
-  home.file.".pi/agent/keybindings.json" = {
-    force = true;
-    text = builtins.toJSON piKeybindings;
-  };
+    ".pi/agent/settings.json" = {
+      force = true;
+      text = builtins.toJSON piSettings;
+    };
 
-  home.file.".pi/agent/extensions/pi-permission-system/config.json" = {
-    force = true;
-    text = piPermissionConfigJson;
+    ".pi/agent/keybindings.json" = {
+      force = true;
+      text = builtins.toJSON piKeybindings;
+    };
   };
 }
