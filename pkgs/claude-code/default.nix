@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "claude-code";
   packageManager = "npm";
   packageName = "@anthropic-ai/claude-code";
-  packageVersion = "2.1.170";
+  packageVersion = "2.1.172";
   name = "claude-code";
   postInstall = ''
     makeWrapper "$(command -v node)" "$out/bin/claude" \

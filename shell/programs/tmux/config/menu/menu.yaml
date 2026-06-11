@@ -184,6 +184,24 @@ items:
         w: 60%
         h: 55%
 
+  - Menu:
+      name: "pi"
+      shortcut: p
+      command: _gen-close-hook pi && direnv exec . pi
+      session: true
+      session_name: "pi"
+      session_on_dir: true
+      run_on_git_root: true
+      environment:
+        MULTI_SESSION_COMMAND: "direnv exec . pi"
+        NO_WINDOW_MGNT: "1"
+        CTRL_C_AS_CLOSE: "1"
+        MENU_POPUP: "1"
+
+      position:
+        w: 60%
+        h: 55%
+
   - Seperate: {}
 
   - Menu:

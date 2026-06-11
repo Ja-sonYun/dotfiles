@@ -21,6 +21,7 @@
     ./programs/rtk
     ./programs/claude
     ./programs/codex
+    ./programs/pi
     ./programs/open-code-review
   ];
 

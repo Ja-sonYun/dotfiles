@@ -103,14 +103,7 @@ in
       autoUpdate = false;
     };
     # will not be uninstalled when removed
-    masApps =
-      { }
-      // (
-        if purpose == "main" then
-          { }
-        else
-          { }
-      );
+    masApps = { } // (if purpose == "main" then { } else { });
     onActivation = {
       # "zap" removes manually installed brews and casks
       cleanup = "none";
