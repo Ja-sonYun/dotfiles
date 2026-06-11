@@ -1,11 +1,23 @@
 { pkgs, ... }:
 
+let
+  packageVersion = "2.1.173";
+  nativePackage = {
+    aarch64-darwin = "@anthropic-ai/claude-code-darwin-arm64";
+    x86_64-darwin = "@anthropic-ai/claude-code-darwin-x64";
+    aarch64-linux = "@anthropic-ai/claude-code-linux-arm64";
+    x86_64-linux = "@anthropic-ai/claude-code-linux-x64";
+  }.${pkgs.stdenv.hostPlatform.system} or null;
+in
 pkgs.lib.mkPackageDerivation {
   inherit pkgs;
   hashKey = "claude-code";
   packageManager = "npm";
   packageName = "@anthropic-ai/claude-code";
-  packageVersion = "2.1.172";
+  inherit packageVersion;
+  extraPackages = pkgs.lib.optionals (nativePackage != null) [
+    "${nativePackage}@${packageVersion}"
+  ];
   name = "claude-code";
   postInstall = ''
     makeWrapper "$(command -v node)" "$out/bin/claude" \

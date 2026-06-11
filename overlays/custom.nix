@@ -45,24 +45,10 @@
     n8n-mcp = final.callPackage ../pkgs/n8n-mcp { };
     pi = final.callPackage ../pkgs/pi { };
     pi-subagents = final.callPackage ../pkgs/pi-extensions/pi-subagents { };
-    pi-retry = final.callPackage ../pkgs/pi-extensions/pi-retry { };
+    pi-permission-system = final.callPackage ../pkgs/pi-extensions/pi-permission-system { };
     pi-mcp-adapter = final.callPackage ../pkgs/pi-extensions/pi-mcp-adapter { };
-    context-mode = final.callPackage ../pkgs/pi-extensions/context-mode { };
-    rpiv-ask-user-question = final.callPackage ../pkgs/pi-extensions/rpiv-ask-user-question { };
-    rpiv-todo = final.callPackage ../pkgs/pi-extensions/rpiv-todo { };
-    rpiv-advisor = final.callPackage ../pkgs/pi-extensions/rpiv-advisor { };
-    rpiv-web-tools = final.callPackage ../pkgs/pi-extensions/rpiv-web-tools { };
-    pi-simplify = final.callPackage ../pkgs/pi-extensions/pi-simplify { };
     piolium = final.callPackage ../pkgs/pi-extensions/piolium { };
     pi-lens = final.callPackage ../pkgs/pi-extensions/pi-lens { };
-    rpiv-i18n = final.callPackage ../pkgs/pi-extensions/rpiv-i18n { };
-    rpiv-args = final.callPackage ../pkgs/pi-extensions/rpiv-args { };
-    pi-chrome = final.callPackage ../pkgs/pi-extensions/pi-chrome { };
-    rpiv-pi = final.callPackage ../pkgs/pi-extensions/rpiv-pi { };
-    pi-markdown-preview = final.callPackage ../pkgs/pi-extensions/pi-markdown-preview { };
-    pi-lean-ctx = final.callPackage ../pkgs/pi-extensions/pi-lean-ctx { };
-    lean-ctx = final.callPackage ../pkgs/lean-ctx { };
-    rpiv-btw = final.callPackage ../pkgs/pi-extensions/rpiv-btw { };
 
     # Pypi
     aws-documentation = final.callPackage ../pkgs/aws-documentation { };

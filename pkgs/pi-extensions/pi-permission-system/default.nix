@@ -1,13 +1,13 @@
 { pkgs, ... }:
 
 let
-  name = "pi-retry";
-  packageName = "@narumitw/pi-retry";
+  name = "pi-permission-system";
+  packageName = "@gotgenes/pi-permission-system";
   package = pkgs.lib.mkPackageDerivation {
     inherit pkgs name packageName;
-    hashKey = "pi-retry";
+    hashKey = "pi-permission-system";
     packageManager = "npm";
-    packageVersion = "0.1.37";
+    packageVersion = "10.10.0";
   };
 in
 package // {

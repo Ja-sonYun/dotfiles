@@ -55,8 +55,8 @@
       "hash": "sha256-ONb2LBCztkQhXbhKXg9GxrSQ6HjNbYeDgS5Ts43Dd6I="
     },
     "claude-code": {
-      "version": "2.1.172",
-      "hash": "sha256-6HW3n5bF/ON5Zi7po4QbgFTQruhRfnbOZy+GoTqOvDU="
+      "version": "2.1.173",
+      "hash": "sha256-uHXER7idD4+vTQRYUOkqaEdn33eySjXwR2+9ekEJvV8="
     },
     "context7-mcp": {
       "version": "3.1.0",
@@ -74,73 +74,21 @@
       "version": "0.10.2",
       "hash": "sha256-JcMdt77PyUpo6GCWNREUjMGUF6aMr/T52Z1E3HrDhto="
     },
-    "pi-retry": {
-      "version": "0.1.37",
-      "hash": "sha256-zr2AgHHD//jjc4Ca/GaLngqjcXoZRUrFn+vF7xWWpkY="
-    },
     "pi-lens": {
       "version": "3.8.50",
       "hash": "sha256-HL6MOlEYNvc/zU2lrwUec6223wXWMtSQ3FXh/KN6y0w="
-    },
-    "pi-chrome": {
-      "version": "0.15.38",
-      "hash": "sha256-YgadE6qRVYFypvW4n4CpistUMpU8+4Tn4qPPNAt4De4="
-    },
-    "rpiv-todo": {
-      "version": "1.19.1",
-      "hash": "sha256-txaV+n4d4j2dzttKxoR+5Q64yBgvqh/xPk6ygJfsb/8="
-    },
-    "rpiv-i18n": {
-      "version": "1.19.1",
-      "hash": "sha256-LF62aKEXtiolNpHjdG8lGcqDRA8oRDNw0ApiDTBrtGs="
-    },
-    "rpiv-ask-user-question": {
-      "version": "1.19.1",
-      "hash": "sha256-r2llQsiq5ZiveJGwHHNFkJK+IpWdiK4TLurKv1ZJbwA="
-    },
-    "rpiv-pi": {
-      "version": "1.19.1",
-      "hash": "sha256-Hs57ZJlAS6gHLjNM34e6B3PmkqMAk8j3BTjHsJyg8do="
-    },
-    "rpiv-args": {
-      "version": "1.19.1",
-      "hash": "sha256-W9Vx3CnqLkIS3b6WdfnFWix41qiYCJgBjJrKZfcCS4o="
-    },
-    "pi-markdown-preview": {
-      "version": "0.10.0",
-      "hash": "sha256-9u986I0gKThj8DmNIi63yuswDktJNzodrXpWhDVWz00="
     },
     "piolium": {
       "version": "0.0.10",
       "hash": "sha256-Gtd0mZazGnBUk6ac8pg8//QpllcM8hO/T6GQF9p6p2Y="
     },
-    "rpiv-btw": {
-      "version": "1.19.1",
-      "hash": "sha256-kH8TNQ5eU9Jc6aR7bSHUBlyfd48MxMK3XdTz2OUXpxc="
-    },
-    "pi-lean-ctx": {
-      "version": "3.7.5",
-      "hash": "sha256-ffJiSEhrU08cge86Hkf4ILOXiQkv7jVTKXezMrThvno="
-    },
     "pi-mcp-adapter": {
       "version": "2.9.0",
       "hash": "sha256-2CC52hzACOx9ZIHsElKgXWFJ3RknGR1Vf3I4K5LUox4="
     },
-    "pi-simplify": {
-      "version": "0.2.2",
-      "hash": "sha256-nR8NgluLyTXgJcQ9zxT5oMg83NOLdP/UQQTH1089/J4="
-    },
-    "context-mode": {
-      "version": "1.0.162",
-      "hash": "sha256-aL45MAlq18AhEShYjlhqV/qHdDkIeYji0kH333noYrc="
-    },
-    "rpiv-web-tools": {
-      "version": "1.19.1",
-      "hash": "sha256-uAT1FcpafR8rPCsWGy2PHqq4AHUkOsHZ9UIWoh/Bh3c="
-    },
-    "rpiv-advisor": {
-      "version": "1.19.1",
-      "hash": "sha256-nwDQJxq1ZoBk+GWewMucaaDeRyslTJguyJkoBrVut+8="
+    "pi-permission-system": {
+      "version": "10.10.0",
+      "hash": "sha256-FuyTbcrRhbl2ymaKTYSUGMg/4lQ9+yMrevh+ucbPJpQ="
     }
   },
   "Jays-MacBook-Pro-Server": {
