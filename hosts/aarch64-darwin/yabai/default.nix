@@ -132,6 +132,12 @@ let
       "sub-layer" = "normal";
     }
     {
+      label = "Bambu Studio";
+      app = "^Bambu Studio$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
       label = "Safari Settings";
       app = "^Safari$";
       title = "^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$";

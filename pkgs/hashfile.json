@@ -55,8 +55,8 @@
       "hash": "sha256-ONb2LBCztkQhXbhKXg9GxrSQ6HjNbYeDgS5Ts43Dd6I="
     },
     "claude-code": {
-      "version": "2.1.173",
-      "hash": "sha256-uHXER7idD4+vTQRYUOkqaEdn33eySjXwR2+9ekEJvV8="
+      "version": "2.1.175",
+      "hash": "sha256-LAgkPbYtcls1JiyxAxNt7XHjZKd7e9aZ71C/BXk90zQ="
     },
     "context7-mcp": {
       "version": "3.2.0",
@@ -87,8 +87,8 @@
       "hash": "sha256-2CC52hzACOx9ZIHsElKgXWFJ3RknGR1Vf3I4K5LUox4="
     },
     "pi-permission-system": {
-      "version": "10.10.0",
-      "hash": "sha256-FuyTbcrRhbl2ymaKTYSUGMg/4lQ9+yMrevh+ucbPJpQ="
+      "version": "12.0.0",
+      "hash": "sha256-ocCLIs73Bzvp66w894VFIYvnFndYS4a7OzhQQXHk9Kg="
     }
   },
   "Jays-MacBook-Pro-Server": {

@@ -101,7 +101,12 @@ let
   };
 
   piKeybindings = {
-    "tui.input.newLine" = [ "alt+enter" ];
+    "tui.input.newLine" = [ "enter" ];
+    "tui.input.submit" = [ "shift+enter" ];
+    "tui.editor.deleteToLineStart" = [ "alt+backspace" ];
+    "tui.editor.deleteWordBackward" = [ "ctrl+w" ];
+    "tui.editor.deleteCharForward" = [ "delete" ];
+    "tui.editor.deleteToLineEnd" = [ "ctrl+delete" ];
   };
 in
 {

@@ -81,6 +81,8 @@
         "cmd+a=select_all"
         "cmd+q=quit"
         "cmd+w=close_window"
+        "ctrl+enter=csi:13;5u"
+        "shift+enter=csi:13;2u"
       ];
     };
   };
