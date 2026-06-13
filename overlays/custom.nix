@@ -41,6 +41,7 @@
     open-code-review = final.callPackage ../pkgs/open-code-review { };
     context7 = final.callPackage ../pkgs/context7 { };
     chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
+    exa-mcp-server = final.callPackage ../pkgs/exa-mcp-server { };
     firecrawl-mcp = final.callPackage ../pkgs/firecrawl-mcp { };
     n8n-mcp = final.callPackage ../pkgs/n8n-mcp { };
     pi = final.callPackage ../pkgs/pi { };

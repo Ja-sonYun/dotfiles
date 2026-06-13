@@ -154,6 +154,7 @@ in
           "mcp__plugin_claude-code-home-manager_codex__*"
           "mcp__plugin_claude-code-home-manager_aws-documentation__*"
           "mcp__plugin_claude-code-home-manager_context7__*"
+          "mcp__plugin_claude-code-home-manager_exa__*"
           "mcp__plugin_claude-code-home-manager_grep_app__*"
           "mcp__plugin_claude-code-home-manager_websearch__*"
         ];

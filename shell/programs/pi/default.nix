@@ -8,23 +8,23 @@ let
   piVersion = lib.getVersion pkgs.pi;
   piAgentsMd = (lib.trim (builtins.readFile aiBundle.agentsMdSrc)) + "\n";
 
-  piPermissionRulesJson = builtins.readFile aiBundle.permissionsSrc;
-  piPermissionConfigJson = ''
-    {
-      "$schema": "https://raw.githubusercontent.com/gotgenes/pi-permission-system/main/schemas/permissions.schema.json",
-      "debugLog": false,
-      "permissionReviewLog": true,
-      "yoloMode": false,
-      "toolInputPreviewMaxLength": 400,
-      "toolTextSummaryMaxLength": 120,
-      "piInfrastructureReadPaths": [],
-      "permission": ${piPermissionRulesJson}
-    }
-  '';
+  # piPermissionRulesJson = builtins.readFile aiBundle.permissionsSrc;
+  # piPermissionConfigJson = ''
+  #   {
+  #     "$schema": "https://raw.githubusercontent.com/gotgenes/pi-permission-system/main/schemas/permissions.schema.json",
+  #     "debugLog": false,
+  #     "permissionReviewLog": true,
+  #     "yoloMode": false,
+  #     "toolInputPreviewMaxLength": 400,
+  #     "toolTextSummaryMaxLength": 120,
+  #     "piInfrastructureReadPaths": [],
+  #     "permission": ${piPermissionRulesJson}
+  #   }
+  # '';
 
   piExtensions = [
     pkgs.pi-subagents.piExtensionPath
-    pkgs.pi-permission-system.piExtensionPath
+    # pkgs.pi-permission-system.piExtensionPath
     pkgs.pi-mcp-adapter.piExtensionPath
     pkgs.piolium.piExtensionPath
   ];
@@ -42,10 +42,10 @@ let
     piLocalExtensionEntries;
 
   piExtensionHomeFiles = piLocalExtensionHomeFiles // {
-    ".pi/agent/extensions/pi-permission-system/config.json" = {
-      force = true;
-      text = piPermissionConfigJson;
-    };
+    # ".pi/agent/extensions/pi-permission-system/config.json" = {
+    #   force = true;
+    #   text = piPermissionConfigJson;
+    # };
   };
 
   extensionFlags = lib.concatMapStringsSep " \\\n        "
@@ -101,8 +101,8 @@ let
   };
 
   piKeybindings = {
-    "tui.input.newLine" = [ "enter" ];
-    "tui.input.submit" = [ "shift+enter" ];
+    "tui.input.newLine" = [ "shift+enter" ];
+    "tui.input.submit" = [ "enter" ];
     "tui.editor.deleteToLineStart" = [ "alt+backspace" ];
     "tui.editor.deleteWordBackward" = [ "ctrl+w" ];
     "tui.editor.deleteCharForward" = [ "delete" ];

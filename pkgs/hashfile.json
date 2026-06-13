@@ -89,6 +89,10 @@
     "pi-permission-system": {
       "version": "12.0.0",
       "hash": "sha256-ocCLIs73Bzvp66w894VFIYvnFndYS4a7OzhQQXHk9Kg="
+    },
+    "exa-mcp-server": {
+      "version": "3.2.1",
+      "hash": "sha256-5afuw+U22tUt+2oicjnRSGAYop9DVbkdKJlUKhQYwY8="
     }
   },
   "Jays-MacBook-Pro-Server": {

@@ -1,4 +1,4 @@
-{ lib, purpose, hostname, ... }:
+{ config, lib, purpose, hostname, ... }:
 let
   packageBrews =
     if hostname == "Jays-MacBook-Pro-Server" then
@@ -11,6 +11,15 @@ let
   allBrews = lib.concatMap (pkg: pkg.homebrew.brews or [ ]) packageBrews;
   allCasks = lib.concatMap (pkg: pkg.homebrew.casks or [ ]) packageBrews;
   allTaps = lib.concatMap (pkg: pkg.homebrew.taps or [ ]) packageBrews;
+
+  # Keep selected Homebrew formulae installed for dependencies, but unlinked from
+  # the Homebrew prefix bin directory so their commands are not exposed on PATH.
+  unlinkedBrews = [
+    "node"
+  ];
+  unlinkedBrewArgs = builtins.concatStringsSep " " (map lib.escapeShellArg unlinkedBrews);
+  brewBin = "${config.homebrew.prefix}/bin/brew";
+  brewUser = config.homebrew.user;
 
   brews = [
     "qemu"
@@ -114,4 +123,19 @@ in
     casks = casks ++ allCasks;
     taps = taps ++ allTaps;
   };
+
+  system.activationScripts.postActivation.text = lib.mkIf (unlinkedBrews != [ ]) (lib.mkAfter ''
+    brew=${lib.escapeShellArg brewBin}
+    if [ -x "$brew" ]; then
+      unlinked_formulae=(${unlinkedBrewArgs})
+      for formula in "''${unlinked_formulae[@]}"; do
+        if /usr/bin/sudo --user=${lib.escapeShellArg brewUser} --set-home \
+          env HOMEBREW_NO_AUTO_UPDATE=1 "$brew" list --formula "$formula" >/dev/null 2>&1; then
+          echo "unlinking Homebrew formula from PATH: $formula"
+          /usr/bin/sudo --user=${lib.escapeShellArg brewUser} --set-home \
+            env HOMEBREW_NO_AUTO_UPDATE=1 "$brew" unlink "$formula" >/dev/null 2>&1 || true
+        fi
+      done
+    fi
+  '');
 }

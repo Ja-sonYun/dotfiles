@@ -14,6 +14,14 @@
         args = [ ];
         env = { };
       };
+      exa = {
+        command = toString (pkgs.writeShellScript "exa-mcp-wrapper" ''
+          export EXA_API_KEY="${config.home.sessionVariables.EXA_API_KEY}"
+          exec ${pkgs.exa-mcp-server}/bin/exa-mcp-server
+        '');
+        args = [ ];
+        env = { };
+      };
       # websearch = {
       #   command = toString (pkgs.writeShellScript "firecrawl-mcp-wrapper" ''
       #     export FIRECRAWL_API_URL="https://firecrawl.test0.zip"
