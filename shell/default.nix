@@ -22,6 +22,7 @@
     ./programs/claude
     ./programs/codex
     ./programs/pi
+    ./programs/pi/develop.nix
     ./programs/open-code-review
   ];
 

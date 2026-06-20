@@ -1,9 +1,5 @@
 { pkgs, ... }:
 {
-  imports = [
-    ../../../../modules/zleFunc
-  ];
-
   programs.zleCommands = {
     _fix-grammar-with-openai = {
       command =

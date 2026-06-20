@@ -46,6 +46,11 @@ in
           # Require holding Command before the top-right hot corner opens Notification Center.
           "wvous-tr-modifier" = 1048576;
         };
+        "kCFPreferencesAnyApplication" = {
+          # Hide the language indicator
+          TSMLanguageIndicatorEnabled = false;
+
+        };
       };
 
       finder = {

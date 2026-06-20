@@ -194,6 +194,8 @@
           # Agenix for secrets management
           agenix.homeManagerModules.default
           (import "${agenix-secrets}/homemanager.nix")
+          ./modules/zshFunc
+          ./modules/zleFunc
           # Common configurations
           ./shell
           ./misc/fonts

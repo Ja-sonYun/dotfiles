@@ -2,9 +2,6 @@
 , ...
 }:
 {
-  imports = [
-    ../../../modules/zshFunc
-  ];
   home.packages = with pkgs; [
     tmux
     pstree

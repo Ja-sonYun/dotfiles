@@ -46,6 +46,7 @@ let
     "obsidian"
     "codex-app"
     "appcleaner"
+    "input-source-pro"
   ]
   ++ (
     if purpose == "main" then

@@ -1,9 +1,5 @@
 { pkgs, ... }:
 {
-  imports = [
-    ../../../../modules/zleFunc
-  ];
-
   programs.zleCommands = {
     _generate-shell-command-with-openai = {
       command =

@@ -3,10 +3,6 @@ let
   git-wt = (pkgs.writeShellScriptBin "git-wt" (builtins.readFile ./git-wt));
 in
 {
-  imports = [
-    ../../../modules/zshFunc
-  ];
-
   programs.zshFunc = {
     git-wt = {
       source = true;
