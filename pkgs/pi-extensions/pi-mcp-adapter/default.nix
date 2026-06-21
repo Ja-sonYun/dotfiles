@@ -7,7 +7,7 @@ let
     inherit pkgs name packageName;
     hashKey = "pi-mcp-adapter";
     packageManager = "npm";
-    packageVersion = "2.9.0";
+    packageVersion = "2.10.0";
   };
 in
 package // {

@@ -48,6 +48,7 @@ let
       lib
       agenix-secrets
       codexConfigFile
+      aiBundle
       ;
   };
 
@@ -133,9 +134,7 @@ let
     };
   };
 
-  codexContext =
-    (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc))
-    + "\n\n@${config.home.homeDirectory}/.codex/RTK.md\n";
+  codexContext = (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc)) + "\n";
 
   codexSkills = builtins.mapAttrs (name: _: aiBundle.skillsSrc + "/${name}") (
     builtins.readDir aiBundle.skillsSrc

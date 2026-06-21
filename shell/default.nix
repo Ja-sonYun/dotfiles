@@ -18,7 +18,6 @@
     ./programs/ghostty
     ./programs/weechat
     ./programs/mcp
-    ./programs/rtk
     ./programs/claude
     ./programs/codex
     ./programs/pi

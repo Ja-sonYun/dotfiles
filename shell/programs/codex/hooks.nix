@@ -3,15 +3,30 @@
   lib,
   agenix-secrets,
   codexConfigFile,
+  aiBundle,
 }:
 let
   codexHookDir = "${agenix-secrets}/ai-bundle/hooks";
+  ponytailHookEnv = "CLAUDE_PLUGIN_ROOT=${aiBundle.ponytailSrc} PLUGIN_DATA=$HOME/.codex/ponytail";
 
   hookDefinitions = {
+    SessionStart = {
+      eventName = "session_start";
+      entries = [
+        {
+          command = "${ponytailHookEnv} ${pkgs.nodejs_24}/bin/node ${aiBundle.ponytailSrc}/hooks/ponytail-activate.js";
+          timeout = 5;
+        }
+      ];
+    };
     UserPromptSubmit = {
       eventName = "user_prompt_submit";
       entries = [
         { file = "user-prompt-submit.sh"; }
+        {
+          command = "${ponytailHookEnv} ${pkgs.nodejs_24}/bin/node ${aiBundle.ponytailSrc}/hooks/ponytail-mode-tracker.js";
+          timeout = 5;
+        }
       ];
     };
     PermissionRequest = {
@@ -84,11 +99,11 @@ let
     lib.flatten (lib.mapAttrsToList (_: mkHookStateFor) hookDefinitions)
   );
 
-  codexHookSettings = lib.mapAttrs (_: definition: [
-    {
-      hooks = map mkHook definition.entries;
-    }
-  ]) hookDefinitions;
+  codexHookSettings = lib.mapAttrs (_: definition:
+    map (entry: {
+      hooks = [ (mkHook entry) ];
+    }) definition.entries
+  ) hookDefinitions;
 in
 {
   state = codexHookState;

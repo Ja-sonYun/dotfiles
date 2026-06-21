@@ -55,8 +55,8 @@
       "hash": "sha256-MKX6LG6CwXzpMA/kYZZ6dkLxEpWqA/wkfXqyeZoeB3E="
     },
     "claude-code": {
-      "version": "2.1.183",
-      "hash": "sha256-uDacSaAhCu7iWo0/PEqpLSZuUvS0b7tFNY3Faeimihg="
+      "version": "2.1.185",
+      "hash": "sha256-DEbgb4lcsBZC+GjMuwnfw6Slc/QfjrH0WW1eaZSlVQw="
     },
     "context7-mcp": {
       "version": "3.2.1",
@@ -67,12 +67,12 @@
       "hash": "sha256-8qVnwXom9RV2s6z47qPLygItz3yXK7hBKCuiUiDgyCc="
     },
     "pi": {
-      "version": "0.79.8",
-      "hash": "sha256-EPdejn3QbEjrCLJ4pPKoXzYOPMmnsZRr00PmD89kMIo="
+      "version": "0.79.9",
+      "hash": "sha256-KsHntULhEavzowRs3F38AbmLx1/7UsCPJCkCgzIdLBI="
     },
     "pi-subagents": {
-      "version": "0.29.0",
-      "hash": "sha256-65q7qsCP5wooaabfB7Oq/q5WZaNFovwRvuQbY9zal3A="
+      "version": "0.30.0",
+      "hash": "sha256-eSJEb+ZcwAimJEbZ+vWciQ8GHNMN+Zt5cr8xomDo5XM="
     },
     "pi-lens": {
       "version": "3.8.53",
@@ -87,8 +87,8 @@
       "hash": "sha256-oxxAwuaaJl1fwTD9MbRSI1TrJ3Pv5rPj28MmC6xbcDE="
     },
     "pi-permission-system": {
-      "version": "15.0.1",
-      "hash": "sha256-MMuNFz3/8NRYJ90lAnTca9ChYoMZLxl0LN/gtfJpI/Q="
+      "version": "16.0.0",
+      "hash": "sha256-iXX7iZNTpe/NhZHOAtbJz0Eo/Wb08cziwNZLVxpGWPs="
     },
     "exa-mcp-server": {
       "version": "3.2.1",

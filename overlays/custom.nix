@@ -45,6 +45,7 @@
     firecrawl-mcp = final.callPackage ../pkgs/firecrawl-mcp { };
     n8n-mcp = final.callPackage ../pkgs/n8n-mcp { };
     pi = final.callPackage ../pkgs/pi { };
+    ponytail = final.callPackage ../pkgs/ponytail { };
     pi-subagents = final.callPackage ../pkgs/pi-extensions/pi-subagents { };
     pi-permission-system = final.callPackage ../pkgs/pi-extensions/pi-permission-system { };
     pi-mcp-adapter = final.callPackage ../pkgs/pi-extensions/pi-mcp-adapter { };

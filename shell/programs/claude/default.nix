@@ -5,6 +5,7 @@
 }:
 let
   aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
+  ponytailHookEnv = "CLAUDE_PLUGIN_ROOT=${aiBundle.ponytailSrc}";
 
   claudeMcpServers = {
     codex = {
@@ -165,13 +166,25 @@ in
       };
       alwaysThinkingEnabled = true;
       hooks = {
-        PreToolUse = [
+        SessionStart = [
           {
-            matcher = "Bash";
+            matcher = "startup|resume|clear|compact";
             hooks = [
               {
                 type = "command";
-                command = "rtk hook claude";
+                command = "${ponytailHookEnv} ${pkgs.nodejs_24}/bin/node ${aiBundle.ponytailSrc}/hooks/ponytail-activate.js";
+                timeout = 5;
+              }
+            ];
+          }
+        ];
+        UserPromptSubmit = [
+          {
+            hooks = [
+              {
+                type = "command";
+                command = "${ponytailHookEnv} ${pkgs.nodejs_24}/bin/node ${aiBundle.ponytailSrc}/hooks/ponytail-mode-tracker.js";
+                timeout = 5;
               }
             ];
           }
@@ -207,9 +220,13 @@ in
       };
       promptSuggestionEnabled = false;
       effortLevel = "high";
+      statusLine = {
+        type = "command";
+        command = "${pkgs.bash}/bin/bash ${aiBundle.ponytailSrc}/hooks/ponytail-statusline.sh";
+      };
     };
 
-    context = (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc)) + "\n\n@RTK.md\n";
+    context = (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc)) + "\n";
     rulesDir = "${aiBundle.rulesSrc}";
     agentsDir = "${aiBundle.agentsSrc}";
     skills = builtins.mapAttrs (name: _: "${aiBundle.skillsSrc}/${name}") (builtins.readDir aiBundle.skillsSrc);
