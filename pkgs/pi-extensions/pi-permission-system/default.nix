@@ -7,7 +7,7 @@ let
     inherit pkgs name packageName;
     hashKey = "pi-permission-system";
     packageManager = "npm";
-    packageVersion = "16.0.0";
+    packageVersion = "16.0.1";
   };
 in
 package // {
