@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 <filename>"
-    exit 1
+	echo "Usage: $0 <filename>"
+	exit 1
 fi
 
 filename=$1
 
-if [[ ! "$filename" =~ \.json$ ]]; then
-    echo "Error: Filename must end with .json"
-    exit 1
+if [[ ! $filename =~ \.json$ ]]; then
+	echo "Error: Filename must end with .json"
+	exit 1
 fi
 
 tempdir=$(mktemp -d)
 
 # Make sure the temp directory gets removed on script exit.
-trap "exit 1"           HUP INT PIPE QUIT TERM
-trap 'rm -rf "$TEMPD"'  EXIT
+trap "exit 1" HUP INT PIPE QUIT TERM
+trap 'rm -rf "$TEMPD"' EXIT
 
 terraform plan -out "$tempdir"/tf.plan
-terraform show -json "$tempdir"/tf.plan > "$filename"
+terraform show -json "$tempdir"/tf.plan >"$filename"

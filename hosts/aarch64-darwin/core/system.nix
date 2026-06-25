@@ -1,8 +1,9 @@
-{ configDir
-, hostname
-, userhome
-, username
-, ...
+{
+  configDir,
+  hostname,
+  userhome,
+  username,
+  ...
 }:
 
 let
@@ -24,7 +25,7 @@ let
         pmset -a disablesleep 1
       ''
     else
-      '''';
+      "";
 in
 {
   # macOS system configuration.

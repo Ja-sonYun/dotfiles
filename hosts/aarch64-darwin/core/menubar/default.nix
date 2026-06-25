@@ -1,6 +1,7 @@
-{ lib
-, username
-, ...
+{
+  lib,
+  username,
+  ...
 }:
 
 let

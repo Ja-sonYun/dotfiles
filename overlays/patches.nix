@@ -1,7 +1,7 @@
 {
   # Override swift-format to skip build on Linux
   swift-format-skip-linux =
-    final: prev:
+    _final: prev:
     prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
       swift-format = prev.runCommand "swift-format-dummy" { } "mkdir -p $out/bin";
     };
@@ -21,7 +21,7 @@
   };
 
   # Override upstream packages using our local pkgs/* definitions
-  unstable-pkgs-override = final: prev: {
+  unstable-pkgs-override = _final: _prev: {
     # yabai = final.callPackage ../pkgs/yabai { inherit prev final; };
   };
 }

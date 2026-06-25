@@ -1,8 +1,6 @@
 # All devShell definitions, composed from lib.nix fragments.
 {
   pkgs,
-  pkgs-terraform,
-  system,
   tlib,
 }:
 let
@@ -40,8 +38,15 @@ in
   # === Terraform stacks ===
 
   terraform = compose [ terraform ];
-  terraform-aws = compose [ terraform aws ];
-  terraform-aws-node20 = compose [ terraform aws node ];
+  terraform-aws = compose [
+    terraform
+    aws
+  ];
+  terraform-aws-node20 = compose [
+    terraform
+    aws
+    node
+  ];
   terraform-aws-node20-python311 = compose [
     terraform
     aws
@@ -54,8 +59,14 @@ in
     node
     python312
   ];
-  terraform-azure = compose [ terraform azure ];
-  terraform-gcloud = compose [ terraform gcloud ];
+  terraform-azure = compose [
+    terraform
+    azure
+  ];
+  terraform-gcloud = compose [
+    terraform
+    gcloud
+  ];
   terraform-gcloud-python311 = compose [
     terraform
     gcloud
@@ -69,7 +80,10 @@ in
     node
     python311
   ];
-  node20-rust = compose [ node rustWasm ];
+  node20-rust = compose [
+    node
+    rustWasm
+  ];
   node20-rust-aws = compose [
     node
     rustWasm
@@ -81,8 +95,15 @@ in
   "go1.24" = compose [ tlib.mkGo ];
   "ruby3.3" = compose [ tlib.mkRuby ];
   "terraform1.8.2" = compose [ terraform ];
-  "terraform1.8.2-aws" = compose [ terraform aws ];
-  "terraform1.8.2-aws-node20" = compose [ terraform aws node ];
+  "terraform1.8.2-aws" = compose [
+    terraform
+    aws
+  ];
+  "terraform1.8.2-aws-node20" = compose [
+    terraform
+    aws
+    node
+  ];
   "terraform1.8.2-aws-node20-python310" = compose [
     terraform
     aws
@@ -95,7 +116,10 @@ in
     node
     python312
   ];
-  "terraform1.8.2-azure" = compose [ terraform azure ];
+  "terraform1.8.2-azure" = compose [
+    terraform
+    azure
+  ];
 
   # Legacy python310 aliases (now python311)
   python310 = compose [ python311 ];

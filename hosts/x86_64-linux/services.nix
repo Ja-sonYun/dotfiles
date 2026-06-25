@@ -3,7 +3,7 @@
   imports =
     if hostname == "Jasonyun-wsl-server" then
       [
-        (infraSrc + "/service/Jasonyun-wsl-server")
+        (infraSrc + "/services/Jasonyun-wsl-server")
       ]
     else
       [ ];

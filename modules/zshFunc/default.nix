@@ -1,7 +1,8 @@
-{ config
-, pkgs
-, lib
-, ...
+{
+  config,
+  pkgs,
+  lib,
+  ...
 }:
 with lib;
 
@@ -58,27 +59,25 @@ in
       allBins = mapAttrsToList toScriptBin binAttrs;
 
       sourcedFns = concatStringsSep "\n\n" (
-        mapAttrsToList
-          (
-            name: fn:
-              let
-                hasDesc = fn ? description && fn.description != null;
-                helpBlock = optionalString hasDesc ''
-                  if [[ "''${1-}" == "-h" || "''${1-}" == "--help" ]]; then
-                    print -- "${fn.description}"
-                    return 0
-                  fi
-                '';
-              in
-              ''
-                # ${optionalString hasDesc (fn.description)}
-                ${name}() {
-                  ${helpBlock}
-                  ${fn.command}
-                }
-              ''
-          )
-          (filterAttrs (_: fn: fn.source or false) cfg)
+        mapAttrsToList (
+          name: fn:
+          let
+            hasDesc = fn ? description && fn.description != null;
+            helpBlock = optionalString hasDesc ''
+              if [[ "''${1-}" == "-h" || "''${1-}" == "--help" ]]; then
+                print -- "${fn.description}"
+                return 0
+              fi
+            '';
+          in
+          ''
+            # ${optionalString hasDesc fn.description}
+            ${name}() {
+              ${helpBlock}
+              ${fn.command}
+            }
+          ''
+        ) (filterAttrs (_: fn: fn.source or false) cfg)
       );
     in
     {

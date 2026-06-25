@@ -7,9 +7,10 @@ let
     inherit pkgs name packageName;
     hashKey = "pi-subagents";
     packageManager = "npm";
-    packageVersion = "0.30.0";
+    packageVersion = "0.31.0";
   };
 in
-package // {
+package
+// {
   piExtensionPath = "${package}/node_modules/${name}/lib/node_modules/${packageName}";
 }

@@ -43,20 +43,18 @@ let
   mkCommandHook = entry: {
     type = "command";
     command =
-      if entry ? command then
-        entry.command
-      else
-        "CODEX_HOOK_DIR=${codexHookDir} CODEX_HOOK_PYTHON=${pkgs.python3}/bin/python ${pkgs.bash}/bin/bash ${codexHookDir}/${entry.file}";
+      entry.command
+        or "CODEX_HOOK_DIR=${codexHookDir} CODEX_HOOK_PYTHON=${pkgs.python3}/bin/python ${pkgs.bash}/bin/bash ${codexHookDir}/${entry.file}";
   };
 
   mkHook =
     entry:
     (mkCommandHook entry)
     // lib.optionalAttrs (entry ? timeout) {
-      timeout = entry.timeout;
+      inherit (entry) timeout;
     }
     // lib.optionalAttrs (entry ? async) {
-      async = entry.async;
+      inherit (entry) async;
     };
 
   mkHookWithDefaults =
@@ -78,9 +76,7 @@ let
       )
     }";
 
-  mkStateKey =
-    eventName: index:
-    "${codexConfigFile}:${eventName}:${toString index}:0";
+  mkStateKey = eventName: index: "${codexConfigFile}:${eventName}:${toString index}:0";
 
   mkHookStateFor =
     definition:
@@ -99,7 +95,8 @@ let
     lib.flatten (lib.mapAttrsToList (_: mkHookStateFor) hookDefinitions)
   );
 
-  codexHookSettings = lib.mapAttrs (_: definition:
+  codexHookSettings = lib.mapAttrs (
+    _: definition:
     map (entry: {
       hooks = [ (mkHook entry) ];
     }) definition.entries

@@ -1,7 +1,7 @@
 { hostname, ... }:
 {
   custom-packages-hashfile =
-    final: prev:
+    final: _prev:
     let
       rawhashfile = builtins.readFile ../pkgs/hashfile.json;
       allhashfile = builtins.fromJSON rawhashfile;
@@ -28,11 +28,12 @@
       };
     };
 
-  custom-packages = final: prev: {
+  custom-packages = final: _prev: {
     # Local custom packages
     git-wrapped = final.callPackage ../pkgs/git-wrapped { };
     awscli-local = final.callPackage ../pkgs/awscli-local { };
     macnotesapp = final.callPackage ../pkgs/macnotesapp { };
+    cf-tunnel = final.callPackage ../pkgs/cf-tunnel { };
     agenix-utils = final.callPackage ../libs/nixlib/pkg/agenix-utils { };
 
     # Npm

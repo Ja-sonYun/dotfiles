@@ -1,4 +1,9 @@
-{ pkgs, lib, config, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   extraPath = pkgs.lib.makeBinPath [
     pkgs.jq

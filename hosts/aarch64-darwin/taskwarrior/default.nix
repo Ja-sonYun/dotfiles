@@ -1,7 +1,8 @@
-{ pkgs
-, lib
-, userhome
-, ...
+{
+  pkgs,
+  lib,
+  userhome,
+  ...
 }:
 let
   # Reminder lists to sync with taskwarrior

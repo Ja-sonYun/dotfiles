@@ -22,7 +22,8 @@ let
     '';
   };
 in
-package // {
+package
+// {
   piExtensionPath = "${package}/pi-extension/index.js";
   skillsPath = "${package}/skills";
   hooksPath = "${package}/hooks";

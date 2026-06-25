@@ -1,0 +1,27 @@
+{
+  "debug": false,
+  "defaultMode": "ask",
+  "permissions": {
+    "allow": [
+      "read",
+      "ls",
+      "bash(git status *)",
+      "bash(git diff *)",
+      "bash(git log *)"
+    ],
+    "ask": ["bash", "edit", "write", "grep", "find"],
+    "deny": [
+      "Path(**/.env*)",
+      "Path(**/.ssh/**)",
+      "ArgRegex((^|/)\\.env($|\\..*))",
+      "bash(argv:rm ** -rf **)",
+      "bash(argv:rm ** -fr **)",
+      "bash(argv:git push **)"
+    ]
+  },
+  "wildcardable": [
+    "bash(argv:echo **)",
+    "bash(argv:ls **)",
+    "bash(argv:cat **)"
+  ]
+}

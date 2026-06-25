@@ -1,7 +1,8 @@
-{ pkgs
-, config
-, agenix-secrets
-, ...
+{
+  pkgs,
+  config,
+  agenix-secrets,
+  ...
 }:
 let
   aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
@@ -229,7 +230,9 @@ in
     context = (pkgs.lib.trim (builtins.readFile aiBundle.agentsMdSrc)) + "\n";
     rulesDir = "${aiBundle.rulesSrc}";
     agentsDir = "${aiBundle.agentsSrc}";
-    skills = builtins.mapAttrs (name: _: "${aiBundle.skillsSrc}/${name}") (builtins.readDir aiBundle.skillsSrc);
+    skills = builtins.mapAttrs (name: _: "${aiBundle.skillsSrc}/${name}") (
+      builtins.readDir aiBundle.skillsSrc
+    );
   };
 
   home.file = {

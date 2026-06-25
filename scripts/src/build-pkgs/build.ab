@@ -1,4 +1,3 @@
-import { text_contains } from "std/text"
 import { echo_success, echo_warning, echo_error } from "../lib/echo.ab"
 import { debug } from "../lib/debug.ab"
 import { sed_inplace } from "../lib/sed.ab"
@@ -44,19 +43,22 @@ pub fun nix_build(root_dir: Text, file: Text, key: Text): Text {
     trust $
         nix build --impure --file "{tmpfile}" -L > "{outfile}" 2>&1 || true
     $
-    let out = trust $
-        cat "{outfile}"
-    $
     trust $
-        rm -f "{tmpfile}" "{outfile}"
+        rm -f "{tmpfile}"
     $
-    return out
+    return outfile
 }
 
-pub fun extract_hash_from_output(out: Text): Text {
+fun output_has(outfile: Text, needle: Text): Bool {
+    let code = trust $
+        grep -qF -- "{needle}" "{outfile}"; echo \$?
+    $
+    return code == "0"
+}
+
+pub fun extract_hash_from_file(outfile: Text): Text {
     let hash = trust $
-        echo "{out}" |
-            sed -n 's/.*got: *\(sha256-[A-Za-z0-9+/=]\+\).*/\1/p' |
+        sed -n 's/.*got: *\(sha256-[A-Za-z0-9+/=]\+\).*/\1/p' "{outfile}" |
             tail -n1
     $
     return hash
@@ -102,12 +104,13 @@ pub fun build_package(root_dir: Text, file: Text, key: Text, version: Text, forc
         }
     }
 
-    let out = nix_build(root_dir, file, key)
-    let has_hash = text_contains(out, "got:")
-    let has_error = text_contains(out, "error:")
+    let outfile = nix_build(root_dir, file, key)
+    let has_hash = output_has(outfile, "got:")
+    let has_error = output_has(outfile, "error:")
 
     if has_hash {
-        let new_hash = extract_hash_from_output(out)
+        let new_hash = extract_hash_from_file(outfile)
+        trust $ rm -f "{outfile}" $
         if new_hash == "" {
             echo_error("Failed to extract hash from build output")
             return false
@@ -123,32 +126,33 @@ pub fun build_package(root_dir: Text, file: Text, key: Text, version: Text, forc
         echo_success("Updated hashfile.json for {key} {version}")
 
         let rebuild_out = nix_build(root_dir, file, key)
-        if text_contains(rebuild_out, "got:") {
+        if output_has(rebuild_out, "got:") {
             echo_error("Rebuild still failed after hash update")
-            trust $
-                echo "{rebuild_out}" >&2
-            $
+            trust $ cat "{rebuild_out}" >&2 $
+            trust $ rm -f "{rebuild_out}" $
             return false
         }
 
-        if text_contains(rebuild_out, "error:") {
+        if output_has(rebuild_out, "error:") {
             echo_error("Build failed with error")
-            trust $
-                echo "{rebuild_out}" >&2
-            $
+            trust $ cat "{rebuild_out}" >&2 $
+            trust $ rm -f "{rebuild_out}" $
             return false
         }
 
+        trust $ rm -f "{rebuild_out}" $
         echo_success("Rebuild successful!")
         return true
     }
 
     if has_error {
         echo_error("Build failed")
-        debug("Output: {out}")
+        trust $ cat "{outfile}" >&2 $
+        trust $ rm -f "{outfile}" $
         return false
     }
 
+    trust $ rm -f "{outfile}" $
     echo_success("Build successful (no hash update needed)")
     return true
 }

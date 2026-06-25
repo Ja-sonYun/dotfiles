@@ -8,7 +8,8 @@ let
       "aarch64-darwin" = "darwin-arm64";
       "x86_64-darwin" = "darwin-x64";
       "x86_64-linux" = "linux-x64";
-    }."${system}";
+    }
+    ."${system}";
   sha256 = {
     "https://nodejs.org/dist/v22.15.1/node-v22.15.1-darwin-arm64.tar.gz" =
       "sha256-0mibhrF+G1Hnb4Af/i2azKQiXnbtpLhDw9hDjUp81v4=";
@@ -18,60 +19,59 @@ let
   mkNpmUrl =
     version: targetSystem:
     "https://nodejs.org/dist/v${version}/node-v${version}-${targetSystem}.tar.gz";
-  nodeBinary = pkgs.lib.mapAttrs
-    (
-      name: version:
-        pkgs.stdenv.mkDerivation {
-          name = "node-${version}";
-          src = pkgs.fetchurl {
-            url = mkNpmUrl version targetSystem;
-            sha256 = sha256."${mkNpmUrl version targetSystem}";
-          };
-          nativeBuildInputs = with pkgs; [
-            gnutar
-          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
-            autoPatchelfHook
-          ];
-          buildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [
-            pkgs.stdenv.cc.cc.lib
-          ];
-          installPhase = ''
-            runHook preInstall
+  nodeBinary = pkgs.lib.mapAttrs (
+    _name: version:
+    pkgs.stdenv.mkDerivation {
+      name = "node-${version}";
+      src = pkgs.fetchurl {
+        url = mkNpmUrl version targetSystem;
+        sha256 = sha256."${mkNpmUrl version targetSystem}";
+      };
+      nativeBuildInputs =
+        with pkgs;
+        [
+          gnutar
+        ]
+        ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+          autoPatchelfHook
+        ];
+      buildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [
+        pkgs.stdenv.cc.cc.lib
+      ];
+      installPhase = ''
+        runHook preInstall
 
-            mkdir -p $out
-            tar -C $out --strip-components=1 -xzf $src
+        mkdir -p $out
+        tar -C $out --strip-components=1 -xzf $src
 
-            for bin in npm npx corepack; do
-              if [ -f "$out/bin/$bin" ]; then
-                substituteInPlace "$out/bin/$bin" \
-                  --replace-fail '#!/usr/bin/env node' "#!$out/bin/node"
-              fi
-            done
+        for bin in npm npx corepack; do
+          if [ -f "$out/bin/$bin" ]; then
+            substituteInPlace "$out/bin/$bin" \
+              --replace-fail '#!/usr/bin/env node' "#!$out/bin/node"
+          fi
+        done
 
-            runHook postInstall
-          '';
-        }
-    )
-    targetNodeVersion;
+        runHook postInstall
+      '';
+    }
+  ) targetNodeVersion;
 in
 {
   mkNpmGlobalPackageDerivation =
-    { pkgs
-    , name
-    , version
-    , packages ? [ ]
-    , # List of packages to install, e.g. ["npm" "yarn" "express@latest"]
-      exposedBinaries ? [ ]
-    , buildInputs ? [ ]
-    , postFixup ? { node ? null
-                  ,
-                  }:
-        ""
-    , postBuild ? ""
-    , postInstall ? ""
-    , outputHash ? null
-    , nodeVersion ? "22"
-    , ...
+    {
+      pkgs,
+      name,
+      version,
+      packages ? [ ],
+      # List of packages to install, e.g. ["npm" "yarn" "express@latest"]
+      exposedBinaries ? [ ],
+      buildInputs ? [ ],
+      postFixup ? _: "",
+      postBuild ? "",
+      postInstall ? "",
+      outputHash ? null,
+      nodeVersion ? "22",
+      ...
     }:
     let
       packagesRequirements = pkgs.lib.concatStringsSep " " packages;
@@ -140,15 +140,14 @@ in
 
         runHook postInstall
       '';
-      postBuild = postBuild;
-      postInstall = postInstall;
-      postFixup =
-        ''
-          patchShebangs $out
-          cd $out
-        ''
-        + (postFixup {
-          node = nodeBinary."${nodeVersion}";
-        });
+      inherit postBuild;
+      inherit postInstall;
+      postFixup = ''
+        patchShebangs $out
+        cd $out
+      ''
+      + (postFixup {
+        node = nodeBinary."${nodeVersion}";
+      });
     };
 }

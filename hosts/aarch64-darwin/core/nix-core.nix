@@ -1,17 +1,10 @@
 {
   config,
+  lib,
+  nixpkgs-stable,
   pkgs,
   ...
 }:
-let
-  atticConfig = pkgs.writeTextDir "attic/config.toml" ''
-    default-server = "attic"
-
-    [servers.attic]
-    endpoint = "https://ncc.test0.zip/"
-    token-file = "${config.age.secrets."nix-cache-upload-token".path}"
-  '';
-in
 {
   nix.enable = true;
   nix.settings = {
@@ -57,6 +50,14 @@ in
 
   nix.linux-builder = {
     enable = true;
+    package = nixpkgs-stable.legacyPackages.${pkgs.system}.darwin.linux-builder;
     systems = [ "aarch64-linux" ];
+  };
+
+  # On-demand: don't keep the QEMU builder VM running when idle. The Makefile
+  # starts it before a build and tears it down after deploy.
+  launchd.daemons.linux-builder.serviceConfig = {
+    RunAtLoad = lib.mkForce false;
+    KeepAlive = lib.mkForce false;
   };
 }

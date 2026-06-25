@@ -1,6 +1,5 @@
 title: " Shell "
 items:
-
   - Menu:
       name: "search string"
       shortcut: s
@@ -23,4 +22,3 @@ items:
       position:
         w: 120
         h: 40
-

@@ -1,4 +1,4 @@
-{ pkgs, system, ... }:
+{ pkgs, ... }:
 {
   home.packages = with pkgs; [
     # Debugging

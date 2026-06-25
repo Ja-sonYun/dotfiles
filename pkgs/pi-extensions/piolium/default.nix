@@ -15,6 +15,7 @@ let
     '';
   };
 in
-package // {
+package
+// {
   piExtensionPath = "${package}/node_modules/${name}/lib/node_modules/${packageName}";
 }

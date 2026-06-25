@@ -21,10 +21,12 @@
   };
 
   outputs =
-    { self
-    , nixpkgs
-    , git-hooks
-    , ...
+    {
+      self,
+      nixpkgs,
+      nixpkgs-unstable,
+      git-hooks,
+      ...
     }:
     let
       systems = [
@@ -36,12 +38,10 @@
       forAllSystems =
         f:
         builtins.listToAttrs (
-          map
-            (system: {
-              name = system;
-              value = f system;
-            })
-            systems
+          map (system: {
+            name = system;
+            value = f system;
+          }) systems
         );
 
       # env-driven toggles
@@ -147,14 +147,15 @@
         # };
       };
 
-      checks = forAllSystems (
-        system: {
-          pre-commit-check = git-hooks.lib.${system}.run {
-            src = ./.;
-            hooks.nixpkgs-fmt.enable = true;
+      checks = forAllSystems (system: {
+        pre-commit-check = git-hooks.lib.${system}.run {
+          src = ./.;
+          hooks.nixfmt = {
+            enable = true;
+            package = nixpkgs-unstable.legacyPackages.${system}.nixfmt;
           };
-        }
-      );
+        };
+      });
 
       packages = forAllSystems (
         system:

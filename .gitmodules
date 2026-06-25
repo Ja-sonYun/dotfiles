@@ -1,11 +1,5 @@
-[submodule "portable/plot"]
-	path = portable/plot
-	url = git@github.com:Ja-sonYun/plot.git
-[submodule "portable/say"]
-	path = portable/say
-	url = git@github.com:Ja-sonYun/say.git
-[submodule "shell/secrets/agenix"]
-	path = shell/secrets/agenix
+[submodule "shell/secrets"]
+	path = shell/secrets
 	url = git@github.com:Ja-sonYun/agenix-secrets.git
 [submodule "hosts/aarch64-darwin/server"]
 	path = infra
@@ -13,12 +7,9 @@
 [submodule "portable/vim/dev/lsp"]
 	path = portable/vim/dev/lsp
 	url = git@github.com:Ja-sonYun/lsp.git
-[submodule ".mkutils"]
-	path = .mkutils
-	url = https://github.com/Ja-sonYun/mkutils
-[submodule "portable/sequence-diagram-cli"]
-	path = portable/sequence-diagram-cli
-	url = git@github.com:Ja-sonYun/sequence-diagram-cli.git
 [submodule "libs/nixlib"]
 	path = libs/nixlib
 	url = git@github.com:Ja-sonYun/nixlib.git
+[submodule ".mkutils"]
+	path = .mkutils
+	url = git@github.com:Ja-sonYun/mkutils.git

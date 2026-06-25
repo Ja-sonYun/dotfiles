@@ -1,7 +1,5 @@
 MAKEFLAGS += --no-print-directory
 
-include .mkutils/dist/utils.mk
-
 HELP_PROJECT_NAME := Dotfiles
 HELP_WIDTH := 20
 
@@ -37,7 +35,7 @@ endif
 ##@ Update
 
 push-agenix: ## Push agenix secrets to git
-	(cd ./shell/secrets/agenix && make push) || true
+	(cd ./shell/secrets && make push) || true
 
 update-vim: ## Update vim flake
 	cd ./portable/vim && nix flake update
@@ -78,7 +76,22 @@ endif
 ifeq ($(SYSTEM),Darwin)
 ##@ Darwin
 
+LINUX_BUILDER := system/org.nixos.linux-builder
+
+linux-builder-up: ## Start linux-builder VM and wait until SSH-ready
+	@sudo launchctl kickstart $(LINUX_BUILDER) 2>/dev/null || true
+	@printf 'waiting for linux-builder'; \
+	for i in $$(seq 1 60); do \
+	  if sudo ssh -o StrictHostKeyChecking=no -o ConnectTimeout=2 linux-builder true 2>/dev/null; \
+	    then echo ' ready'; exit 0; fi; \
+	  printf '.'; sleep 1; \
+	done; echo ' timeout'; exit 1
+
+linux-builder-down: ## Stop the linux-builder VM
+	@sudo launchctl kill TERM $(LINUX_BUILDER) 2>/dev/null || true
+
 build: build-pkgs add lock ## Build nix-darwin config
+	@$(MAKE) linux-builder-up
 	$(NIX) build .#darwinConfigurations.$(HOSTNAME).system $(NIX_TRACE_ARGS)
 
 show-derivations: ## Show derivation details
@@ -86,6 +99,7 @@ show-derivations: ## Show derivation details
 
 deploy: build ## Deploy nix-darwin config
 	nix run nixpkgs#nh darwin switch .#darwinConfigurations.$(HOSTNAME)
+	@$(MAKE) linux-builder-down
 endif
 # ==================================================================================
 

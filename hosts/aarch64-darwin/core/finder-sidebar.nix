@@ -1,4 +1,9 @@
-{ lib, pkgs, userhome, ... }:
+{
+  lib,
+  pkgs,
+  userhome,
+  ...
+}:
 let
   documentsPath = "${userhome}/Documents";
   documentsUri = "file://${userhome}/Documents";
@@ -67,10 +72,12 @@ in
     config = {
       Label = "com.user.finder-sidebar";
       ProgramArguments = [ "${finder-sidebar}/bin/finder-sidebar" ];
-      StartCalendarInterval = [{
-        Hour = 0;
-        Minute = 5;
-      }];
+      StartCalendarInterval = [
+        {
+          Hour = 0;
+          Minute = 5;
+        }
+      ];
       RunAtLoad = true;
       StandardOutPath = "/tmp/finder-sidebar.log";
       StandardErrorPath = "/tmp/finder-sidebar.log";

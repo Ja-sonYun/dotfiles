@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, lib, ... }:
 
 with lib;
 
@@ -26,7 +26,8 @@ in
   config =
     let
       # Generate the content of a single zle widget
-      generateZleWidget = widgetName:
+      generateZleWidget =
+        widgetName:
         let
           widgetConf = zleCommandAttrs.${widgetName};
           widgetCommand = widgetConf.command or "echo 'No command provided.'";

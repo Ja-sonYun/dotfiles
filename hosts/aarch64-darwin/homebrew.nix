@@ -1,9 +1,15 @@
-{ config, lib, purpose, hostname, ... }:
+{
+  config,
+  lib,
+  purpose,
+  hostname,
+  ...
+}:
 let
   packageBrews =
     if hostname == "Jays-MacBook-Pro-Server" then
       [
-        (import ../../infra/service/Jays-MacBook-Pro-Server/homebrew.nix { inherit purpose; })
+        (import ../../infra/services/Jays-MacBook-Pro-Server/homebrew.nix { inherit purpose; })
       ]
     else
       [ ];
@@ -29,6 +35,7 @@ let
     "mole"
     "ollama"
     "container"
+    "diskonaut"
   ]
   ++ (
     if purpose == "main" then
@@ -125,18 +132,20 @@ in
     taps = taps ++ allTaps;
   };
 
-  system.activationScripts.postActivation.text = lib.mkIf (unlinkedBrews != [ ]) (lib.mkAfter ''
-    brew=${lib.escapeShellArg brewBin}
-    if [ -x "$brew" ]; then
-      unlinked_formulae=(${unlinkedBrewArgs})
-      for formula in "''${unlinked_formulae[@]}"; do
-        if /usr/bin/sudo --user=${lib.escapeShellArg brewUser} --set-home \
-          env HOMEBREW_NO_AUTO_UPDATE=1 "$brew" list --formula "$formula" >/dev/null 2>&1; then
-          echo "unlinking Homebrew formula from PATH: $formula"
-          /usr/bin/sudo --user=${lib.escapeShellArg brewUser} --set-home \
-            env HOMEBREW_NO_AUTO_UPDATE=1 "$brew" unlink "$formula" >/dev/null 2>&1 || true
-        fi
-      done
-    fi
-  '');
+  system.activationScripts.postActivation.text = lib.mkIf (unlinkedBrews != [ ]) (
+    lib.mkAfter ''
+      brew=${lib.escapeShellArg brewBin}
+      if [ -x "$brew" ]; then
+        unlinked_formulae=(${unlinkedBrewArgs})
+        for formula in "''${unlinked_formulae[@]}"; do
+          if /usr/bin/sudo --user=${lib.escapeShellArg brewUser} --set-home \
+            env HOMEBREW_NO_AUTO_UPDATE=1 "$brew" list --formula "$formula" >/dev/null 2>&1; then
+            echo "unlinking Homebrew formula from PATH: $formula"
+            /usr/bin/sudo --user=${lib.escapeShellArg brewUser} --set-home \
+              env HOMEBREW_NO_AUTO_UPDATE=1 "$brew" unlink "$formula" >/dev/null 2>&1 || true
+          fi
+        done
+      fi
+    ''
+  );
 }

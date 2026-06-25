@@ -1,9 +1,10 @@
-{ username
-, userhome
-, purpose
-, pkgs
-, lib
-, ...
+{
+  username,
+  userhome,
+  purpose,
+  pkgs,
+  lib,
+  ...
 }:
 {
   imports = lib.optionals (purpose == "main") [
@@ -15,7 +16,7 @@
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
   home = {
-    username = username;
+    inherit username;
     homeDirectory = userhome;
 
     # This value determines the Home Manager release that your

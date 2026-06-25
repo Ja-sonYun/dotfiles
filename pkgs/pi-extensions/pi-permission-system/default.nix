@@ -10,6 +10,7 @@ let
     packageVersion = "16.0.1";
   };
 in
-package // {
+package
+// {
   piExtensionPath = "${package}/node_modules/${name}/lib/node_modules/${packageName}";
 }

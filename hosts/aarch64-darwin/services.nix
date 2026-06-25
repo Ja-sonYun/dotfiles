@@ -1,15 +1,18 @@
-{ hostname, infraSrc, ... }:
 {
-  imports = (
+  hostname,
+  infraSrc,
+  ...
+}:
+{
+  imports =
     if hostname == "Jays-MacBook-Pro-Server" then
       [
         ./sharing.nix
-        (infraSrc + "/service/Jays-MacBook-Pro-Server")
+        (infraSrc + "/services/Jays-MacBook-Pro-Server")
       ]
     else
       [
         ./yabai
         ./skhd
-      ]
-  );
+      ];
 }

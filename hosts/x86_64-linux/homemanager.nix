@@ -1,16 +1,28 @@
-{ username, userhome, isWsl ? false, ... }:
+{
+  username,
+  userhome,
+  isWsl ? false,
+  ...
+}:
 let
   wslNvidiaLib = "/usr/lib/wsl/lib";
 in
 {
   home = {
-    username = username;
+    inherit username;
     homeDirectory = userhome;
     stateVersion = "26.05";
 
-    sessionVariables = { } // (if isWsl then {
-      LD_LIBRARY_PATH = wslNvidiaLib;
-    } else { });
+    sessionVariables =
+      { }
+      // (
+        if isWsl then
+          {
+            LD_LIBRARY_PATH = wslNvidiaLib;
+          }
+        else
+          { }
+      );
 
     sessionPath = if isWsl then [ wslNvidiaLib ] else [ ];
   };

@@ -1,6 +1,6 @@
 { inputs, ... }:
 {
-  stable-packages = final: prev: rec {
+  stable-packages = final: _prev: rec {
     # Allow access stable package via `pkgs.stable.<package>`
     stable = import inputs.nixpkgs-stable {
       system = final.stdenv.hostPlatform.system;
@@ -8,11 +8,11 @@
     };
 
     # Use stable for commonly broken packages
-    gitui = stable.gitui;
-    jujutsu = stable.jujutsu;
-    swift-format = stable.swift-format;
+    inherit (stable) gitui;
+    inherit (stable) jujutsu;
+    inherit (stable) swift-format;
 
-    direnv = stable.direnv;
+    inherit (stable) direnv;
   };
 
   # prev-packages = final: prev: rec {

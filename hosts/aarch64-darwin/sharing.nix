@@ -1,11 +1,11 @@
-{ lib
-, username
-, ...
+{
+  lib,
+  username,
+  ...
 }:
 
 let
-  remoteManagementKickstart =
-    "/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart";
+  remoteManagementKickstart = "/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart";
 in
 {
   services.openssh = {

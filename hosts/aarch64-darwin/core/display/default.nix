@@ -1,8 +1,9 @@
-{ lib
-, pkgs
-, purpose
-, username
-, ...
+{
+  lib,
+  pkgs,
+  purpose,
+  username,
+  ...
 }:
 let
   # The first layout whose displays are all connected is applied.
@@ -102,12 +103,14 @@ in
     else
       [ ];
 
-  system.activationScripts.postActivation.text = lib.mkIf (purpose == "main") (lib.mkAfter ''
-    uid="$(/usr/bin/id -u "${username}")"
-    if /bin/launchctl print "gui/$uid" >/dev/null 2>&1; then
-      /bin/launchctl asuser "$uid" \
-        /usr/bin/sudo --user "${username}" -- \
-        "${apply-display-profile}/bin/apply-display-profile" || true
-    fi
-  '');
+  system.activationScripts.postActivation.text = lib.mkIf (purpose == "main") (
+    lib.mkAfter ''
+      uid="$(/usr/bin/id -u "${username}")"
+      if /bin/launchctl print "gui/$uid" >/dev/null 2>&1; then
+        /bin/launchctl asuser "$uid" \
+          /usr/bin/sudo --user "${username}" -- \
+          "${apply-display-profile}/bin/apply-display-profile" || true
+      fi
+    ''
+  );
 }

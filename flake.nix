@@ -47,10 +47,28 @@
       flake = false;
     };
 
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    agenix-secrets = {
+      url = ./shell/secrets;
+      flake = false;
+    };
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    mkutils = {
+      url = "github:Ja-sonYun/mkutils";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nixlib = {
+      url = ./libs/nixlib;
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # My packages
-    # say.url = ./portable/say;
-    # plot.url = ./portable/plot;
-    # sequence-diagram-cli.url = ./portable/sequence-diagram-cli;
     vim = {
       url = ./portable/vim;
       inputs.nixpkgs.follows = "nixpkgs";
@@ -61,27 +79,6 @@
       url = ./infra;
       flake = false;
     };
-
-    # Agenix for secret management
-    agenix = {
-      url = "github:ryantm/agenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    agenix-secrets = {
-      url = ./shell/secrets/agenix;
-      flake = false;
-    };
-
-    nixlib = {
-      url = ./libs/nixlib;
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # Git hooks for pre-commit
-    git-hooks = {
-      url = "github:cachix/git-hooks.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
@@ -91,20 +88,26 @@
       nixlib,
       home-manager,
       nixpkgs-stable,
-      home-manager-stable,
       darwin,
       nix-homebrew,
-      homebrew-bundle,
-      homebrew-core,
-      homebrew-cask,
-      vim,
       server,
       agenix,
       agenix-secrets,
       git-hooks,
+      mkutils,
       ...
     }:
     let
+      inherit (nixpkgs) lib;
+      excludedPaths =
+        let
+          lines = lib.splitString "\n" (builtins.readFile ./.gitmodules);
+          pathLines = builtins.filter (l: lib.hasInfix "path = " l) lines;
+          submodulePaths = map (l: lib.trim (lib.last (lib.splitString " = " l))) pathLines;
+        in
+        submodulePaths ++ [ "portable/vim" ];
+      excludeRegexes = map (p: "^" + lib.escapeRegex p + "/") excludedPaths;
+
       specialArgsPrepared = {
         "Jays-MacBook-Pro" = {
           system = "aarch64-darwin";
@@ -148,10 +151,10 @@
         };
       };
       mkSpecialArgs =
-        hostname: pkgs:
+        hostname: _pkgs:
         let
           specialArgs = specialArgsPrepared."${hostname}";
-          system = specialArgs.system;
+          inherit (specialArgs) system;
         in
         {
           inherit system;
@@ -165,7 +168,12 @@
             purpose
             ;
           infraSrc = server;
-          inherit agenix agenix-secrets;
+          inherit
+            agenix
+            agenix-secrets
+            nixpkgs-stable
+            nixlib
+            ;
         };
 
       mkPkgsProvider =
@@ -188,7 +196,7 @@
         hostname:
         let
           specialArgs = specialArgsPrepared."${hostname}";
-          system = specialArgs.system;
+          inherit (specialArgs) system;
         in
         [
           # Agenix for secrets management
@@ -221,8 +229,6 @@
         hostname:
         opts@{
           cudaSupport ? false,
-          isVM ? false,
-          isWsl ? false,
         }:
         let
           system = specialArgsPrepared."${hostname}".system;
@@ -263,6 +269,7 @@
 
             ./hosts/aarch64-darwin/homebrew.nix
             ./hosts/aarch64-darwin/core/display
+            nixlib.darwinModules.darwin-nixos-vm
             ./hosts/aarch64-darwin/services.nix
 
             # home manager
@@ -296,14 +303,42 @@
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
-      checks = forAllSystems (system: {
-        pre-commit-check = git-hooks.lib.${system}.run {
-          src = ./.;
-          hooks = {
-            nixpkgs-fmt.enable = true;
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          statixConfig = (pkgs.formats.toml { }).generate "statix.toml" {
+            disabled = [ "repeated_keys" ];
+            ignore = excludedPaths;
           };
-        };
-      });
+        in
+        {
+          pre-commit-check = git-hooks.lib.${system}.run {
+            src = ./.;
+            excludes = excludeRegexes;
+            hooks = {
+              nixfmt.enable = true;
+              deadnix.enable = true;
+              deadnix.settings.noLambdaPatternNames = true;
+              statix.enable = true;
+              statix.settings.config = toString statixConfig;
+              beautysh = {
+                enable = true;
+                name = "beautysh";
+                package = pkgs.beautysh;
+                entry = "${pkgs.beautysh}/bin/beautysh --tab";
+                types = [ "shell" ];
+                excludes = [
+                  "^scripts/update-versions$"
+                  "^scripts/build-pkgs$"
+                ];
+              };
+              prettier.enable = true;
+              taplo.enable = true;
+            };
+          };
+        }
+      );
       devShells = forAllSystems (
         system:
         let
@@ -311,12 +346,10 @@
         in
         {
           default = pkgs.mkShell {
-            # inherit (self.checks.${system}.pre-commit-check) shellHook;
-            # buildInputs = self.checks.${system}.pre-commit-check.enabledPackages ++ [
-            #   pkgs.amber-lang
-            # ];
-            buildInputs = [
+            inherit (self.checks.${system}.pre-commit-check) shellHook;
+            buildInputs = self.checks.${system}.pre-commit-check.enabledPackages ++ [
               pkgs.amber-lang
+              mkutils.packages.${system}.default
             ];
           };
         }

@@ -1,58 +1,38 @@
-{ pkgs
-, lib
-, agenix-secrets
-, ...
+{
+  pkgs,
+  lib,
+  agenix-secrets,
+  ...
 }:
 let
   aiBundle = import "${agenix-secrets}/ai-bundle.nix" { inherit pkgs; };
   piVersion = lib.getVersion pkgs.pi;
   piAgentsMd = (lib.trim (builtins.readFile aiBundle.agentsMdSrc)) + "\n";
 
-  # piPermissionRulesJson = builtins.readFile aiBundle.permissionsSrc;
-  # piPermissionConfigJson = ''
-  #   {
-  #     "$schema": "https://raw.githubusercontent.com/gotgenes/pi-permission-system/main/schemas/permissions.schema.json",
-  #     "debugLog": false,
-  #     "permissionReviewLog": true,
-  #     "yoloMode": false,
-  #     "toolInputPreviewMaxLength": 400,
-  #     "toolTextSummaryMaxLength": 120,
-  #     "piInfrastructureReadPaths": [],
-  #     "permission": ${piPermissionRulesJson}
-  #   }
-  # '';
-
   piExtensions = [
     pkgs.pi-subagents.piExtensionPath
-    # pkgs.pi-permission-system.piExtensionPath
     pkgs.pi-mcp-adapter.piExtensionPath
     pkgs.piolium.piExtensionPath
+    pkgs.ponytail.piExtensionPath
   ];
 
-  piLocalExtensionEntries = lib.filterAttrs
-    (name: type:
-      (type == "regular" && (lib.hasSuffix ".ts" name || lib.hasSuffix ".json" name)) || type == "directory")
-    (builtins.readDir ./extensions);
+  piLocalExtensionEntries = lib.filterAttrs (
+    name: type:
+    (type == "regular" && (lib.hasSuffix ".ts" name || lib.hasSuffix ".json" name))
+    || type == "directory"
+  ) (builtins.readDir ./extensions);
 
-  piLocalExtensionHomeFiles = lib.mapAttrs'
-    (name: _type: lib.nameValuePair ".pi/agent/extensions/${name}" {
+  piLocalExtensionHomeFiles = lib.mapAttrs' (
+    name: _type:
+    lib.nameValuePair ".pi/agent/extensions/${name}" {
       force = true;
       source = ./extensions + "/${name}";
-    })
-    piLocalExtensionEntries;
+    }
+  ) piLocalExtensionEntries;
 
-  piExtensionHomeFiles = piLocalExtensionHomeFiles // {
-    # ".pi/agent/extensions/pi-permission-system/config.json" = {
-    #   force = true;
-    #   text = piPermissionConfigJson;
-    # };
-  };
-
-  extensionFlags = lib.concatMapStringsSep " \\\n        "
-    (
-      extension: ''--add-flags "-e" --add-flags "${extension}"''
-    )
-    piExtensions;
+  extensionFlags = lib.concatMapStringsSep " \\\n        " (
+    extension: ''--add-flags "-e" --add-flags "${extension}"''
+  ) piExtensions;
 
   blockedPackageCommandCheck = ''
     case "''${1-}" in
@@ -114,7 +94,7 @@ in
     piWithExtensions
   ];
 
-  home.file = piExtensionHomeFiles // {
+  home.file = piLocalExtensionHomeFiles // {
     ".pi/agent/AGENTS.md" = {
       force = true;
       text = piAgentsMd;

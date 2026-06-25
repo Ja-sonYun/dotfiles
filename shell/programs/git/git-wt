@@ -2,184 +2,184 @@
 set -euo pipefail
 
 err() {
-    echo "error: $*" >&2
-    exit 1
+	echo "error: $*" >&2
+	exit 1
 }
 inside_repo() { git rev-parse --is-inside-work-tree >/dev/null 2>&1; }
 safe() {
-    local s
-    s="${1//\//-}"
-    s="${s//#/}"
-    echo "$s"
+	local s
+	s="${1//\//-}"
+	s="${s//#/}"
+	echo "$s"
 }
 
 repo_paths() {
-    local root parent base
-    root="$(git rev-parse --show-toplevel)" || err "not a git repo"
-    parent="$(dirname "$root")"
-    base="$(basename "$root")"
-    echo "$parent" "$base"
+	local root parent base
+	root="$(git rev-parse --show-toplevel)" || err "not a git repo"
+	parent="$(dirname "$root")"
+	base="$(basename "$root")"
+	echo "$parent" "$base"
 }
 
 find_wt_by_branch() {
-    local br="$1"
-    git worktree list --porcelain | awk -v br="$br" '
+	local br="$1"
+	git worktree list --porcelain | awk -v br="$br" '
     $1=="worktree"{p=$2}
     $1=="branch" && $2=="refs/heads/"br{print p; exit}
   '
 }
 
 default_wt_path_for_branch() {
-    local br="$1"
-    read -r parent base < <(repo_paths)
-    echo "${parent}/${base}+$(safe "$br")"
+	local br="$1"
+	read -r parent base < <(repo_paths)
+	echo "${parent}/${base}+$(safe "$br")"
 }
 
 resolve_branch_path() {
-    local br="$1"
-    local path
-    path="$(find_wt_by_branch "$br" || true)"
-    if [ -n "$path" ]; then
-        echo "$path"
-    else
-        echo "$(default_wt_path_for_branch "$br")"
-    fi
+	local br="$1"
+	local path
+	path="$(find_wt_by_branch "$br" || true)"
+	if [ -n "$path" ]; then
+		echo "$path"
+	else
+		echo "$(default_wt_path_for_branch "$br")"
+	fi
 }
 
 cmd_checkout() {
-    if [[ "${1:-}" == "-b" ]]; then
-        shift
-        local br="${1:-}"
-        [ -n "$br" ] || err "usage: git wt checkout -b <branch> [<start>]"
-        local start="${2:-}"
-        local dest
-        dest="$(default_wt_path_for_branch "$br")"
-        if [ -n "$start" ]; then
-            git worktree add -b "$br" "$dest" "$start"
-        else
-            git worktree add -b "$br" "$dest"
-        fi
-        echo "$dest"
-    else
-        local br="${1:-}"
-        [ -n "$br" ] || err "usage: git wt checkout <branch>"
-        if ! git show-ref --verify --quiet "refs/heads/$br"; then
-            err "branch not found: $br"
-        fi
-        local path
-        path="$(find_wt_by_branch "$br" || true)"
-        if [ -n "$path" ]; then
-            echo "$path"
-        else
-            local dest
-            dest="$(default_wt_path_for_branch "$br")"
-            git worktree add "$dest" "$br"
-            echo "$dest"
-        fi
-    fi
+	if [[ ${1:-} == "-b" ]]; then
+		shift
+		local br="${1:-}"
+		[ -n "$br" ] || err "usage: git wt checkout -b <branch> [<start>]"
+		local start="${2:-}"
+		local dest
+		dest="$(default_wt_path_for_branch "$br")"
+		if [ -n "$start" ]; then
+			git worktree add -b "$br" "$dest" "$start"
+		else
+			git worktree add -b "$br" "$dest"
+		fi
+		echo "$dest"
+	else
+		local br="${1:-}"
+		[ -n "$br" ] || err "usage: git wt checkout <branch>"
+		if ! git show-ref --verify --quiet "refs/heads/$br"; then
+			err "branch not found: $br"
+		fi
+		local path
+		path="$(find_wt_by_branch "$br" || true)"
+		if [ -n "$path" ]; then
+			echo "$path"
+		else
+			local dest
+			dest="$(default_wt_path_for_branch "$br")"
+			git worktree add "$dest" "$br"
+			echo "$dest"
+		fi
+	fi
 }
 
 cmd_rm() {
-    local force_flag=""
-    local target=""
+	local force_flag=""
+	local target=""
 
-    while [ $# -gt 0 ]; do
-        case "$1" in
-        -f | --force)
-            force_flag="--force"
-            shift
-            ;;
-        -*)
-            err "unknown option: $1"
-            ;;
-        *)
-            target="$1"
-            shift
-            ;;
-        esac
-    done
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			-f | --force)
+				force_flag="--force"
+				shift
+				;;
+			-*)
+				err "unknown option: $1"
+				;;
+			*)
+				target="$1"
+				shift
+				;;
+		esac
+	done
 
-    [ -n "$target" ] || err "usage: git wt rm [-f|--force] <branch|path>"
+	[ -n "$target" ] || err "usage: git wt rm [-f|--force] <branch|path>"
 
-    local path
-    if [ -d "$target" ]; then
-        path="$target"
-    else
-        path="$(resolve_branch_path "$target")"
-    fi
+	local path
+	if [ -d "$target" ]; then
+		path="$target"
+	else
+		path="$(resolve_branch_path "$target")"
+	fi
 
-    if [ -n "$force_flag" ]; then
-        git worktree remove "$force_flag" "$path"
-    else
-        git worktree remove "$path"
-    fi
+	if [ -n "$force_flag" ]; then
+		git worktree remove "$force_flag" "$path"
+	else
+		git worktree remove "$path"
+	fi
 }
 
 cmd_unlock() {
-    local br="${1:-}"
-    [ -n "$br" ] || err "usage: git wt unlock <branch>"
-    local path
-    path="$(resolve_branch_path "$br")"
-    git worktree unlock "$path"
+	local br="${1:-}"
+	[ -n "$br" ] || err "usage: git wt unlock <branch>"
+	local path
+	path="$(resolve_branch_path "$br")"
+	git worktree unlock "$path"
 }
 
 cmd_lock() {
-    local br="${1:-}"
-    [ -n "$br" ] || err "usage: git wt lock <branch>"
-    local path
-    path="$(resolve_branch_path "$br")"
-    git worktree lock "$path"
+	local br="${1:-}"
+	[ -n "$br" ] || err "usage: git wt lock <branch>"
+	local path
+	path="$(resolve_branch_path "$br")"
+	git worktree lock "$path"
 }
 
 cmd_repair() {
-    local br="${1:-}"
-    [ -n "$br" ] || err "usage: git wt repair <branch>"
-    local path
-    path="$(resolve_branch_path "$br")"
-    git worktree repair "$path"
+	local br="${1:-}"
+	[ -n "$br" ] || err "usage: git wt repair <branch>"
+	local path
+	path="$(resolve_branch_path "$br")"
+	git worktree repair "$path"
 }
 
 main() {
-    inside_repo || err "not a git repo"
-    case "${1:-}" in
-    checkout)
-        shift
-        cmd_checkout "$@"
-        ;;
-    rm)
-        shift
-        cmd_rm "$@"
-        ;;
-    unlock)
-        shift
-        cmd_unlock "$@"
-        ;;
-    lock)
-        shift
-        cmd_lock "$@"
-        ;;
-    repair)
-        shift
-        cmd_repair "$@"
-        ;;
-    ls)
-        shift
-        git worktree list "$@"
-        ;;
-    prune)
-        shift
-        git worktree prune "$@"
-        ;;
-    -h | --help | *)
-        echo "usage: git wt checkout [-b] <branch>"
-        echo "   or: git wt ls [-v | --porcelain [-z]]"
-        echo "   or: git wt lock [--reason <string>] <worktree>"
-        echo "   or: git wt prune [-n] [-v] [--expire <expire>]"
-        echo "   or: git wt rm [-f] <worktree>"
-        echo "   or: git wt repair [<path>...]"
-        echo "   or: git wt unlock <worktree>"
-        echo
-        ;;
-    esac
+	inside_repo || err "not a git repo"
+	case "${1:-}" in
+		checkout)
+			shift
+			cmd_checkout "$@"
+			;;
+		rm)
+			shift
+			cmd_rm "$@"
+			;;
+		unlock)
+			shift
+			cmd_unlock "$@"
+			;;
+		lock)
+			shift
+			cmd_lock "$@"
+			;;
+		repair)
+			shift
+			cmd_repair "$@"
+			;;
+		ls)
+			shift
+			git worktree list "$@"
+			;;
+		prune)
+			shift
+			git worktree prune "$@"
+			;;
+		-h | --help | *)
+			echo "usage: git wt checkout [-b] <branch>"
+			echo "   or: git wt ls [-v | --porcelain [-z]]"
+			echo "   or: git wt lock [--reason <string>] <worktree>"
+			echo "   or: git wt prune [-n] [-v] [--expire <expire>]"
+			echo "   or: git wt rm [-f] <worktree>"
+			echo "   or: git wt repair [<path>...]"
+			echo "   or: git wt unlock <worktree>"
+			echo
+			;;
+	esac
 }
 main "$@"

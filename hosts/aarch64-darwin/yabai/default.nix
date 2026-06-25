@@ -149,18 +149,28 @@ let
   renderAttrs =
     keys: attrs:
     lib.concatStringsSep " " (
-      map
-        (key: lib.escapeShellArg "${key}=${toString attrs.${key}}")
-        (lib.filter (key: builtins.hasAttr key attrs) keys)
+      map (key: lib.escapeShellArg "${key}=${toString attrs.${key}}") (
+        lib.filter (key: builtins.hasAttr key attrs) keys
+      )
     );
 
   renderRule =
     rule:
-    "yabai -m rule --add ${renderAttrs [ "label" "app" "title" "role" "subrole" "manage" "sub-layer" "sticky" "grid" ] rule}";
+    "yabai -m rule --add ${
+      renderAttrs [
+        "label"
+        "app"
+        "title"
+        "role"
+        "subrole"
+        "manage"
+        "sub-layer"
+        "sticky"
+        "grid"
+      ] rule
+    }";
 
-  renderSignal =
-    signal:
-    "yabai -m signal --add ${renderAttrs [ "event" "action" ] signal}";
+  renderSignal = signal: "yabai -m signal --add ${renderAttrs [ "event" "action" ] signal}";
 
   notchExternalBar = pkgs.writeShellApplication {
     name = "yabai-apply-external-bar";

@@ -6,7 +6,7 @@
   ...
 }:
 let
-  pythonWithPackages = pkgs.python313.withPackages (ps: [
+  pythonWithPackages = pkgs.python313.withPackages (_ps: [
   ]);
 
   nodeOnly = pkgs.runCommand "nodejs-24-node-only" { } ''

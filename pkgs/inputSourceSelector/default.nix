@@ -1,4 +1,9 @@
-{ stdenv, lib, fetchFromGitHub, apple-sdk_15 }:
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  apple-sdk_15,
+}:
 
 stdenv.mkDerivation {
   pname = "mac-input-source-selector";

@@ -60,7 +60,8 @@ export default function (pi: ExtensionAPI) {
           let latestCacheHitRate: number | undefined;
 
           for (const entry of ctx.sessionManager.getEntries()) {
-            if (entry.type !== "message" || entry.message.role !== "assistant") continue;
+            if (entry.type !== "message" || entry.message.role !== "assistant")
+              continue;
 
             const usage = entry.message.usage;
             totalInput += usage.input;
@@ -69,17 +70,27 @@ export default function (pi: ExtensionAPI) {
             totalCacheWrite += usage.cacheWrite;
             totalCost += usage.cost.total;
 
-            const latestPromptTokens = usage.input + usage.cacheRead + usage.cacheWrite;
+            const latestPromptTokens =
+              usage.input + usage.cacheRead + usage.cacheWrite;
             latestCacheHitRate =
-              latestPromptTokens > 0 ? (usage.cacheRead / latestPromptTokens) * 100 : undefined;
+              latestPromptTokens > 0
+                ? (usage.cacheRead / latestPromptTokens) * 100
+                : undefined;
           }
 
           const contextUsage = ctx.getContextUsage();
-          const contextWindow = contextUsage?.contextWindow ?? ctx.model?.contextWindow ?? 0;
+          const contextWindow =
+            contextUsage?.contextWindow ?? ctx.model?.contextWindow ?? 0;
           const contextPercentValue = contextUsage?.percent ?? 0;
-          const contextPercent = contextUsage?.percent !== null ? contextPercentValue.toFixed(1) : "?";
+          const contextPercent =
+            contextUsage?.percent !== null
+              ? contextPercentValue.toFixed(1)
+              : "?";
 
-          let pwd = formatCwdForFooter(ctx.cwd, process.env.HOME || process.env.USERPROFILE);
+          let pwd = formatCwdForFooter(
+            ctx.cwd,
+            process.env.HOME || process.env.USERPROFILE,
+          );
           const branch = footerData.getGitBranch();
           if (branch) pwd = `${pwd} (${branch})`;
 
@@ -89,18 +100,27 @@ export default function (pi: ExtensionAPI) {
           const statsParts: string[] = [];
           if (totalInput) statsParts.push(`↑${formatTokens(totalInput)}`);
           if (totalOutput) statsParts.push(`↓${formatTokens(totalOutput)}`);
-          if (totalCacheRead) statsParts.push(`R${formatTokens(totalCacheRead)}`);
-          if (totalCacheWrite) statsParts.push(`W${formatTokens(totalCacheWrite)}`);
-          if ((totalCacheRead > 0 || totalCacheWrite > 0) && latestCacheHitRate !== undefined) {
+          if (totalCacheRead)
+            statsParts.push(`R${formatTokens(totalCacheRead)}`);
+          if (totalCacheWrite)
+            statsParts.push(`W${formatTokens(totalCacheWrite)}`);
+          if (
+            (totalCacheRead > 0 || totalCacheWrite > 0) &&
+            latestCacheHitRate !== undefined
+          ) {
             statsParts.push(`CH${latestCacheHitRate.toFixed(1)}%`);
           }
 
           const modelRegistry = ctx.modelRegistry as unknown as {
             isUsingOAuth?: (model: unknown) => boolean;
           };
-          const usingSubscription = ctx.model ? modelRegistry.isUsingOAuth?.(ctx.model) ?? false : false;
+          const usingSubscription = ctx.model
+            ? (modelRegistry.isUsingOAuth?.(ctx.model) ?? false)
+            : false;
           if (totalCost || usingSubscription) {
-            statsParts.push(`$${totalCost.toFixed(3)}${usingSubscription ? " (sub)" : ""}`);
+            statsParts.push(
+              `$${totalCost.toFixed(3)}${usingSubscription ? " (sub)" : ""}`,
+            );
           }
 
           const autoIndicator = " (auto)";
@@ -128,7 +148,9 @@ export default function (pi: ExtensionAPI) {
           if (ctx.model?.reasoning) {
             const thinkingLevel = pi.getThinkingLevel() || "off";
             rightSideWithoutProvider =
-              thinkingLevel === "off" ? `${modelName} • thinking off` : `${modelName} • ${thinkingLevel}`;
+              thinkingLevel === "off"
+                ? `${modelName} • thinking off`
+                : `${modelName} • ${thinkingLevel}`;
           }
 
           let rightSide = rightSideWithoutProvider;
@@ -143,14 +165,26 @@ export default function (pi: ExtensionAPI) {
           const minPadding = 2;
           let statsLine: string;
           if (statsLeftWidth + minPadding + rightSideWidth <= width) {
-            statsLine = statsLeft + " ".repeat(width - statsLeftWidth - rightSideWidth) + rightSide;
+            statsLine =
+              statsLeft +
+              " ".repeat(width - statsLeftWidth - rightSideWidth) +
+              rightSide;
           } else {
             const availableForRight = width - statsLeftWidth - minPadding;
             if (availableForRight > 0) {
-              const truncatedRight = truncateToWidth(rightSide, availableForRight, "");
+              const truncatedRight = truncateToWidth(
+                rightSide,
+                availableForRight,
+                "",
+              );
               statsLine =
                 statsLeft +
-                " ".repeat(Math.max(0, width - statsLeftWidth - visibleWidth(truncatedRight))) +
+                " ".repeat(
+                  Math.max(
+                    0,
+                    width - statsLeftWidth - visibleWidth(truncatedRight),
+                  ),
+                ) +
                 truncatedRight;
             } else {
               statsLine = statsLeft;
@@ -158,20 +192,31 @@ export default function (pi: ExtensionAPI) {
           }
 
           const dimStatsLeft = theme.fg("dim", statsLeft);
-          const dimRemainder = theme.fg("dim", statsLine.slice(statsLeft.length));
+          const dimRemainder = theme.fg(
+            "dim",
+            statsLine.slice(statsLeft.length),
+          );
           const lines = [
-            truncateToWidth(theme.fg("dim", pwd), width, theme.fg("dim", "...")),
+            truncateToWidth(
+              theme.fg("dim", pwd),
+              width,
+              theme.fg("dim", "..."),
+            ),
             dimStatsLeft + dimRemainder,
           ];
 
-          const statusLine = Array.from(footerData.getExtensionStatuses().entries())
+          const statusLine = Array.from(
+            footerData.getExtensionStatuses().entries(),
+          )
             .filter(([key]) => !HIDDEN_STATUS_KEYS.has(key))
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([, text]) => sanitizeStatusText(text))
             .join(" ");
 
           if (statusLine) {
-            lines.push(truncateToWidth(statusLine, width, theme.fg("dim", "...")));
+            lines.push(
+              truncateToWidth(statusLine, width, theme.fg("dim", "...")),
+            );
           }
 
           return lines;

@@ -1,6 +1,5 @@
 title: " network "
 items:
-
   - Menu:
       name: "ping"
       shortcut: p

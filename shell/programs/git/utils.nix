@@ -1,6 +1,6 @@
 { pkgs, ... }:
 let
-  git-wt = (pkgs.writeShellScriptBin "git-wt" (builtins.readFile ./git-wt));
+  git-wt = pkgs.writeShellScriptBin "git-wt" (builtins.readFile ./git-wt);
 in
 {
   programs.zshFunc = {

@@ -1,8 +1,9 @@
-{ config
-, pkgs
-, infraSrc
-, userhome
-, ...
+{
+  config,
+  pkgs,
+  infraSrc,
+  userhome,
+  ...
 }:
 let
   atticConfig = pkgs.writeTextDir "attic/config.toml" ''

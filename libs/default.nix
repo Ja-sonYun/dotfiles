@@ -7,14 +7,15 @@ in
   inherit npm pip;
 
   mkPackageDerivation =
-    { pkgs
-    , hashKey
-    , packageManager
-    , packageName
-    , packageVersion
-    , packageSpec ? null
-    , extraPackages ? [ ]
-    , ...
+    {
+      pkgs,
+      hashKey,
+      packageManager,
+      packageName,
+      packageVersion,
+      packageSpec ? null,
+      extraPackages ? [ ],
+      ...
     }@args:
     let
       basePackageSpec =
@@ -27,20 +28,22 @@ in
         else
           throw "Unsupported packageManager: ${packageManager}";
 
-      commonArgs = builtins.removeAttrs args [
-        "hashKey"
-        "packageManager"
-        "packageName"
-        "packageVersion"
-        "packageSpec"
-        "extraPackages"
-      ] // {
-        version = packageVersion;
-        outputHash = pkgs.hashfile.get {
-          inherit hashKey packageVersion;
+      commonArgs =
+        builtins.removeAttrs args [
+          "hashKey"
+          "packageManager"
+          "packageName"
+          "packageVersion"
+          "packageSpec"
+          "extraPackages"
+        ]
+        // {
+          version = packageVersion;
+          outputHash = pkgs.hashfile.get {
+            inherit hashKey packageVersion;
+          };
+          packages = [ basePackageSpec ] ++ extraPackages;
         };
-        packages = [ basePackageSpec ] ++ extraPackages;
-      };
     in
     if packageManager == "npm" then
       npm.mkNpmGlobalPackageDerivation commonArgs

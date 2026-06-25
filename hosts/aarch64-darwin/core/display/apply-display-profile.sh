@@ -1,59 +1,59 @@
 usage() {
-  printf 'Usage: %s [--list|--dry-run|--help] [layouts.json]\n' "$0"
+	printf 'Usage: %s [--list|--dry-run|--help] [layouts.json]\n' "$0"
 }
 
 mode="apply"
 case "${1:-}" in
-  --help | -h)
-    usage
-    exit 0
-    ;;
-  --list)
-    mode="list"
-    shift
-    ;;
-  --dry-run)
-    mode="dry-run"
-    shift
-    ;;
-  "")
-    ;;
-  *)
-    if [ "${1#-}" != "$1" ]; then
-      usage >&2
-      exit 2
-    fi
-    ;;
+	--help | -h)
+		usage
+		exit 0
+		;;
+	--list)
+		mode="list"
+		shift
+		;;
+	--dry-run)
+		mode="dry-run"
+		shift
+		;;
+	"")
+		;;
+	*)
+		if [ "${1#-}" != "$1" ]; then
+			usage >&2
+			exit 2
+		fi
+		;;
 esac
 
 layout_path="${1:-${APPLY_DISPLAY_PROFILE_CONFIG:-}}"
 
 if command -v displayplacer >/dev/null 2>&1; then
-  displayplacer_bin="$(command -v displayplacer)"
+	displayplacer_bin="$(command -v displayplacer)"
 elif [ -x /opt/homebrew/bin/displayplacer ]; then
-  displayplacer_bin="/opt/homebrew/bin/displayplacer"
+	displayplacer_bin="/opt/homebrew/bin/displayplacer"
 elif [ -x /usr/local/bin/displayplacer ]; then
-  displayplacer_bin="/usr/local/bin/displayplacer"
+	displayplacer_bin="/usr/local/bin/displayplacer"
 else
-  printf 'displayplacer is not installed. Run darwin switch to install the Homebrew formula.\n' >&2
-  exit 1
+	printf 'displayplacer is not installed. Run darwin switch to install the Homebrew formula.\n' >&2
+	exit 1
 fi
 
 display_list="$("$displayplacer_bin" list)"
 
 if [ "$mode" = "list" ]; then
-  printf '%s\n' "$display_list"
-  exit 0
+	printf '%s\n' "$display_list"
+	exit 0
 fi
 
 if [ -z "$layout_path" ]; then
-  printf 'No display layout config provided.\n' >&2
-  exit 1
+	printf 'No display layout config provided.\n' >&2
+	exit 1
 fi
 
 if [ ! -f "$layout_path" ]; then
-  printf 'Display layout config not found: %s\n' "$layout_path" >&2
-  exit 1
+	printf 'Display layout config not found: %s\n' "$layout_path" >&2
+	exit 1
 fi
 
 layout_tsv="$(mktemp)"
@@ -80,12 +80,12 @@ jq -r '
       (.degree // "")
     ]
     | @tsv
-' "$layout_path" > "$layout_tsv"
+' "$layout_path" >"$layout_tsv"
 
-printf '%s\n' "$display_list" > "$display_list_file"
+printf '%s\n' "$display_list" >"$display_list_file"
 
 mapfile -t display_args < <(
-  gawk '
+	gawk '
     BEGIN {
       FS = "\t"
       reset_display()
@@ -380,8 +380,8 @@ mapfile -t display_args < <(
 )
 
 if [ "${#display_args[@]}" -eq 0 ]; then
-  printf 'No matching display layout found.\n' >&2
-  exit 1
+	printf 'No matching display layout found.\n' >&2
+	exit 1
 fi
 
 printf 'displayplacer'
@@ -389,7 +389,7 @@ printf ' %q' "${display_args[@]}"
 printf '\n'
 
 if [ "$mode" = "dry-run" ]; then
-  exit 0
+	exit 0
 fi
 
 "$displayplacer_bin" "${display_args[@]}"

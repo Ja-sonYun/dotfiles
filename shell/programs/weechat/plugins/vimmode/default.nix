@@ -1,6 +1,6 @@
-{ stdenv
-, weechat
-,
+{
+  stdenv,
+  weechat,
 }:
 
 stdenv.mkDerivation {

@@ -1,13 +1,15 @@
 { pkgs, ... }:
 
 let
-  packageVersion = "2.1.186";
-  nativePackage = {
-    aarch64-darwin = "@anthropic-ai/claude-code-darwin-arm64";
-    x86_64-darwin = "@anthropic-ai/claude-code-darwin-x64";
-    aarch64-linux = "@anthropic-ai/claude-code-linux-arm64";
-    x86_64-linux = "@anthropic-ai/claude-code-linux-x64";
-  }.${pkgs.stdenv.hostPlatform.system} or null;
+  packageVersion = "2.1.191";
+  nativePackage =
+    {
+      aarch64-darwin = "@anthropic-ai/claude-code-darwin-arm64";
+      x86_64-darwin = "@anthropic-ai/claude-code-darwin-x64";
+      aarch64-linux = "@anthropic-ai/claude-code-linux-arm64";
+      x86_64-linux = "@anthropic-ai/claude-code-linux-x64";
+    }
+    .${pkgs.stdenv.hostPlatform.system} or null;
 in
 pkgs.lib.mkPackageDerivation {
   inherit pkgs;

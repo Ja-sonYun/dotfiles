@@ -1,24 +1,29 @@
-{ pkgs
-, config
-, ...
+{
+  pkgs,
+  config,
+  ...
 }:
 {
   programs.mcp = {
     enable = true;
     servers = {
       context7 = {
-        command = toString (pkgs.writeShellScript "context7-mcp-wrapper" ''
-          ${pkgs.context7}/bin/context7-mcp \
-            --api-key "${config.home.sessionVariables.CONTEXT7_API_KEY}"
-        '');
+        command = toString (
+          pkgs.writeShellScript "context7-mcp-wrapper" ''
+            ${pkgs.context7}/bin/context7-mcp \
+              --api-key "${config.home.sessionVariables.CONTEXT7_API_KEY}"
+          ''
+        );
         args = [ ];
         env = { };
       };
       exa = {
-        command = toString (pkgs.writeShellScript "exa-mcp-wrapper" ''
-          export EXA_API_KEY="${config.home.sessionVariables.EXA_API_KEY}"
-          exec ${pkgs.exa-mcp-server}/bin/exa-mcp-server
-        '');
+        command = toString (
+          pkgs.writeShellScript "exa-mcp-wrapper" ''
+            export EXA_API_KEY="${config.home.sessionVariables.EXA_API_KEY}"
+            exec ${pkgs.exa-mcp-server}/bin/exa-mcp-server
+          ''
+        );
         args = [ ];
         env = { };
       };

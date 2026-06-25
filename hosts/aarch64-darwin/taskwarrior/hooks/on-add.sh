@@ -7,16 +7,16 @@ FILTER_LISTS="${FILTER_LISTS:-Todos|Work}"
 LOG_FILE="/tmp/taskwarrior-hooks.log"
 
 log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [on-add] $1" >>"$LOG_FILE"
+	echo "$(date '+%Y-%m-%d %H:%M:%S') [on-add] $1" >>"$LOG_FILE"
 }
 
 input=$(cat)
 log "Input: $input"
 
 if [ -n "${TASK_SYNC_RUNNING:-}" ]; then
-    log "Sync running, skipping hook"
-    echo "$input"
-    exit 0
+	log "Sync running, skipping hook"
+	echo "$input"
+	exit 0
 fi
 
 uuid=$(echo "$input" | jq -r '.uuid')
@@ -28,50 +28,50 @@ notes=$(echo "$input" | jq -r '.annotations[0].description // empty')
 
 # Default project
 if [ -z "$project" ]; then
-    project="Todos"
-    log "No project specified, using default: $project"
+	project="Todos"
+	log "No project specified, using default: $project"
 fi
 
 if ! echo "$project" | grep -qE "^($FILTER_LISTS)$"; then
-    log "Project '$project' not in filter list, skipping"
-    echo "$input"
-    exit 0
+	log "Project '$project' not in filter list, skipping"
+	echo "$input"
+	exit 0
 fi
 
 # Build command args
 args=("$project" "$description" --format json)
 
 if [ -n "$due" ]; then
-    due_iso="${due:0:4}-${due:4:2}-${due:6:2}T${due:9:2}:${due:11:2}:${due:13:2}Z"
-    args+=(-d "$due_iso")
+	due_iso="${due:0:4}-${due:4:2}-${due:6:2}T${due:9:2}:${due:11:2}:${due:13:2}Z"
+	args+=(-d "$due_iso")
 fi
 
 if [ -n "$priority" ]; then
-    case "$priority" in
-    H) args+=(-p high) ;;
-    M) args+=(-p medium) ;;
-    L) args+=(-p low) ;;
-    esac
+	case "$priority" in
+		H) args+=(-p high) ;;
+		M) args+=(-p medium) ;;
+		L) args+=(-p low) ;;
+	esac
 fi
 
 if [ -n "$notes" ]; then
-    args+=(-n "$notes")
+	args+=(-n "$notes")
 fi
 
 log "Running: reminders add ${args[*]}"
 
 result=$(reminders add "${args[@]}" 2>&1) || {
-    log "Error: $result"
-    echo "$input"
-    exit 0
+	log "Error: $result"
+	echo "$input"
+	exit 0
 }
 
 external_id=$(echo "$result" | jq -r '.externalId // empty')
 
 if [ -z "$external_id" ]; then
-    log "Failed to get external_id from result: $result"
-    echo "$input"
-    exit 0
+	log "Failed to get external_id from result: $result"
+	echo "$input"
+	exit 0
 fi
 
 log "Created reminder with externalId: $external_id"

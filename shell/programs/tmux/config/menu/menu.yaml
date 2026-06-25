@@ -39,7 +39,6 @@
 
 title: " menu "
 items:
-
   - Menu:
       name: "git"
       shortcut: g
@@ -60,16 +59,16 @@ items:
         w: 60%
         h: 70%
 
-#   - Menu:
-#       name: "docker"
-#       shortcut: d
-#       next_menu: "./docker.yaml"
+  #   - Menu:
+  #       name: "docker"
+  #       shortcut: d
+  #       next_menu: "./docker.yaml"
 
-#   - Menu:
-#       name: "brew services"
-#       shortcut: b
-#       command: "$CONFIG/tmux/menu/scripts/generate_brew_services_restart.sh"
-#       background: true
+  #   - Menu:
+  #       name: "brew services"
+  #       shortcut: b
+  #       command: "$CONFIG/tmux/menu/scripts/generate_brew_services_restart.sh"
+  #       background: true
 
   - Menu:
       name: "Navi"

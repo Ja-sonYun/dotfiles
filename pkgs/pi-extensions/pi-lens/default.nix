@@ -10,6 +10,7 @@ let
     packageVersion = "3.8.53";
   };
 in
-package // {
+package
+// {
   piExtensionPath = "${package}/node_modules/${name}/lib/node_modules/${packageName}";
 }
