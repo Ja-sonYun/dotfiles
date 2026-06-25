@@ -7,7 +7,7 @@ let
     inherit pkgs name packageName;
     hashKey = "piolium";
     packageManager = "npm";
-    packageVersion = "0.0.10";
+    packageVersion = "0.0.11";
     postInstall = ''
       substituteInPlace "$NODE_PATH/lib/node_modules/${packageName}/extensions/piolium/index.ts" \
         --replace-fail '		ctx.ui.notify(PIOLIUM_STARTUP_HINT, "info");' \

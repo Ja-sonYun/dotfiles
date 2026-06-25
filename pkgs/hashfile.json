@@ -51,8 +51,8 @@
       "hash": "sha256-NuWSig1pJYQKJNLAbcjAZHWVB7byla2OgpVrFLubV+o="
     },
     "codex": {
-      "version": "0.142.1",
-      "hash": "sha256-OVSmaX7SI0NFq+5Pt8FuemnbTPPkhVH7mY/RBF5jqn0="
+      "version": "0.142.2",
+      "hash": "sha256-vdqjI2yKjpJcU9kxVqeVWa4zlLYEm2YHkuDY2Rf+N/Y="
     },
     "claude-code": {
       "version": "2.1.191",
@@ -63,8 +63,8 @@
       "hash": "sha256-JSxbIuC2n/g5OfeHFuHn1p6JVKjJQ6nz/f/PE2JFr9Y="
     },
     "open-code-review": {
-      "version": "1.6.0",
-      "hash": "sha256-4ZPU+DLLCLVLc5zZdO/Qb2QAb54/PwD2CVKYxsarMig="
+      "version": "1.6.1",
+      "hash": "sha256-+Sx3lj2WwvzngTIYIah8R5aQlmftjE8oPnkYv5nYnU0="
     },
     "pi": {
       "version": "0.80.2",
@@ -79,8 +79,8 @@
       "hash": "sha256-71c+rzQB0VPv0z2DR8HYNxsL/u0JPXw/6bMCTyuwiMk="
     },
     "piolium": {
-      "version": "0.0.10",
-      "hash": "sha256-Gtd0mZazGnBUk6ac8pg8//QpllcM8hO/T6GQF9p6p2Y="
+      "version": "0.0.11",
+      "hash": "sha256-EpzLAs5UOSf+n7Wxx1qK/2jIwH8j5e1yzAt3P14tS2A="
     },
     "pi-mcp-adapter": {
       "version": "2.10.0",
