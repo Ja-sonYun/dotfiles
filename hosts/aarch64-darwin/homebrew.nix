@@ -72,7 +72,6 @@ let
         "iina"
         "chatgpt"
         "chatgpt-atlas"
-        "ultimaker-cura"
         "balenaetcher"
         "basictex"
         "openvpn-connect"
@@ -119,12 +118,10 @@ in
     global = {
       autoUpdate = false;
     };
-    # will not be uninstalled when removed
     masApps = { } // (if purpose == "main" then { } else { });
     onActivation = {
-      # "zap" removes manually installed brews and casks
-      cleanup = "none";
-      autoUpdate = false;
+      cleanup = "uninstall";
+      autoUpdate = true;
       upgrade = true;
     };
     brews = brews ++ allBrews;
