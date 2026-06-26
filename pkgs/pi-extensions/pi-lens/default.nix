@@ -7,7 +7,7 @@ let
     inherit pkgs name packageName;
     hashKey = "pi-lens";
     packageManager = "npm";
-    packageVersion = "3.8.53";
+    packageVersion = "3.8.61";
   };
 in
 package

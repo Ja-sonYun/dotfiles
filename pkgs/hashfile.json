@@ -55,8 +55,8 @@
       "hash": "sha256-vdqjI2yKjpJcU9kxVqeVWa4zlLYEm2YHkuDY2Rf+N/Y="
     },
     "claude-code": {
-      "version": "2.1.191",
-      "hash": "sha256-lVU7Y2zOAAY3NesuErEWvxkAjr9vfvKQG5I/1WfxJnc="
+      "version": "2.1.193",
+      "hash": "sha256-YpmdFFm34iK0ysEg/JWvLH+sfT1kc/nngDqqIZTkuKM="
     },
     "context7-mcp": {
       "version": "3.2.2",
@@ -75,8 +75,8 @@
       "hash": "sha256-+iOi0DC61U57CZgMfdXFlXETV3FzpjypKS6Iq2+N+bo="
     },
     "pi-lens": {
-      "version": "3.8.53",
-      "hash": "sha256-71c+rzQB0VPv0z2DR8HYNxsL/u0JPXw/6bMCTyuwiMk="
+      "version": "3.8.61",
+      "hash": "sha256-prld8rOxK5WxadPdfn9lFyigUULNG19Z1PBZhYbC2bc="
     },
     "piolium": {
       "version": "0.0.11",
@@ -87,8 +87,8 @@
       "hash": "sha256-oxxAwuaaJl1fwTD9MbRSI1TrJ3Pv5rPj28MmC6xbcDE="
     },
     "pi-permission-system": {
-      "version": "16.0.1",
-      "hash": "sha256-0HiGKZ1JT6+OQfuvjBEpsi62Y+xSxe8kNA3Uk0TIANk="
+      "version": "16.0.2",
+      "hash": "sha256-TNIYoCvTojft9ElmmR2nRAMbUHSY11q5UG5zp/2DCys="
     },
     "exa-mcp-server": {
       "version": "3.2.1",

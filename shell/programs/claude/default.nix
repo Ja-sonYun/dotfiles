@@ -210,6 +210,18 @@ in
             ];
           }
         ];
+        PostToolUse = [
+          {
+            matcher = "Edit|Write|MultiEdit";
+            hooks = [
+              {
+                type = "command";
+                command = "${pkgs.python3}/bin/python ${aiBundle.hooksSrc}/comment-review.py";
+                timeout = 60;
+              }
+            ];
+          }
+        ];
       };
       attribution = {
         commit = "";

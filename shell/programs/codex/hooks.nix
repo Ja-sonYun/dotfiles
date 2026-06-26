@@ -38,6 +38,16 @@ let
         }
       ];
     };
+    PostToolUse = {
+      eventName = "post_tool_use";
+      entries = [
+        {
+          matcher = "apply_patch";
+          command = "${pkgs.python3}/bin/python ${codexHookDir}/comment-review.py";
+          timeout = 60;
+        }
+      ];
+    };
   };
 
   mkCommandHook = entry: {
@@ -66,13 +76,16 @@ let
     };
 
   mkTrustedHash =
-    eventName: hooks:
+    eventName: matcher: hooks:
     "sha256:${
       builtins.hashString "sha256" (
-        builtins.toJSON {
-          event_name = eventName;
-          hooks = map mkHookWithDefaults hooks;
-        }
+        builtins.toJSON (
+          {
+            event_name = eventName;
+            hooks = map mkHookWithDefaults hooks;
+          }
+          // lib.optionalAttrs (matcher != null) { inherit matcher; }
+        )
       )
     }";
 
@@ -81,15 +94,21 @@ let
   mkHookStateFor =
     definition:
     let
-      hooks = map mkHook definition.entries;
+      inherit (definition) entries;
     in
-    builtins.genList (index: {
-      name = mkStateKey definition.eventName index;
-      value = {
-        enabled = true;
-        trusted_hash = mkTrustedHash definition.eventName [ (builtins.elemAt hooks index) ];
-      };
-    }) (builtins.length hooks);
+    builtins.genList (
+      index:
+      let
+        entry = builtins.elemAt entries index;
+      in
+      {
+        name = mkStateKey definition.eventName index;
+        value = {
+          enabled = true;
+          trusted_hash = mkTrustedHash definition.eventName (entry.matcher or null) [ (mkHook entry) ];
+        };
+      }
+    ) (builtins.length entries);
 
   codexHookState = builtins.listToAttrs (
     lib.flatten (lib.mapAttrsToList (_: mkHookStateFor) hookDefinitions)
@@ -97,9 +116,13 @@ let
 
   codexHookSettings = lib.mapAttrs (
     _: definition:
-    map (entry: {
-      hooks = [ (mkHook entry) ];
-    }) definition.entries
+    map (
+      entry:
+      {
+        hooks = [ (mkHook entry) ];
+      }
+      // lib.optionalAttrs (entry ? matcher) { inherit (entry) matcher; }
+    ) definition.entries
   ) hookDefinitions;
 in
 {
