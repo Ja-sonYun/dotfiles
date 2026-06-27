@@ -31,16 +31,16 @@
       "hash": "sha256-0juzNnh00Kka9FhR+XioXPv2IQUucfqvE5+vUs3YptM="
     },
     "n8n-mcp": {
-      "version": "2.60.0",
-      "hash": "sha256-rErF/Og+XeWTqKr7oy7OsbMf0u3ZtZbhGVXU3yBX/qU="
+      "version": "2.61.0",
+      "hash": "sha256-H476ABq/XvVOzhs8eiQfB/cW7hO4//Cls68x5H4b0aA="
     },
     "macnotesapp": {
       "version": "0.8.2",
       "hash": "sha256-8OAjjrgeurnNuVDAuQm0zecLS90N9cHKFbHzyRUgZvM="
     },
     "firecrawl-mcp": {
-      "version": "3.22.0",
-      "hash": "sha256-U4syHmQYU2RdXvAZ9veF2XT7pYRthzFFq+U9SGv+KkU="
+      "version": "3.22.1",
+      "hash": "sha256-ePQISiKOQKxJItL32eaRs/DaNKzwYazM0DpbysppgyY="
     },
     "awscli-local": {
       "version": "0.22.2",
@@ -51,20 +51,20 @@
       "hash": "sha256-NuWSig1pJYQKJNLAbcjAZHWVB7byla2OgpVrFLubV+o="
     },
     "codex": {
-      "version": "0.142.2",
-      "hash": "sha256-vdqjI2yKjpJcU9kxVqeVWa4zlLYEm2YHkuDY2Rf+N/Y="
+      "version": "0.142.3",
+      "hash": "sha256-+x1D/fvZyE8oiYvoejW+eeKeqvmsnzgB0952wFEeXA8="
     },
     "claude-code": {
-      "version": "2.1.193",
-      "hash": "sha256-YpmdFFm34iK0ysEg/JWvLH+sfT1kc/nngDqqIZTkuKM="
+      "version": "2.1.195",
+      "hash": "sha256-imr2ttm/VIfNJtE7V86qtEVp+NfbodrkeO7GMNWeR60="
     },
     "context7-mcp": {
       "version": "3.2.2",
       "hash": "sha256-JSxbIuC2n/g5OfeHFuHn1p6JVKjJQ6nz/f/PE2JFr9Y="
     },
     "open-code-review": {
-      "version": "1.6.2",
-      "hash": "sha256-nKt58wPT8f5nkMwH1G5liNy019oEhSniPLEbCnM8dGU="
+      "version": "1.6.4",
+      "hash": "sha256-y/7MQeuCvn0n9Wyv709loncZ62XJj8k7l8AECGgjDPU="
     },
     "pi": {
       "version": "0.80.2",
@@ -87,8 +87,8 @@
       "hash": "sha256-oxxAwuaaJl1fwTD9MbRSI1TrJ3Pv5rPj28MmC6xbcDE="
     },
     "pi-permission-system": {
-      "version": "16.0.2",
-      "hash": "sha256-TNIYoCvTojft9ElmmR2nRAMbUHSY11q5UG5zp/2DCys="
+      "version": "16.2.1",
+      "hash": "sha256-rdrjLDOeaQIHywk+6ykhLDwWHMy8LIGvwFCTts8jeRs="
     },
     "exa-mcp-server": {
       "version": "3.2.1",

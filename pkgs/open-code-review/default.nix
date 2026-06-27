@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "open-code-review";
   packageManager = "npm";
   packageName = "@alibaba-group/open-code-review";
-  packageVersion = "1.6.2";
+  packageVersion = "1.6.4";
   name = "open-code-review";
   exposedBinaries = [ ];
   buildInputs = [

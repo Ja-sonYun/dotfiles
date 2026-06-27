@@ -14,6 +14,5 @@
       [
         ./yabai
         ./skhd
-        (infraSrc + "/services/Jays-MacBook-Pro-Server")
       ];
 }

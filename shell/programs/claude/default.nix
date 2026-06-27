@@ -210,7 +210,7 @@ in
             ];
           }
         ];
-        PostToolUse = [
+        PreToolUse = [
           {
             matcher = "Edit|Write|MultiEdit";
             hooks = [
