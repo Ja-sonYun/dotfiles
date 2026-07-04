@@ -1,0 +1,27 @@
+% rg, ripgrep, search, replace
+
+# In-place replace across all matching files (macOS sed)
+rg -l '<pattern>' | xargs sed -i '' 's/<search>/<replace>/g'
+
+# Open every file that matches in $EDITOR
+rg -l '<pattern>' | xargs $EDITOR
+
+# Count matches per file, sorted by count
+rg -c '<pattern>' | sort -t: -k2 -nr
+
+# List files that do NOT contain the pattern
+rg --files-without-match '<pattern>'
+
+# Multiline search (pattern spans lines)
+rg -U '<pattern>'
+
+# PCRE2 mode (lookahead/lookbehind, backrefs)
+rg -P '<pattern>'
+
+# Search hidden + gitignored, only in a file type
+rg -uu -t <type> '<pattern>'
+
+# Show 3 lines of context around each match
+rg -C 3 '<pattern>'
+
+$ type: rg --type-list | awk -F: '{print $1}'

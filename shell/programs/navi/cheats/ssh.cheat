@@ -1,0 +1,47 @@
+% ssh, tunnel, port forward
+
+# Local forward: reach remote:PORT via localhost:LOCAL
+ssh -L <local_port>:<remote_host>:<remote_port> <user>@<host>
+
+# Remote forward: expose local:LOCAL on remote:PORT
+ssh -R <remote_port>:localhost:<local_port> <user>@<host>
+
+# Dynamic SOCKS proxy on localhost:PORT
+ssh -D <local_port> <user>@<host>
+
+# Background tunnel, no remote shell
+ssh -fN -L <local_port>:<remote_host>:<remote_port> <user>@<host>
+
+# Connect through a jump host
+ssh -J <jump_user>@<jump_host> <user>@<host>
+
+# Run a command on the remote and exit
+ssh <user>@<host> '<command>'
+
+# Copy your public key to a host
+ssh-copy-id <user>@<host>
+
+% scp, copy, transfer
+
+# Copy a local file to a remote host
+scp <local_file> <user>@<host>:<remote_path>
+
+# Copy a directory recursively to remote
+scp -r <local_dir> <user>@<host>:<remote_path>
+
+# Copy a file FROM remote to local
+scp <user>@<host>:<remote_path> <local_path>
+
+# Copy through a jump host
+scp -o ProxyJump=<jump_user>@<jump_host> <local_file> <user>@<host>:<remote_path>
+
+% rsync, sync, transfer
+
+# Sync a dir to remote over ssh (archive, compress, progress)
+rsync -avz --progress -e ssh <src>/ <user>@<host>:<dest>/
+
+# Mirror exactly, deleting extras on the remote (dangerous)
+rsync -avz --delete -e ssh <src>/ <user>@<host>:<dest>/
+
+# Dry-run: show what WOULD transfer, change nothing
+rsync -avzn -e ssh <src>/ <user>@<host>:<dest>/

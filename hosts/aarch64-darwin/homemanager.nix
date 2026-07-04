@@ -35,8 +35,6 @@
 
   home.packages = with pkgs; [
     macnotesapp
-
-    podman
   ];
 
   home.sessionVariables = {

@@ -1,0 +1,29 @@
+% fd, find, files
+
+# Run a command on each match (parallel)
+fd -e <ext> -x <command>
+
+# Delete all matches (dangerous)
+fd <pattern> -X rm
+
+# Find files changed within a time window
+fd --changed-within <duration> <pattern>
+
+# Find and copy matches into a dir, flattening
+fd -e <ext> -x cp {} <dest>/
+
+% eza, ls, tree
+
+# Tree, N levels deep, dirs first, with git status
+eza --tree --level=<n> --group-directories-first --git
+
+# Long list sorted by size, largest last
+eza -la --sort=size
+
+% bat, cat, view
+
+# Highlight and page a diff
+git diff | bat -l diff
+
+# View only matching lines with context (rg + bat)
+rg -n '<pattern>' <file> | bat -l rust

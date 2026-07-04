@@ -1,5 +1,0 @@
-# Eval
-e scr.color=1
-e dbg.hwbp=false
-e cfg.fortunes=false
-e bin.cache=true

@@ -40,21 +40,21 @@
     claude-code = final.callPackage ../pkgs/claude-code { };
     codex = final.callPackage ../pkgs/codex { };
     open-code-review = final.callPackage ../pkgs/open-code-review { };
+    pi = final.callPackage ../pkgs/pi { };
+    pi-extensions = import ../pkgs/pi/extensions.nix { pkgs = final; };
     context7 = final.callPackage ../pkgs/context7 { };
     chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
     exa-mcp-server = final.callPackage ../pkgs/exa-mcp-server { };
     firecrawl-mcp = final.callPackage ../pkgs/firecrawl-mcp { };
     n8n-mcp = final.callPackage ../pkgs/n8n-mcp { };
-    pi = final.callPackage ../pkgs/pi { };
     ponytail = final.callPackage ../pkgs/ponytail { };
-    pi-subagents = final.callPackage ../pkgs/pi-extensions/pi-subagents { };
-    pi-permission-system = final.callPackage ../pkgs/pi-extensions/pi-permission-system { };
-    pi-mcp-adapter = final.callPackage ../pkgs/pi-extensions/pi-mcp-adapter { };
-    piolium = final.callPackage ../pkgs/pi-extensions/piolium { };
-    pi-lens = final.callPackage ../pkgs/pi-extensions/pi-lens { };
 
     # Pypi
     aws-documentation = final.callPackage ../pkgs/aws-documentation { };
+    freecad-mcp = final.callPackage ../pkgs/freecad-mcp { };
+
+    r2dec = final.callPackage ../pkgs/r2dec { };
+    r2ghidra = final.callPackage ../pkgs/r2ghidra { };
 
     # Cargo
     tmux-menu = final.callPackage ../pkgs/tmux-menu { };

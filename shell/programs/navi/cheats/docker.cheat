@@ -1,0 +1,47 @@
+% docker, container, cleanup, prune
+
+# Stop ALL running containers
+docker stop $(docker ps -q)
+
+# Remove ALL containers (force, incl. running)
+docker rm -f $(docker ps -aq)
+
+# Remove ALL images (force)
+docker rmi -f $(docker images -q)
+
+# Remove containers whose name matches a pattern
+docker ps -a | grep <pattern> | awk '{print $1}' | xargs -r docker rm -f
+
+# Nuke everything: containers, networks, images, build cache, volumes
+docker system prune -a --volumes -f
+
+# Remove only dangling images
+docker image prune -f
+
+# Show docker disk usage breakdown
+docker system df
+
+# Exec into a container as root
+docker exec -it -u root <container> bash
+
+# Follow last 100 log lines with timestamps
+docker logs -f --tail 100 -t <container>
+
+# Get a container's IP address
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' <container>
+
+# Copy a file out of a container
+docker cp <container>:<src_path> <dest_path>
+
+$ container: docker ps --format '{{.Names}}'
+
+% docker compose, compose
+
+# Rebuild from scratch (no cache) and recreate
+docker compose build --no-cache && docker compose up -d --force-recreate
+
+# Tail logs of one service, last 200 lines
+docker compose logs -f --tail 200 <service>
+
+# Stop and remove everything incl. volumes and orphans
+docker compose down -v --remove-orphans

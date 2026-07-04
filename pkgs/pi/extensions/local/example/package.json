@@ -1,0 +1,10 @@
+{
+  "name": "pi-ext-example",
+  "private": true,
+  "dependencies": {
+    "typebox": "^1.1.24"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.2"
+  }
+}

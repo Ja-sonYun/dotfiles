@@ -1,0 +1,9 @@
+{
+  "name": "pi-local-extensions",
+  "private": true,
+  "description": "Shared types for single-file pi extensions under this directory.",
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.2",
+    "typebox": "^1.1.24"
+  }
+}

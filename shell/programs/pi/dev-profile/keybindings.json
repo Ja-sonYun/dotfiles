@@ -1,8 +1,0 @@
-{
-  "tui.input.newLine": ["shift+enter"],
-  "tui.input.submit": ["enter"],
-  "tui.editor.deleteToLineStart": ["alt+backspace"],
-  "tui.editor.deleteWordBackward": ["ctrl+w"],
-  "tui.editor.deleteCharForward": ["delete"],
-  "tui.editor.deleteToLineEnd": ["ctrl+delete"]
-}

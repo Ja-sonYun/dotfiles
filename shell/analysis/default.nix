@@ -8,7 +8,6 @@
     pmd
 
     # Binary analysis
-    radare2
     rizin
     binsider
 
@@ -48,10 +47,4 @@
   #   rr
   #   gdb
   # ];
-
-  home.file.radare2 = {
-    recursive = true;
-    target = ".config/radare2";
-    source = toString ./configs/radare2;
-  };
 }

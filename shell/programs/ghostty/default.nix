@@ -78,6 +78,8 @@
         "clear"
         "cmd+c=copy_to_clipboard"
         "cmd+v=paste_from_clipboard"
+        "shift+enter=text:\\x1b[18~"
+        "ctrl+enter=text:\\x1b[19~"
         "cmd+a=select_all"
         "cmd+q=quit"
         "cmd+w=close_window"

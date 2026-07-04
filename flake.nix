@@ -202,8 +202,8 @@
           # Agenix for secrets management
           agenix.homeManagerModules.default
           (import "${agenix-secrets}/homemanager.nix")
-          ./modules/zshFunc
-          ./modules/zleFunc
+          ./modules/shell
+          ./modules/programs
           # Common configurations
           ./shell
           ./misc/fonts
@@ -269,7 +269,9 @@
 
             ./hosts/aarch64-darwin/homebrew.nix
             ./hosts/aarch64-darwin/core/display
-            nixlib.darwinModules.darwin-nixos-vm
+
+            ./modules/services
+
             ./hosts/aarch64-darwin/services.nix
 
             # home manager

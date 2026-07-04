@@ -138,6 +138,18 @@ let
       "sub-layer" = "normal";
     }
     {
+      label = "Fusion";
+      app = "^Fusion$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
+      label = "FreeCAD";
+      app = "^FreeCAD$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
       label = "Safari Settings";
       app = "^Safari$";
       title = "^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$";

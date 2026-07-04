@@ -6,19 +6,17 @@
       swift-format = prev.runCommand "swift-format-dummy" { } "mkdir -p $out/bin";
     };
 
-  tmux-with-sixel = final: prev: {
-    tmux = prev.tmux.overrideAttrs (old: rec {
-      version = "3.6";
-
-      src = final.fetchFromGitHub {
-        owner = "tmux";
-        repo = "tmux";
-        rev = version;
-        sha256 = "sha256-jIHnwidzqt+uDDFz8UVHihTgHJybbVg3pQvzlMzOXPE=";
-      };
-      configureFlags = (old.configureFlags or [ ]) ++ [ "--enable-sixel" ];
-    });
-  };
+  # tmux-pin = _final: prev: {
+  #   tmux = prev.tmux.overrideAttrs (_: {
+  #     version = "3.7a";
+  #     src = prev.fetchFromGitHub {
+  #       owner = "tmux";
+  #       repo = "tmux";
+  #       tag = "3.7a";
+  #       hash = "sha256-60lcDSOkIvTjqxAROwraPsHcBdv0MvST2ev+sYJDgo8=";
+  #     };
+  #   });
+  # };
 
   # Override upstream packages using our local pkgs/* definitions
   unstable-pkgs-override = _final: _prev: {

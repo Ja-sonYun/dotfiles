@@ -1,0 +1,19 @@
+% tar, compress, archive
+
+# Create gzipped tarball, excluding a glob
+tar --exclude='<glob>' -czvf <archive>.tar.gz <path>
+
+# Extract a single file from a tarball
+tar -xzvf <archive>.tar.gz <path_inside_archive>
+
+# Extract into a specific directory
+tar -xzvf <archive>.tar.gz -C <dir>
+
+# Copy a directory to a remote host over ssh via tar
+tar czf - <path> | ssh <user>@<host> 'tar xzf - -C <dest>'
+
+# Diff a tarball against the filesystem
+tar -dzvf <archive>.tar.gz
+
+# List contents without extracting
+tar -tzvf <archive>.tar.gz

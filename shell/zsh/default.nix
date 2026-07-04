@@ -272,6 +272,7 @@ in
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
+    historyWidget.command = ""; # atuin owns Ctrl-R
   };
 
   programs.zoxide = {

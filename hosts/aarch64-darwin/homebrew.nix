@@ -91,6 +91,7 @@ let
         "microsoft-remote-desktop"
         "protonvpn"
         "bambu-studio"
+        "autodesk-fusion"
 
         # TODO: Move to nix
         "macfuse"

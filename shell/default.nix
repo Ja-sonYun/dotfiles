@@ -1,4 +1,9 @@
-{ lib, purpose, ... }:
+{
+  lib,
+  purpose,
+  agenix-secrets,
+  ...
+}:
 {
   imports = [
     ./zsh
@@ -13,16 +18,17 @@
     ./programs/direnv
     ./programs/navi
     ./programs/visidata
+    ./programs/radare2
   ]
   ++ lib.optionals (purpose == "main") [
     ./programs/ghostty
     ./programs/weechat
-    ./programs/mcp
     ./programs/claude
     ./programs/codex
     ./programs/pi
-    ./programs/pi/develop.nix
     ./programs/open-code-review
+
+    "${agenix-secrets}/modules/mcp"
   ];
 
   home.file.profile = {

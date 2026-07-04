@@ -73,13 +73,9 @@
 
       cloudflared
 
-      (pkgs.writeShellScriptBin "tunnel" ''
-        set -euo pipefail
-        export PATH="${pkgs.age}/bin:${pkgs.cloudflared}/bin:$PATH"
-        exec "${configDir}/infra/cloudflare/generated/tunnel" "$@"
-      '')
-
       awsdac
+
+      hyperfine
 
       awscli2
       awscli-local
