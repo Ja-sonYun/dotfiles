@@ -1,5 +1,6 @@
 {
   imports = [
+    ./claude
     ./codex
     ./navi
     ./pi

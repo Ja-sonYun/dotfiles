@@ -25,6 +25,7 @@ in
     enable = true;
     package = claudeCode;
     enableMcpIntegration = true;
+    chromeNativeHost.enable = true;
 
     mcpServers = { };
 
@@ -38,29 +39,21 @@ in
       promptSuggestionEnabled = false;
       effortLevel = "high";
     };
-  };
 
-  home.file = {
-    ".claude/keybindings.json" = {
-      text = builtins.toJSON {
-        bindings = [
-          {
-            context = "Scroll";
-            bindings = {
-              "ctrl+u" = "scroll:halfPageUp";
-              "ctrl+n" = "scroll:halfPageDown";
-            };
-          }
-        ];
-      };
+    keybindings = {
+      bindings = [
+        {
+          context = "Scroll";
+          bindings = {
+            "ctrl+u" = "scroll:halfPageUp";
+            "ctrl+n" = "scroll:halfPageDown";
+          };
+        }
+      ];
     };
 
-    "Library/Application Support/Claude/claude_desktop_config.json" = {
-      target = "Library/Application Support/Claude/claude_desktop_config.json";
-      force = true;
-      text = builtins.toJSON {
-        mcpServers = removeAttrs config.programs.mcp.servers [ "grep_app" ];
-      };
+    desktopConfig = {
+      mcpServers = removeAttrs config.programs.mcp.servers [ "grep_app" ];
     };
   };
 }

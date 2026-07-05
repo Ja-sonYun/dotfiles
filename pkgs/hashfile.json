@@ -101,8 +101,8 @@
       "hash": "sha256-cCdg5/CsQ0MKgn9omopKn3P7GoVsVu7KqJpedhFNScU="
     },
     "freecad-mcp": {
-      "version": "0.1.17",
-      "hash": "sha256-u6H/Hmr2AyTCti0B7RbqPpxl8bi+2uaxzbM8S/Fj+rE="
+      "version": "0.1.19",
+      "hash": "sha256-++h4rAI1QBaZQNJl5eiXI+y+jLjeHuZg6qbIQkPQpB8="
     },
     "claude-code": {
       "version": "2.1.201",
