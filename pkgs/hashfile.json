@@ -25,40 +25,6 @@
       "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     }
   },
-  "Jays-MacBook-Pro-Server": {
-    "aws-documentation": {
-      "version": "1.1.23",
-      "hash": "sha256-0AjfI4RaCq4knzVaZRbo6T35eO9S2KoalkrYtf27pNE="
-    },
-    "n8n-mcp": {
-      "version": "2.51.1",
-      "hash": "sha256-UnJ1FpGHuuMQ6PSS236+zceOpRCaI1FX2NZEVd15Sgo="
-    },
-    "macnotesapp": {
-      "version": "0.8.2",
-      "hash": "sha256-l6QDjNJN8b7e7TNuvjoZdAWEunn7RxK4l9NBookPq98="
-    },
-    "firecrawl-mcp": {
-      "version": "3.15.0",
-      "hash": "sha256-dRUbPu/lL2ZowYJWUh2qnsZoSvjUh1dzK4Be6yDqskY="
-    },
-    "awscli-local": {
-      "version": "0.22.2",
-      "hash": "sha256-OkvsA8l8A6IFsVOfSFKeqHgtTfrqtfz7JFdolI9U9rM="
-    },
-    "chrome-devtools-mcp": {
-      "version": "0.25.0",
-      "hash": "sha256-lfV44yuCANY/iKtQToxqtBv3k6vtRW+V7ady7ikzbC8="
-    },
-    "codex": {
-      "version": "0.130.0",
-      "hash": "sha256-oMRVUodAAycvN3MDGXflXXnJBRRYNla2xPV6I61V9oE="
-    },
-    "context7-mcp": {
-      "version": "2.2.4",
-      "hash": "sha256-c09slnA20zMzyLpnF39y2k+IcZNg5KCDKTvSTNGjZYY="
-    }
-  },
   "Jays-MacBook-Pro": {
     "aws-documentation": {
       "version": "1.1.26",
@@ -119,6 +85,68 @@
     "pi-permission-system": {
       "version": "0.8.0",
       "hash": "sha256-YMaX66EkeHi19QLAjsw1Sy48vgm4imCqx4phiTx+Fec="
+    }
+  },
+  "Jays-MacBook-Pro-Server": {
+    "aws-documentation": {
+      "version": "1.1.26",
+      "hash": "sha256-NFFpDOa2kVqvopiENrcGNAlRytYMzLX8nnRae8ZjgkU="
+    },
+    "n8n-mcp": {
+      "version": "2.63.0",
+      "hash": "sha256-3y0DNd1mGPKt/XYpz2Ztx4Fns4HNr6td2Q/pLni7+5k="
+    },
+    "chrome-devtools-mcp": {
+      "version": "1.5.0",
+      "hash": "sha256-zO6SVz5BEBUvobz0o1LMbZxiNjNdlznStCJUvLSyVFw="
+    },
+    "open-code-review": {
+      "version": "1.7.1",
+      "hash": "sha256-/UVsR7hf/AW5Ci34narteIzzYaqZYr3m0SDgN+AGaYA="
+    },
+    "awscli-local": {
+      "version": "0.22.2",
+      "hash": "sha256-f0xSXoYjlvS0KTtUnQL4BBA4FBY3HwYx58/axeUVNRA="
+    },
+    "pi": {
+      "version": "0.80.3",
+      "hash": "sha256-rqrHS7/8yQnC9+kwMKt7JRV5QI3l3vmVlFEcYD5cBxI="
+    },
+    "codex": {
+      "version": "0.142.5",
+      "hash": "sha256-TKYrjZufKHFMEPm6hqup2SnhT8T9wKPRpf+YiyH8Kc4="
+    },
+    "macnotesapp": {
+      "version": "0.8.2",
+      "hash": "sha256-QMcCfuWz/Hl+w9mprsGEkQ1IqR0YwSa6F0/nTCuEzJQ="
+    },
+    "claude-code": {
+      "version": "2.1.201",
+      "hash": "sha256-hmtTTbX7v45WV2xzvX8B2A/LaNLWDoUyPv6R6srw+eo="
+    },
+    "firecrawl-mcp": {
+      "version": "3.22.2",
+      "hash": "sha256-WjpK+LSJ3JfNWoumhjksdX3A9Lk6LTSDc57xJMG9aoQ="
+    },
+    "freecad-mcp": {
+      "version": "0.1.19",
+      "hash": "sha256-Nu1xArWGaqpRluMGMz5poDWMXCwal9mTylmCrlzAb3U="
+    },
+    "pi-mcp-adapter": {
+      "version": "2.11.0",
+      "hash": "sha256-f7367MfO9XhWfNo9ED+n27ufGYxJ4BxtI+yCCwN7MkI="
+    },
+    "pi-permission-system": {
+      "version": "0.8.0",
+      "hash": "sha256-VSTYg8dUYpkjHbsTKc559Sqsj+svLrBzVJLmuzGTdjQ="
+    },
+    "context7-mcp": {
+      "version": "3.2.2",
+      "hash": "sha256-P/kfW5Bp0Zc8pClU0tyuGZzChBP0zEny2Y+Z7BVUyKU="
+    },
+    "exa-mcp-server": {
+      "version": "3.2.1",
+      "hash": "sha256-Iy8NVmMjLXsj/5rdIYJ45THzaKT3ODGRZIq/FzxfWAQ="
     }
   }
 }
