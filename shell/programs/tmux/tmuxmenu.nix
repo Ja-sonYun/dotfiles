@@ -124,6 +124,28 @@ _: {
             };
           };
         }
+        {
+          menu = {
+            name = "claude chrome";
+            shortcut = "b";
+            command = "_gen-close-hook claude && direnv exec . claude --chrome";
+            session = true;
+            sessionName = "claude-chrome";
+            sessionOnDir = true;
+            runOnGitRoot = true;
+            environment = {
+              MULTI_SESSION_COMMAND = "direnv exec . claude --chrome";
+              NO_WINDOW_MGNT = "1";
+              CTRL_C_AS_CLOSE = "1";
+              MENU_POPUP = "1";
+              TMUX_REMAP_CTRL_D = "C-n";
+            };
+            position = {
+              w = "60%";
+              h = "55%";
+            };
+          };
+        }
         { separator = true; }
         {
           menu = {
