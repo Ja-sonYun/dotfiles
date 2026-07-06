@@ -6,20 +6,6 @@
       swift-format = prev.runCommand "swift-format-dummy" { } "mkdir -p $out/bin";
     };
 
-  sse-starlette-skip-flaky-darwin-test =
-    _final: prev:
-    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-      python312Packages = prev.python312Packages.overrideScope (
-        _pyFinal: pyPrev: {
-          sse-starlette = pyPrev.sse-starlette.overridePythonAttrs (old: {
-            disabledTests = (old.disabledTests or [ ]) ++ [
-              "test_response_send_whenValidInput_thenGeneratesExpectedOutput"
-            ];
-          });
-        }
-      );
-    };
-
   # tmux-pin = _final: prev: {
   #   tmux = prev.tmux.overrideAttrs (_: {
   #     version = "3.7a";
