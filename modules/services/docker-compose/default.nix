@@ -87,9 +87,10 @@ let
       valueLines = mapAttrsToList (
         key: value: "        printf '%s=%s\\n' ${escapeShellArg key} ${escapeShellArg (envValue value)}"
       ) envFile.environment;
-      secretLines = mapAttrsToList (
-        key: path: "        printf '%s=%s\\n' ${escapeShellArg key} \"$(cat ${escapeShellArg path})\""
-      ) envFile.secrets;
+      secretLines = mapAttrsToList (key: path: ''
+        value="$(read_secret_file ${escapeShellArg path})"
+        printf '%s=%s\n' ${escapeShellArg key} "$value"
+      '') envFile.secrets;
     in
     ''
       mkdir -p "$(dirname ${escapeShellArg envFile.path})"
@@ -105,7 +106,8 @@ let
       source = pkgs.writeText "docker-compose-${name}" file.text;
       replaceScript = concatStringsSep "\n" (
         mapAttrsToList (placeholder: path: ''
-          PLACEHOLDER=${escapeShellArg placeholder} VALUE="$(cat ${escapeShellArg path})" ${pkgs.perl}/bin/perl -0pi -e 's/\Q$ENV{PLACEHOLDER}\E/$ENV{VALUE}/g' ${escapeShellArg file.path}
+          value="$(read_secret_file ${escapeShellArg path})"
+          PLACEHOLDER=${escapeShellArg placeholder} VALUE="$value" ${pkgs.perl}/bin/perl -0pi -e 's/\Q$ENV{PLACEHOLDER}\E/$ENV{VALUE}/g' ${escapeShellArg file.path}
         '') file.replace
       );
     in
@@ -186,6 +188,16 @@ let
       docker=${escapeShellArg dockerBin}
       compose_file=${escapeShellArg "${composeFile}"}
       name=${escapeShellArg name}
+      export PATH="$(dirname "$docker"):$PATH"
+
+      read_secret_file() {
+        for _ in $(seq 1 60); do
+          [ -r "$1" ] && cat "$1" && return 0
+          sleep 1
+        done
+        echo "[dockerCompose] secret file '$1' not readable" >&2
+        return 1
+      }
 
       if [ ! -x "$docker" ]; then
         echo "[dockerCompose] '$docker' not found yet. Install Docker, then re-run system activation. Skipping for now."
