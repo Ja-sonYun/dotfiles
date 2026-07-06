@@ -51,6 +51,12 @@
     enable = true;
     package = nixpkgs-stable.legacyPackages.${pkgs.system}.darwin.linux-builder;
     systems = [ "aarch64-linux" ];
+    config = {
+      virtualisation = {
+        cores = 4;
+        darwin-builder.memorySize = 8192;
+      };
+    };
   };
 
   # On-demand: don't keep the QEMU builder VM running when idle. The Makefile
