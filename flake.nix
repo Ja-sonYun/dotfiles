@@ -63,10 +63,6 @@
       url = "github:Ja-sonYun/mkutils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    aoe = {
-      url = "github:agent-of-empires/agent-of-empires";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     nixlib = {
       url = ./libs/nixlib;
       inputs.nixpkgs.follows = "nixpkgs";
@@ -99,7 +95,6 @@
       agenix-secrets,
       git-hooks,
       mkutils,
-      aoe,
       ...
     }:
     let
@@ -178,7 +173,6 @@
             agenix-secrets
             nixpkgs-stable
             nixlib
-            aoe
             ;
         };
 

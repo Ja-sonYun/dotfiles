@@ -23,7 +23,6 @@
   ++ lib.optionals (purpose == "main") [
     ./programs/ghostty
     ./programs/weechat
-    ./programs/aoe
     ./programs/claude
     ./programs/codex
     ./programs/pi

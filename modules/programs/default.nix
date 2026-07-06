@@ -1,6 +1,5 @@
 {
   imports = [
-    ./aoe
     ./claude
     ./codex
     ./git-extend
