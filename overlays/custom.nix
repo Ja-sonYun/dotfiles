@@ -30,7 +30,7 @@
 
   custom-packages = final: _prev: {
     # Local custom packages
-    git-wrapped = final.callPackage ../pkgs/git-wrapped { };
+    git-extend = final.callPackage ../pkgs/git-extend { };
     awscli-local = final.callPackage ../pkgs/awscli-local { };
     macnotesapp = final.callPackage ../pkgs/macnotesapp { };
     cf-tunnel = final.callPackage ../pkgs/cf-tunnel { };

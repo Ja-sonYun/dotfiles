@@ -3,6 +3,7 @@
     ./aoe
     ./claude
     ./codex
+    ./git-extend
     ./navi
     ./pi
     ./radare2

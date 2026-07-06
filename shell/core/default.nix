@@ -12,7 +12,6 @@
     [
       amber-lang
 
-      git-wrapped
       cf-tunnel
 
       # archives
