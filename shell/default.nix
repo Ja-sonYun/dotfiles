@@ -1,7 +1,9 @@
 {
   lib,
+  pkgs,
   purpose,
   agenix-secrets,
+  aoe,
   ...
 }:
 {
@@ -35,4 +37,8 @@
     target = ".profile";
     text = "";
   };
+
+  home.packages = lib.optionals (purpose == "main") [
+    aoe.packages.${pkgs.stdenv.hostPlatform.system}.default
+  ];
 }

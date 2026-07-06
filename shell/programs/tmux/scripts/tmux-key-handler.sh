@@ -141,11 +141,11 @@ case "$KEY" in
 		fi
 		;;
 
-	"k")
+	"M")
 		show_menu tmux-menu
 		;;
 
-	"M")
+	"k")
 		show_menu /Users/jaykuroyanagi/Projects/tmux-easy-menu/target/debug/tmux-menu
 		;;
 

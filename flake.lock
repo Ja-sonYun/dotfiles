@@ -35,6 +35,28 @@
       },
       "parent": []
     },
+    "aoe": {
+      "inputs": {
+        "crane": "crane",
+        "flake-parts": "flake-parts",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1783323613,
+        "narHash": "sha256-U/L0ltSu/dRW4wmXdFPu9qXQML8rWyWE4tYqIMB+cfo=",
+        "owner": "agent-of-empires",
+        "repo": "agent-of-empires",
+        "rev": "59651b58a5d1637cd9f89e10a42706100309eb0d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "agent-of-empires",
+        "repo": "agent-of-empires",
+        "type": "github"
+      }
+    },
     "brew-src": {
       "flake": false,
       "locked": {
@@ -49,6 +71,21 @@
         "owner": "Homebrew",
         "ref": "master",
         "repo": "brew",
+        "type": "github"
+      }
+    },
+    "crane": {
+      "locked": {
+        "lastModified": 1771796463,
+        "narHash": "sha256-9bCDuUzpwJXcHMQYMS1yNuzYMmKO/CCwCexpjWOl62I=",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "3d3de3313e263e04894f284ac18177bd26169bad",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipetkov",
+        "repo": "crane",
         "type": "github"
       }
     },
@@ -156,6 +193,24 @@
       "original": {
         "owner": "NixOS",
         "repo": "flake-compat",
+        "type": "github"
+      }
+    },
+    "flake-parts": {
+      "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib"
+      },
+      "locked": {
+        "lastModified": 1769996383,
+        "narHash": "sha256-AnYjnFWgS49RlqX7LrC4uA+sCCDBj0Ry/WOJ5XWAsa0=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "57928607ea566b5db3ad13af0e57e921e6b12381",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
         "type": "github"
       }
     },
@@ -475,6 +530,21 @@
         "type": "github"
       }
     },
+    "nixpkgs-lib": {
+      "locked": {
+        "lastModified": 1769909678,
+        "narHash": "sha256-cBEymOf4/o3FD5AZnzC3J9hLbiZ+QDT/KDuyHXVJOpM=",
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "rev": "72716169fe93074c333e8d0173151350670b824c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "type": "github"
+      }
+    },
     "nixpkgs-prev": {
       "locked": {
         "lastModified": 1774243609,
@@ -527,6 +597,7 @@
       "inputs": {
         "agenix": "agenix",
         "agenix-secrets": "agenix-secrets",
+        "aoe": "aoe",
         "darwin": "darwin_2",
         "git-hooks": "git-hooks",
         "home-manager": "home-manager_2",

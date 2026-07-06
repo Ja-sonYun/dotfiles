@@ -24,5 +24,5 @@ git branch | while read line; do
 	EOM
 done
 
-tmux-menu show --menu $TEMP_GIT_BRANCH_MENU
+tmux-menu show --menu "$TEMP_GIT_BRANCH_MENU"
 rm -f $TEMP_GIT_BRANCH_MENU
