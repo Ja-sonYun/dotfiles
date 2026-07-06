@@ -62,19 +62,9 @@ _: {
         { separator = true; }
         {
           menu = {
-            name = "codex";
-            shortcut = "c";
-            command = "_gen-close-hook codex && direnv exec . codex";
-            session = true;
-            sessionName = "codex";
-            sessionOnDir = true;
-            runOnGitRoot = true;
-            environment = {
-              MULTI_SESSION_COMMAND = "direnv exec . codex";
-              NO_WINDOW_MGNT = "1";
-              CTRL_C_AS_CLOSE = "1";
-              MENU_POPUP = "1";
-            };
+            name = "aoe";
+            shortcut = "h";
+            command = "aoe";
             position = {
               w = "60%";
               h = "55%";
@@ -85,17 +75,20 @@ _: {
           menu = {
             name = "pi";
             shortcut = "p";
-            command = "_gen-close-hook pi && direnv exec . pi";
-            session = true;
-            sessionName = "pi";
-            sessionOnDir = true;
+            command = ''title="$(basename "$PWD") pi $(date +%H%M%S)-$$"; direnv exec . aoe add --cmd pi --title "$title" . && aoe session start "$title"'';
             runOnGitRoot = true;
-            environment = {
-              MULTI_SESSION_COMMAND = "direnv exec . pi";
-              NO_WINDOW_MGNT = "1";
-              CTRL_C_AS_CLOSE = "1";
-              MENU_POPUP = "1";
+            position = {
+              w = "60%";
+              h = "55%";
             };
+          };
+        }
+        {
+          menu = {
+            name = "codex";
+            shortcut = "c";
+            command = ''title="$(basename "$PWD") codex $(date +%H%M%S)-$$"; direnv exec . aoe add --cmd codex --title "$title" . && aoe session start "$title"'';
+            runOnGitRoot = true;
             position = {
               w = "60%";
               h = "55%";
@@ -106,18 +99,8 @@ _: {
           menu = {
             name = "claude";
             shortcut = "C";
-            command = "_gen-close-hook claude && direnv exec . claude";
-            session = true;
-            sessionName = "claude";
-            sessionOnDir = true;
+            command = ''title="$(basename "$PWD") claude $(date +%H%M%S)-$$"; direnv exec . aoe add --cmd claude --title "$title" . && aoe session start "$title"'';
             runOnGitRoot = true;
-            environment = {
-              MULTI_SESSION_COMMAND = "direnv exec . claude";
-              NO_WINDOW_MGNT = "1";
-              CTRL_C_AS_CLOSE = "1";
-              MENU_POPUP = "1";
-              TMUX_REMAP_CTRL_D = "C-n";
-            };
             position = {
               w = "60%";
               h = "55%";

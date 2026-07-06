@@ -1,9 +1,7 @@
 {
   lib,
-  pkgs,
   purpose,
   agenix-secrets,
-  aoe,
   ...
 }:
 {
@@ -25,6 +23,7 @@
   ++ lib.optionals (purpose == "main") [
     ./programs/ghostty
     ./programs/weechat
+    ./programs/aoe
     ./programs/claude
     ./programs/codex
     ./programs/pi
@@ -37,8 +36,4 @@
     target = ".profile";
     text = "";
   };
-
-  home.packages = lib.optionals (purpose == "main") [
-    aoe.packages.${pkgs.stdenv.hostPlatform.system}.default
-  ];
 }
