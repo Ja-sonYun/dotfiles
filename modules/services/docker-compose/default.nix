@@ -151,6 +151,27 @@ let
     lib.unique (map (u: u.port) portUsage)
   );
 
+  isAnonymousVolume =
+    volume:
+    if builtins.isString volume then
+      builtins.length (splitString ":" volume) == 1
+    else if builtins.isAttrs volume then
+      (volume.type or "volume") == "volume" && (volume.source or "") == ""
+    else
+      false;
+
+  anonymousVolumeUsage = flatten (
+    mapAttrsToList (
+      projectName: project:
+      flatten (
+        mapAttrsToList (
+          serviceName: service:
+          map (_: "${projectName}.${serviceName}") (filter isAnonymousVolume (service.volumes or [ ]))
+        ) (project.services or { })
+      )
+    ) enabledProjects
+  );
+
   mkRunScript =
     name: project:
     let
@@ -348,6 +369,13 @@ in
             "services.dockerCompose: host port(s) ${concatStringsSep ", " duplicatePorts} "
             + "are published by more than one project. "
             + "(only short \"HOST:CONTAINER\" syntax is checked)";
+        }
+        {
+          assertion = anonymousVolumeUsage == [ ];
+          message =
+            "services.dockerCompose: anonymous volumes are not allowed in "
+            + concatStringsSep ", " (lib.unique anonymousVolumeUsage)
+            + ". Use a named volume like \"name:/path\".";
         }
       ];
     }
