@@ -15,6 +15,10 @@ in
           path = lib.mkOption {
             type = lib.types.listOf lib.types.nonEmptyStr;
           };
+          flag = lib.mkOption {
+            type = lib.types.nullOr lib.types.nonEmptyStr;
+            default = null;
+          };
           help = lib.mkOption {
             type = lib.types.str;
           };

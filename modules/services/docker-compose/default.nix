@@ -3,6 +3,7 @@
   lib,
   pkgs,
   cacheDir,
+  system ? null,
   ...
 }:
 
@@ -16,33 +17,109 @@ let
     flatten
     mapAttrsToList
     mkEnableOption
+    mkMerge
     mkOption
-    nameValuePair
+    optionalAttrs
     splitString
     types
     ;
   cfg = config.services.dockerCompose;
 
-  yamlFormat = pkgs.formats.yaml { };
+  envValue = value: if builtins.isBool value then lib.boolToString value else toString value;
+  hostSystem = if system != null then system else "x86_64-linux";
+  isDarwin = lib.hasSuffix "-darwin" hostSystem;
+  isLinux = lib.hasSuffix "-linux" hostSystem;
+  defaultImageSystem =
+    if hostSystem == "aarch64-darwin" then
+      "aarch64-linux"
+    else if hostSystem == "x86_64-darwin" then
+      "x86_64-linux"
+    else
+      hostSystem;
 
-  projectAttrs = removeAttrs cfg [
-    "preStart"
-    "dockerBin"
-  ];
-
+  projectAttrs = removeAttrs cfg [ "dockerBin" ];
   enabledProjects = filterAttrs (_: project: project.enable) projectAttrs;
-
-  managedLabelKey = "com.docker.compose.project";
 
   mkShellArrayItems = args: concatMapStrings (arg: "          ${escapeShellArg arg}\n") args;
 
   mkComposeFile =
     name: project:
-    yamlFormat.generate "docker-compose-${name}.yaml" (
-      removeAttrs project [
-        "enable"
-        "options"
-      ]
+    pkgs.writeText "docker-compose-${name}.yaml" (lib.generators.toYAML { } (composeConfig project));
+
+  defaultDockerBin =
+    if isDarwin then "${config.homebrew.prefix}/bin/docker" else "${pkgs.docker}/bin/docker";
+
+  dockerBin = if cfg.dockerBin == null then defaultDockerBin else cfg.dockerBin;
+
+  composeConfig =
+    project:
+    removeAttrs project [
+      "enable"
+      "options"
+      "preStart"
+      "images"
+      "envFiles"
+      "files"
+    ];
+
+  enabledImages = project: filterAttrs (_: image: image.enable) project.images;
+  enabledEnvFiles = project: filterAttrs (_: envFile: envFile.enable) project.envFiles;
+  enabledFiles = project: filterAttrs (_: file: file.enable) project.files;
+
+  imageLoadScript =
+    project:
+    concatStringsSep "\n" (
+      mapAttrsToList (
+        _: image:
+        let
+          imageRef = "${image.imageName}:${image.imageTag}";
+        in
+        ''
+          echo "loading ${imageRef}"
+          "$docker" load -i ${escapeShellArg "${image.image}"}
+        ''
+      ) (enabledImages project)
+    );
+
+  mkEnvFileScript =
+    _: envFile:
+    let
+      valueLines = mapAttrsToList (
+        key: value: "        printf '%s=%s\\n' ${escapeShellArg key} ${escapeShellArg (envValue value)}"
+      ) envFile.environment;
+      secretLines = mapAttrsToList (
+        key: path: "        printf '%s=%s\\n' ${escapeShellArg key} \"$(cat ${escapeShellArg path})\""
+      ) envFile.secrets;
+    in
+    ''
+      mkdir -p "$(dirname ${escapeShellArg envFile.path})"
+      {
+      ${concatStringsSep "\n" (valueLines ++ secretLines)}
+      } > ${escapeShellArg envFile.path}
+      chmod ${escapeShellArg envFile.mode} ${escapeShellArg envFile.path}
+    '';
+
+  mkFileScript =
+    name: file:
+    let
+      source = pkgs.writeText "docker-compose-${name}" file.text;
+      replaceScript = concatStringsSep "\n" (
+        mapAttrsToList (placeholder: path: ''
+          PLACEHOLDER=${escapeShellArg placeholder} VALUE="$(cat ${escapeShellArg path})" ${pkgs.perl}/bin/perl -0pi -e 's/\Q$ENV{PLACEHOLDER}\E/$ENV{VALUE}/g' ${escapeShellArg file.path}
+        '') file.replace
+      );
+    in
+    ''
+      mkdir -p "$(dirname ${escapeShellArg file.path})"
+      install -m ${escapeShellArg file.mode} ${escapeShellArg "${source}"} ${escapeShellArg file.path}
+      ${replaceScript}
+    '';
+
+  generatedFileScript =
+    project:
+    concatStringsSep "\n" (
+      (mapAttrsToList mkEnvFileScript (enabledEnvFiles project))
+      ++ (mapAttrsToList mkFileScript (enabledFiles project))
     );
 
   hostPortOf =
@@ -74,138 +151,224 @@ let
     lib.unique (map (u: u.port) portUsage)
   );
 
-  mkAgent =
+  mkRunScript =
     name: project:
     let
       composeFile = mkComposeFile name project;
     in
-    nameValuePair "dockerCompose-${name}" {
-      serviceConfig = {
-        Label = "com.server.docker-compose.${name}";
-        RunAtLoad = true;
-        KeepAlive = true;
-        ProcessType = "Background";
-        StandardOutPath = "${cacheDir}/logs/docker-compose-${name}.out.log";
-        StandardErrorPath = "${cacheDir}/logs/docker-compose-${name}.err.log";
-      };
-
-      script = ''
-        #!/usr/bin/env bash
-        set -euo pipefail
-
-        mkdir -p ${escapeShellArg "${cacheDir}/logs"}
-
-        docker=${escapeShellArg cfg.dockerBin}
-        compose_file=${escapeShellArg "${composeFile}"}
-        name=${escapeShellArg name}
-
-        if [ ! -x "$docker" ]; then
-          echo "[dockerCompose] '$docker' not found yet. Install Docker, then re-run 'darwin-rebuild switch' (or 'make deploy'). Skipping for now."
-          exit 0
-        fi
-
-        ${cfg.preStart}
-
-        for _ in $(seq 1 60); do
-          "$docker" info >/dev/null 2>&1 && break
-          sleep 2
-        done
-        if ! "$docker" info >/dev/null 2>&1; then
-          echo "[dockerCompose] docker daemon not reachable. Skipping for now."
-          exit 0
-        fi
-
-        up_args=(
-        ${mkShellArrayItems project.options.extraFlags}
-        )
-
-        exec "$docker" compose -f "$compose_file" -p "$name" up ''${up_args[@]+"''${up_args[@]}"}
-      '';
-    };
-
-  mkReaper = nameValuePair "dockerComposeReaper" {
-    serviceConfig = {
-      Label = "com.server.docker-compose-reaper";
-      RunAtLoad = true;
-      KeepAlive = false;
-      ProcessType = "Background";
-      StandardOutPath = "${cacheDir}/logs/docker-compose-reaper.out.log";
-      StandardErrorPath = "${cacheDir}/logs/docker-compose-reaper.err.log";
-    };
-
-    script = ''
-      #!/usr/bin/env bash
+    pkgs.writeShellScript "docker-compose-${name}" ''
       set -euo pipefail
+      export PATH=${escapeShellArg (lib.makeBinPath [ pkgs.coreutils ])}:$PATH
 
       mkdir -p ${escapeShellArg "${cacheDir}/logs"}
 
-      docker=${escapeShellArg cfg.dockerBin}
+      docker=${escapeShellArg dockerBin}
+      compose_file=${escapeShellArg "${composeFile}"}
+      name=${escapeShellArg name}
 
-      [ -x "$docker" ] || exit 0
-      "$docker" info >/dev/null 2>&1 || exit 0
+      if [ ! -x "$docker" ]; then
+        echo "[dockerCompose] '$docker' not found yet. Install Docker, then re-run system activation. Skipping for now."
+        exit 0
+      fi
 
-      keep=(
-      ${mkShellArrayItems (mapAttrsToList (name: _: name) enabledProjects)}
+      ${project.preStart}
+
+      ${generatedFileScript project}
+
+      for _ in $(seq 1 60); do
+        "$docker" info >/dev/null 2>&1 && break
+        sleep 2
+      done
+      if ! "$docker" info >/dev/null 2>&1; then
+        echo "[dockerCompose] docker daemon not reachable. Skipping for now."
+        exit 0
+      fi
+
+      ${imageLoadScript project}
+
+      up_args=(
+      ${mkShellArrayItems project.options.extraFlags}
       )
-      in_keep() { local x; for x in ''${keep[@]+"''${keep[@]}"}; do [ "$x" = "$1" ] && return 0; done; return 1; }
 
-      "$docker" ps -a --filter ${escapeShellArg "label=${managedLabelKey}"} \
-        --format ${escapeShellArg "{{ index .Labels \"${managedLabelKey}\" }}"} \
-        | sort -u \
-        | while read -r proj; do
-            [ -n "$proj" ] || continue
-            in_keep "$proj" || "$docker" compose -p "$proj" down -v >/dev/null 2>&1 || true
-          done || true
+      exec "$docker" compose -f "$compose_file" -p "$name" up ''${up_args[@]+"''${up_args[@]}"}
     '';
-  };
 in
 {
   options.services.dockerCompose = mkOption {
     default = { };
-    description = "Docker Compose projects, each run as a launchd-managed agent.";
+    description = "Docker Compose projects, each run as a platform-managed service.";
     type = types.submodule {
       freeformType = types.attrsOf (
         types.submodule {
-          freeformType = yamlFormat.type;
+          freeformType = types.attrsOf types.anything;
           options = {
             enable = mkEnableOption "docker compose project";
+            preStart = mkOption {
+              type = types.lines;
+              default = "";
+              description = "Shell run before this project starts.";
+            };
             options = mkOption {
               default = { };
               type = types.submodule {
-                options.extraFlags = mkOption {
-                  type = types.listOf types.str;
-                  default = [ ];
-                  description = "Extra flags passed to `docker compose up` for this project.";
+                options = {
+                  extraFlags = mkOption {
+                    type = types.listOf types.str;
+                    default = [ ];
+                    description = "Extra flags passed to `docker compose up` for this project.";
+                  };
                 };
               };
+            };
+            images = mkOption {
+              default = { };
+              description = "Docker images to load before this project starts.";
+              type = types.attrsOf (
+                types.submodule (
+                  { config, name, ... }:
+                  {
+                    options = {
+                      enable = mkEnableOption "docker image";
+                      imageName = mkOption {
+                        type = types.str;
+                        default = name;
+                      };
+                      imageTag = mkOption {
+                        type = types.str;
+                        default = "latest";
+                      };
+                      system = mkOption {
+                        type = types.str;
+                        default = defaultImageSystem;
+                      };
+                      dockerfile = mkOption {
+                        type = types.attrs;
+                        default = { };
+                        description = "Arguments passed to pkgs.dockerTools.buildLayeredImage.";
+                      };
+                      image = mkOption {
+                        type = types.package;
+                        default =
+                          let
+                            imagePkgs = import pkgs.path {
+                              inherit (config) system;
+                            };
+                          in
+                          imagePkgs.dockerTools.buildLayeredImage (
+                            {
+                              name = config.imageName;
+                              tag = config.imageTag;
+                            }
+                            // config.dockerfile
+                          );
+                      };
+                    };
+                  }
+                )
+              );
+            };
+            envFiles = mkOption {
+              default = { };
+              description = "Generated Docker Compose env files.";
+              type = types.attrsOf (
+                types.submodule {
+                  options = {
+                    enable = mkEnableOption "generated env file";
+                    path = mkOption {
+                      type = types.str;
+                    };
+                    mode = mkOption {
+                      type = types.str;
+                      default = "0600";
+                    };
+                    environment = mkOption {
+                      default = { };
+                      type = types.attrsOf (
+                        types.oneOf [
+                          types.str
+                          types.int
+                          types.bool
+                        ]
+                      );
+                    };
+                    secrets = mkOption {
+                      default = { };
+                      description = "Environment variables whose values are read from secret files.";
+                      type = types.attrsOf types.str;
+                    };
+                  };
+                }
+              );
+            };
+            files = mkOption {
+              default = { };
+              description = "Generated files for Docker Compose services.";
+              type = types.attrsOf (
+                types.submodule {
+                  options = {
+                    enable = mkEnableOption "generated file";
+                    path = mkOption {
+                      type = types.str;
+                    };
+                    mode = mkOption {
+                      type = types.str;
+                      default = "0600";
+                    };
+                    text = mkOption {
+                      type = types.lines;
+                    };
+                    replace = mkOption {
+                      default = { };
+                      description = "Placeholder strings replaced with values read from files.";
+                      type = types.attrsOf types.str;
+                    };
+                  };
+                }
+              );
             };
           };
         }
       );
-      options.preStart = mkOption {
-        type = types.lines;
-        default = "";
-        description = "Shell run before each project starts, e.g. \"open -ga OrbStack\" to ensure the engine is up.";
-      };
-      options.dockerBin = mkOption {
-        type = types.str;
-        default = "${config.homebrew.prefix}/bin/docker";
-        description = "Path to the docker binary.";
+      options = {
+        dockerBin = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          description = "Path to the docker binary.";
+        };
       };
     };
   };
 
-  config = {
-    assertions = [
-      {
-        assertion = duplicatePorts == [ ];
-        message =
-          "services.dockerCompose: host port(s) ${concatStringsSep ", " duplicatePorts} "
-          + "are published by more than one project. "
-          + "(only short \"HOST:CONTAINER\" syntax is checked)";
+  config = mkMerge [
+    {
+      assertions = [
+        {
+          assertion = duplicatePorts == [ ];
+          message =
+            "services.dockerCompose: host port(s) ${concatStringsSep ", " duplicatePorts} "
+            + "are published by more than one project. "
+            + "(only short \"HOST:CONTAINER\" syntax is checked)";
+        }
+      ];
+    }
+    (optionalAttrs isDarwin (
+      import ./darwin.nix {
+        inherit
+          cacheDir
+          enabledProjects
+          lib
+          mkRunScript
+          ;
       }
-    ];
-
-    launchd.user.agents = builtins.listToAttrs ([ mkReaper ] ++ mapAttrsToList mkAgent enabledProjects);
-  };
+    ))
+    (optionalAttrs isLinux (
+      import ./linux.nix {
+        inherit
+          enabledProjects
+          lib
+          mkRunScript
+          ;
+      }
+    ))
+  ];
 }

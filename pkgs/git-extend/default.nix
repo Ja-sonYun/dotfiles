@@ -7,6 +7,14 @@
 let
   quote = lib.escapeShellArg;
   joinPath = path: lib.concatStringsSep " " path;
+  commandFlag = command: command.flag or null;
+  hasFlag = command: commandFlag command != null;
+  commandLabel =
+    command:
+    let
+      flag = commandFlag command;
+    in
+    joinPath (command.path ++ lib.optionals (flag != null) [ flag ]);
   sortedCommands = lib.sort (a: b: builtins.length a.path > builtins.length b.path) commands;
   pathTestAt =
     offset: path:
@@ -16,20 +24,24 @@ let
   commandHelp =
     command:
     let
-      path = joinPath command.path;
+      path = commandLabel command;
     in
     ''printf '  %-24s %s\n' ${quote path} ${quote command.help}'';
   parentPrefixes = lib.unique (
-    map (command: lib.init command.path) (
-      builtins.filter (command: builtins.length command.path > 1) sortedCommands
+    map (command: if hasFlag command then command.path else lib.init command.path) (
+      builtins.filter (command: hasFlag command || builtins.length command.path > 1) sortedCommands
     )
   );
   parentCommands =
     prefix:
     builtins.filter (
       command:
-      builtins.length command.path > builtins.length prefix
-      && lib.take (builtins.length prefix) command.path == prefix
+      let
+        prefixLength = builtins.length prefix;
+        pathLength = builtins.length command.path;
+      in
+      lib.take prefixLength command.path == prefix
+      && (pathLength > prefixLength || (hasFlag command && pathLength == prefixLength))
     ) sortedCommands;
   parentHelp =
     prefix:
@@ -61,14 +73,48 @@ let
       i: command:
       let
         shiftCount = toString (builtins.length command.path);
+        flag = commandFlag command;
       in
-      ''
-        if ${pathTestAt 1 command.path}; then
-            shift ${shiftCount}
-            git_extend_cmd_${toString i} "$@"
-            exit $?
-        fi
-      ''
+      if flag == null then
+        ''
+          if ${pathTestAt 1 command.path}; then
+              shift ${shiftCount}
+              git_extend_cmd_${toString i} "$@"
+              exit $?
+          fi
+        ''
+      else
+        ''
+          if ${pathTestAt 1 command.path}; then
+              git_extend_original_args=("$@")
+              shift ${shiftCount}
+              git_extend_args=()
+              git_extend_matched=0
+              git_extend_flag_index=-1
+              git_extend_index=0
+
+              for git_extend_arg in "$@"; do
+                  if [ "$git_extend_arg" = ${quote flag} ]; then
+                      if [ "$git_extend_matched" -eq 0 ]; then
+                          git_extend_flag_index=$git_extend_index
+                      fi
+                      git_extend_matched=1
+                      git_extend_index=$((git_extend_index + 1))
+                      continue
+                  fi
+
+                  git_extend_args+=("$git_extend_arg")
+                  git_extend_index=$((git_extend_index + 1))
+              done
+
+              if [ "$git_extend_matched" -eq 1 ]; then
+                  GIT_EXTEND_FLAG_INDEX="$git_extend_flag_index" git_extend_cmd_${toString i} "''${git_extend_args[@]}"
+                  exit $?
+              fi
+
+              set -- "''${git_extend_original_args[@]}"
+          fi
+        ''
     ) sortedCommands
   );
   exactHelpDispatch = lib.concatStringsSep "\n" (
@@ -83,7 +129,7 @@ let
             exit 0
         fi
       ''
-    ) sortedCommands
+    ) (builtins.filter (command: !hasFlag command) sortedCommands)
   );
   parentHelpDispatch = lib.concatStringsSep "\n" (
     map (
