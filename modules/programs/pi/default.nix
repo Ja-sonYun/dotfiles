@@ -18,6 +18,30 @@ let
 
   agentDir = ".pi/agent";
 
+  hookEntryType = lib.types.submodule {
+    options = {
+      type = lib.mkOption {
+        type = lib.types.str;
+        default = "command";
+      };
+      command = lib.mkOption { type = lib.types.str; };
+      timeout = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+      };
+    };
+  };
+
+  hookBlockType = lib.types.submodule {
+    options = {
+      matcher = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+      };
+      hooks = lib.mkOption { type = lib.types.listOf hookEntryType; };
+    };
+  };
+
   transformedMcpServers = lib.mapAttrs (
     name: server:
     lib.hm.mcp.transformMcpServer {
@@ -31,7 +55,8 @@ let
 
   bundledExtensions =
     lib.optional cfg.enableMcpIntegration "${cfg.mcp.package}/extension/index.ts"
-    ++ lib.optional cfg.permissions.enable "${cfg.permissions.package}/extension/index.ts";
+    ++ lib.optional cfg.permissions.enable "${cfg.permissions.package}/extension/index.ts"
+    ++ lib.optional (cfg.hooks != { }) "${pkgs.pi-extensions.hooks}/index.ts";
 
   finalSettings =
     cfg.settings
@@ -115,6 +140,15 @@ in
       description = "Extension files/directories linked into ~/.pi/agent/extensions.";
     };
 
+    hooks = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf hookBlockType);
+      default = { };
+      description = ''
+        Claude Code-style hooks: event -> [ { matcher?; hooks = [ { command; ... } ]; } ].
+        Written to ~/.pi/agent/hooks.json and dispatched by the pi hooks extension.
+      '';
+    };
+
     enableMcpIntegration = lib.mkEnableOption "the pi-mcp-adapter extension fed by shared programs.mcp.servers";
 
     mcp = {
@@ -175,6 +209,9 @@ in
         }
         // lib.optionalAttrs (cfg.systemPrompt != null) {
           "${agentDir}/SYSTEM.md".text = cfg.systemPrompt;
+        }
+        // lib.optionalAttrs (cfg.hooks != { }) {
+          "${agentDir}/hooks.json".source = jsonFormat.generate "pi-hooks.json" cfg.hooks;
         }
         // lib.mapAttrs' (
           name: source: lib.nameValuePair "${agentDir}/skills/${name}" { inherit source; }

@@ -15,6 +15,33 @@ let
       nodeOnly
     ];
   };
+
+  codexLmp = pkgs.writeShellScriptBin "codex-lmp" ''
+    set -euo pipefail
+
+    ai_address="$(${pkgs.coreutils}/bin/cat ${
+      config.age.secrets."ai-address".path
+    } 2>/dev/null || true)"
+    export AI_ADDRESS="$ai_address"
+    export CAPI_KEY="$(${pkgs.coreutils}/bin/cat ${
+      config.age.secrets."capi-key".path
+    } 2>/dev/null || true)"
+
+    if [ -n "$ai_address" ]; then
+      exec ${codex}/bin/codex \
+        --profile ${config.programs.codex.profileName} \
+        --config "projects.\"$PWD\".trust_level=\"trusted\"" \
+        --config "model_provider=\"lmp\"" \
+        --config "model_providers.lmp.base_url=\"''${ai_address%/}/v1\"" \
+        --model "syn:large:text" \
+        "$@"
+    fi
+
+    exec ${codex}/bin/codex \
+      --profile ${config.programs.codex.profileName} \
+      --config "projects.\"$PWD\".trust_level=\"trusted\"" \
+      "$@"
+  '';
 in
 {
   imports = [ "${agenix-secrets}/modules/ai-bundle/codex" ];
@@ -81,8 +108,8 @@ in
         notifications = [
           "plan-mode-prompt"
         ];
-        notification_method = "bel";
-        notification_condition = "unfocused";
+        notification_method = "osc9";
+        notification_condition = "always";
         keymap = {
           pager = {
             half_page_up = "ctrl-u";
@@ -93,6 +120,13 @@ in
 
       feedback = {
         enabled = false;
+      };
+
+      model_providers.lmp = {
+        name = "LMP";
+        base_url = "$AI_ADDRESS/v1";
+        wire_api = "responses";
+        env_key = "CAPI_KEY";
       };
 
       mcp_servers = {
@@ -107,4 +141,6 @@ in
       };
     };
   };
+
+  home.packages = [ codexLmp ];
 }

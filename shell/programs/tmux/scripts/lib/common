@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+project_for_path() {
+	local path="$1" root
+	case "$path" in
+		"~") path="$HOME" ;;
+		"~/"*) path="$HOME/${path#"~/"}" ;;
+	esac
+	if [[ -d "$path" ]]; then
+		root="$(git -C "$path" rev-parse --show-toplevel 2>/dev/null)"
+		printf '%s\n' "${root:-$path}"
+	else
+		printf '%s\n' "$path"
+	fi
+}
+
+# Same normalization as tmux-customize tmcResolveGroup: popup sessions are
+# named _popup_<id>_[git_root_]<name>_<encoded-path>.
+session_matches() {
+	local session="$1" name="$2" logical
+	[[ "$session" == "$name" || "$session" == "${name}_"* ]] && return 0
+	logical="${session#_popup_}"
+	[[ "$logical" == "$session" ]] && return 1
+	logical="${logical#*_}"
+	logical="${logical#git_root_}"
+	[[ "$logical" == "$name" || "$logical" == "${name}_"* ]]
+}
+
+label_for_cmd() {
+	local cmd="$1"
+	cmd="${cmd%% *}"
+	cmd="${cmd##*/}"
+	cmd="${cmd#-}"
+	printf '%s\n' "${cmd:-shell}"
+}
+
+# --- batch tmux IPC helpers -----------------------------------------------
+# Accumulate multiple tmux commands and flush them in a single IPC call
+# instead of spawning a separate tmux client process for each one.
+#
+# Usage:
+#   tmux_begin                       # start a new batch
+#   tmux_add set-option -p ...       # queue a command
+#   tmux_add set-option -w ...       # queue another
+#   tmux_add_refresh_clients         # queue refresh-client for all clients
+#   tmux_flush                       # fire everything in one tmux call
+#
+# For convenience, refresh_clients() does begin + add_refresh_clients + flush.
+
+_TMUX_BATCH=()
+
+tmux_begin() {
+	_TMUX_BATCH=()
+}
+
+tmux_add() {
+	((${#_TMUX_BATCH[@]})) && _TMUX_BATCH+=(';')
+	_TMUX_BATCH+=("$@")
+}
+
+tmux_add_refresh_clients() {
+	local client
+	while IFS= read -r client; do
+		[[ -n "$client" ]] || continue
+		tmux_add refresh-client -S -t "$client"
+	done < <(tmux list-clients -F '#{client_tty}' 2>/dev/null)
+}
+
+tmux_flush() {
+	((${#_TMUX_BATCH[@]})) || return 0
+	tmux "${_TMUX_BATCH[@]}" >/dev/null 2>&1
+	_TMUX_BATCH=()
+}
+
+refresh_clients() {
+	tmux_begin
+	tmux_add_refresh_clients
+	tmux_flush
+	return 0
+}

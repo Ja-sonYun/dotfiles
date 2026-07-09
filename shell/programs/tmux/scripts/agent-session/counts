@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/../lib/common"
+
+declare -A project_cache idle_counts running_counts waiting_counts
+declare -A win_seen win_project_seen win_idle win_running win_waiting
+declare -a main_windows main_panes
+
+while IFS=$'\x1f' read -r session window_id path enabled project state; do
+	if [[ "$enabled" == "1" && -n "$project" ]]; then
+		case "$state" in
+			idle) idle_counts[$project]=$((${idle_counts[$project]:-0} + 1)) ;;
+			running) running_counts[$project]=$((${running_counts[$project]:-0} + 1)) ;;
+			waiting | error) waiting_counts[$project]=$((${waiting_counts[$project]:-0} + 1)) ;;
+		esac
+	fi
+	if [[ "$session" == "main" && -n "$path" ]]; then
+		main_panes+=("$window_id"$'\x1f'"$path")
+		if [[ -z "${win_seen[$window_id]:-}" ]]; then
+			win_seen[$window_id]=1
+			main_windows+=("$window_id")
+		fi
+	fi
+done < <(tmux list-panes -a -F $'#{session_name}\x1f#{window_id}\x1f#{pane_current_path}\x1f#{@agent_enabled}\x1f#{@agent_project}\x1f#{@agent_state}' 2>/dev/null)
+
+((${#main_windows[@]})) || exit 0
+
+for entry in "${main_panes[@]}"; do
+	window_id="${entry%%$'\x1f'*}"
+	path="${entry#*$'\x1f'}"
+	project="${project_cache[$path]:-}"
+	if [[ -z "$project" ]]; then
+		project="$(project_for_path "$path")"
+		project_cache[$path]="$project"
+	fi
+
+	key="$window_id"$'\x1f'"$project"
+	[[ -n "${win_project_seen[$key]:-}" ]] && continue
+	win_project_seen[$key]=1
+
+	win_idle[$window_id]=$((${win_idle[$window_id]:-0} + ${idle_counts[$project]:-0}))
+	win_running[$window_id]=$((${win_running[$window_id]:-0} + ${running_counts[$project]:-0}))
+	win_waiting[$window_id]=$((${win_waiting[$window_id]:-0} + ${waiting_counts[$project]:-0}))
+done
+
+tmux_begin
+
+for window_id in "${main_windows[@]}"; do
+	idle="${win_idle[$window_id]:-0}"
+	running="${win_running[$window_id]:-0}"
+	waiting="${win_waiting[$window_id]:-0}"
+	idle_part="$idle" run_part="$running" wait_part="$waiting"
+	((idle > 0)) && idle_part="#[bg=color244,fg=black]$idle#[default]"
+	((running > 0)) && run_part="#[bg=yellow,fg=black]$running#[default]"
+	((waiting > 0)) && wait_part="#[bg=red,fg=white]$waiting#[default]"
+
+	tmux_add set-option -w -q -t "$window_id" @agent_idle_counts_display "$idle_part"
+	tmux_add set-option -w -q -t "$window_id" @agent_running_counts_display "$run_part"
+	tmux_add set-option -w -q -t "$window_id" @agent_waiting_counts_display "$wait_part"
+done
+
+tmux_add_refresh_clients
+tmux_flush

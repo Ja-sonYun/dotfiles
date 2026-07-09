@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+
+state="${1:-}"
+pane_id="${2:-${TMUX_PANE:-}}"
+session_hint="${3:-}"
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/../lib/common"
+
+detect_agent() {
+	local word base
+	for word in "$@"; do
+		for word in $word; do
+			base="${word##*/}"
+			base="${base%\"}"
+			base="${base#\"}"
+			case "$base" in
+				codex | codex-*) printf 'codex\n'; return ;;
+				claude | claude-*) printf 'claude\n'; return ;;
+				pi | pi-*) printf 'pi\n'; return ;;
+			esac
+		done
+	done
+}
+
+agent_colors() {
+	case "$1" in
+		running) printf '%s\t%s\n' '#[fg=yellow]' '#[bg=yellow]' ;;
+		waiting | error) printf '%s\t%s\n' '#[fg=red]' '#[bg=red]' ;;
+		*) printf '%s\t%s\n' '#[fg=color244]' '#[bg=color244]' ;;
+	esac
+}
+
+clear_session_if_empty() {
+	local session="$1" enabled
+	[[ -n "$session" ]] || return 0
+	while IFS= read -r enabled; do
+		[[ "$enabled" == "1" ]] && return 0
+	done < <(tmux list-panes -t "$session" -F '#{@agent_enabled}' 2>/dev/null)
+	tmux set-environment -t "$session" -u TMUX_AGENT_STATUS >/dev/null 2>&1
+}
+
+clear_pane_state() {
+	local target session window_id agent agent_fg agent_bg
+	IFS=$'\x1f' read -r target session window_id agent < <(
+		tmux display-message -pt "$1" $'#{pane_id}\x1f#{session_name}\x1f#{window_id}\x1f#{@agent_name}' 2>/dev/null
+	)
+	session="${session:-$session_hint}"
+	[[ -n "$target" ]] || {
+		clear_session_if_empty "$session"
+		return 0
+	}
+
+	tmux_begin
+	tmux_add set-option -p -q -u -t "$target" @agent_enabled
+	tmux_add set-option -p -q -u -t "$target" @agent_state
+	tmux_add set-option -p -q -u -t "$target" @agent_project
+
+	if [[ -n "$window_id" ]]; then
+		IFS=$'\t' read -r agent_fg agent_bg < <(agent_colors idle)
+		tmux_add set-option -w -q -t "$window_id" @agent_state idle
+		tmux_add set-option -w -q -t "$window_id" @agent_fg "$agent_fg"
+		tmux_add set-option -w -q -t "$window_id" @agent_bg "$agent_bg"
+		[[ -n "$agent" ]] && tmux_add rename-window -t "$window_id" "$agent:idle"
+	fi
+	tmux_flush
+	clear_session_if_empty "$session"
+}
+
+finish() {
+	"$script_dir/counts" >/dev/null 2>&1
+	exit 0
+}
+
+case "$state" in
+	"" | refresh)
+		finish
+		;;
+	delete)
+		[[ -n "$pane_id" ]] && clear_pane_state "$pane_id"
+		finish
+		;;
+	running | waiting | idle | error | init)
+		;;
+	*)
+		finish
+		;;
+esac
+
+[[ -z "$pane_id" ]] && finish
+
+IFS=$'\x1f' read -r pane_id session window_id pane_path start_command current_command enabled prev_state stored_agent < <(
+	tmux display-message -pt "$pane_id" $'#{pane_id}\x1f#{session_name}\x1f#{window_id}\x1f#{pane_current_path}\x1f#{pane_start_command}\x1f#{pane_current_command}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{@agent_name}' 2>/dev/null
+)
+[[ -n "$pane_id" && -n "$session" && -n "$window_id" ]] || finish
+
+if [[ "$state" == "init" ]]; then
+	[[ "$enabled" == "1" ]] || prev_state=""
+	state="${prev_state:-idle}"
+fi
+
+case "$state" in
+	running | waiting | idle | error) ;;
+	*) state="idle" ;;
+esac
+
+[[ "$enabled" == "1" && "$prev_state" == "$state" ]] && exit 0
+
+agent_status="$(tmux show-environment -t "$session" TMUX_AGENT_STATUS 2>/dev/null | sed 's/^TMUX_AGENT_STATUS=//')"
+agent_status="${agent_status:-${TMUX_AGENT_STATUS:-}}"
+agent="$(detect_agent "$start_command" "$current_command")"
+[[ -n "$agent_status" || -n "$agent" ]] || exit 0
+agent="${agent:-${stored_agent:-agent}}"
+
+project="$(project_for_path "$pane_path")"
+IFS=$'\t' read -r agent_fg agent_bg < <(agent_colors "$state")
+
+tmux_begin
+tmux_add set-environment -t "$session" TMUX_AGENT_STATUS "${agent_status:-1}"
+tmux_add set-option -p -q -t "$pane_id" @agent_enabled 1
+tmux_add set-option -p -q -t "$pane_id" @agent_state "$state"
+tmux_add set-option -p -q -t "$pane_id" @agent_project "$project"
+tmux_add set-option -w -q -t "$window_id" @agent_state "$state"
+tmux_add set-option -w -q -t "$window_id" @agent_name "$agent"
+tmux_add set-option -w -q -t "$window_id" @agent_fg "$agent_fg"
+tmux_add set-option -w -q -t "$window_id" @agent_bg "$agent_bg"
+tmux_add rename-window -t "$window_id" "$agent:$state"
+tmux_flush
+
+finish

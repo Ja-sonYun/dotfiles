@@ -8,5 +8,6 @@
     ./radare2
     ./tmux
     ./tmux-menu
+    ./tmux-customize
   ];
 }

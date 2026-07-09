@@ -188,7 +188,7 @@ let
       docker=${escapeShellArg dockerBin}
       compose_file=${escapeShellArg "${composeFile}"}
       name=${escapeShellArg name}
-      export PATH="$(dirname "$docker"):$PATH"
+      export PATH="$(dirname "$docker"):/usr/local/bin:/opt/homebrew/bin:/Applications/OrbStack.app/Contents/MacOS/xbin:$PATH"
 
       read_secret_file() {
         for _ in $(seq 1 60); do

@@ -3,10 +3,48 @@
   config,
   ...
 }:
+let
+  popupScript = ''
+    if tmux show-environment MAIN_POPUP >/dev/null 2>&1; then
+      if tmux list-sessions | grep '^main:' | grep -q '(attached)'; then
+        tmux detach-client
+      else
+        tmux switch-client -t main
+      fi
+    else
+      tmux popup -e POPUP=1 -w75% -h70% -E "tmux attach -t popup || tmux new -s popup -e MAIN_POPUP=1 -e DEFAULT=1"
+    fi
+  '';
+
+  swapScript = ''
+    tmux rename-session -t main _temp_current
+    tmux rename-session -t popup _temp_popup
+    tmux rename-session -t _temp_current popup
+    tmux rename-session -t _temp_popup main
+    tmux set-environment -t main -u MAIN_POPUP
+    tmux set-environment -t main MAIN 1
+    tmux set-environment -t popup -u MAIN
+    tmux set-environment -t popup MAIN_POPUP 1
+    tmux switch-client -t main
+  '';
+
+  agentMenu = ''
+    tmux display-menu -T ' agent ' \
+      claude c "new-window 'direnv exec . claude'" \
+      "claude lmp" l "new-window 'direnv exec . claude-lmp'" \
+      codex x "new-window 'direnv exec . codex'" \
+      "codex lmp" X "new-window 'direnv exec . codex-lmp'" \
+      pi p "new-window 'direnv exec . pi'" \
+      "claude chrome" b "new-window 'direnv exec . claude --chrome'"
+  '';
+
+in
 {
   imports = [ ./tmuxmenu.nix ];
 
-  home.packages = [ pkgs.pstree ];
+  home.packages = [
+    pkgs.pstree
+  ];
 
   programs.tmux = {
     enable = true;
@@ -19,6 +57,7 @@
       "@menus_trigger" = "'b'";
       prefix = "C-q";
       mouse = "off";
+      renumber-windows = "on";
       history-limit = "50000";
       default-terminal = ''"tmux-256color"'';
       allow-passthrough = "on";
@@ -29,22 +68,20 @@
       copy-mode-line-numbers = "hybrid";
       copy-mode-line-number-style = "'fg=color244,bg=default'";
       copy-mode-current-line-number-style = "'fg=green,bg=default'";
-      status-bg = ''"#FFFFFF"'';
       status-keys = "vi";
       status-interval = "10";
-      status-position = "top";
       status-left-length = "50";
       status-right-length = "120";
-      status-right = ''"#(cd #{q:pane_current_path};$TMUX_CONFIG/scripts/tmux-status-right)"'';
-      status-left = ''"#(cd #{q:pane_current_path};$TMUX_CONFIG/scripts/tmux-status-left)"'';
       status = "on";
     };
 
     setWindowOptions = {
       allow-set-title = "off";
       mode-keys = "vi";
-      window-status-format = ''"#I:#T"'';
-      window-status-current-format = ''"#[fg=white]#[bg=green]▌#[default]#[bg=green]#I:#T#[default]#[fg=white]#[bg=green]▐#[default]"'';
+      monitor-bell = "off";
+      "@agent_idle_counts_display" = "0";
+      "@agent_running_counts_display" = "0";
+      "@agent_waiting_counts_display" = "0";
     };
 
     enableVimIntegration = true;
@@ -52,19 +89,79 @@
     hooks = {
       paneTitleNewWindow = {
         event = "after-new-window";
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-update-pane-title #{pane_id}"'';
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/shell-session/panes #{pane_id}"'';
       };
       paneTitleSelectPane = {
         event = "after-select-pane";
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-update-pane-title #{pane_id}"'';
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/shell-session/panes #{pane_id}"'';
       };
       paneTitleSelectWindow = {
         event = "after-select-window";
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-update-pane-title #{pane_id}"'';
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/shell-session/panes #{pane_id}"'';
       };
       paneTitleSplitWindow = {
         event = "after-split-window";
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-update-pane-title #{pane_id}"'';
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/shell-session/panes #{pane_id}"'';
+      };
+      paneTitlePaneExited = {
+        event = "pane-exited";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/shell-session/panes #{hook_window}"'';
+      };
+      paneTitlePaneDied = {
+        event = "pane-died";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/shell-session/panes #{hook_window}"'';
+      };
+      agentSessionCountsNewWindow = {
+        event = "after-new-window";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/counts"'';
+      };
+      agentSessionCountsSelectPane = {
+        event = "after-select-pane";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/counts"'';
+      };
+      agentSessionCountsSelectWindow = {
+        event = "after-select-window";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/counts"'';
+      };
+      agentSessionCountsSplitWindow = {
+        event = "after-split-window";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/counts"'';
+      };
+      agentStatusNewSession = {
+        event = "after-new-session";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/status init #{pane_id}"'';
+      };
+      agentStatusNewWindow = {
+        event = "after-new-window";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/status init #{pane_id}"'';
+      };
+      agentStatusSelectWindow = {
+        event = "after-select-window";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/status init #{pane_id}"'';
+      };
+      agentStatusClientAttached = {
+        event = "client-attached";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/status init #{pane_id}"'';
+      };
+      agentStatusClientSessionChanged = {
+        event = "client-session-changed";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/status init #{pane_id}"'';
+      };
+      agentStatusPaneExited = {
+        event = "pane-exited";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/status delete #{hook_pane} #{session_name}"'';
+      };
+      agentStatusPaneDied = {
+        event = "pane-died";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/status delete #{hook_pane} #{session_name}"'';
+      };
+      agentStatusWindowUnlinked = {
+        event = "window-unlinked";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/status refresh"'';
+      };
+      agentStatusSessionClosed = {
+        event = "session-closed";
+        command = ''run-shell -b "$TMUX_CONFIG/scripts/agent-session/status refresh"'';
       };
     };
 
@@ -207,67 +304,169 @@
 
       C-d = {
         table = "root";
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh nC-d"'';
+        script = ''
+          if tmux show-environment TMUX_REMAP_CTRL_D >/dev/null 2>&1; then
+            tmux send-keys "$(tmux show-environment TMUX_REMAP_CTRL_D | cut -d= -f2-)"
+          else
+            tmux send-keys C-d
+          fi
+        '';
       };
       menuCtrlCRoot = {
         key = "C-c";
         table = "root";
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh nC-c"'';
+        cases = [
+          {
+            whenEnv = [ "CTRL_C_AS_CLOSE" ];
+            command = "detach";
+          }
+          { command = "send-keys C-c"; }
+        ];
       };
       C-c = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh C-c"'';
+        noDefault = true;
+        cases = [
+          {
+            whenEnv = [ "CTRL_C_AS_CLOSE" ];
+            command = "send-keys C-c";
+          }
+        ];
       };
       w = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh w"'';
+        cases = [
+          {
+            whenEnv = [ "MENU_POPUP" ];
+            command = "detach";
+          }
+        ];
       };
       s = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh s"'';
+        cases = [
+          {
+            whenEnv = [ "MENU_POPUP" ];
+            command = "detach";
+          }
+        ];
       };
       c = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh c"'';
+        cases = [
+          {
+            whenEnv = [ "TMUX_AGENT_STATUS" ];
+            script = agentMenu;
+          }
+          {
+            whenEnv = [ "NO_WINDOW_MGNT" ];
+            command = "detach";
+          }
+        ];
       };
       n = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh n"'';
+        cases = [
+          {
+            whenEnv = [ "NO_WINDOW_MGNT" ];
+            unlessEnv = [ "TMUX_AGENT_STATUS" ];
+            command = "detach";
+          }
+        ];
       };
       C-n = {
         repeat = true;
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh n"'';
+        cases = [
+          {
+            whenEnv = [ "NO_WINDOW_MGNT" ];
+            unlessEnv = [ "TMUX_AGENT_STATUS" ];
+            command = "detach";
+          }
+          { command = "next-window"; }
+        ];
       };
       p = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh p"'';
+        cases = [
+          {
+            whenEnv = [ "NO_WINDOW_MGNT" ];
+            unlessEnv = [ "TMUX_AGENT_STATUS" ];
+            command = "detach";
+          }
+        ];
       };
       C-p = {
         repeat = true;
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh p"'';
+        cases = [
+          {
+            whenEnv = [ "NO_WINDOW_MGNT" ];
+            unlessEnv = [ "TMUX_AGENT_STATUS" ];
+            command = "detach";
+          }
+          { command = "previous-window"; }
+        ];
       };
       "%" = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh %"'';
+        cases = [
+          {
+            whenEnv = [ "NO_WINDOW_MGNT" ];
+            command = "detach";
+          }
+        ];
       };
       menuQuote = {
         key = "'\"'";
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh '\"'"'';
+        cases = [
+          {
+            whenEnv = [ "NO_WINDOW_MGNT" ];
+            command = "detach";
+          }
+        ];
       };
       "!" = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh !"'';
+        cases = [
+          {
+            whenEnv = [ "NO_WINDOW_MGNT" ];
+            command = "detach";
+          }
+        ];
       };
       k = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh k"'';
+        command = "run-shell ${config.programs.tmux-menu.showScript}";
       };
       M = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh M"'';
+        command = ''run-shell "TMUX_MENU_BIN=/Users/jaykuroyanagi/Projects/tmux-easy-menu/target/debug/tmux-menu ${config.programs.tmux-menu.showScript}"'';
       };
 
       f = {
-        command = "if-shell '! tmux show-environment MAIN >/dev/null 2>&1' 'detach' 'run-shell \"$TMUX_CONFIG/scripts/tmux-popup.sh top\"'";
+        cases = [
+          {
+            unlessEnv = [ "MAIN" ];
+            command = "detach";
+          }
+          { script = popupScript; }
+        ];
       };
       "C-f" = {
-        command = "if-shell '! tmux show-environment MAIN >/dev/null 2>&1' 'detach' 'run-shell \"$TMUX_CONFIG/scripts/tmux-popup.sh bottom\"'";
+        cases = [
+          {
+            unlessEnv = [ "MAIN" ];
+            command = "detach";
+          }
+          { script = popupScript; }
+        ];
       };
       "C-r" = {
-        command = "if-shell '! tmux show-environment MAIN >/dev/null 2>&1' 'detach' 'run-shell \"$TMUX_CONFIG/scripts/swap.sh\"'";
+        cases = [
+          {
+            unlessEnv = [ "MAIN" ];
+            command = "detach";
+          }
+          { script = swapScript; }
+        ];
       };
       d = {
-        command = ''run-shell "$TMUX_CONFIG/scripts/tmux-key-handler.sh d"'';
+        noDefault = true;
+        cases = [
+          {
+            unlessEnv = [ "DEFAULT" ];
+            command = "detach";
+          }
+        ];
       };
 
       B = {
@@ -290,18 +489,170 @@
 
   home.sessionVariables.TMUX_CONFIG = config.programs.tmux-menu.configDir;
 
-  home.shellAliases = {
-    tm = toString ./scripts/tmux;
+  programs.tmux-customize = {
+    enable = true;
+    defaultGroup = "normal";
+
+    segments = {
+      space = "printf ' '";
+
+      reconcile = ''[ -n "''${TMUX_CONFIG:-}" ] && "$TMUX_CONFIG/scripts/agent-session/reconcile" >/dev/null 2>&1 || true'';
+
+      prompt = ''printf '#[fg=red]X #[fg=default]%s>> ' "''${USER:-$(whoami)}"'';
+
+      messages = ''
+        messages_dir="/tmp/tmux-status-messages"
+        mkdir -p -- "$messages_dir"
+        msgs=()
+        shopt -s nullglob
+        for f in "$messages_dir"/*; do
+          line="$(tail -n 1 "$f" 2>/dev/null)"
+          [ -n "$line" ] && msgs+=("$line")
+        done
+        message=""
+        for i in "''${!msgs[@]}"; do
+          [ "$i" -ne 0 ] && message+=" | "
+          message+="''${msgs[$i]}"
+        done
+        printf '%s - ' "$message"
+      '';
+
+      git = ''
+        shorten_string() {
+          local maxlen="$1"; shift; local str="$*"
+          if [ "''${#str}" -le "$maxlen" ]; then printf '%s' "$str"; return; fi
+          local end_len=$(( maxlen / 2 ))
+          local start_len=$(( maxlen - end_len - 1 ))
+          printf '%s…%s' "''${str:0:start_len}" "''${str: -end_len}"
+        }
+        branch="$(git symbolic-ref --short HEAD 2>/dev/null)"
+        if [ -n "$branch" ]; then
+          branch="$(shorten_string 20 "$branch")"
+          printf '#[fg=red]Git#[fg=default](#[fg=red]%s#[fg=default]):' "$branch"
+        fi
+      '';
+
+      pwd = ''
+        p="''${PWD/#$HOME/\~}"
+        oldIFS="$IFS"; IFS=/; read -ra parts <<< "$p"; IFS="$oldIFS"
+        n=''${#parts[@]}
+        out=()
+        for (( i=0; i<n; i++ )); do
+          seg="''${parts[$i]}"
+          if [ "$seg" != "~" ] && [ -n "$seg" ] && [ "$i" -lt "$(( n - 1 ))" ]; then
+            seg="''${seg:0:3}…"
+          fi
+          out+=("$seg")
+        done
+        IFS=/; res="''${out[*]}"; IFS="$oldIFS"
+        printf '%s' "$res"
+      '';
+    };
+
+    groups = {
+      normal = {
+        status = {
+          position = "top";
+          bg = "#FFFFFF";
+          left = [ "prompt" ];
+          right = [
+            "reconcile"
+            "messages"
+            "git"
+            "pwd"
+          ];
+        };
+        window = {
+          format = "#I:#{?#{@panes},#{@panes},#W} #[push-default]#{@agent_idle_counts_display}:#{@agent_running_counts_display}:#{@agent_waiting_counts_display}#[pop-default]";
+          currentFormat = "#[fg=white]#[bg=green]▌#[default]#[bg=green]#I:#{?#{@panes},#{@panes},#W} #[push-default]#{@agent_idle_counts_display}:#{@agent_running_counts_display}:#{@agent_waiting_counts_display}#[pop-default]#[default]#[fg=white]#[bg=green]▐#[default]";
+        };
+        color = "green";
+      };
+
+      agent = {
+        match.env = "TMUX_AGENT_STATUS";
+        priority = 10;
+        status = {
+          enable = true;
+          position = "bottom";
+          bg = "default";
+          style = "bg=default";
+          left = [
+            "reconcile"
+            "space"
+          ];
+          right = [ ];
+        };
+        window = {
+          format = "#[bg=default]#{@agent_fg}▐#{@agent_bg}#[fg=black]#I:#W#{@agent_fg}#[bg=default]▌#[default]";
+          currentFormat =
+            let
+              highlightColor = "magenta";
+            in
+            "#{@agent_bg}#[fg=${highlightColor}]▌#[fg=black]#I:#{@agent_name}:#{@agent_state}#{@agent_fg}#[fg=${highlightColor}]▐#[default]";
+        };
+        color = "red";
+      };
+
+      shell = {
+        status = {
+          enable = true;
+          position = "top";
+          bg = "#FFFFFF";
+          left = [ "space" ];
+          right = [ ];
+        };
+        window = {
+          format = "#I:#{?#{@panes},#{@panes},#{pane_current_command}}";
+          currentFormat = "#[fg=white]#[bg=green]▌#[default]#[bg=green]#I:#{?#{@panes},#{@panes},#{pane_current_command}}#[default]#[fg=white]#[bg=green]▐#[default]";
+        };
+        color = "green";
+      };
+    };
+
+    sessions = {
+      main = {
+        group = "normal";
+        environment = {
+          MAIN = "1";
+          DEFAULT = "1";
+        };
+        unicode = true;
+      };
+      popup = {
+        group = "normal";
+        environment = {
+          MAIN_POPUP = "1";
+          DEFAULT = "1";
+        };
+      };
+      subshell = {
+        group = "shell";
+      };
+      agent = {
+        group = "agent";
+      };
+    };
+
+    launcher = {
+      enable = true;
+      startSessions = [
+        "popup"
+        "main"
+      ];
+      attach = "main";
+    };
   };
 
-  programs.zshFunc = {
+  programs.zsh-customize.commands = {
     _gen-close-hook = {
       description = "Generate a tmux close hook for a given command";
-      command = ''
+      body = ''
         command="$1"
         mkdir -p .hooks/on_leave .hooks/on_exit
 
         cat <<'EOF' >".hooks/on_exit/close_''${command}.tmp"
+        # hook-version: 1
         if [[ ! -z "$TMUX" ]]; then
             hooks_dir=$(find_hooks_dir "$OLDPWD")
             if [[ -n "$hooks_dir" ]]; then

@@ -1,4 +1,5 @@
-_: {
+{ config, ... }:
+{
   programs.tmux-menu = {
     enable = true;
 
@@ -7,6 +8,14 @@ _: {
     menus.menu = {
       title = " menu ";
       items = [
+        {
+          menu = {
+            name = "sessions";
+            shortcut = "j";
+            command = "${config.programs.tmux-customize.sessionMenuScript}";
+            background = true;
+          };
+        }
         {
           menu = {
             name = "git";
@@ -62,82 +71,18 @@ _: {
         { separator = true; }
         {
           menu = {
-            name = "codex";
-            shortcut = "c";
-            command = "_gen-close-hook codex && direnv exec . codex";
+            name = "agent";
+            shortcut = "a";
+            command = "_gen-close-hook agent && direnv exec . pi";
             session = true;
-            sessionName = "codex";
+            sessionName = "agent";
             sessionOnDir = true;
             runOnGitRoot = true;
             environment = {
-              MULTI_SESSION_COMMAND = "direnv exec . codex";
               NO_WINDOW_MGNT = "1";
               CTRL_C_AS_CLOSE = "1";
               MENU_POPUP = "1";
-            };
-            position = {
-              w = "60%";
-              h = "55%";
-            };
-          };
-        }
-        {
-          menu = {
-            name = "pi";
-            shortcut = "p";
-            command = "_gen-close-hook pi && direnv exec . pi";
-            session = true;
-            sessionName = "pi";
-            sessionOnDir = true;
-            runOnGitRoot = true;
-            environment = {
-              MULTI_SESSION_COMMAND = "direnv exec . pi";
-              NO_WINDOW_MGNT = "1";
-              CTRL_C_AS_CLOSE = "1";
-              MENU_POPUP = "1";
-            };
-            position = {
-              w = "60%";
-              h = "55%";
-            };
-          };
-        }
-        {
-          menu = {
-            name = "claude";
-            shortcut = "C";
-            command = "_gen-close-hook claude && direnv exec . claude";
-            session = true;
-            sessionName = "claude";
-            sessionOnDir = true;
-            runOnGitRoot = true;
-            environment = {
-              MULTI_SESSION_COMMAND = "direnv exec . claude";
-              NO_WINDOW_MGNT = "1";
-              CTRL_C_AS_CLOSE = "1";
-              MENU_POPUP = "1";
-              TMUX_REMAP_CTRL_D = "C-n";
-            };
-            position = {
-              w = "60%";
-              h = "55%";
-            };
-          };
-        }
-        {
-          menu = {
-            name = "claude chrome";
-            shortcut = "b";
-            command = "_gen-close-hook claude && direnv exec . claude --chrome";
-            session = true;
-            sessionName = "claude-chrome";
-            sessionOnDir = true;
-            runOnGitRoot = true;
-            environment = {
-              MULTI_SESSION_COMMAND = "direnv exec . claude --chrome";
-              NO_WINDOW_MGNT = "1";
-              CTRL_C_AS_CLOSE = "1";
-              MENU_POPUP = "1";
+              TMUX_AGENT_STATUS = "1";
               TMUX_REMAP_CTRL_D = "C-n";
             };
             position = {

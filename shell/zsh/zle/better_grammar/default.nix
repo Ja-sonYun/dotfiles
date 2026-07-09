@@ -1,8 +1,8 @@
 { pkgs, ... }:
 {
-  programs.zleCommands = {
+  programs.zsh-customize.zle = {
     _fix-grammar-with-openai = {
-      command =
+      body =
         let
           pythonEnv = pkgs.python312.withPackages (
             ps: with ps; [
@@ -27,10 +27,10 @@
           LBUFFER="''${fixed_text}"
           RBUFFER=""
         '';
-      bindkeys = ''
-        bindkey '^X^o' _fix-grammar-with-openai
-        bindkey '^Xo' _fix-grammar-with-openai
-      '';
+      bindkeys = [
+        "^X^o"
+        "^Xo"
+      ];
     };
   };
 }

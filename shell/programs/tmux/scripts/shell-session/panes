@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+
+target="${1:-${TMUX_PANE:-}}"
+pane_path="${2:-}"
+render_seq="${3:-}"
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/../lib/common"
+
+label_for_path() {
+	basename "$(project_for_path "$1")"
+}
+
+[[ -z "$target" ]] && target="$(tmux display-message -p '#{pane_id}' 2>/dev/null)"
+[[ -z "$target" ]] && exit 0
+
+fmt=$'#{pane_id}\x1f#{session_name}\x1f#{window_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pcmd}\x1f#{@pane_project_label}\x1f#{@panes}\x1f#{@shell_seq}'
+if [[ "$target" == @* ]]; then
+	IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq < <(
+		tmux list-panes -t "$target" -F "$fmt" 2>/dev/null | sed -n '1p'
+	)
+else
+	IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq < <(
+		tmux display-message -pt "$target" "$fmt" 2>/dev/null
+	)
+fi
+[[ -n "$pane_id" && -n "$session" && -n "$window_id" ]] || exit 0
+
+mode=full
+if session_matches "$session" subshell; then
+	mode=cmd
+elif tmux show-environment -t "$session" TMUX_AGENT_STATUS >/dev/null 2>&1; then
+	exit 0
+fi
+
+shell_label="$(label_for_cmd "${stored_cmd:-$current_command}")"
+
+tmux_begin
+[[ "$shell_label" != "$stored_cmd" ]] &&
+tmux_add set-option -p -q -t "$pane_id" @pcmd "$shell_label"
+
+if [[ "$mode" == full ]]; then
+	pane_path="${pane_path:-${stored_path:-$current_path}}"
+	if [[ "$pane_path" == "$stored_path" && -n "$stored_project_label" ]]; then
+		pane_label="$stored_project_label"
+	else
+		pane_label="$(label_for_path "$pane_path")"
+		[[ "$pane_label" != "$stored_project_label" ]] &&
+		tmux_add set-option -p -q -t "$pane_id" @pane_project_label "$pane_label"
+		[[ "$pane_path" != "$stored_path" ]] &&
+		tmux_add set-option -p -q -t "$pane_id" @pane_last_path "$pane_path"
+	fi
+fi
+
+panes=""
+while IFS=$'\x1f' read -r id path command option_path stored_label option_cmd; do
+	[[ -n "$id" ]] || continue
+
+	if [[ "$id" == "$pane_id" ]]; then
+		label="$pane_label"
+		cmd="$shell_label"
+	else
+		cmd="$(label_for_cmd "${option_cmd:-$command}")"
+		if [[ "$mode" == full ]]; then
+			# never compare stored vs #{pane_current_path}: logical/physical symlink paths differ forever
+			if [[ -n "$stored_label" ]]; then
+				label="$stored_label"
+			else
+				label="$(label_for_path "${option_path:-$path}")"
+				tmux_add set-option -p -q -t "$id" @pane_project_label "$label"
+				tmux_add set-option -p -q -t "$id" @pane_last_path "${option_path:-$path}"
+			fi
+		fi
+	fi
+
+	if [[ "$mode" == full ]]; then
+		part="$label:$cmd"
+	else
+		part="$cmd"
+	fi
+	panes="${panes:+$panes | }$part"
+done < <(tmux list-panes -t "$window_id" -F $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pane_project_label}\x1f#{@pcmd}' 2>/dev/null)
+
+if [[ -z "$panes" ]]; then
+	if [[ "$mode" == full ]]; then
+		panes="$pane_label:$shell_label"
+	else
+		panes="$shell_label"
+	fi
+fi
+
+if [[ "$panes" != "$old_panes" ]]; then
+	tmux_add set-option -w -q -t "$window_id" @panes "$panes"
+	tmux_add_refresh_clients
+fi
+
+((${#_TMUX_BATCH[@]})) || exit 0
+
+# caller's seq dates the rendered data; self-captured seq would miss stale writes
+check_seq="${render_seq:-$start_seq}"
+if [[ -n "$check_seq" ]]; then
+	current_seq="$(tmux display-message -pt "$pane_id" '#{@shell_seq}' 2>/dev/null)"
+	[[ "$check_seq" != "$current_seq" ]] && exit 0
+fi
+
+tmux_flush

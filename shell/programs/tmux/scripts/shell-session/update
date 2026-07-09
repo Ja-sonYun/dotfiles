@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# Lightweight pane context update — triggered by the shell via
+# `&!` (zsh background + disown).  The shell writes the current
+# command, path, and a sequence number into pane options before
+# running this script.
+#
+# The sequence number guards against a race condition where a slow
+# preexec update (e.g. "ls") overwrites values set by a newer precmd
+# update (e.g. "zsh").  We check staleness at the start (skip stale
+# work); the panes script re-checks @shell_seq itself before flushing.
+
+pane_id="${1:-${TMUX_PANE:-}}"
+invoc_seq="${2:-}"
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/../lib/common"
+
+[[ -n "$pane_id" ]] || exit 0
+
+# --- single IPC: read all 5 values at once --------------------------------
+IFS=$'\x1f' read -r shell_path shell_cmd stored_path stored_cmd current_seq < <(
+	tmux display-message -pt "$pane_id" \
+		$'#{@shell_pwd}\x1f#{@shell_cmd}\x1f#{@pane_last_path}\x1f#{@pcmd}\x1f#{@shell_seq}' 2>/dev/null
+)
+
+# --- discard stale update (race condition guard) -------------------------
+if [[ -n "$invoc_seq" && "$invoc_seq" != "$current_seq" ]]; then
+	exit 0
+fi
+
+# Fall back to tmux's own tracking when the shell hasn't set @shell_pwd yet
+[[ -n "$shell_path" ]] ||
+shell_path="$(tmux display-message -pt "$pane_id" '#{pane_current_path}' 2>/dev/null)"
+
+cmd_label="$(label_for_cmd "${shell_cmd:-shell}")"
+
+# --- nothing changed? bail out early -------------------------------------
+[[ "$stored_path" == "$shell_path" && "$stored_cmd" == "$cmd_label" ]] && exit 0
+
+# --- single IPC: persist new values --------------------------------------
+tmux_begin
+tmux_add set-option -p -q -t "$pane_id" @pane_last_path "$shell_path"
+tmux_add set-option -p -q -t "$pane_id" @pcmd "$cmd_label"
+if [[ -n "$invoc_seq" ]]; then
+	current_seq="$(tmux display-message -pt "$pane_id" '#{@shell_seq}' 2>/dev/null)"
+	[[ "$invoc_seq" != "$current_seq" ]] && exit 0
+fi
+tmux_flush
+
+# --- re-render, passing seq so panes can bail if stale -------------------
+"$script_dir/panes" "$pane_id" "$shell_path" "$invoc_seq" >/dev/null 2>&1

@@ -205,10 +205,32 @@ in
       internal = true;
       description = "Dir with scripts/ and generated menu YAMLs under menu/, for $TMUX_CONFIG.";
     };
+
+    showScript = lib.mkOption {
+      type = lib.types.package;
+      readOnly = true;
+      internal = true;
+      description = "Launcher that shows the @menu (or 'menu') group; TMUX_MENU_BIN overrides the binary.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
     home.packages = [ cfg.package ];
+
+    programs.tmux-menu.showScript = pkgs.writeShellScript "tmux-menu-show" ''
+      bin="''${TMUX_MENU_BIN:-${cfg.package}/bin/tmux-menu}"
+      pane_current_path=$(tmux display-message -p "#{pane_current_path}")
+      menu=$(tmux show -v @menu 2>/dev/null)
+      menu=''${menu:-menu}
+      if tmux show-environment DEFAULT >/dev/null 2>&1; then
+        "$bin" show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
+      else
+        tmux detach
+        W=$(tmux display -p "#{client_width}"); W=$((W - 1))
+        H=$(tmux display -p "#{client_height}")
+        "$bin" show -x "$W" -y "$H" --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
+      fi
+    '';
 
     programs.tmux-menu.configDir = pkgs.runCommand "tmux-config" { } (
       ''

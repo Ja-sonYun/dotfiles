@@ -1,8 +1,8 @@
 { pkgs, ... }:
 {
-  programs.zleCommands = {
+  programs.zsh-customize.zle = {
     _generate-shell-command-with-openai = {
-      command =
+      body =
         let
           pythonEnv = pkgs.python312.withPackages (
             ps: with ps; [
@@ -31,10 +31,10 @@
           LBUFFER="''${generated_text}"
           RBUFFER=""
         '';
-      bindkeys = ''
-        bindkey '^X^m' _generate-shell-command-with-openai
-        bindkey '^Xm' _generate-shell-command-with-openai
-      '';
+      bindkeys = [
+        "^X^m"
+        "^Xm"
+      ];
     };
   };
 }

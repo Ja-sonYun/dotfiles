@@ -4,9 +4,6 @@
   ...
 }:
 
-let
-  remoteManagementKickstart = "/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart";
-in
 {
   services.openssh = {
     enable = true;
@@ -23,8 +20,6 @@ in
 
   system.activationScripts.postActivation.text = lib.mkAfter ''
     set -euo pipefail
-
-    user_name=${lib.escapeShellArg username}
 
     enable_system_service() {
       local target="$1"
@@ -45,11 +40,12 @@ in
 
     /usr/sbin/cupsctl --share-printers
 
-    ${lib.escapeShellArg remoteManagementKickstart} \
-      -activate \
-      -configure -allowAccessFor -specifiedUsers \
-      -users "$user_name" -access -on -privs -all \
-      -restart -agent \
-      -quiet
+    # Remote Management conflicts with Screen Sharing; keep it off.
+    /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+      -deactivate -stop -quiet >/dev/null 2>&1 || true
+
+    enable_system_service \
+      system/com.apple.screensharing \
+      /System/Library/LaunchDaemons/com.apple.screensharing.plist
   '';
 }

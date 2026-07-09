@@ -188,6 +188,27 @@
         esac
       '';
     }
+    {
+      path = [
+        "worktree"
+        "checkout"
+      ];
+      help = "Checkout a branch into the default sibling worktree path.";
+      command = ''
+        set +e
+        out="$("$0" wt checkout "$@")"
+        rc=$?
+        set -e
+
+        [ -z "$out" ] || printf '%s\n' "$out"
+        [ "$rc" -eq 0 ] || return "$rc"
+
+        dest="$(printf '%s\n' "$out" | tail -n 1)"
+        if [ -n "''${SHELL_CD_REQUEST_FILE-}" ] && [ -d "$dest" ]; then
+          printf '%s\n' "$dest" >"$SHELL_CD_REQUEST_FILE"
+        fi
+      '';
+    }
   ];
 
   home.shellAliases = {
