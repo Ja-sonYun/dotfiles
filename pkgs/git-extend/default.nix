@@ -180,6 +180,16 @@ let
         exit 0
     fi
 
+    if [ "$#" -eq 1 ] && { [ "''${1-}" = "-h" ] || [ "''${1-}" = "--help" ] || [ "''${1-}" = "help" ]; }; then
+        set +e
+        "$real_git" "$1"
+        rc=$?
+        set -e
+        printf '\ngit-extend commands:\n'
+    ${allHelp}
+        exit "$rc"
+    fi
+
     if [ "''${1-}" = "help" ]; then
     ${exactHelpDispatch}
     ${parentHelpDispatch}
