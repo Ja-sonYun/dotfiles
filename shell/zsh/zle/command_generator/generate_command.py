@@ -6,6 +6,8 @@ import openai
 from pydantic import BaseModel
 
 api_key = os.environ.get("CAPI_KEY")
+_ai_address = os.environ.get("AI_ADDRESS", "").rstrip("/")
+base_url = _ai_address if _ai_address.endswith("/v1") else f"{_ai_address}/v1"
 
 all_args = sys.argv[1:]
 input_text = " ".join(all_args).strip()
@@ -21,7 +23,7 @@ async def generate() -> str:
         sys.exit(1)
 
     client = openai.AsyncClient(
-        base_url="https://lmp.test0.zip/v1",
+        base_url=base_url,
         api_key=api_key,
     )
     response = await client.beta.chat.completions.parse(

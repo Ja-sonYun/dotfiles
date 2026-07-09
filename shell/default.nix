@@ -12,7 +12,6 @@
     ./analysis
 
     ./programs/git
-    ./programs/git/utils.nix
     ./programs/jujutsu
     ./programs/tmux
     ./programs/direnv

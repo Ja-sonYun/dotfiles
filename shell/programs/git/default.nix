@@ -3,6 +3,12 @@
   ...
 }:
 {
+  imports = [
+    ./commands.nix
+    ./worktree.nix
+    ./tools.nix
+  ];
+
   # `programs.git` will generate the config file: ~/.config/git/config
   # to make git use this config file, `~/.gitconfig` should not exist!
   #
@@ -14,111 +20,6 @@
   home.shellAliases = {
     gst = "git status";
   };
-
-  programs.gitExtend.commands = [
-    {
-      path = [ "sync" ];
-      help = "Fetch/prune/tags, pull with rebase/autostash, then update submodules.";
-      command = ''
-        if [ "$#" -ne 0 ]; then
-          echo "usage: git sync" >&2
-          exit 2
-        fi
-
-        git fetch --prune --tags
-        git pull --rebase --autostash
-        git submodule update --init --recursive
-      '';
-    }
-    {
-      path = [
-        "branch"
-        "gone"
-      ];
-      help = "List local branches whose upstream is gone.";
-      command = ''
-        if [ "$#" -ne 0 ]; then
-          echo "usage: git branch gone" >&2
-          exit 2
-        fi
-
-        git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads |
-          awk '$2 == "[gone]" { print $1 }'
-      '';
-    }
-    {
-      path = [
-        "branch"
-        "prune-gone"
-      ];
-      help = "Delete gone local branches that are already merged into HEAD.";
-      command = ''
-        if [ "$#" -ne 0 ]; then
-          echo "usage: git branch prune-gone" >&2
-          exit 2
-        fi
-
-        current="$(git branch --show-current)"
-        merged="$(git branch --format='%(refname:short)' --merged | sort)"
-
-        git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads |
-          awk '$2 == "[gone]" { print $1 }' |
-          while IFS= read -r branch; do
-            [ "$branch" = "$current" ] && continue
-
-            if printf '%s\n' "$merged" | grep -Fxq -- "$branch"; then
-              git branch -d "$branch"
-            fi
-          done
-      '';
-    }
-    {
-      path = [
-        "stash"
-        "staged"
-      ];
-      help = "Stash staged changes only.";
-      command = ''
-        git stash push --staged "$@"
-      '';
-    }
-    {
-      path = [
-        "submodule"
-        "fix"
-      ];
-      help = "Fix broken submodules by removing stale worktrees and git metadata, then reinitializing them.";
-      command = ''
-        git submodule deinit --all -f || true
-
-        git config --file .gitmodules --name-only --get-regexp '^submodule\..*\.path$' |
-          while IFS= read -r key; do
-            name="''${key#submodule.}"
-            name="''${name%.path}"
-            path="$(git config --file .gitmodules --get "$key")"
-
-            case "$name" in
-              "" | /* | ../* | */../* | */..)
-                echo "error: unsafe submodule name: $name" >&2
-                exit 1
-                ;;
-            esac
-
-            case "$path" in
-              "" | /* | ../* | */../* | */..)
-                echo "error: unsafe submodule path: $path" >&2
-                exit 1
-                ;;
-            esac
-
-            rm -rf -- "$path" ".git/modules/$name"
-          done
-
-        git submodule sync --recursive
-        git submodule update --init --recursive --force
-      '';
-    }
-  ];
 
   programs.git = {
     enable = true;
@@ -275,6 +176,12 @@
       init.defaultBranch = "main";
       push.autoSetupRemote = true;
       pull.rebase = true;
+      fetch.prune = true;
+      rerere.enabled = true;
+      rebase.autostash = true;
+      rebase.autosquash = true;
+      merge.conflictstyle = "zdiff3";
+      diff.colorMoved = "default";
       commit.verbose = true;
       branch.sort = "-committerdate";
       column.ui = "auto";
@@ -291,14 +198,6 @@
       mergetool.prompt = false;
       mergetool.keepBackup = false;
       "mergetool \"vimdiff\"".cmd = "vim -d \"$MERGED\" \"$LOCAL\" \"$BASE\" \"$REMOTE\" -c 'wincmd J'";
-    };
-  };
-
-  programs.delta = {
-    enable = true;
-    enableGitIntegration = true;
-    options = {
-      features = "side-by-side";
     };
   };
 }

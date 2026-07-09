@@ -40,7 +40,11 @@ cmd_label="$(label_for_cmd "${shell_cmd:-shell}")"
 
 # --- single IPC: persist new values --------------------------------------
 tmux_begin
-tmux_add set-option -p -q -t "$pane_id" @pane_last_path "$shell_path"
+if [[ "$stored_path" != "$shell_path" ]]; then
+	tmux_add set-option -p -q -t "$pane_id" @pane_last_path "$shell_path"
+	# label was derived from the old path; drop it so panes recomputes the pair
+	tmux_add set-option -p -q -u -t "$pane_id" @pane_project_label
+fi
 tmux_add set-option -p -q -t "$pane_id" @pcmd "$cmd_label"
 if [[ -n "$invoc_seq" ]]; then
 	current_seq="$(tmux display-message -pt "$pane_id" '#{@shell_seq}' 2>/dev/null)"
