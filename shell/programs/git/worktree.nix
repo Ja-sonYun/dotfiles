@@ -16,7 +16,7 @@ let
 
     repo_paths() {
       local root parent base
-      root="$(git rev-parse --show-toplevel)" || err "not a git repo"
+      root="$(git worktree list --porcelain | sed -n '1s/^worktree //p')" || err "not a git repo"
       parent="$(dirname "$root")"
       base="$(basename "$root")"
       echo "$parent" "$base"

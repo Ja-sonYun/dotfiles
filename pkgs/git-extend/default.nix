@@ -174,6 +174,19 @@ let
 
     ${commandFunctions}
 
+    if { [ "''${1-}" = "checkout" ] || [ "''${1-}" = "co" ] || [ "''${1-}" = "switch" ]; } &&
+       git_dir="$("$real_git" rev-parse --absolute-git-dir 2>/dev/null)" &&
+       common_dir="$("$real_git" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" &&
+       [ "$git_dir" != "$common_dir" ]; then
+        case "''${1-}:''${2-}" in
+            checkout: | co: | checkout:-h | checkout:--help | co:-h | co:--help | switch:-h | switch:--help | checkout:-- | co:--) ;;
+            *)
+                printf "error: branch switching is disabled in linked worktrees; use 'git worktree checkout <branch>' or 'git checkout -- <path>'\n" >&2
+                exit 1
+                ;;
+        esac
+    fi
+
     if [ "''${1-}" = "help" ] && [ "''${2-}" = "custom" ] && [ "$#" -eq 2 ]; then
         printf 'git-extend commands:\n'
     ${allHelp}
