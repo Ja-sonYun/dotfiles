@@ -12,7 +12,18 @@ let
         tmux switch-client -t main
       fi
     else
-      tmux popup -e POPUP=1 -w75% -h70% -E "tmux attach -t popup || tmux new -s popup -e MAIN_POPUP=1 -e DEFAULT=1"
+      # Record which client the popup is drawn on so the popup-move script
+      # (prefix+m inside the popup) can close/reopen it on the right terminal.
+      tmux set -g @popup_client "$(tmux display-message -p '#{client_name}')"
+      # Reuse the geometry saved by scripts/popup-move/move ("x y w h" in
+      # cells) so a moved/resized popup keeps its place across close/open.
+      geom="$(tmux show-options -gqv @popup_geom_popup)"
+      if [ -n "$geom" ]; then
+        set -- $geom
+        tmux popup -e POPUP=1 -x "$1" -y "$2" -w "$3" -h "$4" -E "tmux attach -t popup || tmux new -s popup -e MAIN_POPUP=1 -e DEFAULT=1"
+      else
+        tmux popup -e POPUP=1 -w75% -h70% -E "tmux attach -t popup || tmux new -s popup -e MAIN_POPUP=1 -e DEFAULT=1"
+      fi
     fi
   '';
 
@@ -469,6 +480,20 @@ in
         ];
       };
 
+      # popupmove works only in popup content sessions: only their key presses reach this server.
+      m = {
+        cases = [
+          {
+            whenEnv = [ "MAIN_POPUP" ];
+            command = "switch-client -T popupmove";
+          }
+          {
+            whenEnv = [ "MENU_POPUP" ];
+            command = "switch-client -T popupmove";
+          }
+        ];
+      };
+
       B = {
         command = "display-message '#{cursor_x} #{cursor_y}'";
       };
@@ -484,6 +509,19 @@ in
       set -gu terminal-features
       set -ga terminal-features ",xterm*:RGB"
       set-environment -g 'IGNOREEOF' 10
+
+      # popup move/resize mode: enter with prefix+m from inside a popup, any
+      # unbound key (e.g. Escape) leaves the mode. Args are "dx dy dw dh" in
+      # cells; the script re-enters this table after each step, so keys can
+      # be pressed repeatedly. y is the popup's bottom edge, so j/J grow downward.
+      bind-key -T popupmove h run-shell -b "$TMUX_CONFIG/scripts/popup-move/move -5 0 0 0"
+      bind-key -T popupmove l run-shell -b "$TMUX_CONFIG/scripts/popup-move/move 5 0 0 0"
+      bind-key -T popupmove j run-shell -b "$TMUX_CONFIG/scripts/popup-move/move 0 2 0 0"
+      bind-key -T popupmove k run-shell -b "$TMUX_CONFIG/scripts/popup-move/move 0 -2 0 0"
+      bind-key -T popupmove H run-shell -b "$TMUX_CONFIG/scripts/popup-move/move 0 0 -5 0"
+      bind-key -T popupmove L run-shell -b "$TMUX_CONFIG/scripts/popup-move/move 0 0 5 0"
+      bind-key -T popupmove J run-shell -b "$TMUX_CONFIG/scripts/popup-move/move 0 0 0 2"
+      bind-key -T popupmove K run-shell -b "$TMUX_CONFIG/scripts/popup-move/move 0 0 0 -2"
     '';
   };
 

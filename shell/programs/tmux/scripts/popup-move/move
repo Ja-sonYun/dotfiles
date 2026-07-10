@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+
+# Move or resize the currently open tmux popup with the keyboard.
+#
+# Why this exists: tmux cannot move/resize a live popup. Natively only mouse
+# drag works (border drag = move, right-button/Meta drag = resize), and even
+# the tmux 3.7 "call display-popup from inside a popup to modify it" path
+# explicitly ignores -x/-y/-w/-h (see tmux commit 3c9e101 and tmux(1)).
+# So the only option is: close the popup and immediately reopen it with new
+# geometry. That is safe here because our popups run `tmux attach -t <session>`
+# on the SAME tmux server — the session (and everything in it) survives the
+# close/reopen, only the window into it flickers once.
+#
+# How keys reach us: the popup content is a nested tmux client attached to
+# this same server, so key bindings (the `popupmove` key table) fire on that
+# inner client, and run-shell lands here with TMUX_PANE pointing at the
+# inner session's active pane.
+#
+# Coordinate system: matches display-popup semantics —
+#   x = LEFT edge column, y = BOTTOM edge row (tmux does `py = y - h`),
+#   w/h include the border. Everything is normalized to absolute cells.
+#
+# State kept in global user options (server lifetime, so geometry survives
+# closing/reopening the popup):
+#   @popup_geom_<key>    "x y w h" in cells, canonical per popup session
+#   @popup_border_<key>  border-lines style for this popup session
+#   @popup_client        outer client recorded by whoever opened the popup
+#   @popup_pending_geom  raw geometry recorded by the opener (may contain
+#                        %, C, R, P), used only before the first move
+#   @popup_pending_border same, for the border style
+#
+# Usage: move <dx> <dy> <dw> <dh>   (deltas in cells, may be negative)
+
+dx="${1:-0}" dy="${2:-0}" dw="${3:-0}" dh="${4:-0}"
+
+# Session shown inside the popup (context comes from TMUX_PANE set by
+# run-shell). Empty means we were not called from inside tmux — bail out.
+inner="$(tmux display-message -p '#{session_name}' 2>/dev/null)"
+[[ -n "$inner" ]] || exit 0
+
+# Option-name-safe key derived from the session name (user options should
+# stay alphanumeric; menu sessions look like `_popup_3af2_name`).
+key="${inner//[^A-Za-z0-9]/_}"
+
+# The OUTER client is the terminal the popup is drawn on. Prefer the client
+# recorded by the opener; if it is gone (terminal closed, stale value), fall
+# back to any client that is not itself displaying popup content.
+outer="$(tmux show-options -gqv @popup_client)"
+if [[ -z "$outer" ]] || ! tmux list-clients -F '#{client_name}' | grep -qxF "$outer"; then
+	# ponytail: assumes a single non-popup client; ambiguous with multiple terminals
+	outer="$(tmux list-clients -F $'#{client_name}\t#{client_session}' |
+		awk -F '\t' '$2 != "popup" && $2 !~ /^_popup_/ { print $1; exit }')"
+fi
+[[ -n "$outer" ]] || exit 0
+
+# Outer terminal size — the coordinate space for the popup.
+# NOTE: `display-message -p -c <client>` does NOT resolve formats against
+# that client (it resolves against the calling/inner client, whose "screen"
+# is the popup interior), so look the size up via list-clients instead.
+read -r cw ch < <(tmux list-clients -F $'#{client_name}\t#{client_width} #{client_height}' |
+awk -F '\t' -v c="$outer" '$1 == c { print $2; exit }')
+[[ -n "$cw" && -n "$ch" ]] || exit 0
+
+# Load stored geometry: canonical per-session value first, otherwise the raw
+# value recorded when the popup was opened (only relevant for the first move).
+geom="$(tmux show-options -gqv "@popup_geom_$key")"
+[[ -n "$geom" ]] || geom="$(tmux show-options -gqv @popup_pending_geom)"
+read -r x y w h <<<"$geom"
+
+# Convert one raw geometry token to absolute cells.
+#   "35%"        -> percentage of $2 (total size)
+#   "42"         -> already cells, used as-is
+#   anything else (empty, C, garbage) -> $3 (caller-provided fallback)
+cells() { # raw total fallback
+	case "$1" in
+		*%) echo "$(($2 * ${1%\%} / 100))" ;;
+		'' | *[!0-9]*) echo "$3" ;;
+		*) echo "$1" ;;
+	esac
+}
+
+# Normalize w/h first — the x/y fallbacks (centering) depend on them.
+# Defaults mirror the prefix+f popup: 75% x 70% of the terminal.
+w="$(cells "$w" "$cw" "$((cw * 75 / 100))")"
+h="$(cells "$h" "$ch" "$((ch * 70 / 100))")"
+
+# Resolve display-popup's letter positions before the generic conversion:
+# R = right edge, P = bottom. C (centre) falls through to the fallback below.
+[[ "$x" == R ]] && x=$((cw - w))
+[[ "$y" == P ]] && y=$ch
+x="$(cells "$x" "$cw" "$(((cw - w) / 2))")" # fallback: horizontally centered
+y="$(cells "$y" "$ch" "$(((ch + h) / 2))")" # fallback: vertically centered (y is the bottom edge)
+
+# Apply the requested deltas, then clamp so the popup stays fully on screen
+# and never collapses below a usable size.
+x=$((x + dx)) y=$((y + dy)) w=$((w + dw)) h=$((h + dh))
+((w < 20)) && w=20
+((w > cw)) && w=$cw
+((h < 5)) && h=5
+((h > ch)) && h=$ch
+((x < 0)) && x=0
+((x > cw - w)) && x=$((cw - w))
+((y < h)) && y=$h # bottom edge can't be above row h, or the top would go off screen
+((y > ch)) && y=$ch
+
+# Persist BEFORE reopening: this is also what makes the geometry stick when
+# the popup is closed and opened again later (popupScript reads it back).
+tmux set -g "@popup_geom_$key" "$x $y $w $h"
+
+# Border style: same canonical-then-pending lookup as the geometry, promoted
+# to the per-session option on first use so later pending values from other
+# popups can't leak into this one.
+border="$(tmux show-options -gqv "@popup_border_$key")"
+[[ -n "$border" ]] || border="$(tmux show-options -gqv @popup_pending_border)"
+[[ -n "$border" ]] && tmux set -g "@popup_border_$key" "$border"
+
+# Close the current popup on the outer client. This kills the inner
+# `tmux attach` job (and with it the inner client — the one whose key
+# binding invoked us; run-shell keeps this script alive server-side).
+tmux display-popup -C -c "$outer"
+
+# Wait for our old inner client to actually disappear before reopening.
+# The kill is asynchronous, and the reopened popup's pty frequently REUSES
+# the just-freed tty name, so "a client exists on $inner" is only meaningful
+# once the count has dropped to zero in between.
+for _ in {1..20}; do
+	[[ -z "$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null)" ]] && break
+	sleep 0.05
+done
+
+# Reopen at the new geometry, reattaching to the same session so all content
+# is preserved. display-popup blocks until the popup closes again, so it must
+# be backgrounded — the popup itself lives on the server and survives us.
+tmux display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
+	${border:+-b "$border"} -E "tmux attach -t $(printf '%q' "$inner")" &
+
+# Re-arm popupmove mode on the reopened popup's client. Each close/reopen
+# creates a brand-new inner client that starts in the root key table; without
+# this, the mode would silently end after every single keypress.
+for _ in {1..20}; do
+	new="$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null | head -n1)"
+	if [[ -n "$new" ]]; then
+		tmux switch-client -c "$new" -T popupmove
+		break
+	fi
+	sleep 0.05
+done
+exit 0

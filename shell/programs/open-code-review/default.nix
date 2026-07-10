@@ -11,7 +11,7 @@ let
       export OCR_LLM_TOKEN="$CAPI_KEY"
     fi
 
-    export OCR_LLM_MODEL="gpt-5.5"
+    export OCR_LLM_MODEL="gpt-5.6-sol"
     export OCR_USE_ANTHROPIC="false"
     export OCR_NO_UPDATE="1"
 

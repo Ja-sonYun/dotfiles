@@ -52,7 +52,7 @@ in
     enableMcpIntegration = true;
 
     settings = {
-      model = "gpt-5.5";
+      model = "gpt-5.6-sol";
       model_reasoning_effort = "xhigh";
       plan_mode_reasoning_effort = "xhigh";
       model_verbosity = "medium";

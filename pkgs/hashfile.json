@@ -55,8 +55,8 @@
       "hash": "sha256-aRgb6PKkaoo+cGg3hCt3jEy9bZsGb1ib/+Tc8+FK8Ik="
     },
     "codex": {
-      "version": "0.143.0",
-      "hash": "sha256-dQTCYAGRwp2JGoMXjjXbp8Wlg6OJXEOz++99LlZ3tac="
+      "version": "0.144.1",
+      "hash": "sha256-FMWNBHxwyWmxTgKRMBZCu6V4hi+jADhwtpFOkAS+BRA="
     },
     "context7-mcp": {
       "version": "3.2.3",
@@ -71,12 +71,12 @@
       "hash": "sha256-++h4rAI1QBaZQNJl5eiXI+y+jLjeHuZg6qbIQkPQpB8="
     },
     "claude-code": {
-      "version": "2.1.205",
-      "hash": "sha256-ON6wo/a3rmS4MKSOmeTqxzRQQ6sSNRT0gCFLwHRTRZs="
+      "version": "2.1.206",
+      "hash": "sha256-qEdh5Rq8lkc7n0Id/c11I91iEmrFYjQKQTWi5muI88Y="
     },
     "pi": {
-      "version": "0.80.3",
-      "hash": "sha256-7C2Mm1GkOcxjSZ1xBWHlHk4qc+9XXVjIRM6KAA2gJ1w="
+      "version": "0.80.6",
+      "hash": "sha256-zHXIuyhOeKDls18gJxajCkXb2TmMqMo5IzGbry//Yxk="
     },
     "pi-mcp-adapter": {
       "version": "2.11.0",

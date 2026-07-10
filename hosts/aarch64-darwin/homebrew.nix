@@ -70,8 +70,6 @@ let
         "appcleaner"
         "drawio"
         "iina"
-        "chatgpt"
-        "chatgpt-atlas"
         "balenaetcher"
         "basictex"
         "openvpn-connect"
