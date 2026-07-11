@@ -2,13 +2,13 @@
 
 pkgs.rustPlatform.buildRustPackage rec {
   pname = "tmux-menu";
-  version = "0.1.24";
+  version = "0.1.25";
 
   src = pkgs.fetchCrate {
     inherit pname version;
-    hash = "sha256-TqEyvkevnufd8sO5dWuEnHCc1lTr7WeaYkjS1wAMvKc=";
+    hash = "sha256-3jhL1v975di+I99hXFATsKWU0rg5x2YDvHTRdP7zxW4=";
   };
 
-  cargoHash = "sha256-9zVSumDXWGPS26pySR+KdeD/KAP+frUYr73kR8iALpM=";
+  cargoHash = "sha256-b6Fdlddqiiwd+yB9HHOPYQk83xSqLLYmdnomwgRLJ28=";
   cargoDepsName = pname;
 }

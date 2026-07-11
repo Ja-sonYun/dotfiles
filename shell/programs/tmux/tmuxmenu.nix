@@ -174,14 +174,6 @@
             };
           };
         }
-        {
-          menu = {
-            name = "Git branch";
-            shortcut = "b";
-            command = "$CONFIG/tmux/scripts/gitbranch.sh";
-            background = true;
-          };
-        }
         { separator = true; }
         {
           menu = {

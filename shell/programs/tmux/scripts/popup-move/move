@@ -13,8 +13,7 @@
 #
 # How keys reach us: the popup content is a nested tmux client attached to
 # this same server, so key bindings (the `popupmove` key table) fire on that
-# inner client, and run-shell lands here with TMUX_PANE pointing at the
-# inner session's active pane.
+# inner client and pass its session name as the final argument.
 #
 # Coordinate system: matches display-popup semantics —
 #   x = LEFT edge column, y = BOTTOM edge row (tmux does `py = y - h`),
@@ -23,19 +22,25 @@
 # State kept in global user options (server lifetime, so geometry survives
 # closing/reopening the popup):
 #   @popup_geom_<key>    "x y w h" in cells, canonical per popup session
+#   @popup_default_geom_<key> raw geometry restored by reset
 #   @popup_border_<key>  border-lines style for this popup session
 #   @popup_client        outer client recorded by whoever opened the popup
 #   @popup_pending_geom  raw geometry recorded by the opener (may contain
 #                        %, C, R, P), used only before the first move
 #   @popup_pending_border same, for the border style
 #
-# Usage: move <dx> <dy> <dw> <dh>   (deltas in cells, may be negative)
+# Usage: move <dx> <dy> <dw> <dh> | move reset
 
-dx="${1:-0}" dy="${2:-0}" dw="${3:-0}" dh="${4:-0}"
+if [[ "${1:-}" == reset ]]; then
+	reset=1
+	dx=0 dy=0 dw=0 dh=0
+	inner="${2:-}"
+else
+	reset=0
+	dx="${1:-0}" dy="${2:-0}" dw="${3:-0}" dh="${4:-0}"
+	inner="${5:-}"
+fi
 
-# Session shown inside the popup (context comes from TMUX_PANE set by
-# run-shell). Empty means we were not called from inside tmux — bail out.
-inner="$(tmux display-message -p '#{session_name}' 2>/dev/null)"
 [[ -n "$inner" ]] || exit 0
 
 # Option-name-safe key derived from the session name (user options should
@@ -61,10 +66,18 @@ read -r cw ch < <(tmux list-clients -F $'#{client_name}\t#{client_width} #{clien
 awk -F '\t' -v c="$outer" '$1 == c { print $2; exit }')
 [[ -n "$cw" && -n "$ch" ]] || exit 0
 
-# Load stored geometry: canonical per-session value first, otherwise the raw
-# value recorded when the popup was opened (only relevant for the first move).
-geom="$(tmux show-options -gqv "@popup_geom_$key")"
-[[ -n "$geom" ]] || geom="$(tmux show-options -gqv @popup_pending_geom)"
+# Load stored geometry, or the launcher's raw default for reset/first move.
+default_geom="$(tmux show-options -gqv "@popup_default_geom_$key")"
+if [[ -z "$default_geom" ]]; then
+	default_geom="$(tmux show-options -gqv @popup_pending_geom)"
+	[[ -n "$default_geom" ]] && tmux set -g "@popup_default_geom_$key" "$default_geom"
+fi
+if ((reset)); then
+	geom="$default_geom"
+else
+	geom="$(tmux show-options -gqv "@popup_geom_$key")"
+	[[ -n "$geom" ]] || geom="$default_geom"
+fi
 read -r x y w h <<<"$geom"
 
 # Convert one raw geometry token to absolute cells.
@@ -133,6 +146,8 @@ done
 # be backgrounded — the popup itself lives on the server and survives us.
 tmux display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
 	${border:+-b "$border"} -E "tmux attach -t $(printf '%q' "$inner")" &
+
+((reset)) && exit 0
 
 # Re-arm popupmove mode on the reopened popup's client. Each close/reopen
 # creates a brand-new inner client that starts in the root key table; without

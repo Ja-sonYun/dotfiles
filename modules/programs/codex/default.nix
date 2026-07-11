@@ -41,19 +41,62 @@ let
 
   transformedMcpServers = lib.mapAttrs (_: mkDefaultTomlValue) rawMcpServers;
 
-  mcpFragment = tomlFormat.generate "codex-mcp-servers.toml" { mcp_servers = rawMcpServers; };
+  managedSettingKeys = [
+    "default_permissions"
+    "features"
+    "hooks"
+    "mcp_servers"
+    "model_providers"
+    "tui"
+  ];
 
-  mcpMergeScript = pkgs.python3.withPackages (p: [ p.tomlkit ]);
+  selectSettings = keys: lib.filterAttrs (name: _: builtins.elem name keys);
 
-  wrappedPackage =
-    pkgs.runCommand "${cfg.package.name}-wrapped" { nativeBuildInputs = [ pkgs.makeWrapper ]; }
-      ''
-        mkdir -p $out/bin
-        makeWrapper ${cfg.package}/bin/codex $out/bin/codex \
-          --run "set -- --config 'projects.''''\"\$PWD\"''''.trust_level=\"trusted\"'" \
-          --add-flag --profile \
-          --add-flag ${lib.escapeShellArg cfg.profileName}
-      '';
+  permissions = cfg.settings.permissions or { };
+  managedSettings =
+    selectSettings managedSettingKeys cfg.settings
+    // lib.optionalAttrs (permissions ? managed) {
+      permissions.managed = permissions.managed;
+    };
+  flagSettings =
+    removeAttrs cfg.settings (managedSettingKeys ++ [ "permissions" ])
+    // lib.optionalAttrs (removeAttrs permissions [ "managed" ] != { }) {
+      permissions = removeAttrs permissions [ "managed" ];
+    };
+
+  settingsSecrets = pkgs.tool.secretSettings cfg.settings;
+  flagSecrets = pkgs.tool.secretSettings flagSettings;
+  managedFragment = tomlFormat.generate "codex-managed-settings.toml" managedSettings;
+
+  configMergePython = pkgs.python3.withPackages (p: [ p.tomlkit ]);
+
+  quoteKey = key: if builtins.match "[A-Za-z0-9_-]+" key == null then builtins.toJSON key else key;
+
+  flattenSettings =
+    path: value:
+    if builtins.isAttrs value && !lib.isDerivation value then
+      lib.concatLists (lib.mapAttrsToList (name: child: flattenSettings (path ++ [ name ]) child) value)
+    else
+      [
+        {
+          key = lib.concatMapStringsSep "." quoteKey path;
+          inherit value;
+        }
+      ];
+
+  flagArgs = lib.concatMap (setting: [
+    "--config"
+    "${setting.key}=${builtins.toJSON setting.value}"
+  ]) (flattenSettings [ ] flagSettings);
+
+  wrappedArgs = lib.escapeShellArgs flagArgs;
+
+  wrappedPackage = pkgs.writeShellScriptBin "codex" ''
+    exec ${cfg.package}/bin/codex \
+      ${wrappedArgs} \
+      --config "projects.\"$PWD\".trust_level=\"trusted\"" \
+      "$@"
+  '';
 in
 {
   disabledModules = [ "programs/codex" ];
@@ -73,16 +116,10 @@ in
       description = "Whether to integrate shared programs.mcp.servers into Codex.";
     };
 
-    profileName = lib.mkOption {
-      type = lib.types.str;
-      default = "home-manager";
-      description = "Codex profile name for managed settings.";
-    };
-
     settings = lib.mkOption {
       inherit (tomlFormat) type;
       default = { };
-      description = "Codex profile TOML settings.";
+      description = "Codex TOML settings.";
     };
 
     context = lib.mkOption {
@@ -105,37 +142,43 @@ in
   };
 
   config = lib.mkIf cfg.enable (
-    let
-      profileTarget = ".codex/${cfg.profileName}.config.toml";
-    in
     lib.mkMerge [
       {
         home.packages = [ wrappedPackage ];
 
-        home.file = {
-          ${profileTarget}.source = tomlFormat.generate "codex-${cfg.profileName}.config.toml" cfg.settings;
-        }
-        // lib.optionalAttrs (cfg.context != null) {
-          ".codex/AGENTS.md".text = cfg.context;
-        }
-        // lib.mapAttrs' (
-          name: source: lib.nameValuePair ".codex/skills/${name}" { inherit source; }
-        ) cfg.skills
-        // lib.mapAttrs' (
-          name: text: lib.nameValuePair ".codex/rules/${name}.rules" { inherit text; }
-        ) cfg.rules;
+        assertions = [
+          {
+            assertion = settingsSecrets.invalidSecretPaths == [ ];
+            message = "programs.codex.settings contains invalid _secret values at: ${lib.concatStringsSep ", " settingsSecrets.invalidSecretPaths}.";
+          }
+          {
+            assertion = flagSecrets.secretPaths == [ ];
+            message = "programs.codex.settings only supports _secret in settings merged into ~/.codex/config.toml.";
+          }
+        ];
+
+        home.file =
+          lib.optionalAttrs (cfg.context != null) {
+            ".codex/AGENTS.md".text = cfg.context;
+          }
+          // lib.mapAttrs' (
+            name: source: lib.nameValuePair ".codex/skills/${name}" { inherit source; }
+          ) cfg.skills
+          // lib.mapAttrs' (
+            name: text: lib.nameValuePair ".codex/rules/${name}.rules" { inherit text; }
+          ) cfg.rules;
+
+        home.activation.codexConfigMerge = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          run mkdir -p "${config.home.homeDirectory}/.codex"
+          run ${configMergePython}/bin/python3 ${./merge-config-toml.py} \
+            "${config.home.homeDirectory}/.codex/config.toml" ${managedFragment} \
+            "${config.home.homeDirectory}/.codex/.home-manager-mcp-state.json" \
+            "${config.home.homeDirectory}/.codex/.home-manager-model-provider-state.json"
+        '';
       }
 
       (lib.mkIf (cfg.enableMcpIntegration && config.programs.mcp.enable) {
         programs.codex.settings.mcp_servers = transformedMcpServers;
-
-        # base config.toml must stay writable for the GUI, so merge instead of symlinking it
-        home.activation.codexMcpMerge = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          run mkdir -p "${config.home.homeDirectory}/.codex"
-          run ${mcpMergeScript}/bin/python3 ${./merge-config-toml.py} \
-            "${config.home.homeDirectory}/.codex/config.toml" ${mcpFragment} \
-            "${config.home.homeDirectory}/.codex/.home-manager-mcp-state.json"
-        '';
       })
     ]
   );

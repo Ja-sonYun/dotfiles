@@ -115,9 +115,6 @@ let
         pkgs.gigalixir
         pkgs.inotify-tools
         pkgs.libnotify
-      ]
-      ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-        pkgs.terminal-notifier
       ];
   };
 

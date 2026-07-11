@@ -28,19 +28,14 @@ let
     } 2>/dev/null || true)"
 
     if [ -n "$ai_address" ]; then
-      exec ${codex}/bin/codex \
-        --profile ${config.programs.codex.profileName} \
-        --config "projects.\"$PWD\".trust_level=\"trusted\"" \
+      exec codex \
         --config "model_provider=\"lmp\"" \
         --config "model_providers.lmp.base_url=\"''${ai_address%/}/v1\"" \
         --model "syn:large:text" \
         "$@"
     fi
 
-    exec ${codex}/bin/codex \
-      --profile ${config.programs.codex.profileName} \
-      --config "projects.\"$PWD\".trust_level=\"trusted\"" \
-      "$@"
+    exec codex "$@"
   '';
 in
 {
@@ -91,6 +86,7 @@ in
         multi_agent = true;
         personality = true;
         skill_mcp_dependency_install = false;
+        memories = true;
       };
 
       agents = {

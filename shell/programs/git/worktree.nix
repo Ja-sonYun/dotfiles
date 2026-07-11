@@ -1,4 +1,4 @@
-_:
+{ pkgs, ... }:
 let
   helpers = ''
     set -euo pipefail
@@ -188,7 +188,7 @@ in
         if [ -z "$dest" ]; then
           dest="$(default_wt_path_for_branch "$br")"
           git worktree add --detach "$dest"
-          (cd "$dest" && gh pr checkout "$num") || {
+          (cd "$dest" && PATH="${pkgs.git}/bin:$PATH" gh pr checkout "$num") || {
             git worktree remove --force "$dest"
             exit 1
           }
