@@ -46,8 +46,7 @@ let
     name: project:
     pkgs.writeText "docker-compose-${name}.yaml" (lib.generators.toYAML { } (composeConfig project));
 
-  defaultDockerBin =
-    if isDarwin then "${config.homebrew.prefix}/bin/docker" else "${pkgs.docker}/bin/docker";
+  defaultDockerBin = if isDarwin then "/usr/local/bin/docker" else "${pkgs.docker}/bin/docker";
 
   dockerBin = if cfg.dockerBin == null then defaultDockerBin else cfg.dockerBin;
 
