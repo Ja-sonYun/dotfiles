@@ -8,8 +8,8 @@ import openai
 from pydantic import BaseModel
 
 api_key = os.environ.get("CAPI_KEY")
-_ai_address = os.environ.get("AI_ADDRESS", "").rstrip("/")
-base_url = _ai_address if _ai_address.endswith("/v1") else f"{_ai_address}/v1"
+_llm_domain = os.environ.get("LLM_DOMAIN", "").rstrip("/")
+base_url = _llm_domain if _llm_domain.endswith("/v1") else f"{_llm_domain}/v1"
 
 all_args = sys.argv[1:]
 input_text = " ".join(all_args)

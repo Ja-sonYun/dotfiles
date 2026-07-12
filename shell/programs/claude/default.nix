@@ -21,13 +21,13 @@ let
   claudeLmp = pkgs.writeShellScriptBin "claude-lmp" ''
     set -euo pipefail
 
-    ai_address="$(${pkgs.coreutils}/bin/cat ${
-      config.age.secrets."ai-address".path
+    llm_domain="$(${pkgs.coreutils}/bin/cat ${
+      config.age.secrets."llm-domain".path
     } 2>/dev/null || true)"
-    export AI_ADDRESS="$ai_address"
+    export LLM_DOMAIN="$llm_domain"
 
-    if [ -n "$ai_address" ]; then
-      export ANTHROPIC_BASE_URL="''${ai_address%/}"
+    if [ -n "$llm_domain" ]; then
+      export ANTHROPIC_BASE_URL="''${llm_domain%/}"
     fi
 
     export ANTHROPIC_API_KEY="$(${pkgs.coreutils}/bin/cat ${

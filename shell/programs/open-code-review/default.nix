@@ -3,8 +3,8 @@ let
   openCodeReviewWrapped = pkgs.writeShellScriptBin "ocr" ''
     set -euo pipefail
 
-    if [ -n "''${AI_ADDRESS:-}" ]; then
-      export OCR_LLM_URL="$AI_ADDRESS/v1"
+    if [ -n "''${LLM_DOMAIN:-}" ]; then
+      export OCR_LLM_URL="$LLM_DOMAIN/v1"
     fi
 
     if [ -n "''${CAPI_KEY:-}" ]; then

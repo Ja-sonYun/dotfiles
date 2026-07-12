@@ -19,18 +19,18 @@ let
   codexLmp = pkgs.writeShellScriptBin "codex-lmp" ''
     set -euo pipefail
 
-    ai_address="$(${pkgs.coreutils}/bin/cat ${
-      config.age.secrets."ai-address".path
+    llm_domain="$(${pkgs.coreutils}/bin/cat ${
+      config.age.secrets."llm-domain".path
     } 2>/dev/null || true)"
-    export AI_ADDRESS="$ai_address"
+    export LLM_DOMAIN="$llm_domain"
     export CAPI_KEY="$(${pkgs.coreutils}/bin/cat ${
       config.age.secrets."capi-key".path
     } 2>/dev/null || true)"
 
-    if [ -n "$ai_address" ]; then
+    if [ -n "$llm_domain" ]; then
       exec codex \
         --config "model_provider=\"lmp\"" \
-        --config "model_providers.lmp.base_url=\"''${ai_address%/}/v1\"" \
+        --config "model_providers.lmp.base_url=\"''${llm_domain%/}/v1\"" \
         --model "syn:large:text" \
         "$@"
     fi
@@ -120,7 +120,7 @@ in
 
       model_providers.lmp = {
         name = "LMP";
-        base_url = "$AI_ADDRESS/v1";
+        base_url = "$LLM_DOMAIN/v1";
         wire_api = "responses";
         env_key = "CAPI_KEY";
       };

@@ -32,7 +32,7 @@
 
     envFiles = {
       CAPI_KEY = config.age.secrets."capi-key".path;
-      AI_ADDRESS = config.age.secrets."ai-address".path;
+      LLM_DOMAIN = config.age.secrets."llm-domain".path;
     };
   };
 }

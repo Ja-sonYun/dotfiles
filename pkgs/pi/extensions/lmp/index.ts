@@ -6,9 +6,8 @@ interface RawModel {
   max_tokens?: number;
 }
 
-// CAPI_KEY/AI_ADDRESS come from pi's env wrapper (programs.pi.envFiles).
 export default async function (pi: ExtensionAPI) {
-  const base = process.env.AI_ADDRESS;
+  const base = process.env.LLM_DOMAIN;
   const key = process.env.CAPI_KEY;
   if (!base) return;
 

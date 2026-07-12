@@ -12,7 +12,7 @@
       e cfg.fortunes=false
       e bin.cache=true
       e r2ghidra.sleighhome=${pkgs.r2ghidra}/lib/radare2/last/r2ghidra_sleigh
-      decai -e baseurl=`%AI_ADDRESS`
+      decai -e baseurl=`%LLM_DOMAIN`
     '';
 
     plugins = {
@@ -22,7 +22,7 @@
 
     envFiles = {
       OPENAI_API_KEY = config.age.secrets."capi-key".path;
-      AI_ADDRESS = config.age.secrets."ai-address".path;
+      LLM_DOMAIN = config.age.secrets."llm-domain".path;
     };
 
     decai = {
