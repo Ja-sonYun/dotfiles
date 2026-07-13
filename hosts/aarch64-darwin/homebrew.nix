@@ -51,7 +51,7 @@ let
     "ghostty"
     "orbstack"
     "obsidian"
-    "codex-app"
+    "chatgpt"
     "appcleaner"
     "input-source-pro"
   ]
