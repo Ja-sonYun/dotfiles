@@ -45,6 +45,7 @@
   programs.zsh-customize = {
     enable = true;
     fpath = [ "$HOME/.zsh/completions" ];
+    blocks = [ { raw = "set -o ignoreeof"; } ];
     path = [
       "$HOME/.bin"
       "$HOME/.local/bin"

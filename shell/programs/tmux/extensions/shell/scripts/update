@@ -14,14 +14,13 @@ pane_id="${1:-${TMUX_PANE:-}}"
 invoc_seq="${2:-}"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-source "$script_dir/../lib/common"
+source "$script_dir/../../../scripts/lib/common"
 
 [[ -n "$pane_id" ]] || exit 0
 
-# --- single IPC: read all 5 values at once --------------------------------
-IFS=$'\x1f' read -r shell_path shell_cmd stored_path stored_cmd current_seq < <(
+IFS=$'\x1f' read -r shell_path shell_cmd stored_path stored_cmd current_seq current_path < <(
 	tmux display-message -pt "$pane_id" \
-		$'#{@shell_pwd}\x1f#{@shell_cmd}\x1f#{@pane_last_path}\x1f#{@pcmd}\x1f#{@shell_seq}' 2>/dev/null
+		$'#{@shell_pwd}\x1f#{@shell_cmd}\x1f#{@pane_last_path}\x1f#{@pcmd}\x1f#{@shell_seq}\x1f#{pane_current_path}' 2>/dev/null
 )
 
 # --- discard stale update (race condition guard) -------------------------
@@ -30,8 +29,7 @@ if [[ -n "$invoc_seq" && "$invoc_seq" != "$current_seq" ]]; then
 fi
 
 # Fall back to tmux's own tracking when the shell hasn't set @shell_pwd yet
-[[ -n "$shell_path" ]] ||
-shell_path="$(tmux display-message -pt "$pane_id" '#{pane_current_path}' 2>/dev/null)"
+shell_path="${shell_path:-$current_path}"
 
 cmd_label="$(label_for_cmd "${shell_cmd:-shell}")"
 
@@ -50,7 +48,7 @@ if [[ -n "$invoc_seq" ]]; then
 	current_seq="$(tmux display-message -pt "$pane_id" '#{@shell_seq}' 2>/dev/null)"
 	[[ "$invoc_seq" != "$current_seq" ]] && exit 0
 fi
-tmux_flush
+tmux_flush || exit
 
 # --- re-render, passing seq so panes can bail if stale -------------------
 "$script_dir/panes" "$pane_id" "$shell_path" "$invoc_seq" >/dev/null 2>&1

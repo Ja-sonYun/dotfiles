@@ -37,15 +37,43 @@ let
     };
   };
 
+  bindingOptions = name: {
+    key = lib.mkOption {
+      type = lib.types.str;
+      default = name;
+      description = "Key spec emitted verbatim to bind-key; defaults to the attribute name.";
+    };
+    repeat = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Add -r (repeatable).";
+    };
+    command = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Unconditional tmux command; use \\; to chain. Exclusive with script/cases.";
+    };
+    script = lib.mkOption {
+      type = lib.types.nullOr lib.types.lines;
+      default = null;
+      description = "Unconditional inline shell; run via run-shell. Exclusive with command/cases.";
+    };
+    cases = lib.mkOption {
+      type = lib.types.listOf caseType;
+      default = [ ];
+      description = "Ordered env-guarded branches (first match wins); a guardless case is the default else.";
+    };
+    noDefault = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "When cases are used and none match: do nothing instead of the key's tmux default.";
+    };
+  };
+
   bindingType = lib.types.submodule (
     { name, ... }:
     {
-      options = {
-        key = lib.mkOption {
-          type = lib.types.str;
-          default = name;
-          description = "Key spec emitted verbatim to bind-key; defaults to the attribute name.";
-        };
+      options = bindingOptions name // {
         table = lib.mkOption {
           type = lib.types.enum [
             "prefix"
@@ -55,32 +83,14 @@ let
           default = "prefix";
           description = "Key table: root -> -n, others -> -T <table>.";
         };
-        repeat = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Add -r (repeatable).";
-        };
-        command = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          description = "Unconditional tmux command; use \\; to chain. Exclusive with script/cases.";
-        };
-        script = lib.mkOption {
-          type = lib.types.nullOr lib.types.lines;
-          default = null;
-          description = "Unconditional inline shell; run via run-shell. Exclusive with command/cases.";
-        };
-        cases = lib.mkOption {
-          type = lib.types.listOf caseType;
-          default = [ ];
-          description = "Ordered env-guarded branches (first match wins); a guardless case is the default else.";
-        };
-        noDefault = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "When cases are used and none match: do nothing instead of the key's tmux default.";
-        };
       };
+    }
+  );
+
+  keyTableBindingType = lib.types.submodule (
+    { name, ... }:
+    {
+      options = bindingOptions name;
     }
   );
 
@@ -260,7 +270,7 @@ let
         else
           b.command == null && b.script == null
       )
-      "programs.tmux.bindings.${name}: use exactly one of command/script (no cases) OR cases (no command/script)";
+      "programs.tmux binding ${name}: use exactly one of command/script (no cases) OR cases (no command/script)";
     lib.concatStringsSep " " (
       [
         "bind-key"
@@ -274,6 +284,12 @@ let
     );
 
   renderUnbind = u: "unbind-key ${lib.optionalString (u.table != null) "-T ${u.table} "}${u.key}";
+
+  renderKeyTable =
+    table: bindings:
+    lib.mapAttrsToList (
+      name: binding: renderBinding "${table}-${name}" (binding // { inherit table; })
+    ) bindings;
 
   renderHooks =
     hooks:
@@ -312,6 +328,7 @@ let
       (renderHooks cfg.hooks)
       (map renderUnbind cfg.unbind)
       (lib.mapAttrsToList renderBinding cfg.bindings)
+      (lib.concatLists (lib.mapAttrsToList renderKeyTable cfg.keyTables))
       (lib.optional (cfg.extraConfig != "") cfg.extraConfig)
     ]
   );
@@ -326,6 +343,13 @@ in
       type = lib.types.package;
       default = pkgs.tmux;
       description = "tmux package to install.";
+    };
+
+    agentStatusScript = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      internal = true;
+      description = "Agent status script path.";
     };
 
     setGlobalOptions = lib.mkOption {
@@ -352,6 +376,12 @@ in
       type = lib.types.attrsOf bindingType;
       default = { };
       description = "Named key bindings; attr name describes the binding.";
+    };
+
+    keyTables = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.attrsOf keyTableBindingType);
+      default = { };
+      description = "Named custom key tables containing key bindings.";
     };
 
     hooks = lib.mkOption {

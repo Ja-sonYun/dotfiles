@@ -3,4 +3,5 @@
 // (import ./lib.nix)
 // (import ./inputs.nix { inherit inputs; })
 // (import ./patches.nix)
+// (import ./python.nix)
 // (import ./custom.nix { inherit hostname; })

@@ -1,0 +1,560 @@
+#!/bin/bash
+
+tmux_bin="${TMUX_BIN:-tmux}"
+
+global_get() {
+	"$tmux_bin" show-option -gqv "$1"
+}
+
+global_set() {
+	"$tmux_bin" set-option -gq "$1" "$2"
+}
+
+global_unset() {
+	"$tmux_bin" set-option -guq "$1"
+}
+
+window_get() {
+	"$tmux_bin" show-option -wqv -t "$1" "$2"
+}
+
+window_set() {
+	"$tmux_bin" set-option -wq -t "$1" "$2" "$3"
+}
+
+window_unset() {
+	"$tmux_bin" set-option -wuq -t "$1" "$2"
+}
+
+pane_exists() {
+	local pane
+	[ -n "$1" ] || return 1
+	pane=$("$tmux_bin" display-message -pt "$1" '#{pane_id}' 2>/dev/null)
+	[ "$pane" = "$1" ]
+}
+
+window_exists() {
+	local window
+	[ -n "$1" ] || return 1
+	window=$("$tmux_bin" display-message -pt "$1" '#{window_id}' 2>/dev/null)
+	[ "$window" = "$1" ]
+}
+
+is_monitor() {
+	[ -n "$("$tmux_bin" show-option -pqv -t "$1" @pane_monitor_scope 2>/dev/null)" ]
+}
+
+message() {
+	"$tmux_bin" display-message "pane monitor: $*"
+}
+
+acquire_lock() {
+	# ponytail: server-wide serialization; split by window only if reflow becomes slow.
+	"$tmux_bin" wait-for -L __pane_monitor_lock || exit
+	trap '"$tmux_bin" wait-for -U __pane_monitor_lock' EXIT
+}
+
+monitor_width() {
+	local value
+	value=$(global_get @pane_monitor_width)
+	case "$value" in
+		''|*[!0-9]*|0) printf '60\n' ;;
+		*) printf '%s\n' "$value" ;;
+	esac
+}
+
+monitor_height() {
+	local value
+	value=$(global_get @pane_monitor_height)
+	case "$value" in
+		''|*[!0-9]*|0) printf '3\n' ;;
+		*) printf '%s\n' "$value" ;;
+	esac
+}
+
+next_order() {
+	local order
+	order=$(global_get @pane_monitor_next_order)
+	case "$order" in
+		''|*[!0-9]*) order=0 ;;
+	esac
+	order=$((order + 1))
+	global_set @pane_monitor_next_order "$order"
+	printf '%s\n' "$order"
+}
+
+origin_pane() {
+	local pane
+	pane=$(global_get @menu_origin_pane)
+	if ! pane_exists "$pane"; then
+		pane=$("$tmux_bin" display-message -p '#{pane_id}')
+	fi
+	printf '%s\n' "$pane"
+}
+
+origin_window() {
+	local window pane
+	window=$(global_get @menu_origin_window)
+	if ! window_exists "$window"; then
+		pane=$(origin_pane)
+		window=$("$tmux_bin" display-message -pt "$pane" '#{window_id}')
+	fi
+	printf '%s\n' "$window"
+}
+
+main_window() {
+	"$tmux_bin" display-message -pt main: '#{window_id}' 2>/dev/null
+}
+
+kill_global_view() {
+	local pane
+	pane=$(global_get @pane_monitor_global_monitor)
+	global_unset @pane_monitor_global_monitor
+	if pane_exists "$pane"; then
+		"$tmux_bin" kill-pane -t "$pane"
+	fi
+}
+
+kill_local_view() {
+	local window=$1 pane
+	pane=$(window_get "$window" @pane_monitor_local_monitor)
+	window_unset "$window" @pane_monitor_local_monitor
+	if pane_exists "$pane"; then
+		"$tmux_bin" kill-pane -t "$pane"
+	fi
+}
+
+visible_count() {
+	local window=$1 count=0
+	if [ "$(window_get "$window" @pane_monitor_local_visible)" = 1 ]; then
+		count=$((count + 1))
+	fi
+	if [ "$(global_get @pane_monitor_global_visible)" = 1 ] &&
+	[ "$(global_get @pane_monitor_global_window)" = "$window" ]; then
+		count=$((count + 1))
+	fi
+	printf '%s\n' "$count"
+}
+
+fits_window() {
+	local window=$1 count=$2 width=${3:-$(monitor_width)} height=${4:-$(monitor_height)}
+	local window_width window_height
+	read -r window_width window_height < <(
+		"$tmux_bin" display-message -pt "$window" '#{window_width} #{window_height}'
+	) || return 1
+	[ $((width + 2)) -le "$window_width" ] &&
+	[ $((count * height + (count - 1) * 2 + 1)) -le "$window_height" ]
+}
+
+can_show() {
+	local scope=$1 window=$2 count=1
+	if [ "$scope" = global ]; then
+		[ "$(window_get "$window" @pane_monitor_local_visible)" = 1 ] && count=2
+	elif [ "$(global_get @pane_monitor_global_visible)" = 1 ] &&
+	[ "$(global_get @pane_monitor_global_window)" = "$window" ]; then
+		count=2
+	fi
+	if ! fits_window "$window" "$count"; then
+		message "$(monitor_width)x$(monitor_height) does not fit"
+		return 1
+	fi
+}
+
+create_view() {
+	local scope=$1 source=$2 window=$3 y=$4 width height window_width x pane active status_script counts_script
+	width=$(monitor_width)
+	height=$(monitor_height)
+	window_width=$("$tmux_bin" display-message -pt "$window" '#{window_width}')
+	active=$("$tmux_bin" display-message -pt "$window" '#{pane_id}')
+	x=$((window_width - width - 2))
+	pane=$("$tmux_bin" new-pane -dP -t "$window" \
+			-x "$width" -y "$height" -X "$x" -Y "$y" -F '#{pane_id}' \
+		"$0 view $source") || return 1
+
+	"$tmux_bin" set-option -pq -t "$pane" @pane_monitor_scope "$scope"
+	"$tmux_bin" set-option -pq -t "$pane" @pane_monitor_source "$source"
+	if [ "$scope" = global ]; then
+		global_set @pane_monitor_global_monitor "$pane"
+	else
+		window_set "$window" @pane_monitor_local_monitor "$pane"
+	fi
+	"$tmux_bin" select-pane -d -t "$pane" ';' select-pane -t "$active"
+	status_script=$(dirname "$0")/../../shell/scripts/panes
+	counts_script=$(dirname "$0")/../../agent/scripts/counts
+	if { [ ! -x "$status_script" ] || "$status_script" "$active"; } &&
+	{ [ ! -x "$counts_script" ] || "$counts_script"; }; then
+		return 0
+	fi
+	if [ "$scope" = global ]; then
+		kill_global_view
+	else
+		kill_local_view "$window"
+	fi
+	return 1
+}
+
+clear_dead_sources() {
+	local window=$1 source
+	source=$(window_get "$window" @pane_monitor_local_source)
+	if [ -n "$source" ] && ! pane_exists "$source"; then
+		kill_local_view "$window"
+		window_unset "$window" @pane_monitor_local_source
+		window_unset "$window" @pane_monitor_local_visible
+		window_unset "$window" @pane_monitor_local_order
+	fi
+
+	source=$(global_get @pane_monitor_global_source)
+	if [ -n "$source" ] && ! pane_exists "$source"; then
+		kill_global_view
+		global_unset @pane_monitor_global_source
+		global_unset @pane_monitor_global_visible
+		global_unset @pane_monitor_global_window
+		global_unset @pane_monitor_global_order
+	fi
+}
+
+reflow() {
+	local window=$1 count height local_order global_order first second
+	window_exists "$window" || return 0
+	clear_dead_sources "$window"
+	count=$(visible_count "$window")
+	[ "$count" -gt 0 ] || return 0
+	if ! fits_window "$window" "$count"; then
+		kill_local_view "$window"
+		if [ "$(global_get @pane_monitor_global_window)" = "$window" ]; then
+			kill_global_view
+		fi
+		message "$(monitor_width)x$(monitor_height) does not fit"
+		return 0
+	fi
+
+	kill_local_view "$window"
+	if [ "$(global_get @pane_monitor_global_window)" = "$window" ]; then
+		kill_global_view
+	fi
+
+	local_order=$(window_get "$window" @pane_monitor_local_order)
+	global_order=$(global_get @pane_monitor_global_order)
+	if [ "$count" -eq 2 ] && [ "${local_order:-0}" -le "${global_order:-0}" ]; then
+		first=local
+		second=global
+	elif [ "$count" -eq 2 ]; then
+		first=global
+		second=local
+	elif [ "$(window_get "$window" @pane_monitor_local_visible)" = 1 ]; then
+		first=local
+	else
+		first=global
+	fi
+
+	height=$(monitor_height)
+	if [ "$first" = local ]; then
+		create_view local "$(window_get "$window" @pane_monitor_local_source)" "$window" 1 || return 1
+	else
+		create_view global "$(global_get @pane_monitor_global_source)" "$window" 1 || return 1
+	fi
+	[ -n "$second" ] || return 0
+	if [ "$second" = local ]; then
+		create_view local "$(window_get "$window" @pane_monitor_local_source)" "$window" $((height + 3)) && return 0
+	else
+		create_view global "$(global_get @pane_monitor_global_source)" "$window" $((height + 3)) && return 0
+	fi
+	kill_local_view "$window"
+	if [ "$(global_get @pane_monitor_global_window)" = "$window" ]; then
+		kill_global_view
+	fi
+	return 1
+}
+
+follow_global() {
+	local source old_window window
+	[ "$(global_get @pane_monitor_global_visible)" = 1 ] || return 0
+	source=$(global_get @pane_monitor_global_source)
+	if ! pane_exists "$source"; then
+		clear_dead_sources "$(global_get @pane_monitor_global_window)"
+		return 0
+	fi
+
+	window=$(main_window)
+	old_window=$(global_get @pane_monitor_global_window)
+	if [ -z "$window" ]; then
+		kill_global_view
+		global_unset @pane_monitor_global_window
+		reflow "$old_window"
+		return 0
+	fi
+	if [ "$old_window" = "$window" ] && pane_exists "$(global_get @pane_monitor_global_monitor)"; then
+		return 0
+	fi
+
+	if [ "$old_window" != "$window" ]; then
+		kill_global_view
+		global_unset @pane_monitor_global_window
+		reflow "$old_window"
+		global_set @pane_monitor_global_order "$(next_order)"
+	fi
+	global_set @pane_monitor_global_window "$window"
+	reflow "$window"
+}
+
+add_global() {
+	local source old_window window
+	source=$(origin_pane)
+	if ! pane_exists "$source" || is_monitor "$source"; then
+		message "select a source pane"
+		return 1
+	fi
+	window=$(main_window)
+	if [ -z "$window" ]; then
+		message "main session not found"
+		return 1
+	fi
+	can_show global "$window" || return 1
+	old_window=$(global_get @pane_monitor_global_window)
+	kill_global_view
+	global_set @pane_monitor_global_source "$source"
+	global_set @pane_monitor_global_visible 1
+	global_set @pane_monitor_global_order "$(next_order)"
+	global_unset @pane_monitor_global_window
+	reflow "$old_window"
+	follow_global
+}
+
+add_local() {
+	local source window
+	source=$(origin_pane)
+	window=$(origin_window)
+	if ! pane_exists "$source" || is_monitor "$source"; then
+		message "select a source pane"
+		return 1
+	fi
+	can_show local "$window" || return 1
+	kill_local_view "$window"
+	window_set "$window" @pane_monitor_local_source "$source"
+	window_set "$window" @pane_monitor_local_visible 1
+	window_set "$window" @pane_monitor_local_order "$(next_order)"
+	reflow "$window"
+}
+
+toggle_global() {
+	local source window
+	source=$(global_get @pane_monitor_global_source)
+	if ! pane_exists "$source"; then
+		message "no global monitor"
+		return 1
+	fi
+	window=$(global_get @pane_monitor_global_window)
+	if [ "$(global_get @pane_monitor_global_visible)" = 1 ]; then
+		global_set @pane_monitor_global_visible 0
+		kill_global_view
+		global_unset @pane_monitor_global_window
+		reflow "$window"
+	else
+		window=$(main_window)
+		if [ -z "$window" ]; then
+			message "main session not found"
+			return 1
+		fi
+		can_show global "$window" || return 1
+		global_set @pane_monitor_global_visible 1
+		global_set @pane_monitor_global_order "$(next_order)"
+		follow_global
+	fi
+}
+
+toggle_local() {
+	local window source
+	window=$(origin_window)
+	source=$(window_get "$window" @pane_monitor_local_source)
+	if ! pane_exists "$source"; then
+		message "no local monitor"
+		return 1
+	fi
+	if [ "$(window_get "$window" @pane_monitor_local_visible)" = 1 ]; then
+		window_set "$window" @pane_monitor_local_visible 0
+		kill_local_view "$window"
+		reflow "$window"
+	else
+		can_show local "$window" || return 1
+		window_set "$window" @pane_monitor_local_visible 1
+		window_set "$window" @pane_monitor_local_order "$(next_order)"
+		reflow "$window"
+	fi
+}
+
+remove_global() {
+	local window
+	window=$(global_get @pane_monitor_global_window)
+	kill_global_view
+	global_unset @pane_monitor_global_source
+	global_unset @pane_monitor_global_visible
+	global_unset @pane_monitor_global_window
+	global_unset @pane_monitor_global_order
+	reflow "$window"
+}
+
+remove_local() {
+	local window
+	window=$(origin_window)
+	kill_local_view "$window"
+	window_unset "$window" @pane_monitor_local_source
+	window_unset "$window" @pane_monitor_local_visible
+	window_unset "$window" @pane_monitor_local_order
+	reflow "$window"
+}
+
+set_size() {
+	local width=$1 height=$2 window count
+	case "$width" in
+		''|*[!0-9]*|0) message "size must be WIDTH HEIGHT"; return 1 ;;
+	esac
+	case "$height" in
+		''|*[!0-9]*|0) message "size must be WIDTH HEIGHT"; return 1 ;;
+	esac
+	if [ "${#width}" -gt 5 ] || [ "${#height}" -gt 5 ]; then
+		message "size is too large"
+		return 1
+	fi
+	width=$((10#$width))
+	height=$((10#$height))
+	if [ "$width" -eq 0 ] || [ "$height" -eq 0 ]; then
+		message "size must be WIDTH HEIGHT"
+		return 1
+	fi
+	if [ "$width" -gt 10000 ] || [ "$height" -gt 10000 ]; then
+		message "size is too large"
+		return 1
+	fi
+
+	while read -r window; do
+		[ -n "$window" ] || continue
+		clear_dead_sources "$window"
+		count=$(visible_count "$window")
+		if [ "$count" -gt 0 ] && ! fits_window "$window" "$count" "$width" "$height"; then
+			message "${width}x${height} does not fit"
+			return 1
+		fi
+	done < <("$tmux_bin" list-windows -a -F '#{window_id}' | sort -u)
+
+	global_set @pane_monitor_width "$width"
+	global_set @pane_monitor_height "$height"
+	while read -r window; do
+		[ -n "$window" ] && reflow "$window"
+	done < <("$tmux_bin" list-windows -a -F '#{window_id}' | sort -u)
+}
+
+cleanup() {
+	local exited=$1 window old_window source
+	if [ "$exited" = "$(global_get @pane_monitor_global_source)" ]; then
+		remove_global
+	elif [ "$exited" = "$(global_get @pane_monitor_global_monitor)" ]; then
+		old_window=$(global_get @pane_monitor_global_window)
+		source=$(global_get @pane_monitor_global_source)
+		if pane_exists "$source"; then
+			global_unset @pane_monitor_global_monitor
+			global_set @pane_monitor_global_visible 0
+			global_unset @pane_monitor_global_window
+			reflow "$old_window"
+		else
+			remove_global
+		fi
+	fi
+
+	while read -r window; do
+		[ -n "$window" ] || continue
+		if [ "$exited" = "$(window_get "$window" @pane_monitor_local_source)" ]; then
+			kill_local_view "$window"
+			window_unset "$window" @pane_monitor_local_source
+			window_unset "$window" @pane_monitor_local_visible
+			window_unset "$window" @pane_monitor_local_order
+			reflow "$window"
+		elif [ "$exited" = "$(window_get "$window" @pane_monitor_local_monitor)" ]; then
+			source=$(window_get "$window" @pane_monitor_local_source)
+			window_unset "$window" @pane_monitor_local_monitor
+			if pane_exists "$source"; then
+				window_set "$window" @pane_monitor_local_visible 0
+			else
+				window_unset "$window" @pane_monitor_local_source
+				window_unset "$window" @pane_monitor_local_visible
+				window_unset "$window" @pane_monitor_local_order
+			fi
+			reflow "$window"
+		fi
+	done < <("$tmux_bin" list-windows -a -F '#{window_id}' | sort -u)
+}
+
+crop_ansi() {
+	awk -v width="$1" -v esc="$(printf '\033')" '
+		{
+			line = $0
+			out = ""
+			used = 0
+			while (length(line) && used < width) {
+				if (substr(line, 1, 2) == esc "[") {
+					tail = substr(line, 3)
+					end = index(tail, "m")
+					if (end && substr(tail, 1, end - 1) ~ /^[0-9;:]*$/) {
+						length_sgr = end + 2
+						out = out substr(line, 1, length_sgr)
+						line = substr(line, length_sgr + 1)
+						continue
+					}
+				}
+				out = out substr(line, 1, 1)
+				line = substr(line, 2)
+				used++
+			}
+			printf "%s%s[0m\n", out, esc
+		}
+	'
+}
+
+self_test() {
+	local actual expected
+	actual=$(printf '\033[31mabcdef\033[39m\n' | crop_ansi 3)
+	expected=$(printf '\033[31mabc\033[0m')
+	[ "$actual" = "$expected" ]
+}
+
+view() {
+	local source=$1 pane width height cursor start content last_content=""
+	read -r width height < <(
+		"$tmux_bin" display-message -pt "$TMUX_PANE" '#{pane_width} #{pane_height}' 2>/dev/null
+	) || return 0
+	while read -r pane cursor < <(
+		"$tmux_bin" display-message -pt "$source" '#{pane_id} #{cursor_y}' 2>/dev/null
+		); do
+		[ "$pane" = "$source" ] || break
+		case "$cursor" in
+			''|*[!0-9]*) break ;;
+		esac
+		start=$((cursor - height + 1))
+		[ "$start" -ge 0 ] || start=0
+		content=$("$tmux_bin" capture-pane -ep -t "$source" -S "$start" -E "$cursor" | crop_ansi "$width")
+		if [ "$content" != "$last_content" ]; then
+			printf '\033[0m\033[H\033[2J%s' "$content"
+			last_content=$content
+		fi
+		sleep 0.5
+	done
+}
+
+case "$1" in
+	add-global) acquire_lock; add_global ;;
+	add-local) acquire_lock; add_local ;;
+	toggle-global) acquire_lock; toggle_global ;;
+	toggle-local) acquire_lock; toggle_local ;;
+	remove-global) acquire_lock; remove_global ;;
+	remove-local) acquire_lock; remove_local ;;
+	size) acquire_lock; set_size "$2" "$3" ;;
+	follow)
+		acquire_lock
+		[ -z "${2:-}" ] || [ "$(main_window)" = "$2" ] || exit 0
+		follow_global
+		;;
+	resize) acquire_lock; reflow "$2" ;;
+	cleanup) acquire_lock; cleanup "$2" ;;
+	view) view "$2" ;;
+	--self-test) self_test ;;
+	*) message "unknown command"; exit 1 ;;
+esac

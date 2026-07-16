@@ -42,12 +42,23 @@ label_for_cmd() {
 #   tmux_begin                       # start a new batch
 #   tmux_add set-option -p ...       # queue a command
 #   tmux_add set-option -w ...       # queue another
-#   tmux_add_refresh_clients         # queue refresh-client for all clients
+#   tmux_refresh_clients             # refresh all current clients
 #   tmux_flush                       # fire everything in one tmux call
-#
-# For convenience, refresh_clients() does begin + add_refresh_clients + flush.
-
 _TMUX_BATCH=()
+
+tmux_lock() {
+	_TMUX_LOCK="$1"
+	tmux wait-for -L "$_TMUX_LOCK" || return
+	trap tmux_unlock EXIT
+}
+
+tmux_unlock() {
+	local lock="${_TMUX_LOCK:-}"
+	[[ -n "$lock" ]] || return 0
+	tmux wait-for -U "$lock" || return
+	_TMUX_LOCK=""
+	trap - EXIT
+}
 
 tmux_begin() {
 	_TMUX_BATCH=()
@@ -58,23 +69,27 @@ tmux_add() {
 	_TMUX_BATCH+=("$@")
 }
 
-tmux_add_refresh_clients() {
-	local client
+tmux_refresh_clients() {
+	local client current error exists
 	while IFS= read -r client; do
 		[[ -n "$client" ]] || continue
-		tmux_add refresh-client -S -t "$client"
+		if error="$(tmux refresh-client -S -t "$client" 2>&1)"; then
+			continue
+		fi
+		exists=""
+		while IFS= read -r current; do
+			[[ "$current" == "$client" ]] && exists=1
+		done < <(tmux list-clients -F '#{client_tty}' 2>/dev/null)
+		[[ -n "$exists" ]] || continue
+		printf '%s\n' "$error" >&2
+		return 1
 	done < <(tmux list-clients -F '#{client_tty}' 2>/dev/null)
 }
 
 tmux_flush() {
+	local status=0
 	((${#_TMUX_BATCH[@]})) || return 0
-	tmux "${_TMUX_BATCH[@]}" >/dev/null 2>&1
+	tmux "${_TMUX_BATCH[@]}" >/dev/null 2>&1 || status=$?
 	_TMUX_BATCH=()
-}
-
-refresh_clients() {
-	tmux_begin
-	tmux_add_refresh_clients
-	tmux_flush
-	return 0
+	return "$status"
 }

@@ -57,6 +57,10 @@ let
         type = lib.types.nullOr lib.types.str;
         default = null;
       };
+      keyTable = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+      };
       sessionOnDir = lib.mkOption {
         type = lib.types.bool;
         default = false;
@@ -147,6 +151,7 @@ let
     // lib.optionalAttrs (e.closeAfterCommand != null) { close_after_command = e.closeAfterCommand; }
     // lib.optionalAttrs e.session { session = true; }
     // lib.optionalAttrs (e.sessionName != null) { session_name = e.sessionName; }
+    // lib.optionalAttrs (e.keyTable != null) { key_table = e.keyTable; }
     // lib.optionalAttrs e.sessionOnDir { session_on_dir = true; }
     // lib.optionalAttrs e.runOnGitRoot { run_on_git_root = true; }
     // lib.optionalAttrs e.background { background = true; }
@@ -193,24 +198,18 @@ in
       description = "Menus rendered to YAML; attr name is the file stem (e.g. menu, git).";
     };
 
-    scriptsDir = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
-      description = "Scripts dir placed at <configDir>/scripts.";
-    };
-
     configDir = lib.mkOption {
       type = lib.types.package;
       readOnly = true;
       internal = true;
-      description = "Dir with scripts/ and generated menu YAMLs under menu/, for $TMUX_CONFIG.";
+      description = "Dir containing generated menu YAMLs under menu/.";
     };
 
     showScript = lib.mkOption {
       type = lib.types.package;
       readOnly = true;
       internal = true;
-      description = "Launcher that shows the @menu (or 'menu') group; TMUX_MENU_BIN overrides the binary.";
+      description = "Launcher that shows the @menu (or 'menu') group.";
     };
   };
 
@@ -218,24 +217,25 @@ in
     home.packages = [ cfg.package ];
 
     programs.tmux-menu.showScript = pkgs.writeShellScript "tmux-menu-show" ''
-      bin="''${TMUX_MENU_BIN:-${cfg.package}/bin/tmux-menu}"
-      pane_current_path=$(tmux display-message -p "#{pane_current_path}")
+      IFS=$'\x1f' read -r pane_current_path pane_id window_id < <(
+        tmux display-message -p $'#{pane_current_path}\x1f#{pane_id}\x1f#{window_id}'
+      )
+      tmux set-option -g @menu_origin_pane "$pane_id" ';' set-option -g @menu_origin_window "$window_id"
       menu=$(tmux show -v @menu 2>/dev/null)
       menu=''${menu:-menu}
       if tmux show-environment DEFAULT >/dev/null 2>&1; then
-        "$bin" show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
+        ${cfg.package}/bin/tmux-menu show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
       else
         tmux detach
         W=$(tmux display -p "#{client_width}"); W=$((W - 1))
         H=$(tmux display -p "#{client_height}")
-        "$bin" show -x "$W" -y "$H" --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
+        ${cfg.package}/bin/tmux-menu show -x "$W" -y "$H" --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
       fi
     '';
 
     programs.tmux-menu.configDir = pkgs.runCommand "tmux-config" { } (
       ''
-        mkdir -p $out/scripts $out/menu
-        cp -r ${cfg.scriptsDir}/. $out/scripts/
+        mkdir -p $out/menu
       ''
       + lib.concatStrings (
         lib.mapAttrsToList (name: file: "cp ${file} $out/menu/${name}.yaml\n") generatedMenus

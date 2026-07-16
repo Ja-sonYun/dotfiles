@@ -18,11 +18,12 @@ detect_state() {
 	fi
 }
 
-while IFS=$'\x1f' read -r pane_id enabled state in_mode name; do
+while IFS=$'\x1f' read -r pane_id session_id session_name enabled state in_mode name; do
+	[[ "$session_name" != "_popup_all_agents" ]] || continue
 	[[ "$enabled" == "1" && "$in_mode" == "0" && "$name" == "codex" ]] || continue
 	content="$(tmux capture-pane -p -t "$pane_id" 2>/dev/null | grep -v '^[[:space:]]*$' | tail -n 30)"
 	[[ -n "$content" ]] || continue
 	detected="$(detect_state "$content")"
 	[[ -n "$detected" && "$detected" != "$state" ]] || continue
-	"$script_dir/status" "$detected" "$pane_id" >/dev/null 2>&1
-done < <(tmux list-panes -a -F $'#{pane_id}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{pane_in_mode}\x1f#{@agent_name}' 2>/dev/null)
+	"$script_dir/status" "$detected" "$pane_id" "$session_id" || exit
+done < <(tmux list-panes -a -F $'#{pane_id}\x1f#{session_id}\x1f#{session_name}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{pane_in_mode}\x1f#{@agent_name}' 2>/dev/null)

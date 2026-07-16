@@ -1,113 +1,51 @@
-{ config, ... }:
+{ lib, ... }:
 {
   programs.tmux-menu = {
     enable = true;
 
-    scriptsDir = ./scripts;
-
     menus.menu = {
       title = " menu ";
-      items = [
-        {
-          menu = {
-            name = "sessions";
-            shortcut = "j";
-            command = "${config.programs.tmux-customize.sessionMenuScript}";
-            background = true;
-          };
-        }
-        {
-          menu = {
-            name = "git";
-            shortcut = "g";
-            nextMenu = "git";
-          };
-        }
-        {
-          menu = {
-            name = "shell";
-            shortcut = "s";
-            command = "_gen-close-hook subshell && /bin/zsh";
-            session = true;
-            sessionName = "subshell";
-            sessionOnDir = true;
-            runOnGitRoot = true;
-            environment.MENU_POPUP = "1";
-            position = {
-              w = "60%";
-              h = "70%";
+      items = lib.mkMerge [
+        (lib.mkOrder 100 [
+          {
+            menu = {
+              name = "git";
+              shortcut = "g";
+              nextMenu = "git";
             };
-          };
-        }
-        {
-          menu = {
-            name = "Navi";
-            shortcut = "n";
-            command = "navi --path=$CONFIG/navi --print | pbcopy";
-            position = {
-              w = "40%";
-              h = "55%";
+          }
+        ])
+        (lib.mkOrder 300 [
+          {
+            menu = {
+              name = "Navi";
+              shortcut = "n";
+              command = "navi --path=$CONFIG/navi --print | pbcopy";
+              keyTable = "popup-root";
+              position = {
+                w = "40%";
+                h = "55%";
+              };
             };
-          };
-        }
-        {
-          menu = {
-            name = "taskwarrior";
-            shortcut = "t";
-            command = "cd ~/ && taskwarrior-tui";
-            session = true;
-            sessionName = "taskwarrior-tui";
-            environment = {
-              NO_WINDOW_MGNT = "1";
-              CTRL_C_AS_CLOSE = "1";
-              MENU_POPUP = "1";
+          }
+          {
+            menu = {
+              name = "taskwarrior";
+              shortcut = "t";
+              command = "cd ~/ && taskwarrior-tui";
+              session = true;
+              sessionName = "taskwarrior-tui";
+              keyTable = "popup-locked-root";
+              environment = {
+                CTRL_C_AS_CLOSE = "1";
+              };
+              position = {
+                w = "60%";
+                h = "70%";
+              };
             };
-            position = {
-              w = "60%";
-              h = "70%";
-            };
-          };
-        }
-        { separator = true; }
-        {
-          menu = {
-            name = "agent";
-            shortcut = "a";
-            command = "_gen-close-hook agent && direnv exec . pi";
-            session = true;
-            sessionName = "agent";
-            sessionOnDir = true;
-            runOnGitRoot = true;
-            environment = {
-              NO_WINDOW_MGNT = "1";
-              CTRL_C_AS_CLOSE = "1";
-              MENU_POPUP = "1";
-              TMUX_AGENT_STATUS = "1";
-              TMUX_REMAP_CTRL_D = "C-n";
-            };
-            position = {
-              w = "60%";
-              h = "55%";
-            };
-          };
-        }
-        { separator = true; }
-        {
-          menu = {
-            name = "notify watch";
-            shortcut = "l";
-            command = "$TMUX_CONFIG/scripts/notify-watch.sh";
-            background = true;
-          };
-        }
-        {
-          menu = {
-            name = "notify cancel";
-            shortcut = "L";
-            command = "$TMUX_CONFIG/scripts/notify-cancel.sh";
-            background = true;
-          };
-        }
+          }
+        ])
       ];
     };
 
@@ -124,12 +62,9 @@
             command = "_gen-close-hook tig && tig";
             session = true;
             sessionName = "tig";
+            keyTable = "popup-locked-root";
             sessionOnDir = true;
             runOnGitRoot = true;
-            environment = {
-              MENU_POPUP = "1";
-              NO_WINDOW_MGNT = "1";
-            };
             position = {
               w = "140";
               h = "80";
@@ -143,12 +78,9 @@
             command = "_gen-close-hook gitui && gitui";
             session = true;
             sessionName = "gitui";
+            keyTable = "popup-locked-root";
             sessionOnDir = true;
             runOnGitRoot = true;
-            environment = {
-              MENU_POPUP = "1";
-              NO_WINDOW_MGNT = "1";
-            };
             position = {
               w = "140";
               h = "80";
@@ -162,12 +94,9 @@
             command = "_gen-close-hook gh-dash && gh dash";
             session = true;
             sessionName = "gh-dash";
+            keyTable = "popup-locked-root";
             sessionOnDir = true;
             runOnGitRoot = true;
-            environment = {
-              MENU_POPUP = "1";
-              NO_WINDOW_MGNT = "1";
-            };
             position = {
               w = "150";
               h = "80";
@@ -180,6 +109,7 @@
             name = "dump gitignore";
             shortcut = "i";
             command = "gibo dump %%LANGUAGE%% | less && gibo dump %%LANGUAGE%% | pbcopy";
+            keyTable = "popup-root";
             inputs = [ "LANGUAGE" ];
             position = {
               w = "150";

@@ -31,6 +31,10 @@
 #
 # Usage: move <dx> <dy> <dw> <dh> | move reset
 
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/../../../scripts/lib/common"
+tmux_lock __popup_lock || exit
+
 if [[ "${1:-}" == reset ]]; then
 	reset=1
 	dx=0 dy=0 dw=0 dh=0
@@ -68,9 +72,10 @@ awk -F '\t' -v c="$outer" '$1 == c { print $2; exit }')
 
 # Load stored geometry, or the launcher's raw default for reset/first move.
 default_geom="$(tmux show-options -gqv "@popup_default_geom_$key")"
+save_default=0
 if [[ -z "$default_geom" ]]; then
 	default_geom="$(tmux show-options -gqv @popup_pending_geom)"
-	[[ -n "$default_geom" ]] && tmux set -g "@popup_default_geom_$key" "$default_geom"
+	[[ -n "$default_geom" ]] && save_default=1
 fi
 if ((reset)); then
 	geom="$default_geom"
@@ -98,8 +103,9 @@ w="$(cells "$w" "$cw" "$((cw * 75 / 100))")"
 h="$(cells "$h" "$ch" "$((ch * 70 / 100))")"
 
 # Resolve display-popup's letter positions before the generic conversion:
-# R = right edge, P = bottom. C (centre) falls through to the fallback below.
+# R = right edge, S = below the top status line, P = bottom.
 [[ "$x" == R ]] && x=$((cw - w))
+[[ "$y" == S ]] && y=$((h + 1))
 [[ "$y" == P ]] && y=$ch
 x="$(cells "$x" "$cw" "$(((cw - w) / 2))")" # fallback: horizontally centered
 y="$(cells "$y" "$ch" "$(((ch + h) / 2))")" # fallback: vertically centered (y is the bottom edge)
@@ -116,21 +122,25 @@ x=$((x + dx)) y=$((y + dy)) w=$((w + dw)) h=$((h + dh))
 ((y < h)) && y=$h # bottom edge can't be above row h, or the top would go off screen
 ((y > ch)) && y=$ch
 
-# Persist BEFORE reopening: this is also what makes the geometry stick when
-# the popup is closed and opened again later (popupScript reads it back).
-tmux set -g "@popup_geom_$key" "$x $y $w $h"
-
 # Border style: same canonical-then-pending lookup as the geometry, promoted
 # to the per-session option on first use so later pending values from other
 # popups can't leak into this one.
 border="$(tmux show-options -gqv "@popup_border_$key")"
-[[ -n "$border" ]] || border="$(tmux show-options -gqv @popup_pending_border)"
-[[ -n "$border" ]] && tmux set -g "@popup_border_$key" "$border"
+save_border=0
+if [[ -z "$border" ]]; then
+	border="$(tmux show-options -gqv @popup_pending_border)"
+	[[ -n "$border" ]] && save_border=1
+fi
 
 # Close the current popup on the outer client. This kills the inner
 # `tmux attach` job (and with it the inner client — the one whose key
 # binding invoked us; run-shell keeps this script alive server-side).
-tmux display-popup -C -c "$outer"
+tmux_begin
+((save_default)) && tmux_add set -g "@popup_default_geom_$key" "$default_geom"
+tmux_add set -g "@popup_geom_$key" "$x $y $w $h"
+((save_border)) && tmux_add set -g "@popup_border_$key" "$border"
+tmux_add display-popup -C -c "$outer"
+tmux_flush || exit
 
 # Wait for our old inner client to actually disappear before reopening.
 # The kill is asynchronous, and the reopened popup's pty frequently REUSES

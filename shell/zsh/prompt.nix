@@ -12,6 +12,8 @@ let
 in
 {
   programs.zsh-customize = {
+    blocks = [ { raw = "setopt prompt_subst"; } ];
+
     autoload = {
       history-search-end.flags = "-U";
       edit-command-line = { };

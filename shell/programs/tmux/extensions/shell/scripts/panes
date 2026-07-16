@@ -5,7 +5,8 @@ pane_path="${2:-}"
 render_seq="${3:-}"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-source "$script_dir/../lib/common"
+source "$script_dir/../../../scripts/lib/common"
+tmux_lock __shell_panes_lock || exit
 
 label_for_path() {
 	basename "$(project_for_path "$1")"
@@ -53,8 +54,13 @@ if [[ "$mode" == full ]]; then
 fi
 
 panes=""
-while IFS=$'\x1f' read -r id path command option_path stored_label option_cmd; do
+target_is_monitor=0
+while IFS=$'\x1f' read -r id path command option_path stored_label option_cmd monitor_scope; do
 	[[ -n "$id" ]] || continue
+	if [[ -n "$monitor_scope" ]]; then
+		[[ "$id" == "$pane_id" ]] && target_is_monitor=1
+		continue
+	fi
 
 	if [[ "$id" == "$pane_id" ]]; then
 		label="$pane_label"
@@ -79,9 +85,9 @@ while IFS=$'\x1f' read -r id path command option_path stored_label option_cmd; d
 		part="$cmd"
 	fi
 	panes="${panes:+$panes | }$part"
-done < <(tmux list-panes -t "$window_id" -F $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pane_project_label}\x1f#{@pcmd}' 2>/dev/null)
+done < <(tmux list-panes -t "$window_id" -F $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pane_project_label}\x1f#{@pcmd}\x1f#{@pane_monitor_scope}' 2>/dev/null)
 
-if [[ -z "$panes" ]]; then
+if [[ -z "$panes" && "$target_is_monitor" == 0 ]]; then
 	if [[ "$mode" == full ]]; then
 		panes="$pane_label:$shell_label"
 	else
@@ -91,7 +97,7 @@ fi
 
 if [[ "$panes" != "$old_panes" ]]; then
 	tmux_add set-option -w -q -t "$window_id" @panes "$panes"
-	tmux_add_refresh_clients
+	refresh_clients=1
 fi
 
 ((${#_TMUX_BATCH[@]})) || exit 0
@@ -103,4 +109,5 @@ if [[ -n "$check_seq" ]]; then
 	[[ "$check_seq" != "$current_seq" ]] && exit 0
 fi
 
-tmux_flush
+tmux_flush || exit
+[[ "${refresh_clients:-}" != 1 ]] || tmux_refresh_clients

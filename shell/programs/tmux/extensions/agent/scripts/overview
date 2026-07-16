@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/../../../scripts/lib/common"
+tmux_lock __popup_lock || exit
+
+session="_popup_all_agents"
+
+if tmux has-session -t "$session" 2>/dev/null &&
+! error=$(tmux kill-session -t "$session" 2>&1); then
+	if tmux has-session -t "$session" 2>/dev/null; then
+		printf '%s\n' "$error" >&2
+		exit 1
+	fi
+fi
+
+mapfile -t windows < <(
+	tmux list-panes -a -F $'#{window_id}\x1f#{@agent_enabled}' 2>/dev/null |
+	awk -F $'\x1f' '$2 == "1" && !seen[$1]++ { print $1 }'
+)
+
+if ((${#windows[@]} == 0)); then
+	tmux display-message "No AI agents"
+	exit 0
+fi
+
+tmux_begin
+tmux_add new-session -d -s "$session" \
+	-e TMUX_AGENT_STATUS=1 \
+	-e CTRL_C_AS_CLOSE=1 \
+	-e TMUX_REMAP_CTRL_D=C-n
+tmux_add set-option -t "$session" prefix None
+tmux_add set-option -t "$session" key-table all-agents-root
+tmux_flush
+
+placeholder="$(tmux list-windows -t "$session" -F '#{window_id}')"
+linked=0
+for window in "${windows[@]}"; do
+	if tmux link-window -d -s "$window" -t "$session:" 2>/dev/null; then
+		((linked += 1))
+	fi
+done
+
+if ((linked == 0)); then
+	tmux kill-session -t "$session"
+	tmux display-message "No AI agents"
+	exit 0
+fi
+
+tmux kill-window -t "$placeholder"
+
+inner="$(tmux display-message -p '#{client_name}' 2>/dev/null)" || inner=""
+outer="$(tmux show-options -gqv @popup_client)"
+if [[ -z "$outer" ]] || ! tmux list-clients -F '#{client_name}' | grep -qxF "$outer"; then
+	outer="$inner"
+fi
+[[ -n "$outer" ]] || exit 0
+
+geom="$(tmux show-options -gqv @popup_geom__popup_all_agents)"
+if [[ -n "$geom" ]]; then
+	read -r x y w h <<<"$geom"
+else
+	x=C
+	y=C
+	w=75%
+	h=70%
+fi
+
+tmux_begin
+tmux_add set -g @popup_client "$outer"
+tmux_add set -g @popup_default_geom__popup_all_agents "C C 75% 70%"
+tmux_add set -g @popup_border__popup_all_agents single
+tmux_add display-popup -C -c "$outer"
+tmux_flush
+if [[ -n "$inner" && "$inner" != "$outer" ]]; then
+	for _ in {1..20}; do
+		! tmux list-clients -F '#{client_name}' | grep -qxF "$inner" && break
+		sleep 0.05
+	done
+fi
+tmux_unlock || exit
+
+tmux display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
+	-b single -E "tmux attach -f active-pane -t $session" || [[ "$?" -eq 129 ]]

@@ -54,19 +54,22 @@ let
     "chatgpt"
     "appcleaner"
     "input-source-pro"
+    "slack"
+    "bambu-studio"
+    "visual-studio-code"
+    "discord"
+    "claude"
   ]
   ++ (
     if purpose == "main" then
       [
         "keycastr" # Show keystroke realtime
-        "claude"
+        "gitify"
         "gimp"
         "bitwarden"
         "sf-symbols"
-        "discord"
         "wallspace"
         "google-chrome"
-        "slack"
         "appcleaner"
         "drawio"
         "iina"
@@ -75,7 +78,6 @@ let
         "openvpn-connect"
         "freecad"
         "blender"
-        "visual-studio-code"
         "obs"
         "pdf-expert"
         "jump-desktop"
@@ -88,7 +90,6 @@ let
         "cleanshot"
         "microsoft-remote-desktop"
         "protonvpn"
-        "bambu-studio"
         "autodesk-fusion"
 
         # TODO: Move to nix

@@ -11,6 +11,7 @@
     inherit (stable) gitui;
     inherit (stable) jujutsu;
     inherit (stable) swift-format;
+    inherit (stable) unar;
 
     inherit (stable) direnv;
   };

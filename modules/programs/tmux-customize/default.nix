@@ -89,21 +89,12 @@ let
         default = null;
         description = "Session @menu value; the menu opener reads it.";
       };
-      color = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Section color in the session switcher menu.";
-      };
     };
   };
 
   sessionType = lib.types.submodule {
     options = {
       group = lib.mkOption { type = lib.types.str; };
-      label = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-      };
       environment = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
@@ -117,7 +108,7 @@ let
 
   dg = cfg.groups.${cfg.defaultGroup};
 
-  statusCmd = g: side: ''"#(cd #{q:pane_current_path};${tmcStatus} ${g} ${side} #{q:session_name})"'';
+  statusCmd = g: side: ''"#(cd #{q:pane_current_path};${tmcStatus} ${g} ${side})"'';
 
   segmentDefs = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (n: body: ''
@@ -139,7 +130,6 @@ let
   tmcStatus = pkgs.writeShellScript "tmc-status" ''
     group="$1"
     side="$2"
-    session="$3"
 
     ${segmentDefs}
 
@@ -264,86 +254,6 @@ let
     esac
   '';
 
-  groupColorCases = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (
-      n: g: "  ${n}) printf '%s' ${esc (if g.color == null then "white" else g.color)} ;;"
-    ) cfg.groups
-  );
-
-  labelExactCases = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (
-      n: s: "  ${n}) printf '%s' ${esc (if s.label == null then n else s.label)}; return ;;"
-    ) cfg.sessions
-  );
-
-  labelEncodedCases = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (
-      n: s:
-      ''${n}|${n}_*) printf '%s (%s)' ${esc (if s.label == null then n else s.label)} "$base"; return ;;''
-    ) cfg.sessions
-  );
-
-  groupNamesList = lib.concatStringsSep " " (lib.attrNames cfg.groups);
-
-  tmcSessionMenu = pkgs.writeShellScript "tmc-session-menu" ''
-    tmp="/tmp/tmc-session-menu.yaml"
-    {
-      printf 'title: " sessions "\n'
-      printf 'border: "simple"\n'
-      printf 'items:\n'
-    } > "$tmp"
-
-    group_color() {
-      case "$1" in
-    ${groupColorCases}
-        *) printf '%s' white ;;
-      esac
-    }
-
-    label_for() {
-      local s="$1" logical base
-      case "$s" in
-    ${labelExactCases}
-      esac
-      logical="''${s#_popup_}"
-      logical="''${logical#*_}"
-      logical="''${logical#git_root_}"
-      base="''${logical##*_}"
-      case "$logical" in
-    ${labelEncodedCases}
-      esac
-      printf '%s' "$s"
-    }
-
-    emit_item() {
-      local s="$1" name
-      name="$(label_for "$s")"
-      {
-        printf '  - Menu:\n'
-        printf '      name: "%s"\n' "$name"
-        printf '      shortcut: ""\n'
-        printf '      command: "tmux switch-client -t \\"%s\\""\n' "$s"
-        printf '      close_after_command: true\n'
-      } >> "$tmp"
-    }
-
-    all="$(tmux list-sessions -F '#{session_name}' 2>/dev/null)"
-    for g in ${groupNamesList}; do
-      header_done=0
-      while IFS= read -r s; do
-        [ -z "$s" ] && continue
-        [ "$(${tmcResolveGroup} "$s")" = "$g" ] || continue
-        if [ "$header_done" -eq 0 ]; then
-          printf '  - NoDim:\n      name: "#[fg=%s] %s "\n' "$(group_color "$g")" "$g" >> "$tmp"
-          header_done=1
-        fi
-        emit_item "$s"
-      done <<< "$all"
-    done
-
-    tmux-menu show --menu "$tmp"
-  '';
-
   startCmds = lib.concatMapStringsSep "\n" (
     name:
     let
@@ -357,12 +267,9 @@ let
     }${envFlags} -s ${name} 2>/dev/null"
   ) cfg.launcher.startSessions;
 
-  resetLines = lib.concatStringsSep "\n" cfg.launcher.reset;
-
   tmcTmux = pkgs.writeShellScript "tmc-tmux" ''
     init_tmux() {
     ${startCmds}
-    ${resetLines}
     }
 
     cd "$HOME" || exit 1
@@ -386,7 +293,7 @@ let
 
   applyHook = event: {
     inherit event;
-    command = ''run-shell "${tmcGroupApply} #{pane_id}"'';
+    command = ''run-shell -b "${tmcGroupApply} #{pane_id}"'';
   };
 in
 {
@@ -433,27 +340,10 @@ in
         default = "main";
         description = "Session attached to as fallback.";
       };
-      reset = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [
-          "rm -f /tmp/tmux-popup-loc.json"
-          ''rm -rf "''${TMUX_TMPDIR:-/tmp}/tmux-$(id -u)/agent-status"''
-        ];
-        description = "Shell commands run on cold start to clear stale state.";
-      };
-    };
-
-    sessionMenuScript = lib.mkOption {
-      type = lib.types.path;
-      readOnly = true;
-      internal = true;
-      description = "Generated session switcher script (parses tmux ls into a menu).";
     };
   };
 
   config = lib.mkIf cfg.enable {
-    programs.tmux-customize.sessionMenuScript = tmcSessionMenu;
-
     programs.tmux.setGlobalOptions = defaultStatusOpts;
     programs.tmux.setWindowOptions = defaultWindowOpts;
 

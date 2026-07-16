@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+
+state="${1:-}"
+pane_id="${2:-${TMUX_PANE:-}}"
+session_id_hint="${3:-}"
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/../../../scripts/lib/common"
+tmux_lock __agent_status_lock || exit
+
+resolve_session_id() {
+	local owner id candidate name
+	owner="$(tmux show-option -pqv -t "$pane_id" @agent_session_id 2>/dev/null)"
+	if [[ -n "$owner" ]] && tmux has-session -t "$owner" 2>/dev/null; then
+		printf '%s\n' "$owner"
+		return
+	fi
+	if [[ -n "$session_id_hint" ]]; then
+		name="$(tmux display-message -pt "$session_id_hint:" '#{session_name}' 2>/dev/null)"
+		if session_matches "$name" agent; then
+			printf '%s\n' "$session_id_hint"
+			return
+		fi
+	fi
+	while IFS=$'\x1f' read -r id candidate name; do
+		[[ "$id" == "$pane_id" ]] || continue
+		if session_matches "$name" agent; then
+			printf '%s\n' "$candidate"
+			return
+		fi
+	done < <(tmux list-panes -a -F $'#{pane_id}\x1f#{session_id}\x1f#{session_name}' 2>/dev/null)
+	if [[ -n "$session_id_hint" ]]; then
+		printf '%s\n' "$session_id_hint"
+	else
+		tmux display-message -pt "$pane_id" '#{session_id}' 2>/dev/null
+	fi
+}
+
+detect_agent() {
+	local word base
+	for word in "$@"; do
+		for word in $word; do
+			base="${word##*/}"
+			base="${base%\"}"
+			base="${base#\"}"
+			case "$base" in
+				codex | codex-*) printf 'codex\n'; return ;;
+				claude | claude-*) printf 'claude\n'; return ;;
+				pi | pi-*) printf 'pi\n'; return ;;
+			esac
+		done
+	done
+}
+
+agent_colors() {
+	case "$1" in
+		running) printf '%s\t%s\n' '#[fg=yellow]' '#[bg=yellow]' ;;
+		waiting | error) printf '%s\t%s\n' '#[fg=red]' '#[bg=red]' ;;
+		*) printf '%s\t%s\n' '#[fg=color244]' '#[bg=color244]' ;;
+	esac
+}
+
+clear_session_if_empty() {
+	local session_id="$1" enabled
+	[[ -n "$session_id" ]] || return 0
+	tmux has-session -t "$session_id" 2>/dev/null || return 0
+	while IFS= read -r enabled; do
+		[[ "$enabled" == "1" ]] && return 0
+	done < <(tmux list-panes -t "$session_id" -F '#{@agent_enabled}' 2>/dev/null)
+	if ! tmux set-environment -t "$session_id" -u TMUX_AGENT_STATUS; then
+		tmux has-session -t "$session_id" 2>/dev/null || return 0
+		return 1
+	fi
+}
+
+clear_pane_state() {
+	local target session_id="$2" window_id id enabled has_other_agent=""
+	IFS=$'\x1f' read -r target session_id window_id < <(
+		tmux display-message -pt "$1" $'#{pane_id}\x1f#{session_id}\x1f#{window_id}' 2>/dev/null
+	)
+	session_id="${2:-$session_id}"
+	[[ -n "$target" ]] || {
+		clear_session_if_empty "$session_id"
+		return 0
+	}
+	while IFS=$'\x1f' read -r id enabled; do
+		if [[ "$id" != "$target" && "$enabled" == "1" ]]; then
+			has_other_agent=1
+			break
+		fi
+	done < <(tmux list-panes -t "$window_id" -F $'#{pane_id}\x1f#{@agent_enabled}' 2>/dev/null)
+
+	tmux_begin
+	tmux_add set-option -p -q -u -t "$target" @agent_enabled
+	tmux_add set-option -p -q -u -t "$target" @agent_state
+	tmux_add set-option -p -q -u -t "$target" @agent_project
+	tmux_add set-option -p -q -u -t "$target" @agent_session_id
+	if [[ -z "$has_other_agent" ]]; then
+		tmux_add set-option -w -q -u -t "$target" @agent_state
+		tmux_add set-option -w -q -u -t "$target" @agent_name
+		tmux_add set-option -w -q -u -t "$target" @agent_fg
+		tmux_add set-option -w -q -u -t "$target" @agent_bg
+		tmux_add set-option -w -q -u -t "$target" automatic-rename
+	fi
+	if ! tmux_flush; then
+		tmux display-message -pt "$target" '#{pane_id}' >/dev/null 2>&1 || return 0
+		return 1
+	fi
+	clear_session_if_empty "$session_id"
+}
+
+finish() {
+	"$script_dir/counts"
+	exit $?
+}
+
+case "$state" in
+	"" | refresh)
+		finish
+		;;
+	delete)
+		session_id="$(resolve_session_id)"
+		[[ -z "$pane_id" ]] || clear_pane_state "$pane_id" "$session_id" || exit 1
+		finish
+		;;
+	running | waiting | idle | error | init)
+		;;
+	*)
+		finish
+		;;
+esac
+
+[[ -z "$pane_id" ]] && finish
+
+session_id="$(resolve_session_id)"
+session_name="$(tmux display-message -pt "$session_id:" '#{session_name}' 2>/dev/null)"
+[[ "$session_name" == "_popup_all_agents" ]] && exit 0
+IFS=$'\x1f' read -r pane_id window_id pane_path start_command current_command enabled prev_state stored_agent stored_session_id < <(
+	tmux display-message -pt "$pane_id" $'#{pane_id}\x1f#{window_id}\x1f#{pane_current_path}\x1f#{pane_start_command}\x1f#{pane_current_command}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_session_id}' 2>/dev/null
+)
+[[ -n "$pane_id" && -n "$session_id" && -n "$session_name" && -n "$window_id" ]] || finish
+
+if [[ "$state" == "init" ]]; then
+	[[ "$enabled" == "1" ]] || prev_state=""
+	state="${prev_state:-idle}"
+fi
+
+case "$state" in
+	running | waiting | idle | error) ;;
+	*) state="idle" ;;
+esac
+
+if ! session_matches "$session_name" agent; then
+	[[ "$enabled" != "1" ]] || clear_pane_state "$pane_id" "$session_id" || exit 1
+	exit 0
+fi
+agent_status="$(tmux show-environment -t "$session_id" TMUX_AGENT_STATUS 2>/dev/null | sed 's/^TMUX_AGENT_STATUS=//')"
+agent="$(detect_agent "$start_command" "$current_command")"
+if [[ -z "$agent_status" && -z "$agent" ]]; then
+	[[ "$enabled" != "1" ]] || clear_pane_state "$pane_id" "$session_id" || exit 1
+	exit 0
+fi
+[[ "$enabled" == "1" && "$prev_state" == "$state" && "$stored_session_id" == "$session_id" ]] && exit 0
+agent="${agent:-${stored_agent:-agent}}"
+
+project="$(project_for_path "$pane_path")"
+IFS=$'\t' read -r agent_fg agent_bg < <(agent_colors "$state")
+
+tmux_begin
+tmux_add set-environment -t "$session_id" TMUX_AGENT_STATUS "${agent_status:-1}"
+tmux_add set-option -p -q -t "$pane_id" @agent_enabled 1
+tmux_add set-option -p -q -t "$pane_id" @agent_state "$state"
+tmux_add set-option -p -q -t "$pane_id" @agent_project "$project"
+tmux_add set-option -p -q -t "$pane_id" @agent_session_id "$session_id"
+tmux_add set-option -w -q -t "$pane_id" @agent_state "$state"
+tmux_add set-option -w -q -t "$pane_id" @agent_name "$agent"
+tmux_add set-option -w -q -t "$pane_id" @agent_fg "$agent_fg"
+tmux_add set-option -w -q -t "$pane_id" @agent_bg "$agent_bg"
+tmux_add rename-window -t "$pane_id" "$agent:$state"
+if ! tmux_flush; then
+	if ! tmux display-message -pt "$pane_id" '#{pane_id}' >/dev/null 2>&1; then
+		clear_session_if_empty "$session_id"
+		exit 0
+	fi
+	tmux has-session -t "$session_id" 2>/dev/null || exit 0
+	exit 1
+fi
+
+finish
