@@ -31,8 +31,8 @@
       "hash": "sha256-SSgAey3l269EV+1ULzuakLoMBde+HUXO/ssVuLqstus="
     },
     "n8n-mcp": {
-      "version": "2.65.0",
-      "hash": "sha256-X5a5GBs7UZsaj1G++4DNNTlXdtaNBRSArzKeOyHarqo="
+      "version": "2.65.1",
+      "hash": "sha256-PvlodN72n6KyxAY9WXuDIH+4MpZGaXMojt50dc0Nz+k="
     },
     "macnotesapp": {
       "version": "0.8.2",
@@ -71,12 +71,12 @@
       "hash": "sha256-++h4rAI1QBaZQNJl5eiXI+y+jLjeHuZg6qbIQkPQpB8="
     },
     "claude-code": {
-      "version": "2.1.211",
-      "hash": "sha256-O75azuVAI364THCVn8SBiQK0QaschPeNO4rsl4ydPZM="
+      "version": "2.1.212",
+      "hash": "sha256-w3GSHMKfeUAaLEMQc6spzJiHJ9JC4ZgKa9VRWSSfqwI="
     },
     "pi": {
-      "version": "0.80.7",
-      "hash": "sha256-3D8PZ3MFfgr6giSzc3u4anx0a/1GYFZTZw/yUCa8cJs="
+      "version": "0.80.10",
+      "hash": "sha256-WnszHMaqdf27gSCK+7VZipFce1vAwtXTvZQwv1EqIfs="
     },
     "pi-mcp-adapter": {
       "version": "2.11.0",

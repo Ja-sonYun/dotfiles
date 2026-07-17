@@ -72,7 +72,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "pi";
   packageManager = "npm";
   packageName = "@earendil-works/pi-coding-agent";
-  packageVersion = "0.80.7";
+  packageVersion = "0.80.10";
   name = "pi";
   exposedBinaries = [
     "pi"
