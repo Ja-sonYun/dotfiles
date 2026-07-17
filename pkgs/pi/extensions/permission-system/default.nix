@@ -1,5 +1,8 @@
 { pkgs, ... }:
 
+let
+  inherit (import ../hooks { inherit pkgs; }) fireHook;
+in
 pkgs.lib.mkPackageDerivation {
   inherit pkgs;
   hashKey = "pi-permission-system";
@@ -12,7 +15,7 @@ pkgs.lib.mkPackageDerivation {
   postInstall = ''
     substituteInPlace "$NODE_PATH/lib/node_modules/pi-permission-system/src/permission-dialog.ts" \
       --replace-fail 'const selected = await ui.select(' \
-                     'import("node:child_process").then(cp=>cp.execFile("${pkgs.pi-extensions.hooks.fireHook}",["Notification","permission_prompt"],()=>{})).catch(()=>{}); const selected = await ui.select('
+                     'import("node:child_process").then(cp=>cp.execFile("${fireHook}",["Notification","permission_prompt"],()=>{})).catch(()=>{}); const selected = await ui.select('
     ln -s "$NODE_PATH/lib/node_modules/pi-permission-system" "$out/extension"
   '';
 }
