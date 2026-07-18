@@ -42,17 +42,18 @@ let
     "0092-badvar-segfault"
     "0093-no-virtual-destructor"
     "0100-CHAR-windows"
+    "ghidra-native"
   ];
 in
 stdenv.mkDerivation {
   pname = "r2ghidra";
-  version = "6.1.4";
+  version = "6.1.8";
 
   src = fetchFromGitHub {
     owner = "radareorg";
     repo = "r2ghidra";
-    rev = "6.1.4";
-    hash = "sha256-uVMsONXethTq/BL9MBQkDP3iJ6t25PEnpeD/Y17dpxM=";
+    rev = "6.1.8";
+    hash = "sha256-f5iohbAUYG524KJqSvL3PQCFnLQc055Ta02G3CRSO9I=";
   };
 
   nativeBuildInputs = [

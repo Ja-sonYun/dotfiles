@@ -39,8 +39,8 @@
       "hash": "sha256-9z0uAB0r3aMI4d65Zm4v+jrxU294E+Mf63oBtCPTyZY="
     },
     "open-code-review": {
-      "version": "1.7.11",
-      "hash": "sha256-ircL/82pT+tpD30/z6EsTEgZcgSMcypFTdLwaZho62Y="
+      "version": "1.7.12",
+      "hash": "sha256-AMpDm3nu1LuvG6LCe1IobDK1IAKk++T130WpAiCQ7XM="
     },
     "firecrawl-mcp": {
       "version": "3.22.3",
@@ -59,8 +59,8 @@
       "hash": "sha256-onPPBQ0KU1jagiLLPy41jHNbzDC6DqX6dBGAIfSZ3hs="
     },
     "context7-mcp": {
-      "version": "3.2.3",
-      "hash": "sha256-eNUE5XU8CWHLYTXJoz7k330SIFFQGwCleHuRLmruXg4="
+      "version": "3.2.4",
+      "hash": "sha256-IO+a+hjgFN2PgNF/dV1JU6uhYtWlo5tfpX1TZ+FZqVM="
     },
     "exa-mcp-server": {
       "version": "3.2.1",
@@ -71,8 +71,8 @@
       "hash": "sha256-++h4rAI1QBaZQNJl5eiXI+y+jLjeHuZg6qbIQkPQpB8="
     },
     "claude-code": {
-      "version": "2.1.212",
-      "hash": "sha256-w3GSHMKfeUAaLEMQc6spzJiHJ9JC4ZgKa9VRWSSfqwI="
+      "version": "2.1.214",
+      "hash": "sha256-yXGbmNkkKeqw2h6eSRaPYb91MnxRv0DOpvw1n41f428="
     },
     "pi": {
       "version": "0.80.10",

@@ -43,6 +43,11 @@ in
       menuExtraClock.Show24Hour = true; # show 24 hour clock
 
       CustomUserPreferences = {
+        NSGlobalDomain = {
+          NSRecentApplicationsLimit = 0;
+          NSRecentDocumentsLimit = 0;
+          NSRecentServersLimit = 0;
+        };
         "com.apple.dock" = {
           # Require holding Command before the top-right hot corner opens Notification Center.
           "wvous-tr-modifier" = 1048576;

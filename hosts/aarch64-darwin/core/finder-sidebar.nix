@@ -35,6 +35,8 @@ let
         mysides add "$name" "$uri"
       }
 
+      mysides remove "Recents" 2>/dev/null || true
+
       if [ -d "$documents_path" ]; then
         set_sidebar_item "Documents" "$documents_uri"
       fi
