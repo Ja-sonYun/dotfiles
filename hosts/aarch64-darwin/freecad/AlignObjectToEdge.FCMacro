@@ -1,0 +1,126 @@
+import math
+
+import Draft
+import FreeCAD as App
+import FreeCADGui as Gui
+from PySide import QtWidgets
+
+TITLE = "Align Object to Edge"
+
+
+def main():
+    doc = App.ActiveDocument
+    if doc is None:
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(), TITLE, "Open a document, then run this macro again."
+        )
+        return
+
+    selection = Gui.Selection.getSelectionEx()
+    if (
+        len(selection) != 1
+        or len(selection[0].SubObjects) != 1
+        or selection[0].SubObjects[0].ShapeType != "Edge"
+    ):
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(),
+            TITLE,
+            "Select exactly one straight Edge on a PartDesign Body, then run this macro again.",
+        )
+        return
+
+    selected = selection[0]
+    obj = selected.Object
+    edge_name = selected.SubElementNames[0]
+    edge = obj.Shape.getElement(edge_name)
+    if (
+        type(edge.Curve).__name__ not in {"Line", "LineSegment"}
+        or len(edge.Vertexes) != 2
+    ):
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(), TITLE, "The selected Edge must be straight."
+        )
+        return
+
+    body = obj if obj.TypeId == "PartDesign::Body" else obj.getParentGeoFeatureGroup()
+    if body is None or body.TypeId != "PartDesign::Body":
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(),
+            TITLE,
+            "The selected Edge must belong to a PartDesign Body.",
+        )
+        return
+
+    placement = obj.getGlobalPlacement()
+    start = placement.multVec(edge.Vertexes[0].Point)
+    end = placement.multVec(edge.Vertexes[1].Point)
+    vector = end - start
+    if vector.Length <= 1e-9:
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(), TITLE, "The selected Edge has no length."
+        )
+        return
+    if abs(vector.z) > vector.Length * 1e-6:
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(),
+            TITLE,
+            "The selected Edge must be parallel to the global XY plane.",
+        )
+        return
+
+    angle = math.degrees(math.atan2(vector.y, vector.x))
+    line_angle = (angle + 90.0) % 180.0 - 90.0
+    correction = -line_angle
+    pivot = (start + end) * 0.5
+
+    if abs(correction) <= 1e-9:
+        QtWidgets.QMessageBox.information(
+            Gui.getMainWindow(), TITLE, "The selected Edge is already at 0 degrees."
+        )
+        return
+
+    answer = QtWidgets.QMessageBox.question(
+        Gui.getMainWindow(),
+        TITLE,
+        f"Rotate the entire '{body.Label}' Body so {edge_name} becomes 0 degrees in the global XY plane?\n\n"
+        f"Rotation: {correction:.6f} degrees\n"
+        "The Edge midpoint will stay fixed.",
+        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel,
+        QtWidgets.QMessageBox.Cancel,
+    )
+    if answer != QtWidgets.QMessageBox.Yes:
+        return
+
+    doc.openTransaction("Align object to selected Edge")
+    try:
+        Draft.rotate([body], correction, pivot, App.Vector(0, 0, 1), copy=False)
+        doc.recompute()
+
+        placement = obj.getGlobalPlacement()
+        aligned_start = placement.multVec(edge.Vertexes[0].Point)
+        aligned_end = placement.multVec(edge.Vertexes[1].Point)
+        aligned_vector = aligned_end - aligned_start
+        midpoint_shift = (((aligned_start + aligned_end) * 0.5) - pivot).Length
+        if (
+            abs(aligned_vector.y) / aligned_vector.Length > 1e-9
+            or midpoint_shift > 1e-7
+        ):
+            raise RuntimeError("Object alignment validation failed")
+        doc.commitTransaction()
+    except Exception:
+        doc.abortTransaction()
+        raise
+
+    Gui.Selection.clearSelection()
+    Gui.Selection.addSelection(body)
+    Gui.activeDocument().activeView().fitAll()
+    App.Console.PrintMessage(
+        f"Aligned {body.Label} to {edge_name}: rotated {correction:.6f} degrees\n"
+    )
+
+
+try:
+    main()
+except Exception as error:
+    QtWidgets.QMessageBox.critical(Gui.getMainWindow(), TITLE, str(error))
+    App.Console.PrintError(f"{TITLE}: {error}\n")

@@ -55,8 +55,8 @@
       "hash": "sha256-e68L1cIfdaGUP16GNCQPTGOaOTbuMXHNNLCrsNdEX4A="
     },
     "codex": {
-      "version": "0.144.5",
-      "hash": "sha256-onPPBQ0KU1jagiLLPy41jHNbzDC6DqX6dBGAIfSZ3hs="
+      "version": "0.144.6",
+      "hash": "sha256-86GpBEFqCypcRtD8vdgLkpLWnYcRqce3HKSQKInXWfQ="
     },
     "context7-mcp": {
       "version": "3.2.4",
@@ -71,8 +71,8 @@
       "hash": "sha256-++h4rAI1QBaZQNJl5eiXI+y+jLjeHuZg6qbIQkPQpB8="
     },
     "claude-code": {
-      "version": "2.1.214",
-      "hash": "sha256-yXGbmNkkKeqw2h6eSRaPYb91MnxRv0DOpvw1n41f428="
+      "version": "2.1.215",
+      "hash": "sha256-P+g58fJbUGHvihSwHeZq22M77b6W7O753gokAoVf1Iw="
     },
     "pi": {
       "version": "0.80.10",

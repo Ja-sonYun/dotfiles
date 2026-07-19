@@ -1,0 +1,115 @@
+import math
+
+import FreeCAD as App
+import FreeCADGui as Gui
+from PySide import QtWidgets
+
+TITLE = "Align Sketch to Edge"
+
+
+def main():
+    doc = App.ActiveDocument
+    if doc is None:
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(), TITLE, "Open a document, then run this macro again."
+        )
+        return
+
+    sketches = []
+    edges = []
+    for item in Gui.Selection.getSelectionEx():
+        if item.Object.TypeId == "Sketcher::SketchObject":
+            sketches.append(item.Object)
+        for name, subobject in zip(item.SubElementNames, item.SubObjects):
+            if subobject.ShapeType == "Edge":
+                edges.append((item.Object, name, subobject))
+
+    if len(sketches) != 1 or len(edges) != 1:
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(),
+            TITLE,
+            "Select one Sketch in the tree and Ctrl-select one straight Edge in the 3D view, then run this macro again.",
+        )
+        return
+
+    sketch = sketches[0]
+    _edge_object, edge_name, edge = edges[0]
+    if (
+        type(edge.Curve).__name__ not in {"Line", "LineSegment"}
+        or len(edge.Vertexes) != 2
+    ):
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(), TITLE, "The selected Edge must be straight."
+        )
+        return
+
+    inverse = sketch.Placement.inverse()
+    start = inverse.multVec(edge.Vertexes[0].Point)
+    end = inverse.multVec(edge.Vertexes[1].Point)
+    vector = end - start
+    if vector.Length <= 1e-9:
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(), TITLE, "The selected Edge has no length."
+        )
+        return
+    if abs(vector.z) > vector.Length * 1e-6:
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(),
+            TITLE,
+            "The selected Edge must be parallel to the Sketch plane.",
+        )
+        return
+
+    angle = math.degrees(math.atan2(vector.y, vector.x))
+    target = 90.0 * math.floor(angle / 90.0 + 0.5)
+    delta = angle - target
+
+    if abs(delta) <= 1e-9:
+        QtWidgets.QMessageBox.information(
+            Gui.getMainWindow(), TITLE, "The Sketch is already aligned to this Edge."
+        )
+        return
+
+    answer = QtWidgets.QMessageBox.question(
+        Gui.getMainWindow(),
+        TITLE,
+        f"Rotate the '{sketch.Label}' coordinate system so {edge_name} becomes {target:.0f} degrees?\n\n"
+        "The model object will not move.",
+        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel,
+        QtWidgets.QMessageBox.Cancel,
+    )
+    if answer != QtWidgets.QMessageBox.Yes:
+        return
+
+    doc.openTransaction("Align Sketch to selected Edge")
+    try:
+        offset = sketch.AttachmentOffset
+        offset.Rotation = offset.Rotation.multiply(
+            App.Rotation(App.Vector(0, 0, 1), delta)
+        )
+        sketch.AttachmentOffset = offset
+        doc.recompute()
+
+        inverse = sketch.Placement.inverse()
+        start = inverse.multVec(edge.Vertexes[0].Point)
+        end = inverse.multVec(edge.Vertexes[1].Point)
+        aligned_angle = math.degrees(math.atan2((end - start).y, (end - start).x))
+        if abs(aligned_angle - target) > 1e-7:
+            raise RuntimeError("Sketch alignment validation failed")
+        doc.commitTransaction()
+    except Exception:
+        doc.abortTransaction()
+        raise
+
+    Gui.Selection.clearSelection()
+    Gui.Selection.addSelection(sketch)
+    App.Console.PrintMessage(
+        f"Aligned {sketch.Label} to {edge_name}: {angle:.6f} degrees -> {target:.0f} degrees\n"
+    )
+
+
+try:
+    main()
+except Exception as error:
+    QtWidgets.QMessageBox.critical(Gui.getMainWindow(), TITLE, str(error))
+    App.Console.PrintError(f"{TITLE}: {error}\n")

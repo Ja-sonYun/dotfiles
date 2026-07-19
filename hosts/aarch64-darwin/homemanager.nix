@@ -9,6 +9,7 @@
 {
   imports = lib.optionals (purpose == "main") [
     ./core/finder-sidebar.nix
+    ./freecad
     ./taskwarrior
     ./yabai-indicator
   ];

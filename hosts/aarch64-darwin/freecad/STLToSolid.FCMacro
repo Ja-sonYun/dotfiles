@@ -1,0 +1,87 @@
+import FreeCAD as App
+import FreeCADGui as Gui
+import Part
+from PySide import QtWidgets
+
+TITLE = "STL to Editable Body"
+
+
+def main():
+    doc = App.ActiveDocument
+    if doc is None:
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(), TITLE, "Open a document, then run this macro again."
+        )
+        return
+
+    selection = Gui.Selection.getSelection()
+    if len(selection) != 1 or selection[0].TypeId != "Mesh::Feature":
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(),
+            TITLE,
+            "Select exactly one imported STL mesh in the tree or 3D view, then run this macro again.",
+        )
+        return
+
+    mesh_obj = selection[0]
+    target_name = f"{mesh_obj.Name}_body"
+    if doc.getObject(target_name) is not None:
+        QtWidgets.QMessageBox.warning(
+            Gui.getMainWindow(), TITLE, f"{target_name} already exists."
+        )
+        return
+
+    answer = QtWidgets.QMessageBox.question(
+        Gui.getMainWindow(),
+        TITLE,
+        f"Convert '{mesh_obj.Label}' to an editable PartDesign Body?\n\n"
+        "The original mesh will be hidden, not deleted.",
+        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel,
+        QtWidgets.QMessageBox.Cancel,
+    )
+    if answer != QtWidgets.QMessageBox.Yes:
+        return
+
+    doc.openTransaction("Convert STL to editable solid")
+    try:
+        doc.recompute()
+        shape = Part.Shape()
+        shape.makeShapeFromMesh(mesh_obj.Mesh.Topology, 0.1)
+
+        # ponytail: direct conversion keeps STL facets; remodel when parametric faces are needed.
+        solid_shape = Part.Solid(shape.removeSplitter())
+        if (
+            solid_shape.isNull()
+            or not solid_shape.isValid()
+            or len(solid_shape.Solids) != 1
+        ):
+            raise RuntimeError("STL did not convert to one valid solid")
+
+        body = doc.addObject("PartDesign::Body", target_name)
+        body.Label = f"{mesh_obj.Label} (editable body)"
+        base = body.newObject("PartDesign::Feature", f"{mesh_obj.Name}_base")
+        base.Label = f"{mesh_obj.Label} (STL base)"
+        base.Shape = solid_shape
+        body.Placement = mesh_obj.Placement
+        body.Tip = base
+        base.ViewObject.ShapeColor = mesh_obj.ViewObject.ShapeColor
+        mesh_obj.ViewObject.Visibility = False
+        doc.recompute()
+        if body.Shape.ShapeType != "Solid" or not body.Shape.isValid():
+            raise RuntimeError("Body did not contain one valid solid")
+        doc.commitTransaction()
+    except Exception:
+        doc.abortTransaction()
+        raise
+
+    Gui.Selection.clearSelection()
+    Gui.Selection.addSelection(body)
+    Gui.activeDocument().activeView().fitAll()
+    App.Console.PrintMessage(f"Created {body.Label}\n")
+
+
+try:
+    main()
+except Exception as error:
+    QtWidgets.QMessageBox.critical(Gui.getMainWindow(), TITLE, str(error))
+    App.Console.PrintError(f"{TITLE}: {error}\n")
