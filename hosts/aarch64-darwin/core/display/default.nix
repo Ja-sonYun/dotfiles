@@ -1,7 +1,7 @@
 {
+  hostname,
   lib,
   pkgs,
-  purpose,
   username,
   ...
 }:
@@ -96,14 +96,14 @@ let
 in
 {
   environment.systemPackages =
-    if purpose == "main" then
+    if hostname == "Jays-MacBook-Pro" then
       [
         apply-display-profile
       ]
     else
       [ ];
 
-  system.activationScripts.postActivation.text = lib.mkIf (purpose == "main") (
+  system.activationScripts.postActivation.text = lib.mkIf (hostname == "Jays-MacBook-Pro") (
     lib.mkAfter ''
       uid="$(/usr/bin/id -u "${username}")"
       if /bin/launchctl print "gui/$uid" >/dev/null 2>&1; then

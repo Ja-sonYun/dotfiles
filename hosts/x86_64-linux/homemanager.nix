@@ -1,7 +1,7 @@
 {
+  hasTag,
   username,
   userhome,
-  isWsl ? false,
   ...
 }:
 let
@@ -14,17 +14,14 @@ in
     stateVersion = "26.05";
 
     sessionVariables =
-      { }
-      // (
-        if isWsl then
-          {
-            LD_LIBRARY_PATH = wslNvidiaLib;
-          }
-        else
-          { }
-      );
+      if hasTag "wsl" && hasTag "gpu" then
+        {
+          LD_LIBRARY_PATH = wslNvidiaLib;
+        }
+      else
+        { };
 
-    sessionPath = if isWsl then [ wslNvidiaLib ] else [ ];
+    sessionPath = if hasTag "wsl" && hasTag "gpu" then [ wslNvidiaLib ] else [ ];
   };
 
   programs.home-manager.enable = true;

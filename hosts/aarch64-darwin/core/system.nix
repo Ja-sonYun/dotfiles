@@ -1,6 +1,6 @@
 {
-  configDir,
-  hostname,
+  hasTag,
+  paths,
   userhome,
   username,
   ...
@@ -18,7 +18,7 @@ let
   '';
 
   serverActiveScript =
-    if hostname == "Jays-MacBook-Pro-Server" then
+    if hasTag "server" then
       ''
         # Keep the server awake even when idle.
         pmset -a sleep 0
@@ -171,6 +171,6 @@ in
 
   # Further configurations are defined in ./shell/system.nix
   fonts.packages = [
-    "${configDir}/misc/fonts"
+    "${paths.dotfiles}/misc/fonts"
   ];
 }

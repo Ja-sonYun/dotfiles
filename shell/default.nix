@@ -1,6 +1,6 @@
 {
+  hasTag,
   lib,
-  purpose,
   agenix-secrets,
   ...
 }:
@@ -18,17 +18,18 @@
     ./programs/navi
     ./programs/visidata
     ./programs/radare2
-
+  ]
+  ++ lib.optionals (hasTag "gui") [
     ./programs/ghostty
+    ./programs/weechat
+  ]
+  ++ lib.optionals (hasTag "ai") [
     ./programs/claude
     ./programs/codex
     ./programs/pi
     ./programs/open-code-review
 
     "${agenix-secrets}/modules/mcp"
-  ]
-  ++ lib.optionals (purpose == "main") [
-    ./programs/weechat
   ];
 
   home.file.profile = {

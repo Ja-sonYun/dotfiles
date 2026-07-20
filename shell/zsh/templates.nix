@@ -1,7 +1,7 @@
 {
-  pkgs,
   lib,
-  configDir,
+  paths,
+  pkgs,
   ...
 }:
 let
@@ -65,7 +65,7 @@ in
   programs.zsh-customize.commands.templates = {
     description = "Manage flake dev environment templates. Subcommands: list, init, info, search, direnv, echo";
     body = ''
-      local templates_dir="${configDir}/templates"
+      local templates_dir="${paths.dotfiles}/templates"
 
       _validate_name() {
         local name="$1"

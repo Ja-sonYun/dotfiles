@@ -1,13 +1,13 @@
 {
+  hasTag,
   username,
   userhome,
-  purpose,
   pkgs,
   lib,
   ...
 }:
 {
-  imports = lib.optionals (purpose == "main") [
+  imports = lib.optionals (hasTag "gui") [
     ./core/finder-sidebar.nix
     ./freecad
     ./taskwarrior
@@ -34,8 +34,8 @@
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  home.packages = with pkgs; [
-    macnotesapp
+  home.packages = lib.optionals (hasTag "gui") [
+    pkgs.macnotesapp
   ];
 
   home.sessionVariables = {

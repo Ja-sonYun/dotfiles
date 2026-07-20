@@ -1,8 +1,8 @@
 {
   config,
   lib,
+  paths,
   pkgs,
-  cacheDir,
   system ? null,
   ...
 }:
@@ -24,6 +24,7 @@ let
     types
     ;
   cfg = config.services.dockerCompose;
+  cacheDir = paths.cache;
 
   envValue = value: if builtins.isBool value then lib.boolToString value else toString value;
   hostSystem = if system != null then system else "x86_64-linux";

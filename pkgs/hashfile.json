@@ -39,12 +39,12 @@
       "hash": "sha256-9z0uAB0r3aMI4d65Zm4v+jrxU294E+Mf63oBtCPTyZY="
     },
     "open-code-review": {
-      "version": "1.7.12",
-      "hash": "sha256-AMpDm3nu1LuvG6LCe1IobDK1IAKk++T130WpAiCQ7XM="
+      "version": "1.7.13",
+      "hash": "sha256-+8VrEVs1JUuPQtO62sK+DzMKCLVTkLxDi5KDbp2/DLs="
     },
     "firecrawl-mcp": {
-      "version": "3.22.3",
-      "hash": "sha256-uIPdZIvQVTt/27NpVBwf9GYnOyEOXr9jdQFyAKzHrWg="
+      "version": "3.22.4",
+      "hash": "sha256-eSANlYWZO/xzKf9vfewAc4WvadjQwoS5xQd9/Uym6iU="
     },
     "awscli-local": {
       "version": "0.22.2",

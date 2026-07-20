@@ -1,18 +1,20 @@
 {
+  hasTag,
   hostname,
   infraSrc,
+  lib,
   ...
 }:
 {
   imports =
-    if hostname == "Jays-MacBook-Pro-Server" then
-      [
-        ./sharing.nix
-        (infraSrc + "/services/Jays-MacBook-Pro-Server")
-      ]
-    else
-      [
-        ./yabai
-        ./skhd
-      ];
+    lib.optionals (hasTag "gui") [
+      ./yabai
+      ./skhd
+    ]
+    ++ lib.optionals (hasTag "server") [
+      ./sharing.nix
+    ]
+    ++ lib.optionals (hostname == "Jays-MacBook-Pro-Server") [
+      (infraSrc + "/services/Jays-MacBook-Pro-Server")
+    ];
 }

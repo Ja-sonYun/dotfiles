@@ -1,9 +1,8 @@
 {
-  pkgs,
+  hasTag,
   lib,
-  configDir,
-  hostname,
-  purpose,
+  paths,
+  pkgs,
   ...
 }:
 {
@@ -79,8 +78,6 @@
       awscli2
       awscli-local
 
-      llmfit
-
       (ledger.override { usePython = true; })
 
       # My vim config
@@ -93,17 +90,18 @@
       # Cleaner
       dust
     ]
-    ++ lib.optionals (purpose == "main") [
+    ++ lib.optionals (hasTag "gui") [
       # say
       mermaid-cli
     ]
-    ++ lib.optionals (hostname == "Jays-MacBook-Pro-Server") [
+    ++ lib.optionals (hasTag "ai") [
+      llmfit
     ];
 
   home.sessionVariables = {
     EDITOR = "${pkgs.vim-pkg}/bin/vim";
     # PAGER = "${pkgs.moor}/bin/moor";
-    FLAKE_TEMPLATES_DIR = "${configDir}/templates";
+    FLAKE_TEMPLATES_DIR = "${paths.dotfiles}/templates";
   };
 
   home.shellAliases = {

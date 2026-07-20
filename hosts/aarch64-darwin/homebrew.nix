@@ -1,23 +1,10 @@
 {
   config,
+  hasTag,
   lib,
-  purpose,
-  hostname,
   ...
 }:
 let
-  packageBrews =
-    if hostname == "Jays-MacBook-Pro-Server" then
-      [
-        (import ../../infra/services/Jays-MacBook-Pro-Server/homebrew.nix { inherit purpose; })
-      ]
-    else
-      [ ];
-
-  allBrews = lib.concatMap (pkg: pkg.homebrew.brews or [ ]) packageBrews;
-  allCasks = lib.concatMap (pkg: pkg.homebrew.casks or [ ]) packageBrews;
-  allTaps = lib.concatMap (pkg: pkg.homebrew.taps or [ ]) packageBrews;
-
   # Keep selected Homebrew formulae installed for dependencies, but unlinked from
   # the Homebrew prefix bin directory so their commands are not exposed on PATH.
   unlinkedBrews = [
@@ -38,7 +25,7 @@ let
     "diskonaut"
   ]
   ++ (
-    if purpose == "main" then
+    if hasTag "gui" then
       [
         "displayplacer"
         "keith/formulae/reminders-cli"
@@ -47,64 +34,56 @@ let
       [ ]
   );
 
-  casks = [
-    "ghostty"
-    "orbstack"
-    "obsidian"
-    "chatgpt"
-    "appcleaner"
-    "input-source-pro"
-    "slack"
-    "bambu-studio"
-    "visual-studio-code"
-    "discord"
-    "claude"
-  ]
-  ++ (
-    if purpose == "main" then
-      [
-        "keycastr" # Show keystroke realtime
-        "gitify"
-        "gimp"
-        "bitwarden"
-        "sf-symbols"
-        "wallspace"
-        "google-chrome"
-        "appcleaner"
-        "drawio"
-        "iina"
-        "balenaetcher"
-        "basictex"
-        "openvpn-connect"
-        "freecad"
-        "blender"
-        "obs"
-        "pdf-expert"
-        "jump-desktop"
-        "parallels"
-        "kicad"
-        "firefox"
-        "notion"
-        "devonthink"
-        "alcove"
-        "cleanshot"
-        "microsoft-remote-desktop"
-        "protonvpn"
-        "autodesk-fusion"
-
-        # TODO: Move to nix
-        "macfuse"
-      ]
-    else
-      [
-      ]
-  );
+  casks =
+    lib.optionals (hasTag "gui") [
+      "ghostty"
+      "orbstack"
+      "obsidian"
+      "appcleaner"
+      "input-source-pro"
+      "slack"
+      "bambu-studio"
+      "visual-studio-code"
+      "discord"
+      "keycastr"
+      "gitify"
+      "gimp"
+      "bitwarden"
+      "sf-symbols"
+      "wallspace"
+      "google-chrome"
+      "drawio"
+      "iina"
+      "balenaetcher"
+      "basictex"
+      "openvpn-connect"
+      "freecad"
+      "blender"
+      "obs"
+      "pdf-expert"
+      "jump-desktop"
+      "parallels"
+      "kicad"
+      "firefox"
+      "notion"
+      "devonthink"
+      "alcove"
+      "cleanshot"
+      "microsoft-remote-desktop"
+      "protonvpn"
+      "autodesk-fusion"
+      "macfuse"
+    ]
+    ++ lib.optionals (hasTag "gui" && hasTag "ai") [
+      "chatgpt"
+      "claude"
+    ];
 
   taps = [
     "localstack/tap"
   ]
   ++ (
-    if purpose == "main" then
+    if hasTag "gui" then
       [
         "keith/formulae"
       ]
@@ -118,15 +97,13 @@ in
     global = {
       autoUpdate = false;
     };
-    masApps = { } // (if purpose == "main" then { } else { });
+    masApps = { };
     onActivation = {
       cleanup = "uninstall";
       autoUpdate = true;
       upgrade = true;
     };
-    brews = brews ++ allBrews;
-    casks = casks ++ allCasks;
-    taps = taps ++ allTaps;
+    inherit brews casks taps;
   };
 
   system.activationScripts.postActivation.text = lib.mkIf (unlinkedBrews != [ ]) (

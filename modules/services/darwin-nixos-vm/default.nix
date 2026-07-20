@@ -1,8 +1,8 @@
 {
   config,
   lib,
+  paths,
   pkgs,
-  cacheDir,
   ...
 }:
 
@@ -24,6 +24,7 @@ let
     unique
     ;
   cfg = config.services.nixosContainer;
+  cacheDir = paths.cache;
 
   serviceOptions = [
     "enable"
