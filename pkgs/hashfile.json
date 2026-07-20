@@ -85,6 +85,10 @@
     "pi-permission-system": {
       "version": "0.8.0",
       "hash": "sha256-YMaX66EkeHi19QLAjsw1Sy48vgm4imCqx4phiTx+Fec="
+    },
+    "mcp-remote": {
+      "version": "0.1.38",
+      "hash": "sha256-r9hJvmMuoXrKTeGFQU9DY+MLfyRFVFWG47sRYwWsa/M="
     }
   },
   "Jays-MacBook-Pro-Server": {
