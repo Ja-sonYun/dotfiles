@@ -129,6 +129,7 @@ let g:netrw_hide = 1
 nnoremap <silent> <leader>a <Cmd>nohl<CR>
 nnoremap <silent> <leader>w <Cmd>write<CR>
 nnoremap <silent> <leader>r <Cmd>edit<CR>
+nnoremap <silent> <leader>R <Cmd>LspServer restart<CR>
 
 " Navigate
 nnoremap <silent> ]q <Cmd>cnext<CR>

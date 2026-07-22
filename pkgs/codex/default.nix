@@ -16,7 +16,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "codex";
   packageManager = "npm";
   packageName = "@openai/codex";
-  packageVersion = "0.144.6";
+  packageVersion = "0.145.0";
   name = "codex";
   exposedBinaries = [
     "codex"
