@@ -50,15 +50,16 @@ get_root_dir__38_v0() {
 
 get_hashfile_path__39_v0() {
     local root_dir=$1
-    ret_get_hashfile_path39_v0="${root_dir}/pkgs/hashfile.json"
+    local hostname=$2
+    ret_get_hashfile_path39_v0="${root_dir}/pkgs/_hashfiles/${hostname}.json"
     return 0
 }
 
 get_hostname__40_v0() {
     command_3="$(hostname -s)"
     __status=$?
-    h_27="${command_3}"
-    ret_get_hostname40_v0="${h_27}"
+    h_26="${command_3}"
+    ret_get_hostname40_v0="${h_26}"
     return 0
 }
 
@@ -277,24 +278,24 @@ update_hashfile__168_v0() {
     local key=$2
     local version=$3
     local hash=$4
-    get_hashfile_path__39_v0 "${root_dir}"
-    hashfile_32="${ret_get_hashfile_path39_v0}"
     get_hostname__40_v0 
-    hostname_33="${ret_get_hostname40_v0}"
-    debug__136_v0 "Updating hashfile: ${hashfile_32}"
-    debug__136_v0 "Hostname: ${hostname_33}, Key: ${key}, Version: ${version}, Hash: ${hash}"
+    hostname_32="${ret_get_hostname40_v0}"
+    get_hashfile_path__39_v0 "${root_dir}" "${hostname_32}"
+    hashfile_33="${ret_get_hashfile_path39_v0}"
+    debug__136_v0 "Updating hashfile: ${hashfile_33}"
+    debug__136_v0 "Hostname: ${hostname_32}, Key: ${key}, Version: ${version}, Hash: ${hash}"
     query_34="
-.[ \$host ][ \$key ].version = \$version |
-.[ \$host ][ \$key ].hash = \$hash
+.[ \$key ].version = \$version |
+.[ \$key ].hash = \$hash
 "
-    command_16="$(jq             --arg host "${hostname_33}"             --arg key "${key}"             --arg version "${version}"             --arg hash "${hash}"             "${query_34}"             "${hashfile_32}")"
+    command_16="$(jq             --arg key "${key}"             --arg version "${version}"             --arg hash "${hash}"             "${query_34}"             "${hashfile_33}")"
     __status=$?
     updated_35="${command_16}"
     if [ "$([ "_${updated_35}" != "_" ]; echo $?)" != 0 ]; then
         ret_update_hashfile168_v0=0
         return 0
     fi
-    echo "${updated_35}" > "${hashfile_32}"
+    echo "${updated_35}" > "${hashfile_33}"
     __status=$?
     ret_update_hashfile168_v0=1
     return 0
@@ -309,8 +310,8 @@ build_package__169_v0() {
     if [ "${force}" != 0 ]; then
         echo_warning__34_v0 "Force mode: invalidating hash for ${key} ${version}"
         update_hashfile__168_v0 "${root_dir}" "${key}" "${version}" "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-        ret_update_hashfile168_v0__101_16="${ret_update_hashfile168_v0}"
-        if [ "$(( ! ${ret_update_hashfile168_v0__101_16} ))" != 0 ]; then
+        ret_update_hashfile168_v0__100_16="${ret_update_hashfile168_v0}"
+        if [ "$(( ! ${ret_update_hashfile168_v0__100_16} ))" != 0 ]; then
             echo_error__35_v0 "Failed to invalidate hash"
             ret_build_package169_v0=0
             return 0
@@ -334,18 +335,18 @@ build_package__169_v0() {
         fi
         echo_warning__34_v0 "Hash mismatch detected for ${key} ${version}. New hash: ${new_hash_50}"
         update_hashfile__168_v0 "${root_dir}" "${key}" "${version}" "${new_hash_50}"
-        ret_update_hashfile168_v0__121_16="${ret_update_hashfile168_v0}"
-        if [ "$(( ! ${ret_update_hashfile168_v0__121_16} ))" != 0 ]; then
+        ret_update_hashfile168_v0__120_16="${ret_update_hashfile168_v0}"
+        if [ "$(( ! ${ret_update_hashfile168_v0__120_16} ))" != 0 ]; then
             echo_error__35_v0 "Failed to update hashfile"
             ret_build_package169_v0=0
             return 0
         fi
-        echo_success__33_v0 "Updated hashfile.json for ${key} ${version}"
+        echo_success__33_v0 "Updated host hashfile for ${key} ${version}"
         nix_build__165_v0 "${root_dir}" "${file}" "${key}"
         rebuild_out_51="${ret_nix_build165_v0}"
         output_has__166_v0 "${rebuild_out_51}" "got:"
-        ret_output_has166_v0__129_12="${ret_output_has166_v0}"
-        if [ "${ret_output_has166_v0__129_12}" != 0 ]; then
+        ret_output_has166_v0__128_12="${ret_output_has166_v0}"
+        if [ "${ret_output_has166_v0__128_12}" != 0 ]; then
             echo_error__35_v0 "Rebuild still failed after hash update"
             cat "${rebuild_out_51}" >&2
             __status=$?
@@ -355,8 +356,8 @@ build_package__169_v0() {
             return 0
         fi
         output_has__166_v0 "${rebuild_out_51}" "error:"
-        ret_output_has166_v0__136_12="${ret_output_has166_v0}"
-        if [ "${ret_output_has166_v0__136_12}" != 0 ]; then
+        ret_output_has166_v0__135_12="${ret_output_has166_v0}"
+        if [ "${ret_output_has166_v0__135_12}" != 0 ]; then
             echo_error__35_v0 "Build failed with error"
             cat "${rebuild_out_51}" >&2
             __status=$?
@@ -391,13 +392,13 @@ hash_needs_build__173_v0() {
     local root_dir=$1
     local hash_key=$2
     local package_version=$3
-    get_hashfile_path__39_v0 "${root_dir}"
-    hashfile_26="${ret_get_hashfile_path39_v0}"
     get_hostname__40_v0 
-    hostname_28="${ret_get_hostname40_v0}"
+    hostname_27="${ret_get_hostname40_v0}"
+    get_hashfile_path__39_v0 "${root_dir}" "${hostname_27}"
+    hashfile_28="${ret_get_hashfile_path39_v0}"
     fake_hash_29="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     query_30="
-.[ \$host ][ \$key ] as \$entry |
+.[ \$key ] as \$entry |
 if
   (\$entry == null)
   or ((\$entry | type) "'!'"= \"object\")
@@ -411,7 +412,7 @@ else
   \"0\"
 end
 "
-    command_17="$(jq -r             --arg host "${hostname_28}"             --arg key "${hash_key}"             --arg version "${package_version}"             --arg fake "${fake_hash_29}"             "${query_30}"             "${hashfile_26}")"
+    command_17="$(jq -r             --arg key "${hash_key}"             --arg version "${package_version}"             --arg fake "${fake_hash_29}"             "${query_30}"             "${hashfile_28}")"
     __status=$?
     result_31="${command_17}"
     ret_hash_needs_build173_v0="$([ "_${result_31}" != "_1" ]; echo $?)"

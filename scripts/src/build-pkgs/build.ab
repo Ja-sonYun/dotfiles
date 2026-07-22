@@ -65,19 +65,18 @@ pub fun extract_hash_from_file(outfile: Text): Text {
 }
 
 pub fun update_hashfile(root_dir: Text, key: Text, version: Text, hash: Text): Bool {
-    let hashfile = get_hashfile_path(root_dir)
     let hostname = get_hostname()
+    let hashfile = get_hashfile_path(root_dir, hostname)
 
     debug("Updating hashfile: {hashfile}")
     debug("Hostname: {hostname}, Key: {key}, Version: {version}, Hash: {hash}")
 
     let query = "
-.[ $host ][ $key ].version = $version |
-.[ $host ][ $key ].hash = $hash
+.[ $key ].version = $version |
+.[ $key ].hash = $hash
 "
     let updated = trust $
         jq \
-            --arg host "{hostname}" \
             --arg key "{key}" \
             --arg version "{version}" \
             --arg hash "{hash}" \
@@ -123,7 +122,7 @@ pub fun build_package(root_dir: Text, file: Text, key: Text, version: Text, forc
             return false
         }
 
-        echo_success("Updated hashfile.json for {key} {version}")
+        echo_success("Updated host hashfile for {key} {version}")
 
         let rebuild_out = nix_build(root_dir, file, key)
         if output_has(rebuild_out, "got:") {

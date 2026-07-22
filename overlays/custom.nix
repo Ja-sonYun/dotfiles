@@ -3,15 +3,13 @@
   custom-packages-hashfile =
     final: _prev:
     let
-      rawhashfile = builtins.readFile ../pkgs/hashfile.json;
-      allhashfile = builtins.fromJSON rawhashfile;
-      currentHostHashfile = allhashfile.${hostname} or { };
+      rawhashfile = builtins.readFile (../pkgs/_hashfiles + "/${hostname}.json");
+      currentHostHashfile = builtins.fromJSON rawhashfile;
       fakeHash = final.lib.fakeSha256;
     in
     {
       hashfile = {
         raw = currentHostHashfile;
-        all = allhashfile;
         get =
           { hashKey, packageVersion }:
           let

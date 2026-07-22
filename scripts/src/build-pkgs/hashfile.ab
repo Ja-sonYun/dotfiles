@@ -1,11 +1,11 @@
 import { get_hashfile_path, get_hostname } from "./config.ab"
 
 pub fun hash_needs_build(root_dir: Text, hash_key: Text, package_version: Text): Bool {
-    let hashfile = get_hashfile_path(root_dir)
     let hostname = get_hostname()
+    let hashfile = get_hashfile_path(root_dir, hostname)
     let fake_hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     let query = "
-.[ $host ][ $key ] as $entry |
+.[ $key ] as $entry |
 if
   ($entry == null)
   or (($entry | type) != \"object\")
@@ -21,7 +21,6 @@ end
 "
     let result = trust $
         jq -r \
-            --arg host "{hostname}" \
             --arg key "{hash_key}" \
             --arg version "{package_version}" \
             --arg fake "{fake_hash}" \

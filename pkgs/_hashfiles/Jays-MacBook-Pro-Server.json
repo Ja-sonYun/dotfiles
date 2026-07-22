@@ -1,0 +1,62 @@
+{
+  "aws-documentation": {
+    "version": "1.1.26",
+    "hash": "sha256-NFFpDOa2kVqvopiENrcGNAlRytYMzLX8nnRae8ZjgkU="
+  },
+  "n8n-mcp": {
+    "version": "2.63.2",
+    "hash": "sha256-Iy8FnDR2Oo1VoUpwE+IFJrqpt9yERWf0cHz3vLGdA40="
+  },
+  "chrome-devtools-mcp": {
+    "version": "1.5.0",
+    "hash": "sha256-zO6SVz5BEBUvobz0o1LMbZxiNjNdlznStCJUvLSyVFw="
+  },
+  "open-code-review": {
+    "version": "1.7.7",
+    "hash": "sha256-YGQ9HWErk7uv/GVRdw/ItHC4c50pNPH/Q1togvtmToM="
+  },
+  "awscli-local": {
+    "version": "0.22.2",
+    "hash": "sha256-f0xSXoYjlvS0KTtUnQL4BBA4FBY3HwYx58/axeUVNRA="
+  },
+  "pi": {
+    "version": "0.80.6",
+    "hash": "sha256-wmunsMmUTLVifOA4pRHauguzMoRE/xFBVt1vT4+tbbg="
+  },
+  "codex": {
+    "version": "0.144.1",
+    "hash": "sha256-2A+0gybIiVlEpxuAhXMRDqCITnZN9ZSX9++l7RXI07A="
+  },
+  "macnotesapp": {
+    "version": "0.8.2",
+    "hash": "sha256-QMcCfuWz/Hl+w9mprsGEkQ1IqR0YwSa6F0/nTCuEzJQ="
+  },
+  "claude-code": {
+    "version": "2.1.207",
+    "hash": "sha256-LtQbq9x8yPSNLK8iQoeXNUvolHDWEEMemMGAlpDIBJQ="
+  },
+  "firecrawl-mcp": {
+    "version": "3.22.3",
+    "hash": "sha256-Qr7lUGcmvpfr9LbqbGHWDDHkLZ14SZLxDWMV8j/0ygA="
+  },
+  "freecad-mcp": {
+    "version": "0.1.19",
+    "hash": "sha256-Nu1xArWGaqpRluMGMz5poDWMXCwal9mTylmCrlzAb3U="
+  },
+  "pi-mcp-adapter": {
+    "version": "2.11.0",
+    "hash": "sha256-f7367MfO9XhWfNo9ED+n27ufGYxJ4BxtI+yCCwN7MkI="
+  },
+  "pi-permission-system": {
+    "version": "0.8.0",
+    "hash": "sha256-VSTYg8dUYpkjHbsTKc559Sqsj+svLrBzVJLmuzGTdjQ="
+  },
+  "context7-mcp": {
+    "version": "3.2.3",
+    "hash": "sha256-hD4cjtUyUQqTEYAhEDSGCUxDmhjApXdml62zI98IXu4="
+  },
+  "exa-mcp-server": {
+    "version": "3.2.1",
+    "hash": "sha256-Iy8NVmMjLXsj/5rdIYJ45THzaKT3ODGRZIq/FzxfWAQ="
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "awscli-local": {
+    "version": "0.0.1",
+    "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  },
+  "codex": {
+    "version": "0.0.1",
+    "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  },
+  "context7-mcp": {
+    "version": "0.0.1",
+    "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  },
+  "aws-documentation": {
+    "version": "0.0.1",
+    "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  },
+  "chrome-devtools-mcp": {
+    "version": "0.0.1",
+    "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  },
+  "firecrawl-mcp": {
+    "version": "0.0.1",
+    "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  }
+}

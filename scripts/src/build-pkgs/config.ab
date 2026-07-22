@@ -8,8 +8,8 @@ pub fun get_root_dir(): Text {
     return root
 }
 
-pub fun get_hashfile_path(root_dir: Text): Text {
-    return "{root_dir}/pkgs/hashfile.json"
+pub fun get_hashfile_path(root_dir: Text, hostname: Text): Text {
+    return "{root_dir}/pkgs/_hashfiles/{hostname}.json"
 }
 
 pub fun get_hostname(): Text {

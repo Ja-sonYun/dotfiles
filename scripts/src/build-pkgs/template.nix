@@ -1,14 +1,13 @@
 let
   pkgs = import <nixpkgs> { };
   system = builtins.currentSystem;
-  hostname = "__HOSTNAME__";
-  allhashfile = builtins.fromJSON (builtins.readFile __ROOT_DIR__/pkgs/hashfile.json);
   customLibs = import __ROOT_DIR__/libs { inherit pkgs system; };
-  currentHostHashfile = allhashfile."${hostname}" or { };
+  currentHostHashfile = builtins.fromJSON (
+    builtins.readFile __ROOT_DIR__/pkgs/_hashfiles/__HOSTNAME__.json
+  );
   finalPkgs = pkgs // {
     hashfile = {
       raw = currentHostHashfile;
-      all = allhashfile;
       get =
         { hashKey, packageVersion }:
         let
