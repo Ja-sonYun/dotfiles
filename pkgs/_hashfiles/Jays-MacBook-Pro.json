@@ -1,19 +1,19 @@
 {
   "aws-documentation": {
-    "version": "1.1.26",
-    "hash": "sha256-SSgAey3l269EV+1ULzuakLoMBde+HUXO/ssVuLqstus="
+    "version": "1.1.27",
+    "hash": "sha256-qekWg6BXsv4upmhY3tPOyrKA2cVTf26Cb8J3KMvNQYI="
   },
   "n8n-mcp": {
-    "version": "2.65.1",
-    "hash": "sha256-PvlodN72n6KyxAY9WXuDIH+4MpZGaXMojt50dc0Nz+k="
+    "version": "2.65.2",
+    "hash": "sha256-B2RjkJ4MClanY9wHBkepSDBEv8jtLXRFG+7DAsIqsGA="
   },
   "macnotesapp": {
     "version": "0.8.2",
     "hash": "sha256-9z0uAB0r3aMI4d65Zm4v+jrxU294E+Mf63oBtCPTyZY="
   },
   "open-code-review": {
-    "version": "1.7.14",
-    "hash": "sha256-xEomkaeapQPIjcHvU7+APTo+PifSTQucro5L15tFuO8="
+    "version": "1.7.15",
+    "hash": "sha256-pn7zvULEUbrbMlxD3LWLZI4ej1PW1A0CyVpyZvajCms="
   },
   "firecrawl-mcp": {
     "version": "3.22.4",
@@ -44,8 +44,8 @@
     "hash": "sha256-++h4rAI1QBaZQNJl5eiXI+y+jLjeHuZg6qbIQkPQpB8="
   },
   "claude-code": {
-    "version": "2.1.217",
-    "hash": "sha256-g+QgDf67uLaY65zW+YOrWRTEItp09SM0VGdpY9zfGos="
+    "version": "2.1.218",
+    "hash": "sha256-lKd0q+8BFNFgY/IL/KRDFwrRsdB2uCI2BFWgLmN5gv8="
   },
   "pi": {
     "version": "0.81.1",
