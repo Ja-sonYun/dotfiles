@@ -146,7 +146,8 @@ let
     [
       python312
       python312Packages.black
-      python312Packages.isort
+      # isort tests pull in flaky SciPy tests through pylama.
+      (python312Packages.isort.overridePythonAttrs (_: { doCheck = false; }))
       pyright
     ]
   );
