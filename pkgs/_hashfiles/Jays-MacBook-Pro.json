@@ -4,8 +4,8 @@
     "hash": "sha256-fxauM8adET9ZQ0DK/kKjTjqX4R6b6KfbNbbnGj0zcCE="
   },
   "n8n-mcp": {
-    "version": "2.66.0",
-    "hash": "sha256-h6jhD1rCyTnaTzLlWjpwdURwKt8d67tuQa1TBWdlIjQ="
+    "version": "2.66.1",
+    "hash": "sha256-c8J8szpUXDkHjrp7HxR4Z2uKVbA/FGj7GvI2wNswFGs="
   },
   "mcp-remote": {
     "version": "0.1.38",

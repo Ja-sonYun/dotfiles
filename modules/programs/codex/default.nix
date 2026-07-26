@@ -16,6 +16,57 @@ let
       str
     ];
 
+  claudeAgentFiles =
+    if cfg.claudeAgentsDir == null then { } else builtins.readDir cfg.claudeAgentsDir;
+
+  claudeAgentNames = map (file: lib.removeSuffix ".md" file) (
+    lib.filter (
+      file: file != "README.md" && claudeAgentFiles.${file} == "regular" && lib.hasSuffix ".md" file
+    ) (builtins.attrNames claudeAgentFiles)
+  );
+
+  adaptedClaudeAgentsSrc = pkgs.runCommandLocal "codex-claude-agents" { } ''
+    set -euo pipefail
+    shopt -s nullglob
+
+    mkdir -p "$out"
+
+    for source in "${cfg.claudeAgentsDir}"/*.md; do
+      file="$(${pkgs.coreutils}/bin/basename "$source")"
+      if [ "$file" = "README.md" ]; then
+        continue
+      fi
+
+      AGENT_NAME="$(${pkgs.yq-go}/bin/yq --front-matter=extract -r '.name' "$source")"
+      AGENT_DESCRIPTION="$(${pkgs.yq-go}/bin/yq --front-matter=extract -r '.description' "$source")"
+      AGENT_TOOLS="$(${pkgs.yq-go}/bin/yq --front-matter=extract -r '.tools' "$source")"
+      body="$(${pkgs.gawk}/bin/awk \
+        'separators < 2 && /^---$/ { separators++; next } separators == 2 { print }' \
+        "$source")"
+      AGENT_INSTRUCTIONS="Treat references to CLAUDE.md as references to the nearest applicable AGENTS.md.
+    Use Codex subagent collaboration when the instructions mention Claude's Task tool.
+    Treat Claude tool and model names as non-binding; use active Codex tools and permissions.
+
+    $body"
+      export AGENT_NAME AGENT_DESCRIPTION AGENT_INSTRUCTIONS
+
+      expression='{"name": strenv(AGENT_NAME), "description": strenv(AGENT_DESCRIPTION), "developer_instructions": strenv(AGENT_INSTRUCTIONS)}'
+      if [[ "$AGENT_TOOLS" != *Write* && "$AGENT_TOOLS" != *Edit* ]]; then
+        expression+=' + {"sandbox_mode": "read-only"}'
+      fi
+
+      ${pkgs.yq-go}/bin/yq --null-input --output-format=toml "$expression" \
+        > "$out/''${file%.md}.toml"
+    done
+  '';
+
+  claudeAgentHomeFiles = builtins.listToAttrs (
+    map (name: {
+      name = ".codex/agents/${name}.toml";
+      value.source = adaptedClaudeAgentsSrc + "/${name}.toml";
+    }) claudeAgentNames
+  );
+
   mkDefaultTomlValue =
     value:
     if builtins.isAttrs value && !lib.isDerivation value then
@@ -128,6 +179,12 @@ in
       description = "Content for ~/.codex/AGENTS.md.";
     };
 
+    claudeAgentsDir = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Directory of Claude Code agent Markdown files adapted into Codex custom agents.";
+    };
+
     skills = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
@@ -164,6 +221,7 @@ in
           // lib.mapAttrs' (
             name: source: lib.nameValuePair ".codex/skills/${name}" { inherit source; }
           ) cfg.skills
+          // claudeAgentHomeFiles
           // lib.mapAttrs' (
             name: text: lib.nameValuePair ".codex/rules/${name}.rules" { inherit text; }
           ) cfg.rules;
