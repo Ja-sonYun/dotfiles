@@ -1,5 +1,6 @@
 {
   hasTag,
+  hostname,
   username,
   userhome,
   pkgs,
@@ -7,12 +8,15 @@
   ...
 }:
 {
-  imports = lib.optionals (hasTag "gui") [
-    ./core/finder-sidebar.nix
-    ./freecad
-    ./taskwarrior
-    ./yabai-indicator
-  ];
+  imports =
+    lib.optionals (hasTag "gui") [
+      ./core/finder-sidebar.nix
+      ./freecad
+      ./yabai-indicator
+    ]
+    ++ lib.optionals (hostname == "Jays-MacBook-Pro") [
+      ./taskwarrior
+    ];
 
   # Home Manager needs a bit of information about you and the
   # paths it should manage.

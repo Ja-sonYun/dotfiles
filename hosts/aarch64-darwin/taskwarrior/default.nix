@@ -1,27 +1,46 @@
 {
+  agenix-secrets,
   pkgs,
   userhome,
   ...
 }:
 {
-  home.file."taskrc" = {
-    target = ".taskrc";
-    text = ''
-      data.location=${userhome}/.task
-      news.version=${pkgs.taskwarrior3.version}
+  imports = [ "${agenix-secrets}/modules/taskwarrior" ];
 
-      confirmation=no
+  programs.taskwarrior = {
+    enable = true;
+    package = pkgs.taskwarrior3;
+    dataLocation = "${userhome}/.task";
 
-      color.project.Todos=yellow
+    config = {
+      news.version = pkgs.taskwarrior3.version;
+      confirmation = false;
 
-      color.tag.xteam=yellow
-      color.tag.urgent=bold red on gray
-      color.tag.waiting=blue
-    '';
+      uda = {
+        ai_source = {
+          type = "string";
+          label = "AI Source";
+        };
+        ai_source_id = {
+          type = "string";
+          label = "AI Source ID";
+        };
+        ai_source_url = {
+          type = "string";
+          label = "AI Source URL";
+        };
+      };
+
+      color = {
+        project.Todos = "yellow";
+        tag = {
+          xteam = "yellow";
+          urgent = "bold red on gray";
+          waiting = "blue";
+        };
+      };
+    };
+
+    ai.enable = true;
   };
-
-  home.packages = [
-    pkgs.taskwarrior3
-    pkgs.taskwarrior-tui
-  ];
 }

@@ -28,23 +28,6 @@
               };
             };
           }
-          {
-            menu = {
-              name = "taskwarrior";
-              shortcut = "t";
-              command = "cd ~/ && taskwarrior-tui";
-              session = true;
-              sessionName = "taskwarrior-tui";
-              keyTable = "popup-locked-root";
-              environment = {
-                CTRL_C_AS_CLOSE = "1";
-              };
-              position = {
-                w = "60%";
-                h = "70%";
-              };
-            };
-          }
         ])
       ];
     };
