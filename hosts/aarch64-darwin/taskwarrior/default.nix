@@ -17,6 +17,8 @@
       confirmation = false;
 
       uda = {
+        taskwarrior-tui.task-report.next.filter = "status:pending -WAITING";
+
         ai_source = {
           type = "string";
           label = "AI Source";
