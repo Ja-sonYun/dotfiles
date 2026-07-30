@@ -1,3 +1,4 @@
+import hashlib
 import json
 import stat
 import subprocess
@@ -69,12 +70,21 @@ class _MergeConfigTest(unittest.TestCase):
                     }
                 },
                 "hooks": {
-                    "state": {"entry": {"enabled": True}},
                     "PreToolUse": [
                         {
                             "matcher": "x",
                             "hooks": [{"type": "command", "command": "true"}],
-                        }
+                        },
+                        {
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": "second",
+                                    "timeout": 5,
+                                    "async": True,
+                                }
+                            ]
+                        },
                     ],
                 },
                 "permissions": {"managed": {"extends": ":workspace"}},
@@ -103,12 +113,72 @@ class _MergeConfigTest(unittest.TestCase):
             self.assertEqual(config["permissions"]["user"]["extends"], ":read-only")
             self.assertEqual(config["permissions"]["managed"]["extends"], ":workspace")
             self.assertEqual(config["default_permissions"], "managed")
+            hook_state_key = f"{target}:pre_tool_use:0:0"
+            trusted_input = {
+                "event_name": "pre_tool_use",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "true",
+                        "timeout": 600,
+                        "async": False,
+                    }
+                ],
+                "matcher": "x",
+            }
+            trusted_hash = hashlib.sha256(
+                json.dumps(
+                    trusted_input,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            ).hexdigest()
+            self.assertEqual(
+                config["hooks"]["state"][hook_state_key],
+                {
+                    "enabled": True,
+                    "trusted_hash": f"sha256:{trusted_hash}",
+                },
+            )
+            second_hook_state_key = f"{target}:pre_tool_use:1:0"
+            second_trusted_input = {
+                "event_name": "pre_tool_use",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "second",
+                        "timeout": 5,
+                        "async": True,
+                    }
+                ],
+            }
+            second_trusted_hash = hashlib.sha256(
+                json.dumps(
+                    second_trusted_input,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            ).hexdigest()
+            self.assertEqual(
+                config["hooks"]["state"][second_hook_state_key],
+                {
+                    "enabled": True,
+                    "trusted_hash": f"sha256:{second_trusted_hash}",
+                },
+            )
+            self.assertEqual(
+                set(config["hooks"]["state"]),
+                {hook_state_key, second_hook_state_key},
+            )
             self.assertIn(
                 'default_permissions = "managed" # nix-generated', output
             )
             self.assertIn("[mcp_servers.nix] # nix-generated", output)
             self.assertIn("[model_providers.nix] # nix-generated", output)
-            self.assertIn("[hooks.state.entry] # nix-generated", output)
+            self.assertIn(
+                f'[hooks.state."{hook_state_key}"] # nix-generated',
+                output,
+            )
             self.assertIn("[[hooks.PreToolUse]] # nix-generated", output)
             self.assertIn("[[hooks.PreToolUse.hooks]] # nix-generated", output)
             self.assertIn("[permissions.managed] # nix-generated", output)
@@ -138,7 +208,7 @@ class _MergeConfigTest(unittest.TestCase):
             self.assertNotIn("features", config)
             self.assertNotIn("tui", config)
             self.assertNotIn("[mcp_servers.nix]", target.read_text())
-            self.assertEqual(target.read_text().count("# nix-generated"), 5)
+            self.assertEqual(target.read_text().count("# nix-generated"), 8)
 
             fragment.write_text(
                 tomlkit.dumps(

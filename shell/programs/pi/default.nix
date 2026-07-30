@@ -1,15 +1,11 @@
 {
   config,
   pkgs,
-  agenix-secrets,
   ...
 }:
 {
-  imports = [ "${agenix-secrets}/modules/ai-bundle/pi" ];
-
   programs.pi = {
     enable = true;
-    enableMcpIntegration = true;
 
     settings = {
       quietStartup = true;

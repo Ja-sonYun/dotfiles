@@ -56,67 +56,6 @@ let
       ) (parentCommands prefix);
     in
     lib.concatStringsSep "\n" (map commandHelp items);
-  commandFunctions = lib.concatStringsSep "\n\n" (
-    lib.imap0 (i: command: ''
-      git_extend_cmd_${toString i}() {
-          if [ "''${1-}" = "-h" ] || [ "''${1-}" = "--help" ]; then
-              printf '%s\n' ${quote command.help}
-              return 0
-          fi
-
-      ${command.command}
-      }
-    '') sortedCommands
-  );
-  commandDispatch = lib.concatStringsSep "\n" (
-    lib.imap0 (
-      i: command:
-      let
-        shiftCount = toString (builtins.length command.path);
-        flag = commandFlag command;
-      in
-      if flag == null then
-        ''
-          if ${pathTestAt 1 command.path}; then
-              shift ${shiftCount}
-              git_extend_cmd_${toString i} "$@"
-              exit $?
-          fi
-        ''
-      else
-        ''
-          if ${pathTestAt 1 command.path}; then
-              git_extend_original_args=("$@")
-              shift ${shiftCount}
-              git_extend_args=()
-              git_extend_matched=0
-              git_extend_flag_index=-1
-              git_extend_index=0
-
-              for git_extend_arg in "$@"; do
-                  if [ "$git_extend_arg" = ${quote flag} ]; then
-                      if [ "$git_extend_matched" -eq 0 ]; then
-                          git_extend_flag_index=$git_extend_index
-                      fi
-                      git_extend_matched=1
-                      git_extend_index=$((git_extend_index + 1))
-                      continue
-                  fi
-
-                  git_extend_args+=("$git_extend_arg")
-                  git_extend_index=$((git_extend_index + 1))
-              done
-
-              if [ "$git_extend_matched" -eq 1 ]; then
-                  GIT_EXTEND_FLAG_INDEX="$git_extend_flag_index" git_extend_cmd_${toString i} "''${git_extend_args[@]}"
-                  exit $?
-              fi
-
-              set -- "''${git_extend_original_args[@]}"
-          fi
-        ''
-    ) sortedCommands
-  );
   exactHelpDispatch = lib.concatStringsSep "\n" (
     map (
       command:
@@ -163,16 +102,27 @@ let
     ) parentPrefixes
   );
   allHelp = lib.concatStringsSep "\n" (map commandHelp sortedCommands);
+  hookedGit = pkgs.command.hook {
+    package = pkgs.git;
+    binary = "git";
+    hooks = map (
+      command:
+      command
+      // {
+        command = ''
+          git() {
+              command_hook_original "$@"
+          }
+
+          ${command.command}
+        '';
+      }
+    ) commands;
+  };
   gitExtendScript = ''
     set -euo pipefail
 
     real_git=${quote "${pkgs.git}/bin/git"}
-
-    git() {
-        "$real_git" "$@"
-    }
-
-    ${commandFunctions}
 
     if { [ "''${1-}" = "checkout" ] || [ "''${1-}" = "co" ] || [ "''${1-}" = "switch" ]; } &&
        git_dir="$("$real_git" rev-parse --absolute-git-dir 2>/dev/null)" &&
@@ -209,13 +159,15 @@ let
     fi
 
     ${parentHelpDispatch}
-    ${commandDispatch}
 
-    exec "$real_git" "$@"
+    exec ${hookedGit}/bin/git "$@"
   '';
   gitBin = pkgs.writeShellScriptBin "git" gitExtendScript;
 in
 pkgs.symlinkJoin {
   name = "git-extend";
   paths = [ gitBin ];
+  postBuild = ''
+    ln -s git "$out/bin/,git"
+  '';
 }

@@ -10,20 +10,55 @@ let
     pkgs.lib.optional (extraPath != [ ]) ''--prefix PATH : "${pkgs.lib.makeBinPath extraPath}"''
     ++ pkgs.lib.optional (extraPythonPath != "") ''--prefix PYTHONPATH : "${extraPythonPath}"''
   );
+  package = pkgs.lib.mkPackageDerivation {
+    inherit pkgs;
+    hashKey = "codex";
+    packageManager = "npm";
+    packageName = "@openai/codex";
+    packageVersion = "0.146.0";
+    name = "codex";
+    exposedBinaries = [
+      "codex"
+    ];
+    postInstall = pkgs.lib.optionalString (extraPath != [ ] || extraPythonPath != "") ''
+      rm -f $out/bin/codex
+      makeWrapper "$NODE_PATH/bin/codex" "$out/bin/codex" \
+        ${wrapperArgs}
+    '';
+  };
+  blockConfigMutation =
+    path:
+    let
+      command = pkgs.lib.concatStringsSep " " path;
+    in
+    {
+      inherit path;
+      matchAnywhere = true;
+      command = ''
+        printf '%s\n' ${pkgs.lib.escapeShellArg "error: codex ${command} is disabled; manage this setting in Nix."} >&2
+        exit 1
+      '';
+    };
 in
-pkgs.lib.mkPackageDerivation {
-  inherit pkgs;
-  hashKey = "codex";
-  packageManager = "npm";
-  packageName = "@openai/codex";
-  packageVersion = "0.145.0";
-  name = "codex";
-  exposedBinaries = [
-    "codex"
+pkgs.command.hook {
+  inherit package;
+  binary = "codex";
+  hooks = map blockConfigMutation [
+    [
+      "mcp"
+      "add"
+    ]
+    [
+      "mcp"
+      "remove"
+    ]
+    [
+      "features"
+      "enable"
+    ]
+    [
+      "features"
+      "disable"
+    ]
   ];
-  postInstall = pkgs.lib.optionalString (extraPath != [ ] || extraPythonPath != "") ''
-    rm -f $out/bin/codex
-    makeWrapper "$NODE_PATH/bin/codex" "$out/bin/codex" \
-      ${wrapperArgs}
-  '';
 }

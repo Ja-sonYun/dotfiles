@@ -15,27 +15,66 @@ let
       x86_64-linux = "@anthropic-ai/claude-code-linux-x64";
     }
     .${pkgs.stdenv.hostPlatform.system} or null;
+  package = pkgs.lib.mkPackageDerivation {
+    inherit pkgs;
+    hashKey = "claude-code";
+    packageManager = "npm";
+    packageName = "@anthropic-ai/claude-code";
+    inherit packageVersion;
+    extraPackages =
+      pkgs.lib.optionals (nativePackage != null) [
+        "${nativePackage}@${packageVersion}"
+      ]
+      ++ extraPackages;
+    name = "claude-code";
+    postInstall = ''
+      makeWrapper "$(command -v node)" "$out/bin/claude" \
+        --add-flags "$NODE_PATH/lib/node_modules/@anthropic-ai/claude-code/cli-wrapper.cjs" \
+        --set DISABLE_BUG_COMMAND              1 \
+        --set DISABLE_INSTALLATION_CHECKS      1 \
+        --set DISABLE_AUTOUPDATER              1 \
+        --set CLAUDE_CODE_DISABLE_MOUSE_CLICKS 1 \
+        --set DISABLE_ERROR_REPORTING          1 \
+        ${pkgs.lib.optionalString (extraPath != [ ]) "--prefix PATH : ${pkgs.lib.makeBinPath extraPath}"}
+    '';
+  };
+  blockConfigMutation =
+    path:
+    let
+      command = pkgs.lib.concatStringsSep " " path;
+    in
+    {
+      inherit path;
+      matchAnywhere = true;
+      command = ''
+        printf '%s\n' ${pkgs.lib.escapeShellArg "error: claude ${command} is disabled; manage this setting in Nix."} >&2
+        exit 1
+      '';
+    };
 in
-pkgs.lib.mkPackageDerivation {
-  inherit pkgs;
-  hashKey = "claude-code";
-  packageManager = "npm";
-  packageName = "@anthropic-ai/claude-code";
-  inherit packageVersion;
-  extraPackages =
-    pkgs.lib.optionals (nativePackage != null) [
-      "${nativePackage}@${packageVersion}"
+pkgs.command.hook {
+  inherit package;
+  binary = "claude";
+  hooks = map blockConfigMutation [
+    [
+      "mcp"
+      "add"
     ]
-    ++ extraPackages;
-  name = "claude-code";
-  postInstall = ''
-    makeWrapper "$(command -v node)" "$out/bin/claude" \
-      --add-flags "$NODE_PATH/lib/node_modules/@anthropic-ai/claude-code/cli-wrapper.cjs" \
-      --set DISABLE_BUG_COMMAND              1 \
-      --set DISABLE_INSTALLATION_CHECKS      1 \
-      --set DISABLE_AUTOUPDATER              1 \
-      --set CLAUDE_CODE_DISABLE_MOUSE_CLICKS 1 \
-      --set DISABLE_ERROR_REPORTING          1 \
-      ${pkgs.lib.optionalString (extraPath != [ ]) "--prefix PATH : ${pkgs.lib.makeBinPath extraPath}"}
-  '';
+    [
+      "mcp"
+      "add-json"
+    ]
+    [
+      "mcp"
+      "add-from-claude-desktop"
+    ]
+    [
+      "mcp"
+      "remove"
+    ]
+    [
+      "mcp"
+      "reset-project-choices"
+    ]
+  ];
 }

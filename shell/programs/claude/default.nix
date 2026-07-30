@@ -1,7 +1,6 @@
 {
   pkgs,
   config,
-  agenix-secrets,
   ...
 }:
 let
@@ -42,15 +41,10 @@ let
   '';
 in
 {
-  imports = [ "${agenix-secrets}/modules/ai-bundle/claude" ];
-
   programs.claude-code = {
     enable = true;
     package = claudeCode;
-    enableMcpIntegration = true;
     chromeNativeHost.enable = true;
-
-    mcpServers = { };
 
     settings = {
       alwaysThinkingEnabled = true;
@@ -73,10 +67,6 @@ in
           };
         }
       ];
-    };
-
-    desktopConfig = {
-      mcpServers = removeAttrs config.programs.mcp.servers [ "grep_app" ];
     };
   };
 

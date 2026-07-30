@@ -1,11 +1,7 @@
 {
-  "aws-documentation": {
-    "version": "1.1.27",
-    "hash": "sha256-fxauM8adET9ZQ0DK/kKjTjqX4R6b6KfbNbbnGj0zcCE="
-  },
   "n8n-mcp": {
-    "version": "2.66.1",
-    "hash": "sha256-c8J8szpUXDkHjrp7HxR4Z2uKVbA/FGj7GvI2wNswFGs="
+    "version": "2.67.1",
+    "hash": "sha256-1+xnep/F6fJFgZI0xv+7GROlEKl1w2iCJXv6v2dT0eA="
   },
   "mcp-remote": {
     "version": "0.1.38",
@@ -16,12 +12,12 @@
     "hash": "sha256-iWminmZlTwAAGKJShzFPvyIcWxfgVmVyN7I2rEKvNDs="
   },
   "open-code-review": {
-    "version": "1.7.17",
-    "hash": "sha256-TkSNvKiC2rPtoR3U+7Lg33naq4hvR1Nj9cs+6IL8Cos="
+    "version": "1.8.0",
+    "hash": "sha256-vdz2gad3vTQkSGPQWwACRwPtacYhrDjV/AMIOhqKo1I="
   },
   "pi": {
-    "version": "0.82.1",
-    "hash": "sha256-GI/ojhSA8G7k9lA37IZly98eSflB9VUk3+szPFWaB5A="
+    "version": "0.83.0",
+    "hash": "sha256-ORqVB4K8dvMGS2UNQLJpVW92YuFx6EpsldMax5JyenY="
   },
   "pi-permission-system": {
     "version": "0.8.0",
@@ -32,12 +28,12 @@
     "hash": "sha256-mNKuDFLLhPUnH0/BJAK4vMB1DxX7mzbHHZgRYqkx5cU="
   },
   "freecad-mcp": {
-    "version": "0.1.19",
-    "hash": "sha256-o0f5MoKUmAEPiYSkOWFqUZ6Waj7KMnToImo1J8I/I/E="
+    "version": "0.1.20",
+    "hash": "sha256-C4iAnYj8V7NZpAKv6aEGNTC/uBO6bKWeYsX5DsEubXg="
   },
   "firecrawl-mcp": {
-    "version": "3.22.4",
-    "hash": "sha256-tKfZOUsBt2c8fnMMwUGbSilUslibJ3r9TkFLgr3gI2Q="
+    "version": "3.23.0",
+    "hash": "sha256-k3i6EMJWsaRN3kTO79Y9pOufFJ6L2vI6d17WEIMFXv4="
   },
   "awscli-local": {
     "version": "0.22.2",
@@ -48,8 +44,8 @@
     "hash": "sha256-tJazdhxW5EnjtXUrLoIo3ydCyEq3cV4wVI9AWaIo/p0="
   },
   "codex": {
-    "version": "0.145.0",
-    "hash": "sha256-Jj05tb0XdqBBudk44CS2zfSyM66yTIucqdz64momxVA="
+    "version": "0.146.0",
+    "hash": "sha256-qVTpm/4v+pLn6McFmV/6m8HerEdpvpU87WjoOxPbC38="
   },
   "context7-mcp": {
     "version": "3.2.5",

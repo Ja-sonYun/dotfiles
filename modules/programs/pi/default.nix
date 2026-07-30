@@ -42,19 +42,8 @@ let
     };
   };
 
-  transformedMcpServers = lib.mapAttrs (
-    name: server:
-    lib.hm.mcp.transformMcpServer {
-      inherit server;
-      exclude = [ "type" ];
-      extraTransforms = [
-        (lib.hm.mcp.wrapEnvFilesCommand { inherit pkgs name; })
-      ];
-    }
-  ) config.programs.mcp.servers;
-
   bundledExtensions =
-    lib.optional cfg.enableMcpIntegration "${cfg.mcp.package}/extension/index.ts"
+    lib.optional (cfg.mcp.servers != { }) "${cfg.mcp.package}/extension/index.ts"
     ++ lib.optional cfg.permissions.enable "${cfg.permissions.package}/extension/index.ts"
     ++ lib.optional (cfg.hooks != { }) "${pkgs.pi-extensions.hooks}/index.ts";
 
@@ -149,8 +138,6 @@ in
       '';
     };
 
-    enableMcpIntegration = lib.mkEnableOption "the pi-mcp-adapter extension fed by shared programs.mcp.servers";
-
     mcp = {
       package = lib.mkOption {
         type = lib.types.package;
@@ -167,6 +154,12 @@ in
           directTools = false;
         };
         description = "The `settings` block of ~/.pi/agent/mcp.json.";
+      };
+
+      servers = lib.mkOption {
+        inherit (jsonFormat) type;
+        default = { };
+        description = "MCP servers written to ~/.pi/agent/mcp.json.";
       };
     };
 
@@ -221,10 +214,10 @@ in
         ) cfg.extensions;
       }
 
-      (lib.mkIf (cfg.enableMcpIntegration && config.programs.mcp.enable) {
+      (lib.mkIf (cfg.mcp.servers != { }) {
         home.file."${agentDir}/mcp.json".source = jsonFormat.generate "pi-mcp.json" {
           settings = cfg.mcp.settings;
-          mcpServers = transformedMcpServers;
+          mcpServers = cfg.mcp.servers;
         };
       })
 

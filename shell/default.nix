@@ -29,7 +29,7 @@
     ./programs/pi
     ./programs/open-code-review
 
-    "${agenix-secrets}/modules/mcp"
+    "${agenix-secrets}/modules/ai-agents"
   ];
 
   home.file.profile = {

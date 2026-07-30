@@ -1,8 +1,4 @@
 {
-  "aws-documentation": {
-    "version": "1.1.26",
-    "hash": "sha256-NFFpDOa2kVqvopiENrcGNAlRytYMzLX8nnRae8ZjgkU="
-  },
   "n8n-mcp": {
     "version": "2.63.2",
     "hash": "sha256-Iy8FnDR2Oo1VoUpwE+IFJrqpt9yERWf0cHz3vLGdA40="

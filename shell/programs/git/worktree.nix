@@ -14,9 +14,16 @@ let
       echo "$s"
     }
 
+    main_worktree_path() {
+      local root
+      root="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
+      [ -n "$root" ] || err "could not find main worktree"
+      echo "$root"
+    }
+
     repo_paths() {
       local root parent base
-      root="$(git worktree list --porcelain | sed -n '1s/^worktree //p')" || err "not a git repo"
+      root="$(main_worktree_path)"
       parent="$(dirname "$root")"
       base="$(basename "$root")"
       echo "$parent" "$base"
@@ -47,11 +54,95 @@ let
       fi
     }
 
+    copy_env_files() {
+      local source_root="$1"
+      local dest="$2"
+      local rel base source target
+
+      git -C "$source_root" ls-files --others -z |
+        while IFS= read -r -d "" rel; do
+          base="''${rel##*/}"
+          case "$base" in
+            .env | .envrc) ;;
+            *) continue ;;
+          esac
+
+          source="$source_root/$rel"
+          target="$dest/$rel"
+
+          if [ -L "$source" ]; then
+            echo "skipped symlink: $rel" >&2
+            continue
+          fi
+          [ -f "$source" ] || continue
+          if [ -e "$target" ] || [ -L "$target" ]; then
+            echo "skipped existing: $rel" >&2
+            continue
+          fi
+
+          mkdir -p "$(dirname "$target")" || return 1
+          cp -p "$source" "$target" || return 1
+        done
+    }
+
     git rev-parse --is-inside-work-tree >/dev/null 2>&1 || err "not a git repo"
   '';
+  renameCommand = flag: {
+    path = [ "branch" ];
+    inherit flag;
+    help = "Rename the current linked-worktree branch and directory.";
+    command = helpers + ''
+
+      if [ "$#" -ne 1 ]; then
+        git branch ${flag} "$@"
+        exit $?
+      fi
+
+      git_dir="$(git rev-parse --absolute-git-dir)"
+      common_dir="$(git rev-parse --path-format=absolute --git-common-dir)"
+      if [ "$git_dir" = "$common_dir" ]; then
+        git branch ${flag} "$@"
+        exit $?
+      fi
+
+      new_br="$1"
+      old_br="$(git branch --show-current)"
+      [ -n "$old_br" ] || err "detached HEAD"
+      git check-ref-format --branch "$new_br" >/dev/null
+      if git show-ref --verify --quiet "refs/heads/$new_br"; then
+        err "branch already exists: $new_br"
+      fi
+
+      current_path="$(git rev-parse --show-toplevel)"
+      dest="$(default_wt_path_for_branch "$new_br")"
+      if [ "$current_path" = "$dest" ]; then
+        git branch ${flag} "$new_br"
+        if [ -n "''${SHELL_CD_REQUEST_FILE-}" ]; then
+          printf '%s\n' "$dest" >"$SHELL_CD_REQUEST_FILE"
+        fi
+        exit 0
+      fi
+      if [ -e "$dest" ] || [ -L "$dest" ]; then
+        err "worktree path already exists: $dest"
+      fi
+
+      git worktree move "$current_path" "$dest"
+      if ! git -C "$dest" branch ${flag} "$new_br"; then
+        git -C "$dest" worktree move "$dest" "$current_path" ||
+          echo "error: failed to restore worktree path: $current_path" >&2
+        exit 1
+      fi
+
+      if [ -n "''${SHELL_CD_REQUEST_FILE-}" ]; then
+        printf '%s\n' "$dest" >"$SHELL_CD_REQUEST_FILE"
+      fi
+    '';
+  };
 in
 {
   programs.gitExtend.commands = [
+    (renameCommand "-m")
+    (renameCommand "--move")
     {
       path = [
         "worktree"
@@ -60,6 +151,8 @@ in
       help = "Checkout a branch into a sibling worktree and cd into it.";
       command = helpers + ''
 
+        created=""
+        created_branch=""
         if [[ ''${1:-} == "-b" ]]; then
           shift
           br="''${1:-}"
@@ -71,6 +164,8 @@ in
           else
             git worktree add -b "$br" "$dest"
           fi
+          created=1
+          created_branch=1
         else
           br="''${1:-}"
           [ -n "$br" ] || err "usage: git worktree checkout <branch>"
@@ -79,13 +174,24 @@ in
             if [ -z "$dest" ]; then
               dest="$(default_wt_path_for_branch "$br")"
               git worktree add "$dest" "$br"
+              created=1
             fi
           elif git show-ref --verify --quiet "refs/remotes/origin/$br"; then
             dest="$(default_wt_path_for_branch "$br")"
             git worktree add --track -b "$br" "$dest" "origin/$br"
+            created=1
+            created_branch=1
           else
             err "branch not found: $br"
           fi
+        fi
+
+        if [ -n "$created" ] && ! copy_env_files "$(main_worktree_path)" "$dest"; then
+          git worktree remove --force "$dest" || err "failed to remove incomplete worktree: $dest"
+          if [ -n "$created_branch" ]; then
+            git branch -D "$br" || err "failed to remove incomplete branch: $br"
+          fi
+          err "failed to copy environment files"
         fi
 
         echo "$dest"

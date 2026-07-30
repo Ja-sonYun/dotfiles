@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+git_command="${1:-${GIT_UNDER_TEST:-,git}}"
+git_under_test="$(command -v "$git_command" 2>/dev/null || true)"
+[ -n "$git_under_test" ] || {
+	echo "error: git under test not found: $git_command" >&2
+	exit 1
+}
+
+fail() {
+	echo "error: $*" >&2
+	exit 1
+}
+
+assert_file() {
+	[ -f "$1" ] && [ ! -L "$1" ] || fail "expected regular non-symlink file: $1"
+}
+
+assert_missing() {
+	[ ! -e "$1" ] && [ ! -L "$1" ] || fail "expected missing path: $1"
+}
+
+assert_equal() {
+	[ "$1" = "$2" ] || fail "expected '$1' to equal '$2'"
+}
+
+case "$git_under_test" in
+	*/bin/,git)
+		sibling_git="${git_under_test%,git}git"
+		[ -x "$sibling_git" ] || fail "expected executable sibling: $sibling_git"
+		assert_equal "$(realpath "$git_under_test")" "$(realpath "$sibling_git")"
+		assert_equal "$("$git_under_test" help custom)" "$("$sibling_git" help custom)"
+		;;
+esac
+
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/git-extend-selftest.XXXXXX")"
+tmp="$(cd "$tmp" && pwd -P)"
+trap 'rm -rf "$tmp"' EXIT
+
+export GIT_CONFIG_GLOBAL=/dev/null
+export GIT_CONFIG_SYSTEM=/dev/null
+export GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0=core.excludesFile
+export GIT_CONFIG_VALUE_0=/dev/null
+unset SHELL_CD_REQUEST_FILE
+
+main="$tmp/repo"
+"$git_under_test" init -q -b main "$main"
+"$git_under_test" -C "$main" config user.name "Git Extend Selftest"
+"$git_under_test" -C "$main" config user.email "git-extend-selftest@example.invalid"
+
+printf '%s\n' ".env" ".env.local" >"$main/.gitignore"
+mkdir "$main/tracked-env"
+printf '%s\n' "committed-env" >"$main/tracked-env/.env"
+printf '%s\n' "tracked" >"$main/tracked"
+"$git_under_test" -C "$main" add .gitignore tracked
+"$git_under_test" -C "$main" add -f tracked-env/.env
+"$git_under_test" -C "$main" commit -q -m initial
+printf '%s\n' "dirty-env" >"$main/tracked-env/.env"
+
+mkdir -p "$main/nested" "$main/linked"
+printf '%s\n' "main-env" >"$main/.env"
+printf '%s\n' "main-envrc" >"$main/nested/.envrc"
+printf '%s\n' "excluded" >"$main/.env.local"
+ln -s ../.env "$main/linked/.env"
+
+first="$tmp/repo+feature-base"
+first_cd_request="$tmp/first-cd"
+(
+	cd "$main"
+	SHELL_CD_REQUEST_FILE="$first_cd_request" "$git_under_test" worktree checkout -b feature/base >/dev/null
+)
+
+assert_file "$first/.env"
+assert_file "$first/nested/.envrc"
+assert_equal "$(cat "$first/.env")" "main-env"
+assert_equal "$(cat "$first/nested/.envrc")" "main-envrc"
+assert_equal "$(cat "$first/tracked-env/.env")" "committed-env"
+assert_missing "$first/.env.local"
+assert_missing "$first/linked/.env"
+assert_equal "$(cat "$first_cd_request")" "$first"
+
+mkdir "$main/late"
+printf '%s\n' "late-envrc" >"$main/late/.envrc"
+printf '%s\n' "linked-only" >"$first/.env"
+"$git_under_test" -C "$main" branch nested/next main
+second="$tmp/repo+nested-next"
+(
+	cd "$first"
+	"$git_under_test" worktree checkout nested/next >/dev/null
+)
+
+assert_file "$second/.env"
+assert_equal "$(cat "$second/.env")" "main-env"
+assert_equal "$("$git_under_test" -C "$second" symbolic-ref --short HEAD)" "nested/next"
+
+origin="$tmp/origin.git"
+"$git_under_test" init -q --bare "$origin"
+"$git_under_test" -C "$main" remote add origin "$origin"
+"$git_under_test" -C "$main" push -q origin main:refs/heads/remote/only
+"$git_under_test" -C "$main" fetch -q origin
+remote="$tmp/repo+remote-only"
+remote_cd_request="$tmp/remote-cd"
+(
+	cd "$main"
+	SHELL_CD_REQUEST_FILE="$remote_cd_request" "$git_under_test" worktree checkout remote/only >/dev/null
+)
+
+assert_file "$remote/.env"
+assert_file "$remote/nested/.envrc"
+assert_equal "$("$git_under_test" -C "$remote" symbolic-ref --short HEAD)" "remote/only"
+assert_equal "$(cat "$remote_cd_request")" "$remote"
+
+printf '%s\n' "main-updated" >"$main/.env"
+(
+	cd "$main"
+	"$git_under_test" worktree checkout feature/base >/dev/null
+)
+assert_equal "$(cat "$first/.env")" "linked-only"
+assert_missing "$first/late/.envrc"
+
+noncanonical="$tmp/custom-linked-location"
+"$git_under_test" -C "$main" worktree move "$first" "$noncanonical"
+assert_missing "$first"
+[ -d "$noncanonical" ] || fail "expected moved worktree: $noncanonical"
+assert_equal "$("$git_under_test" -C "$noncanonical" symbolic-ref --short HEAD)" "feature/base"
+
+renamed="$tmp/repo+release-renamed"
+rename_cd_request="$tmp/rename-cd"
+(
+	cd "$noncanonical"
+	SHELL_CD_REQUEST_FILE="$rename_cd_request" "$git_under_test" branch -m release/renamed
+)
+
+assert_missing "$noncanonical"
+[ -d "$renamed" ] || fail "expected renamed worktree: $renamed"
+assert_equal "$("$git_under_test" -C "$renamed" symbolic-ref --short HEAD)" "release/renamed"
+assert_equal "$(cat "$rename_cd_request")" "$renamed"
+"$git_under_test" -C "$main" worktree list --porcelain |
+grep -Fqx "worktree $renamed" || fail "renamed worktree is not registered"
+
+long_renamed="$tmp/repo+long-form"
+long_rename_cd_request="$tmp/long-rename-cd"
+(
+	cd "$renamed"
+	SHELL_CD_REQUEST_FILE="$long_rename_cd_request" "$git_under_test" branch --move long/form
+)
+
+assert_missing "$renamed"
+[ -d "$long_renamed" ] || fail "expected renamed worktree: $long_renamed"
+assert_equal "$("$git_under_test" -C "$long_renamed" symbolic-ref --short HEAD)" "long/form"
+assert_equal "$(cat "$long_rename_cd_request")" "$long_renamed"
+"$git_under_test" -C "$main" worktree list --porcelain |
+grep -Fqx "worktree $long_renamed" || fail "long-form renamed worktree is not registered"
+
+"$git_under_test" -C "$main" branch taken main
+taken_oid="$("$git_under_test" -C "$main" rev-parse refs/heads/taken)"
+taken_path="$tmp/repo+taken"
+taken_cd_request="$tmp/taken-cd"
+printf '%s\n' "branch-collision-sentinel" >"$taken_cd_request"
+if (
+	cd "$long_renamed"
+	SHELL_CD_REQUEST_FILE="$taken_cd_request" "$git_under_test" branch -m taken
+	); then
+	fail "rename unexpectedly succeeded with an existing branch"
+fi
+
+[ -d "$long_renamed" ] || fail "worktree path changed after branch collision"
+assert_missing "$taken_path"
+assert_equal "$("$git_under_test" -C "$long_renamed" symbolic-ref --short HEAD)" "long/form"
+assert_equal "$("$git_under_test" -C "$main" rev-parse refs/heads/taken)" "$taken_oid"
+assert_equal "$(cat "$taken_cd_request")" "branch-collision-sentinel"
+"$git_under_test" -C "$main" worktree list --porcelain |
+grep -Fqx "worktree $long_renamed" || fail "worktree registration changed after branch collision"
+
+same_cd_request="$tmp/same-cd"
+(
+	cd "$second"
+	SHELL_CD_REQUEST_FILE="$same_cd_request" "$git_under_test" branch -m nested-next
+)
+
+[ -d "$second" ] || fail "same-path rename moved worktree"
+assert_equal "$("$git_under_test" -C "$second" symbolic-ref --short HEAD)" "nested-next"
+assert_equal "$(cat "$same_cd_request")" "$second"
+
+collision="$tmp/repo+blocked"
+mkdir "$collision"
+printf '%s\n' "occupied" >"$collision/occupied"
+collision_cd_request="$tmp/collision-cd"
+printf '%s\n' "path-collision-sentinel" >"$collision_cd_request"
+if (
+	cd "$second"
+	SHELL_CD_REQUEST_FILE="$collision_cd_request" "$git_under_test" branch -m blocked
+	); then
+	fail "rename unexpectedly succeeded with an occupied target"
+fi
+
+[ -d "$second" ] || fail "original worktree path changed after failed rename"
+assert_equal "$("$git_under_test" -C "$second" symbolic-ref --short HEAD)" "nested-next"
+assert_file "$collision/occupied"
+assert_equal "$(cat "$collision_cd_request")" "path-collision-sentinel"
+"$git_under_test" -C "$main" worktree list --porcelain |
+grep -Fqx "worktree $second" || fail "original worktree registration changed after failed rename"
+
+explicit_cd_request="$tmp/explicit-cd"
+printf '%s\n' "explicit-sentinel" >"$explicit_cd_request"
+(
+	cd "$remote"
+	SHELL_CD_REQUEST_FILE="$explicit_cd_request" "$git_under_test" branch -m remote/only explicit/renamed
+)
+assert_equal "$("$git_under_test" -C "$remote" symbolic-ref --short HEAD)" "explicit/renamed"
+assert_equal "$(cat "$explicit_cd_request")" "explicit-sentinel"
+
+main_cd_request="$tmp/main-cd"
+printf '%s\n' "main-sentinel" >"$main_cd_request"
+(
+	cd "$main"
+	SHELL_CD_REQUEST_FILE="$main_cd_request" "$git_under_test" branch -m main-renamed
+)
+assert_equal "$("$git_under_test" -C "$main" symbolic-ref --short HEAD)" "main-renamed"
+assert_equal "$(cat "$main_cd_request")" "main-sentinel"
+
+echo "selftest: ok"

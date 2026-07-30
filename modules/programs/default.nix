@@ -1,5 +1,6 @@
 {
   imports = [
+    ./ai-agents
     ./claude
     ./codex
     ./git-extend

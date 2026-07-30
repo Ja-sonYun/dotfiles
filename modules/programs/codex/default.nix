@@ -67,30 +67,7 @@ let
     }) claudeAgentNames
   );
 
-  mkDefaultTomlValue =
-    value:
-    if builtins.isAttrs value && !lib.isDerivation value then
-      lib.mapAttrs (_: mkDefaultTomlValue) value
-    else
-      lib.mkDefault value;
-
-  rawMcpServers = lib.mapAttrs (
-    name: server:
-    lib.hm.mcp.transformMcpServer {
-      inherit server;
-      exclude = [
-        "headers"
-        "type"
-      ];
-      extraTransforms = [
-        (s: s // lib.optionalAttrs (s.headers or { } != { }) { http_headers = s.headers; })
-        lib.hm.mcp.addType
-        (lib.hm.mcp.wrapEnvFilesCommand { inherit pkgs name; })
-      ];
-    }
-  ) config.programs.mcp.servers;
-
-  transformedMcpServers = lib.mapAttrs (_: mkDefaultTomlValue) rawMcpServers;
+  codexConfigFile = "${config.home.homeDirectory}/.codex/config.toml";
 
   managedSettingKeys = [
     "default_permissions"
@@ -161,12 +138,6 @@ in
       description = "Codex package to install.";
     };
 
-    enableMcpIntegration = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Whether to integrate shared programs.mcp.servers into Codex.";
-    };
-
     settings = lib.mkOption {
       inherit (tomlFormat) type;
       default = { };
@@ -198,46 +169,38 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable (
-    lib.mkMerge [
+  config = lib.mkIf cfg.enable {
+    home.packages = [ wrappedPackage ];
+
+    assertions = [
       {
-        home.packages = [ wrappedPackage ];
-
-        assertions = [
-          {
-            assertion = settingsSecrets.invalidSecretPaths == [ ];
-            message = "programs.codex.settings contains invalid _secret values at: ${lib.concatStringsSep ", " settingsSecrets.invalidSecretPaths}.";
-          }
-          {
-            assertion = flagSecrets.secretPaths == [ ];
-            message = "programs.codex.settings only supports _secret in settings merged into ~/.codex/config.toml.";
-          }
-        ];
-
-        home.file =
-          lib.optionalAttrs (cfg.context != null) {
-            ".codex/AGENTS.md".text = cfg.context;
-          }
-          // lib.mapAttrs' (
-            name: source: lib.nameValuePair ".codex/skills/${name}" { inherit source; }
-          ) cfg.skills
-          // claudeAgentHomeFiles
-          // lib.mapAttrs' (
-            name: text: lib.nameValuePair ".codex/rules/${name}.rules" { inherit text; }
-          ) cfg.rules;
-
-        home.activation.codexConfigMerge = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          run mkdir -p "${config.home.homeDirectory}/.codex"
-          run ${configMergePython}/bin/python3 ${./merge-config-toml.py} \
-            "${config.home.homeDirectory}/.codex/config.toml" ${managedFragment} \
-            "${config.home.homeDirectory}/.codex/.home-manager-mcp-state.json" \
-            "${config.home.homeDirectory}/.codex/.home-manager-model-provider-state.json"
-        '';
+        assertion = settingsSecrets.invalidSecretPaths == [ ];
+        message = "programs.codex.settings contains invalid _secret values at: ${lib.concatStringsSep ", " settingsSecrets.invalidSecretPaths}.";
       }
+      {
+        assertion = flagSecrets.secretPaths == [ ];
+        message = "programs.codex.settings only supports _secret in settings merged into ~/.codex/config.toml.";
+      }
+    ];
 
-      (lib.mkIf (cfg.enableMcpIntegration && config.programs.mcp.enable) {
-        programs.codex.settings.mcp_servers = transformedMcpServers;
-      })
-    ]
-  );
+    home.file =
+      lib.optionalAttrs (cfg.context != null) {
+        ".codex/AGENTS.md".text = cfg.context;
+      }
+      // lib.mapAttrs' (
+        name: source: lib.nameValuePair ".codex/skills/${name}" { inherit source; }
+      ) cfg.skills
+      // claudeAgentHomeFiles
+      // lib.mapAttrs' (
+        name: text: lib.nameValuePair ".codex/rules/${name}.rules" { inherit text; }
+      ) cfg.rules;
+
+    home.activation.codexConfigMerge = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      run mkdir -p "${config.home.homeDirectory}/.codex"
+      run ${configMergePython}/bin/python3 ${./merge-config-toml.py} \
+        "${codexConfigFile}" ${managedFragment} \
+        "${config.home.homeDirectory}/.codex/.home-manager-mcp-state.json" \
+        "${config.home.homeDirectory}/.codex/.home-manager-model-provider-state.json"
+    '';
+  };
 }

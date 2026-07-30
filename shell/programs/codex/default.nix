@@ -1,7 +1,6 @@
 {
   pkgs,
   config,
-  agenix-secrets,
   ...
 }:
 let
@@ -39,12 +38,9 @@ let
   '';
 in
 {
-  imports = [ "${agenix-secrets}/modules/ai-bundle/codex" ];
-
   programs.codex = {
     enable = true;
     package = codex;
-    enableMcpIntegration = true;
 
     settings = {
       model = "gpt-5.6-sol";
@@ -86,7 +82,7 @@ in
         multi_agent = true;
         personality = true;
         skill_mcp_dependency_install = false;
-        memories = true;
+        memories = false;
       };
 
       agents = {
@@ -101,11 +97,6 @@ in
           "model-with-reasoning"
         ];
         show_tooltips = false;
-        notifications = [
-          "plan-mode-prompt"
-        ];
-        notification_method = "osc9";
-        notification_condition = "always";
         keymap = {
           pager = {
             half_page_up = "ctrl-u";

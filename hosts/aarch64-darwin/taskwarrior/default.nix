@@ -18,19 +18,6 @@
 
       uda = {
         taskwarrior-tui.task-report.next.filter = "status:pending -WAITING";
-
-        ai_source = {
-          type = "string";
-          label = "AI Source";
-        };
-        ai_source_id = {
-          type = "string";
-          label = "AI Source ID";
-        };
-        ai_source_url = {
-          type = "string";
-          label = "AI Source URL";
-        };
       };
 
       color = {

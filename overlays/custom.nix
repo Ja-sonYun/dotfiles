@@ -49,7 +49,6 @@
     ponytail = final.callPackage ../pkgs/ponytail { };
 
     # Pypi
-    aws-documentation = final.callPackage ../pkgs/aws-documentation { };
     freecad-mcp = final.callPackage ../pkgs/freecad-mcp { };
 
     r2dec = final.callPackage ../pkgs/r2dec { };

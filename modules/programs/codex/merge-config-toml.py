@@ -1,5 +1,7 @@
+import hashlib
 import json
 import os
+import re
 import sys
 from collections.abc import MutableMapping, MutableSequence
 from pathlib import Path
@@ -49,6 +51,54 @@ def _mark_generated_sections(value: Any) -> None:
     elif isinstance(value, AoT):
         for table in value:
             _mark_generated_sections(table)
+
+
+def _add_hook_state(fragment: Any, target: Path) -> None:
+    hooks = fragment.get("hooks")
+    if hooks is None:
+        return
+    if not isinstance(hooks, MutableMapping):
+        raise ValueError("hooks must be a table")
+
+    hooks.pop("state", None)
+    state = {}
+    for event, blocks in hooks.items():
+        if not isinstance(blocks, MutableSequence):
+            raise ValueError(f"hooks.{event} must be an array")
+        event_name = re.sub(r"(?<!^)(?=[A-Z])", "_", event).lower()
+        for index, block in enumerate(blocks):
+            if not isinstance(block, MutableMapping):
+                raise ValueError(f"hooks.{event}[{index}] must be a table")
+            commands = block.get("hooks")
+            if not isinstance(commands, MutableSequence):
+                raise ValueError(f"hooks.{event}[{index}].hooks must be an array")
+
+            normalized = []
+            for command in commands:
+                value = command.unwrap()
+                value["timeout"] = value.get("timeout", 600)
+                value["async"] = value.get("async", False)
+                normalized.append(value)
+
+            trusted_input = {
+                "event_name": event_name,
+                "hooks": normalized,
+            }
+            if "matcher" in block:
+                trusted_input["matcher"] = block["matcher"]
+            trusted_hash = hashlib.sha256(
+                json.dumps(
+                    trusted_input,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            ).hexdigest()
+            state[f"{target}:{event_name}:{index}:0"] = {
+                "enabled": True,
+                "trusted_hash": f"sha256:{trusted_hash}",
+            }
+    if state:
+        hooks["state"] = state
 
 
 def _read_state(path: Path) -> list[str]:
@@ -111,6 +161,7 @@ def _main() -> None:
     )
     fragment = tomlkit.parse(_read(fragment_path))
     _resolve_secrets(fragment)
+    _add_hook_state(fragment, target)
     for value in fragment.values():
         _mark_generated_sections(value)
     if "default_permissions" in fragment:
