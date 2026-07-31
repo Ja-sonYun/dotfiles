@@ -1,7 +1,7 @@
 {
   "n8n-mcp": {
-    "version": "2.67.1",
-    "hash": "sha256-1+xnep/F6fJFgZI0xv+7GROlEKl1w2iCJXv6v2dT0eA="
+    "version": "2.67.2",
+    "hash": "sha256-Rwl3UzfdKJw38tv4/Ua2oLH4C28bLr9YmVDywD7pr4s="
   },
   "mcp-remote": {
     "version": "0.1.38",
@@ -12,8 +12,8 @@
     "hash": "sha256-iWminmZlTwAAGKJShzFPvyIcWxfgVmVyN7I2rEKvNDs="
   },
   "open-code-review": {
-    "version": "1.8.0",
-    "hash": "sha256-vdz2gad3vTQkSGPQWwACRwPtacYhrDjV/AMIOhqKo1I="
+    "version": "1.8.1",
+    "hash": "sha256-/THjoefWD3SQArVH0FEKyEdGii2ue+lUEWZlBjC4NoU="
   },
   "pi": {
     "version": "0.83.0",
@@ -24,8 +24,8 @@
     "hash": "sha256-N/sGAha9ui62fN+tk8SeIf2K/W+eMqP8A6VJOeWSvEQ="
   },
   "pi-mcp-adapter": {
-    "version": "2.15.0",
-    "hash": "sha256-mNKuDFLLhPUnH0/BJAK4vMB1DxX7mzbHHZgRYqkx5cU="
+    "version": "2.16.0",
+    "hash": "sha256-t6zetYJFO6Zr9CGKjN9B6zZzXnsux78ONnar0ft1JO8="
   },
   "freecad-mcp": {
     "version": "0.1.20",
