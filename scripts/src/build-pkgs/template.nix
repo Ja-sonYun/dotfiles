@@ -6,6 +6,10 @@ let
     builtins.readFile __ROOT_DIR__/pkgs/_hashfiles/__HOSTNAME__.json
   );
   finalPkgs = pkgs // {
+    command = import __ROOT_DIR__/libs/nixlib/command {
+      inherit pkgs;
+      lib = pkgs.lib // customLibs;
+    };
     hashfile = {
       raw = currentHostHashfile;
       get =

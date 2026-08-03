@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 let
-  packageVersion = "0.1.20";
+  packageVersion = "0.1.21";
 
   addon = pkgs.stdenvNoCC.mkDerivation {
     pname = "freecad-mcp-addon";
@@ -10,7 +10,7 @@ let
     src = pkgs.fetchPypi {
       pname = "freecad_mcp";
       version = packageVersion;
-      hash = "sha256-z2PYQPysMiPJEOmXE3zzphk8OTrgWZExenoXLWtl6VM=";
+      hash = "sha256-LlJ6jn+oj2kloId0cRhTDyhRyWR4UJz1iY0XZ/G4d5c=";
     };
 
     sourceRoot = "freecad_mcp-${packageVersion}";

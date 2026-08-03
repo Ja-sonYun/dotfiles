@@ -132,12 +132,6 @@ let
       "sub-layer" = "normal";
     }
     {
-      label = "Bambu Studio";
-      app = "^Bambu Studio$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
       label = "Fusion";
       app = "^Fusion$";
       manage = "on";
