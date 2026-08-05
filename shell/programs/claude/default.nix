@@ -6,6 +6,7 @@
 let
   claudeCode = pkgs.claude-code.override {
     extraPath = [
+      pkgs.aws-ro
       pkgs.pyright
       pkgs.ruff
       pkgs.rustfmt

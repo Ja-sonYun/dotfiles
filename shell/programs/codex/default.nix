@@ -11,6 +11,7 @@ let
 
   codex = pkgs.codex.override {
     extraPath = [
+      pkgs.aws-ro
       nodeOnly
     ];
   };

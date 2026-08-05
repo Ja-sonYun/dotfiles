@@ -3,9 +3,15 @@
   pkgs,
   ...
 }:
+let
+  pi = pkgs.pi.override {
+    extraPath = [ pkgs.aws-ro ];
+  };
+in
 {
   programs.pi = {
     enable = true;
+    package = pi;
 
     settings = {
       quietStartup = true;

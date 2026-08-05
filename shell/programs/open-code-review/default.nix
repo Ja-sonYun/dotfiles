@@ -14,6 +14,7 @@ let
     export OCR_LLM_MODEL="gpt-5.6-sol"
     export OCR_USE_ANTHROPIC="false"
     export OCR_NO_UPDATE="1"
+    export PATH="${pkgs.lib.makeBinPath [ pkgs.aws-ro ]}:$PATH"
 
     exec ${pkgs.open-code-review}/bin/ocr "$@"
   '';
