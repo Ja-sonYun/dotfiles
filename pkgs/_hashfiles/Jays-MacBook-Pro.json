@@ -12,8 +12,8 @@
     "hash": "sha256-c9wZgJVxiUxDgRzQTSWiqxSNkCDj6dM/rJwQx7PtRj4="
   },
   "open-code-review": {
-    "version": "1.8.8",
-    "hash": "sha256-eBJkrEKZSLyE33y0er14yY7/t7exIh2Esdtq7XAZwFs="
+    "version": "1.8.9",
+    "hash": "sha256-ZpM0G9slCukxcnxZTZj5jiZnACM3vRdCRLnWawd/Sm0="
   },
   "pi": {
     "version": "0.83.0",
@@ -44,8 +44,8 @@
     "hash": "sha256-XxuBG5qe2mn0ACtKho/rdSypzosmqSC5TrlH8CQmV88="
   },
   "codex": {
-    "version": "0.146.0",
-    "hash": "sha256-ZK8z3dLPBbKbEDdfA3dhqwcsJxRCpf34kP/vBrWIXQg="
+    "version": "0.146.1",
+    "hash": "sha256-xUHc9mT9KJMFgaJxshAa6UCvi6w0FC2YbwXx/cTFO4Q="
   },
   "context7-mcp": {
     "version": "3.2.5",
@@ -56,7 +56,7 @@
     "hash": "sha256-yDQkrLCZx5uUsogHMusl/X6+dSlpqqVMc2RXZ0OLjJg="
   },
   "claude-code": {
-    "version": "2.1.222",
-    "hash": "sha256-481LfMHXNVEXCJi+tjFcCD0WwgtXwiJtfXvEh8+GXj0="
+    "version": "2.1.223",
+    "hash": "sha256-4Byb1SQGfYWwBuyqN1bNM2Adqht/Mc+8G3MK/C6Xe4g="
   }
 }
