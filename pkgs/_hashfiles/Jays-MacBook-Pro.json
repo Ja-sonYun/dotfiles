@@ -1,7 +1,7 @@
 {
   "n8n-mcp": {
-    "version": "2.68.0",
-    "hash": "sha256-wr7I1Bdid3PcuiFZSsZRTjPkuTPG1FwkxPYwtMLtL3A="
+    "version": "2.68.4",
+    "hash": "sha256-7fRfHoYwv3wyutidIQP5tXN2Mip4XR6NNQ0PIdopxVI="
   },
   "mcp-remote": {
     "version": "0.1.38",
@@ -12,28 +12,28 @@
     "hash": "sha256-c9wZgJVxiUxDgRzQTSWiqxSNkCDj6dM/rJwQx7PtRj4="
   },
   "open-code-review": {
-    "version": "1.8.9",
-    "hash": "sha256-ZpM0G9slCukxcnxZTZj5jiZnACM3vRdCRLnWawd/Sm0="
+    "version": "1.8.10",
+    "hash": "sha256-zVsYwSw5La78F2ZTFcgQUiONZ+uXjKw6Axu6Xr7fZOw="
   },
   "pi": {
-    "version": "0.83.0",
-    "hash": "sha256-A6D1rIVmw7WVo5F1O/LDSpQlEnaSrJj6LJXaM9kKH0k="
+    "version": "0.84.1",
+    "hash": "sha256-ZcQNrTqcX31795o+F23raLeY+wqLxFFtj2ztyTFrjwU="
   },
   "pi-permission-system": {
     "version": "0.8.0",
     "hash": "sha256-o5cRLDeXQGXng5nekFQeVF+gY1B45V9urD8ERbkb568="
   },
   "pi-mcp-adapter": {
-    "version": "2.20.1",
-    "hash": "sha256-xWb89V4wjVRlrvotsCNBaB2QgZFV+L4+O5kzkTYgcD8="
+    "version": "2.21.0",
+    "hash": "sha256-JIq7+qyD/EPKV3UL+TBsX+2QKi/NIoJ7THTa+Ixu2lM="
   },
   "freecad-mcp": {
     "version": "0.1.21",
     "hash": "sha256-i0/sisyqwR8LMkN6iS51itiTbFS910fQWLSNxKhefb0="
   },
   "firecrawl-mcp": {
-    "version": "3.23.3",
-    "hash": "sha256-ZzGgR2C3olHGIyWQ1HrMmrnIJGZVLnmXMtiQ1YYJibU="
+    "version": "3.23.4",
+    "hash": "sha256-G1pyqeKm8SFE2xP6JrM60RkujK7nZSmMNIJo+imOfuI="
   },
   "awscli-local": {
     "version": "0.22.2",
@@ -44,19 +44,19 @@
     "hash": "sha256-XxuBG5qe2mn0ACtKho/rdSypzosmqSC5TrlH8CQmV88="
   },
   "codex": {
-    "version": "0.146.1",
-    "hash": "sha256-xUHc9mT9KJMFgaJxshAa6UCvi6w0FC2YbwXx/cTFO4Q="
+    "version": "0.147.0",
+    "hash": "sha256-6FpBQyrOOwr5SLA470Vwz8YAlpPjspLzyCFCgzpGBL4="
   },
   "context7-mcp": {
-    "version": "3.2.5",
-    "hash": "sha256-YclewWDji0SpcbW99tXJBPUtojhrw6Jq/H+bRBRmNE4="
+    "version": "4.0.0",
+    "hash": "sha256-K9MGSnlQXUkx1U3FolN9/h2coo9B68eTXIK4JHc/8BM="
   },
   "exa-mcp-server": {
     "version": "3.4.0",
     "hash": "sha256-yDQkrLCZx5uUsogHMusl/X6+dSlpqqVMc2RXZ0OLjJg="
   },
   "claude-code": {
-    "version": "2.1.223",
-    "hash": "sha256-4Byb1SQGfYWwBuyqN1bNM2Adqht/Mc+8G3MK/C6Xe4g="
+    "version": "2.1.224",
+    "hash": "sha256-KvLnnR7IfNFVRun12KyPvkspcaoEXRZQHZqxbAln7zg="
   }
 }

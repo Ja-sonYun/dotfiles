@@ -9,12 +9,17 @@ let
     ln -s ${pkgs.nodejs_24}/bin/node $out/bin/node
   '';
 
-  codex = pkgs.codex.override {
+  codexPackage = pkgs.codex.override {
     extraPath = [
       pkgs.aws-ro
       nodeOnly
     ];
   };
+
+  codex = pkgs.writeShellScriptBin "codex" ''
+    export CODEX_GITHUB_PERSONAL_ACCESS_TOKEN="$(${pkgs.gh}/bin/gh auth token --hostname github.com)"
+    exec ${codexPackage}/bin/codex "$@"
+  '';
 
   codexLmp = pkgs.writeShellScriptBin "codex-lmp" ''
     set -euo pipefail
@@ -126,6 +131,7 @@ in
           ];
           env = { };
         };
+        github.bearer_token_env_var = "CODEX_GITHUB_PERSONAL_ACCESS_TOKEN";
       };
     };
   };
