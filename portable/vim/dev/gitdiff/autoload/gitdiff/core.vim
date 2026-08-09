@@ -2,6 +2,7 @@ vim9script
 
 var repo_root = ''
 var temp_root = ''
+var session_cwd = ''
 var base_sha = ''
 var range_label = ''
 var changes: list<dict<any>> = []
@@ -73,6 +74,12 @@ def WorktreePath(cwd: string): string
     throw 'g:gitdiff_worktree_dir must be a non-empty string'
   endif
   return fnamemodify(isabsolutepath(configured) ? configured : cwd .. '/' .. configured, ':p')
+enddef
+
+def KeepCwd(): void
+  if session_cwd != '' && getcwd() !=# session_cwd
+    execute 'noautocmd cd ' .. fnameescape(session_cwd)
+  endif
 enddef
 
 def DisableRooter(): dict<any>
@@ -237,6 +244,7 @@ def ConfigureCodeBuffer(): void
   if temp_root == ''
     return
   endif
+  KeepCwd()
   const path = expand('%:p')
   if &buftype != '' || stridx(path, temp_root .. '/') != 0
     RestoreGitGutter()
@@ -267,6 +275,16 @@ def ConfigureCodeBuffer(): void
   silent! execute 'GitGutter'
 enddef
 
+def PinFiles(): void
+  if files_bufnr <= 0 || winnr('$') <= 1
+    return
+  endif
+  const winid = bufwinid(files_bufnr)
+  if winid > 0
+    win_execute(winid, 'wincmd J | resize 12 | setlocal winfixheight')
+  endif
+enddef
+
 def OpenPath(index: number): void
   if index < 0 || index >= len(changes) || changes[index].status ==# 'D'
     echo 'Deleted file has no target version'
@@ -283,13 +301,12 @@ def OpenPath(index: number): void
     endif
     execute 'edit ' .. fnameescape(temp_root .. '/' .. changes[index].path)
   finally
+    KeepCwd()
     RestoreRooter(rooter_state)
   endtry
   current_index = index
   ConfigureCodeBuffer()
-  if bufwinnr(files_bufnr) != -1
-    win_execute(bufwinid(files_bufnr), 'resize 12 | setlocal winfixheight')
-  endif
+  PinFiles()
 enddef
 
 def OpenUnderCursor(): void
@@ -322,8 +339,7 @@ def ToggleFiles(): void
   endif
   execute 'botright :12split'
   execute 'buffer ' .. files_bufnr
-  resize 12
-  setlocal winfixheight
+  PinFiles()
   wincmd p
 enddef
 
@@ -344,6 +360,7 @@ enddef
 def ResetState(): void
   repo_root = ''
   temp_root = ''
+  session_cwd = ''
   base_sha = ''
   range_label = ''
   changes = []
@@ -397,6 +414,7 @@ def Cleanup(close_tab: bool): void
       ProtectOriginFromRooter()
       origin_restore_pending = true
     endif
+    KeepCwd()
     RestoreRooter(rooter_state)
     ResetState()
     cleaning = false
@@ -423,6 +441,7 @@ export def Open(spec: string): void
   Close()
   try
     const invocation_cwd = getcwd()
+    session_cwd = invocation_cwd
     const worktree = WorktreePath(invocation_cwd)
     repo_root = Git(invocation_cwd, ['rev-parse', '--show-toplevel'])[0]
     range_label = spec
@@ -449,6 +468,7 @@ export def Open(spec: string): void
       t:gitdiff_session = true
       ShowFiles()
     finally
+      KeepCwd()
       RestoreRooter(rooter_state)
     endtry
   catch
@@ -468,6 +488,7 @@ augroup UserGitDiff
   autocmd!
   autocmd BufReadPost,BufEnter * ConfigureCodeBuffer()
   autocmd BufEnter * RestoreOriginAfterEnter()
+  autocmd WinNew * PinFiles()
   autocmd TabClosed * CleanupClosedTab()
   autocmd VimLeavePre * Cleanup(false)
 augroup END
