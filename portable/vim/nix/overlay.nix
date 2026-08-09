@@ -95,8 +95,12 @@ let
     # (mkVimPlugin inputs.vim-lsp "vim-lsp")
   ];
 
+  localPlugins = [
+    (mkVimPlugin ../dev/gitdiff "gitdiff")
+  ];
+
   # Aggregate plugin set for packaged Vim
-  packagedPlugins = allPlugins ++ myPluginsFromGit;
+  packagedPlugins = allPlugins ++ localPlugins ++ myPluginsFromGit;
 
   commonPackages =
     with pkgs;

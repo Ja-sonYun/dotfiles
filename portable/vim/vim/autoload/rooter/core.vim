@@ -33,6 +33,9 @@ def FindRoot(): p.Path
 enddef
 
 def Activate(): bool
+  if get(g:, 'rooter_disabled', false) || get(b:, 'rooter_disabled', false)
+    return false
+  endif
   if index(Config.buftypes, &buftype) == -1
     return false
   endif

@@ -1,7 +1,7 @@
 {
   "n8n-mcp": {
-    "version": "2.68.4",
-    "hash": "sha256-7fRfHoYwv3wyutidIQP5tXN2Mip4XR6NNQ0PIdopxVI="
+    "version": "2.69.0",
+    "hash": "sha256-Oprt3dLLWYKMJeVvWNcMcpjvNpqJYGGGD361SOLtNC0="
   },
   "mcp-remote": {
     "version": "0.1.38",
