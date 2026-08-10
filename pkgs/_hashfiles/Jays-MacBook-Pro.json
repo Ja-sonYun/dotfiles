@@ -24,8 +24,8 @@
     "hash": "sha256-o5cRLDeXQGXng5nekFQeVF+gY1B45V9urD8ERbkb568="
   },
   "pi-mcp-adapter": {
-    "version": "2.21.1",
-    "hash": "sha256-WTdWTUxWub3z5bl8nWaNb8nJSn4ZvMVL3ywr2ZHRgaA="
+    "version": "2.21.2",
+    "hash": "sha256-rBvp7fFmhdxQU6+VfWv4VCB/Zy2RpC7512lqsGzPRhg="
   },
   "freecad-mcp": {
     "version": "0.1.21",
