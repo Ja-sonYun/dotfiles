@@ -1,9 +1,12 @@
 vim9script
 
+import autoload 'dock/core.vim' as dock
+
 var repo_root = ''
 var temp_root = ''
 var session_cwd = ''
 var base_sha = ''
+var head_sha = ''
 var range_label = ''
 var changes: list<dict<any>> = []
 var files_bufnr = -1
@@ -256,7 +259,7 @@ def ConfigureCodeBuffer(): void
 
   b:rooter_disabled = true
   setlocal readonly nomodifiable
-  nnoremap <buffer> <silent> q <ScriptCmd>Close()<CR>
+  nnoremap <buffer> <silent> dq <ScriptCmd>Close()<CR>
   nnoremap <buffer> <silent> gf <ScriptCmd>ToggleFiles()<CR>
   nnoremap <buffer> <silent> ]f <ScriptCmd>MoveFile(1)<CR>
   nnoremap <buffer> <silent> [f <ScriptCmd>MoveFile(-1)<CR>
@@ -264,6 +267,12 @@ def ConfigureCodeBuffer(): void
   nnoremap <buffer> ghr <Nop>
 
   const relative = strpart(path, strlen(temp_root) + 1)
+  b:gitdiff_context = {
+    repo_root: repo_root,
+    path: relative,
+    base_sha: base_sha,
+    head_sha: head_sha,
+  }
   for i in range(len(changes))
     if changes[i].path ==# relative
       current_index = i
@@ -273,16 +282,14 @@ def ConfigureCodeBuffer(): void
   endfor
   UseGitGutterBase()
   silent! execute 'GitGutter'
+  if !get(b:, 'gitdiff_ready', false)
+    b:gitdiff_ready = true
+    silent! doautocmd <nomodeline> User GitDiffBuffer
+  endif
 enddef
 
-def PinFiles(): void
-  if files_bufnr <= 0 || winnr('$') <= 1
-    return
-  endif
-  const winid = bufwinid(files_bufnr)
-  if winid > 0
-    win_execute(winid, 'wincmd J | resize 12 | setlocal winfixheight')
-  endif
+def FilesDock(): dict<any>
+  return get(g:, 'gitdiff_files_dock', { edge: 'bottom', size: 12, min_width: 50 })
 enddef
 
 def OpenPath(index: number): void
@@ -306,7 +313,6 @@ def OpenPath(index: number): void
   endtry
   current_index = index
   ConfigureCodeBuffer()
-  PinFiles()
 enddef
 
 def OpenUnderCursor(): void
@@ -337,9 +343,7 @@ def ToggleFiles(): void
     endif
     return
   endif
-  execute 'botright :12split'
-  execute 'buffer ' .. files_bufnr
-  PinFiles()
+  dock.Open(files_bufnr, FilesDock())
   wincmd p
 enddef
 
@@ -352,9 +356,10 @@ def ShowFiles(): void
   setlocal nowrap nonumber norelativenumber signcolumn=no nolist
   setfiletype gitdiff
   nnoremap <buffer> <silent> <CR> <ScriptCmd>OpenUnderCursor()<CR>
-  nnoremap <buffer> <silent> q <ScriptCmd>Close()<CR>
+  nnoremap <buffer> <silent> dq <ScriptCmd>Close()<CR>
   nnoremap <buffer> <silent> gf <ScriptCmd>ToggleFiles()<CR>
   RenderFiles()
+  dock.Attach(FilesDock())
 enddef
 
 def ResetState(): void
@@ -362,6 +367,7 @@ def ResetState(): void
   temp_root = ''
   session_cwd = ''
   base_sha = ''
+  head_sha = ''
   range_label = ''
   changes = []
   files_bufnr = -1
@@ -382,6 +388,7 @@ def Cleanup(close_tab: bool): void
   const rooter_state = DisableRooter()
   try
     RestoreGitGutter()
+    silent! doautocmd <nomodeline> User GitDiffClosed
 
     if close_tab
       for tab in range(1, tabpagenr('$'))
@@ -447,6 +454,7 @@ export def Open(spec: string): void
     range_label = spec
     const resolved = ResolveRange(spec)
     base_sha = resolved[0]
+    head_sha = resolved[1]
     changes = ReadChanges(base_sha, resolved[1])
     if empty(changes)
       echo 'No changes'
@@ -488,7 +496,6 @@ augroup UserGitDiff
   autocmd!
   autocmd BufReadPost,BufEnter * ConfigureCodeBuffer()
   autocmd BufEnter * RestoreOriginAfterEnter()
-  autocmd WinNew * PinFiles()
   autocmd TabClosed * CleanupClosedTab()
   autocmd VimLeavePre * Cleanup(false)
 augroup END

@@ -12,8 +12,8 @@
     "hash": "sha256-c9wZgJVxiUxDgRzQTSWiqxSNkCDj6dM/rJwQx7PtRj4="
   },
   "open-code-review": {
-    "version": "1.8.10",
-    "hash": "sha256-zVsYwSw5La78F2ZTFcgQUiONZ+uXjKw6Axu6Xr7fZOw="
+    "version": "1.9.0",
+    "hash": "sha256-ZgnQ3hrp82UbiBE7H2nFhTQhW+N8R/FaLjvyUymPJDY="
   },
   "pi": {
     "version": "0.84.1",
@@ -32,16 +32,16 @@
     "hash": "sha256-i0/sisyqwR8LMkN6iS51itiTbFS910fQWLSNxKhefb0="
   },
   "firecrawl-mcp": {
-    "version": "3.23.6",
-    "hash": "sha256-cyLDEkZw9RyWPBG6lOeI2A3Mv7o3HeTzWSjwROhB3eM="
+    "version": "3.23.8",
+    "hash": "sha256-zRZkLVjkEPcpyrenZpUAwIpARA0qw7XEN1I90pdsn7Y="
   },
   "awscli-local": {
     "version": "0.22.2",
     "hash": "sha256-ubTOzhTZD5LuZb4wiYF0eyIjYnuyMNoZ9CRPExxe3VI="
   },
   "chrome-devtools-mcp": {
-    "version": "1.6.0",
-    "hash": "sha256-XxuBG5qe2mn0ACtKho/rdSypzosmqSC5TrlH8CQmV88="
+    "version": "1.7.0",
+    "hash": "sha256-aC06/+WzaNLBqcL9RY0BKVNwkAuDJL6jGvKQiEKw+Ng="
   },
   "codex": {
     "version": "0.147.0",
@@ -56,7 +56,7 @@
     "hash": "sha256-yDQkrLCZx5uUsogHMusl/X6+dSlpqqVMc2RXZ0OLjJg="
   },
   "claude-code": {
-    "version": "2.1.226",
-    "hash": "sha256-WAmeHUSTBYLcBMKmooK+Q1lF6y/NNXqfBA2JSAuNkqM="
+    "version": "2.1.227",
+    "hash": "sha256-XXqb6qTS04SbA03XSxEUo144pP/0cDd/XqD7X80qL4c="
   }
 }

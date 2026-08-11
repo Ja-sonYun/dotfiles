@@ -96,7 +96,9 @@ let
   ];
 
   localPlugins = [
+    (mkVimPlugin ../dev/dock "dock")
     (mkVimPlugin ../dev/gitdiff "gitdiff")
+    (mkVimPlugin ../dev/ghreview "ghreview")
   ];
 
   # Aggregate plugin set for packaged Vim

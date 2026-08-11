@@ -81,8 +81,10 @@ export class SignCol
   public var group: string
   public var kinds: dict<Spec> = {}
   public var state: dict<State> = {}
+  public var priority: number = 10
 
-  def new(this.group, specs: list<Spec>)
+  def new(this.group, specs: list<Spec>, priority: number = 10)
+    this.priority = priority
     this.AssertSignApi()
     for spec in specs
       this.kinds[spec.kind] = spec
@@ -250,6 +252,7 @@ export class SignCol
         id: 0,
         name: this.NameFor(value.kind),
         lnum: value.lnum,
+        priority: this.priority,
       })
       add(addKeys, key)
     endfor
