@@ -71,6 +71,7 @@ in
       '';
 
       approval_policy = "on-request";
+      sandbox_workspace_write.network_access = true;
 
       suppress_unstable_features_warning = true;
       check_for_update_on_startup = false;
