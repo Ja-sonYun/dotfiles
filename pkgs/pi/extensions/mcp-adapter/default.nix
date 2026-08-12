@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "pi-mcp-adapter";
   packageManager = "npm";
   packageName = "pi-mcp-adapter";
-  packageVersion = "2.22.0";
+  packageVersion = "2.23.0";
   name = "pi-mcp-adapter";
   exposedBinaries = [
     "pi-mcp-adapter"

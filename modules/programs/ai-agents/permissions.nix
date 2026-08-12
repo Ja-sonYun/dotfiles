@@ -77,9 +77,11 @@ let
       data.mcp_readonly_tools or { }
     );
 
+  allowPaths = builtins.filter (path: path != "*") (keysWith data.path "allow");
   denyPaths = builtins.filter (path: path != "*") (keysWith data.path "deny");
   isWorkspaceRelative =
     path: !(lib.hasPrefix "~" path) && !(lib.hasPrefix "/" path) && !(lib.hasInfix ".." path);
+  absoluteAllowPaths = builtins.filter (path: !(isWorkspaceRelative path)) allowPaths;
   workspaceDenyPaths = builtins.filter isWorkspaceRelative denyPaths;
   absoluteDenyPaths = builtins.filter (path: !(isWorkspaceRelative path)) denyPaths;
 
@@ -138,11 +140,16 @@ in
     rules = lib.concatStringsSep "\n" codexRules + "\n";
     profile = {
       extends = ":workspace";
-      filesystem = builtins.listToAttrs (map (path: lib.nameValuePair path "deny") absoluteDenyPaths) // {
-        ":workspace_roots" = builtins.listToAttrs (
-          map (path: lib.nameValuePair ("**/" + path) "deny") workspaceDenyPaths
-        );
-      };
+      filesystem =
+        builtins.listToAttrs (
+          map (path: lib.nameValuePair path "write") absoluteAllowPaths
+          ++ map (path: lib.nameValuePair path "deny") absoluteDenyPaths
+        )
+        // {
+          ":workspace_roots" = builtins.listToAttrs (
+            map (path: lib.nameValuePair ("**/" + path) "deny") workspaceDenyPaths
+          );
+        };
       network.enabled = true;
     };
     mcpServers = codexMcpServers;

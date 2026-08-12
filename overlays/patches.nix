@@ -6,17 +6,17 @@
       swift-format = prev.runCommand "swift-format-dummy" { } "mkdir -p $out/bin";
     };
 
-  # tmux-pin = _final: prev: {
-  #   tmux = prev.tmux.overrideAttrs (_: {
-  #     version = "3.7a";
-  #     src = prev.fetchFromGitHub {
-  #       owner = "tmux";
-  #       repo = "tmux";
-  #       tag = "3.7a";
-  #       hash = "sha256-60lcDSOkIvTjqxAROwraPsHcBdv0MvST2ev+sYJDgo8=";
-  #     };
-  #   });
-  # };
+  tmux-pin = _final: prev: {
+    tmux = prev.tmux.overrideAttrs (_: {
+      version = "3.6b";
+      src = prev.fetchFromGitHub {
+        owner = "tmux";
+        repo = "tmux";
+        tag = "3.6b";
+        hash = "sha256-iW4K/OxSVpxVkyI5Dy6lzwVf/8nXyjcHtL76Ezmxavc=";
+      };
+    });
+  };
 
   # Override upstream packages using our local pkgs/* definitions
   unstable-pkgs-override = _final: _prev: {

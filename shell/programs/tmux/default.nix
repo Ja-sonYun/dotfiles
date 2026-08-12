@@ -32,9 +32,9 @@
       focus-events = "on";
       pane-border-style = "'bg=default fg=color231'";
       pane-active-border-style = "'bg=default fg=color231'";
-      copy-mode-line-numbers = "hybrid";
-      copy-mode-line-number-style = "'fg=color244,bg=default'";
-      copy-mode-current-line-number-style = "'fg=green,bg=default'";
+      # copy-mode-line-numbers = "hybrid";
+      # copy-mode-line-number-style = "'fg=color244,bg=default'";
+      # copy-mode-current-line-number-style = "'fg=green,bg=default'";
       status-keys = "vi";
       status-interval = "10";
       status-left-length = "50";

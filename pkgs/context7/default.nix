@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "context7-mcp";
   packageManager = "npm";
   packageName = "@upstash/context7-mcp";
-  packageVersion = "4.0.1";
+  packageVersion = "4.0.2";
   name = "context7-mcp";
   exposedBinaries = [
     "context7-mcp"

@@ -1,11 +1,11 @@
 {
-  agenix-secrets,
+  lib,
   pkgs,
   userhome,
   ...
 }:
 {
-  imports = [ "${agenix-secrets}/modules/taskwarrior" ];
+  home.packages = [ pkgs.taskwarrior-tui ];
 
   programs.taskwarrior = {
     enable = true;
@@ -29,7 +29,23 @@
         };
       };
     };
-
-    ai.enable = true;
   };
+
+  programs.tmux-menu.menus.menu.items = lib.mkOrder 300 [
+    {
+      menu = {
+        name = "taskwarrior";
+        shortcut = "t";
+        command = "cd ~/ && taskwarrior-tui";
+        session = true;
+        sessionName = "taskwarrior-tui";
+        keyTable = "popup-locked-root";
+        environment.CTRL_C_AS_CLOSE = "1";
+        position = {
+          w = "60%";
+          h = "70%";
+        };
+      };
+    }
+  ];
 }
