@@ -16,6 +16,59 @@ let
       str
     ];
 
+  skillSourceType = lib.types.submodule {
+    options = {
+      source = lib.mkOption { type = lib.types.pathInStore; };
+      skills = lib.mkOption { type = lib.types.nonEmptyListOf lib.types.str; };
+    };
+  };
+
+  skillSourceInstallCommands = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (sourceName: source: ''
+      work_dir="$(${pkgs.coreutils}/bin/mktemp -d "$TMPDIR/skills.XXXXXX")"
+      (
+        cd "$work_dir"
+        ${pkgs.skills}/bin/skills add ${lib.escapeShellArg (toString source.source)} \
+          --skill ${lib.escapeShellArgs source.skills} \
+          --agent universal --copy --yes
+      )
+
+      for name in ${lib.escapeShellArgs source.skills}; do
+        skill_dir="$work_dir/.agents/skills/$name"
+        if [ ! -f "$skill_dir/SKILL.md" ]; then
+          printf 'External skill source %s did not install skill %s\n' \
+            ${lib.escapeShellArg sourceName} "$name" >&2
+          exit 1
+        fi
+        if [ -e "$out/$name" ]; then
+          echo "Duplicate external skill name: $name" >&2
+          exit 1
+        fi
+        ${pkgs.coreutils}/bin/cp -R "$skill_dir" "$out/$name"
+      done
+    '') cfg.skillSources
+  );
+
+  externalSkillNames = lib.concatMap (source: source.skills) (builtins.attrValues cfg.skillSources);
+
+  externalSkillsSrc = pkgs.runCommandLocal "ai-agent-external-skills" { } ''
+    set -euo pipefail
+
+    export DISABLE_TELEMETRY=1
+    export HOME="$TMPDIR/home"
+    mkdir -p "$HOME" "$out"
+
+    ${skillSourceInstallCommands}
+  '';
+
+  externalSkills = lib.genAttrs externalSkillNames (name: externalSkillsSrc + "/${name}");
+
+  duplicateSkillNames = lib.intersectLists (builtins.attrNames cfg.skills) (
+    builtins.attrNames externalSkills
+  );
+
+  skills = cfg.skills // externalSkills;
+
   mcpServerType = lib.types.submodule {
     freeformType = jsonFormat.type;
     options = {
@@ -228,6 +281,11 @@ in
       default = { };
     };
 
+    skillSources = lib.mkOption {
+      type = lib.types.attrsOf skillSourceType;
+      default = { };
+    };
+
     agentsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
@@ -247,7 +305,13 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
-        assertions = lib.concatLists (
+        assertions = [
+          {
+            assertion = duplicateSkillNames == [ ];
+            message = "programs.ai-agents has duplicate skill names: ${lib.concatStringsSep ", " duplicateSkillNames}.";
+          }
+        ]
+        ++ lib.concatLists (
           lib.mapAttrsToList (name: server: [
             {
               assertion = (server.command != null) != (server.url != null);
@@ -274,7 +338,8 @@ in
       (lib.mkIf config.programs.codex.enable {
         programs.codex = lib.mkMerge [
           {
-            inherit (cfg) context skills;
+            inherit (cfg) context;
+            inherit skills;
             claudeAgentsDir = cfg.agentsDir;
             settings = {
               hooks = codexHooks;
@@ -295,7 +360,7 @@ in
       (lib.mkIf config.programs.claude-code.enable {
         programs.claude-code = lib.mkMerge [
           {
-            inherit (cfg) skills;
+            inherit skills;
             mcpServers = claudeMcpServers;
             desktopConfig.mcpServers = claudeMcpServers;
             settings = {
@@ -318,7 +383,8 @@ in
       (lib.mkIf config.programs.pi.enable {
         programs.pi = lib.mkMerge [
           {
-            inherit (cfg) context skills;
+            inherit (cfg) context;
+            inherit skills;
             hooks = piHooks;
             mcp.servers = piMcpServers;
           }

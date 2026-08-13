@@ -94,10 +94,11 @@ let
   claudeMcpServers = builtins.filter (
     name: !(lib.hasPrefix "mcp_" name) && !(lib.hasInfix ":" name) && !(lib.hasSuffix "_*" name)
   ) (builtins.attrNames data.mcp);
+  claudeMcpPluginName = "hm";
 
   claudeReadonlyToolRules = lib.concatLists (
     lib.mapAttrsToList (
-      server: tools: map (tool: "mcp__plugin_claude-code-home-manager_${server}__${tool}") tools
+      server: tools: map (tool: "mcp__plugin_${claudeMcpPluginName}_${server}__${tool}") tools
     ) (data.mcp_readonly_tools or { })
   );
 
@@ -164,7 +165,7 @@ in
       ++ lib.optional (data.web_fetch == "allow") "WebFetch(domain:*)"
       ++ map (key: if key == "*" then "Skill" else "Skill(${key})") (keysWith data.skill "allow")
       ++ claudeBashRules "allow"
-      ++ map (server: "mcp__plugin_claude-code-home-manager_${server}__*") claudeMcpServers
+      ++ map (server: "mcp__plugin_${claudeMcpPluginName}_${server}__*") claudeMcpServers
       ++ claudeReadonlyToolRules;
     ask = claudeBashRules "ask";
     deny =

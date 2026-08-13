@@ -4,20 +4,6 @@
   ...
 }:
 let
-  claudeCode = pkgs.claude-code.override {
-    extraPath = [
-      pkgs.aws-ro
-      pkgs.pyright
-      pkgs.ruff
-      pkgs.rustfmt
-      pkgs.shfmt
-      pkgs.prettier
-      pkgs.terraform
-      pkgs.rust-analyzer
-      pkgs.clang-tools
-    ];
-  };
-
   claudeLmp = pkgs.writeShellScriptBin "claude-lmp" ''
     set -euo pipefail
 
@@ -38,13 +24,23 @@ let
     export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="LMP large text"
     export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY="1"
 
-    exec ${claudeCode}/bin/claude --model "syn:large:text" "$@"
+    exec ${config.programs.claude-code.finalPackage}/bin/claude --model "syn:large:text" "$@"
   '';
 in
 {
   programs.claude-code = {
     enable = true;
-    package = claudeCode;
+    extraPath = [
+      pkgs.aws-ro
+      pkgs.pyright
+      pkgs.ruff
+      pkgs.rustfmt
+      pkgs.shfmt
+      pkgs.prettier
+      pkgs.terraform
+      pkgs.rust-analyzer
+      pkgs.clang-tools
+    ];
     chromeNativeHost.enable = true;
 
     settings = {

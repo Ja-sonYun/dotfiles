@@ -4,21 +4,9 @@
   ...
 }:
 let
-  nodeOnly = pkgs.runCommand "nodejs-24-node-only" { } ''
-    mkdir -p $out/bin
-    ln -s ${pkgs.nodejs_24}/bin/node $out/bin/node
-  '';
-
-  codexPackage = pkgs.codex.override {
-    extraPath = [
-      pkgs.aws-ro
-      nodeOnly
-    ];
-  };
-
   codex = pkgs.writeShellScriptBin "codex" ''
     export CODEX_GITHUB_PERSONAL_ACCESS_TOKEN="$(${pkgs.gh}/bin/gh auth token --hostname github.com)"
-    exec ${codexPackage}/bin/codex "$@"
+    exec ${pkgs.codex}/bin/codex "$@"
   '';
 
   codexLmp = pkgs.writeShellScriptBin "codex-lmp" ''
@@ -47,6 +35,7 @@ in
   programs.codex = {
     enable = true;
     package = codex;
+    extraPath = [ pkgs.aws-ro ];
 
     settings = {
       model = "gpt-5.6-sol";

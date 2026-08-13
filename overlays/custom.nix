@@ -47,7 +47,6 @@
     firecrawl-mcp = final.callPackage ../pkgs/firecrawl-mcp { };
     mcp-remote = final.callPackage ../pkgs/mcp-remote { };
     n8n-mcp = final.callPackage ../pkgs/n8n-mcp { };
-    ponytail = final.callPackage ../pkgs/ponytail { };
 
     # Pypi
     freecad-mcp = final.callPackage ../pkgs/freecad-mcp { };

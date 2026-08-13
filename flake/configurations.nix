@@ -31,9 +31,10 @@ let
         ;
       hasTag = hostConfig.hasTag hostname;
       infraSrc = server;
+      homeManagerSrc = home-manager.outPath;
+      agenix-secrets = agenix-secrets.outPath;
       inherit
         agenix
-        agenix-secrets
         nixpkgs-stable
         nixlib
         ;
@@ -45,6 +46,7 @@ let
       inherit (hosts.${hostname}) system;
       overlays =
         builtins.attrValues (import ../overlays { inherit inputs hostname; })
+        ++ [ agenix-secrets.overlays.default ]
         ++ builtins.attrValues nixlib.overlays;
       config = {
         allowUnfree = true;
@@ -56,11 +58,14 @@ let
     hostname:
     [
       agenix.homeManagerModules.default
-      (import "${agenix-secrets}/homemanager.nix")
+      agenix-secrets.homeManagerModules.secrets
       ../modules/shell
       ../modules/programs
       ../shell
       ../misc/fonts
+    ]
+    ++ nixpkgs.lib.optionals (hostConfig.hasTag hostname "ai") [
+      agenix-secrets.homeManagerModules.ai-agents
     ]
     ++ (
       if hosts.${hostname}.system == "aarch64-darwin" then
@@ -97,7 +102,7 @@ let
       pkgs = mkPkgsProvider hostname;
       modules = [
         agenix.darwinModules.default
-        (import "${agenix-secrets}/systemmanager.nix")
+        agenix-secrets.darwinModules.secrets
 
         ../hosts/aarch64-darwin/shell.nix
 

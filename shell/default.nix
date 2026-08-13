@@ -1,7 +1,6 @@
 {
   hasTag,
   lib,
-  agenix-secrets,
   ...
 }:
 {
@@ -28,8 +27,6 @@
     ./programs/codex
     ./programs/pi
     ./programs/open-code-review
-
-    "${agenix-secrets}/modules/ai-agents"
   ];
 
   home.file.profile = {

@@ -1,5 +1,6 @@
 {
   config,
+  homeManagerSrc,
   lib,
   pkgs,
   ...
@@ -7,6 +8,11 @@
 let
   cfg = config.programs.codex;
   tomlFormat = pkgs.formats.toml { };
+  codexLib = import "${homeManagerSrc}/modules/programs/codex/lib.nix" { inherit lib pkgs; };
+  nodeOnly = pkgs.runCommand "nodejs-24-node-only" { } ''
+    mkdir -p $out/bin
+    ln -s ${pkgs.nodejs_24}/bin/node $out/bin/node
+  '';
 
   sourceType =
     with lib.types;
@@ -67,6 +73,23 @@ let
     }) claudeAgentNames
   );
 
+  pluginsCacheDir = ".codex/plugins/cache";
+  pluginEntries = lib.concatLists (
+    lib.mapAttrsToList (
+      marketplaceName: plugins:
+      let
+        helpers = codexLib.mkHelpers {
+          configDir = ".codex";
+          homeRelativePluginsCacheDir = pluginsCacheDir;
+          pluginsMarketplaceName = marketplaceName;
+          inherit pluginsCacheDir tomlFormat;
+          skillsDir = ".codex/skills";
+        };
+      in
+      map (plugin: { inherit helpers plugin; }) plugins
+    ) cfg.plugins
+  );
+
   codexConfigFile = "${config.home.homeDirectory}/.codex/config.toml";
 
   managedSettingKeys = [
@@ -80,19 +103,35 @@ let
 
   selectSettings = keys: lib.filterAttrs (name: _: builtins.elem name keys);
 
-  permissions = cfg.settings.permissions or { };
+  pluginSettings =
+    lib.optionalAttrs (cfg.plugins != { } || cfg.marketplaces != { }) {
+      features.plugins = true;
+    }
+    // lib.optionalAttrs (cfg.plugins != { }) {
+      plugins = lib.listToAttrs (
+        map (entry: entry.helpers.mkPluginConfigEntry entry.plugin) pluginEntries
+      );
+    }
+    // lib.optionalAttrs (cfg.marketplaces != { }) {
+      marketplaces = lib.mapAttrs (_: source: {
+        source_type = "local";
+        source = toString source;
+      }) cfg.marketplaces;
+    };
+  settings = lib.recursiveUpdate cfg.settings pluginSettings;
+  permissions = settings.permissions or { };
   managedSettings =
-    selectSettings managedSettingKeys cfg.settings
+    selectSettings managedSettingKeys settings
     // lib.optionalAttrs (permissions ? managed) {
       permissions.managed = permissions.managed;
     };
   flagSettings =
-    removeAttrs cfg.settings (managedSettingKeys ++ [ "permissions" ])
+    removeAttrs settings (managedSettingKeys ++ [ "permissions" ])
     // lib.optionalAttrs (removeAttrs permissions [ "managed" ] != { }) {
       permissions = removeAttrs permissions [ "managed" ];
     };
 
-  settingsSecrets = pkgs.tool.secretSettings cfg.settings;
+  settingsSecrets = pkgs.tool.secretSettings settings;
   flagSecrets = pkgs.tool.secretSettings flagSettings;
   managedFragment = tomlFormat.generate "codex-managed-settings.toml" managedSettings;
 
@@ -120,6 +159,7 @@ let
   wrappedArgs = lib.escapeShellArgs flagArgs;
 
   wrappedPackage = pkgs.writeShellScriptBin "codex" ''
+    export PATH=${lib.makeBinPath ([ nodeOnly ] ++ cfg.extraPath)}:$PATH
     exec ${cfg.package}/bin/codex \
       ${wrappedArgs} \
       --config "projects.\"$PWD\".trust_level=\"trusted\"" \
@@ -136,6 +176,12 @@ in
       type = lib.types.package;
       default = pkgs.codex;
       description = "Codex package to install.";
+    };
+
+    extraPath = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [ ];
+      description = "Packages added to Codex's PATH.";
     };
 
     settings = lib.mkOption {
@@ -162,6 +208,18 @@ in
       description = "Skill directories linked into ~/.codex/skills.";
     };
 
+    marketplaces = lib.mkOption {
+      type = lib.types.attrsOf sourceType;
+      default = { };
+      description = "Official marketplace roots registered with Codex.";
+    };
+
+    plugins = lib.mkOption {
+      type = with lib.types; attrsOf (listOf (either package path));
+      default = { };
+      description = "Plugins installed by marketplace name.";
+    };
+
     rules = lib.mkOption {
       type = lib.types.attrsOf lib.types.lines;
       default = { };
@@ -181,6 +239,10 @@ in
         assertion = flagSecrets.secretPaths == [ ];
         message = "programs.codex.settings only supports _secret in settings merged into ~/.codex/config.toml.";
       }
+      {
+        assertion = lib.all (name: builtins.hasAttr name cfg.marketplaces) (builtins.attrNames cfg.plugins);
+        message = "programs.codex.plugins marketplace names must exist in programs.codex.marketplaces.";
+      }
     ];
 
     home.file =
@@ -190,10 +252,28 @@ in
       // lib.mapAttrs' (
         name: source: lib.nameValuePair ".codex/skills/${name}" { inherit source; }
       ) cfg.skills
+      // lib.listToAttrs (map (entry: entry.helpers.mkPluginFileEntry entry.plugin) pluginEntries)
       // claudeAgentHomeFiles
       // lib.mapAttrs' (
         name: text: lib.nameValuePair ".codex/rules/${name}.rules" { inherit text; }
       ) cfg.rules;
+
+    home.activation.cleanCodexPluginCache = lib.mkIf (pluginEntries != [ ]) (
+      lib.hm.dag.entryBefore [ "linkGeneration" ] (
+        lib.concatMapStringsSep "\n" (
+          entry:
+          let
+            cachePath = lib.escapeShellArg (entry.helpers.mkPluginCachePath entry.plugin);
+          in
+          ''
+            path="$HOME"/${cachePath}
+            if [ -d "$path" ] && [ ! -L "$path" ]; then
+              rm -rf "$path"
+            fi
+          ''
+        ) pluginEntries
+      )
+    );
 
     home.activation.codexConfigMerge = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       run mkdir -p "${config.home.homeDirectory}/.codex"

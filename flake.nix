@@ -52,7 +52,8 @@
     };
     agenix-secrets = {
       url = ./shell/secrets;
-      flake = false;
+      inputs.mkutils.follows = "mkutils";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     git-hooks = {
       url = "github:cachix/git-hooks.nix";
