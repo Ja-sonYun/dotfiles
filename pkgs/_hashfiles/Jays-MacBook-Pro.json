@@ -12,20 +12,20 @@
     "hash": "sha256-c9wZgJVxiUxDgRzQTSWiqxSNkCDj6dM/rJwQx7PtRj4="
   },
   "open-code-review": {
-    "version": "1.9.2",
-    "hash": "sha256-tlzsokJB6NfU2yVWGwnjs3O+p67uvk1Vnma0UADHYA0="
+    "version": "1.9.3",
+    "hash": "sha256-Orl2/IJ5PlFulfto25B4s206j11uVWau1Mb7lTWYgTo="
   },
   "pi": {
-    "version": "0.84.1",
-    "hash": "sha256-ZcQNrTqcX31795o+F23raLeY+wqLxFFtj2ztyTFrjwU="
+    "version": "0.84.2",
+    "hash": "sha256-37xrWmXT3kZZhZI9dRhduGq/bedcYUMDfTsMx1DoKf8="
   },
   "pi-permission-system": {
     "version": "0.8.0",
     "hash": "sha256-o5cRLDeXQGXng5nekFQeVF+gY1B45V9urD8ERbkb568="
   },
   "pi-mcp-adapter": {
-    "version": "2.23.0",
-    "hash": "sha256-NgL0YkZNoU2t9fjmCeFo6E9MFVs45E7gLHfCRuyjj2I="
+    "version": "2.26.0",
+    "hash": "sha256-eVbQPJXkITTrWaTkGXIeAMVDFfLgAEW3LLPqkQ7GQxE="
   },
   "freecad-mcp": {
     "version": "0.1.21",
@@ -56,7 +56,7 @@
     "hash": "sha256-yDQkrLCZx5uUsogHMusl/X6+dSlpqqVMc2RXZ0OLjJg="
   },
   "claude-code": {
-    "version": "2.1.229",
-    "hash": "sha256-ORDP/CKdB1qIquSH1ZR41qNf7XqG/p7sVBsw13kC/pg="
+    "version": "2.1.233",
+    "hash": "sha256-GNX1+B/ipgRCcdqk1F0eBIxud1aw7GKwN+zrW2Cm1hM="
   }
 }

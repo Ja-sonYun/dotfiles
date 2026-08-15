@@ -1,6 +1,6 @@
 { pkgs, lib, ... }:
 {
-  home.activation.setZshAsDefaultShell = lib.mkIf pkgs.stdenv.isLinux (
+  home.activation.setZshAsDefaultShell = lib.mkIf pkgs.stdenv.hostPlatform.isLinux (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
       ZSH_PATH="$HOME/.nix-profile/bin/zsh"

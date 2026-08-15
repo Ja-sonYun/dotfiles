@@ -5,7 +5,7 @@
     enableZshIntegration = true;
 
     # Use brew to install ghostty on macOS
-    package = if pkgs.stdenv.isDarwin then null else pkgs.ghostty;
+    package = if pkgs.stdenv.hostPlatform.isDarwin then null else pkgs.ghostty;
 
     settings = {
       # Terminal identity

@@ -49,7 +49,7 @@
 
   nix.linux-builder = {
     enable = true;
-    package = nixpkgs-stable.legacyPackages.${pkgs.system}.darwin.linux-builder;
+    package = nixpkgs-stable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.darwin.linux-builder;
     systems = [ "aarch64-linux" ];
     config = {
       virtualisation = {

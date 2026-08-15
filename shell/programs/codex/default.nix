@@ -35,7 +35,10 @@ in
   programs.codex = {
     enable = true;
     package = codex;
-    extraPath = [ pkgs.aws-ro ];
+    extraPath = [
+      pkgs.aws-ro
+      pkgs.uv
+    ];
 
     settings = {
       model = "gpt-5.6-sol";

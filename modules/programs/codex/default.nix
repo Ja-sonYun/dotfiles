@@ -96,8 +96,10 @@ let
     "default_permissions"
     "features"
     "hooks"
+    "marketplaces"
     "mcp_servers"
     "model_providers"
+    "plugins"
     "tui"
   ];
 
@@ -252,35 +254,19 @@ in
       // lib.mapAttrs' (
         name: source: lib.nameValuePair ".codex/skills/${name}" { inherit source; }
       ) cfg.skills
-      // lib.listToAttrs (map (entry: entry.helpers.mkPluginFileEntry entry.plugin) pluginEntries)
       // claudeAgentHomeFiles
       // lib.mapAttrs' (
         name: text: lib.nameValuePair ".codex/rules/${name}.rules" { inherit text; }
       ) cfg.rules;
-
-    home.activation.cleanCodexPluginCache = lib.mkIf (pluginEntries != [ ]) (
-      lib.hm.dag.entryBefore [ "linkGeneration" ] (
-        lib.concatMapStringsSep "\n" (
-          entry:
-          let
-            cachePath = lib.escapeShellArg (entry.helpers.mkPluginCachePath entry.plugin);
-          in
-          ''
-            path="$HOME"/${cachePath}
-            if [ -d "$path" ] && [ ! -L "$path" ]; then
-              rm -rf "$path"
-            fi
-          ''
-        ) pluginEntries
-      )
-    );
 
     home.activation.codexConfigMerge = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       run mkdir -p "${config.home.homeDirectory}/.codex"
       run ${configMergePython}/bin/python3 ${./merge-config-toml.py} \
         "${codexConfigFile}" ${managedFragment} \
         "${config.home.homeDirectory}/.codex/.home-manager-mcp-state.json" \
-        "${config.home.homeDirectory}/.codex/.home-manager-model-provider-state.json"
+        "${config.home.homeDirectory}/.codex/.home-manager-model-provider-state.json" \
+        "${config.home.homeDirectory}/.codex/.home-manager-marketplace-state.json" \
+        "${config.home.homeDirectory}/.codex/.home-manager-plugin-state.json"
     '';
   };
 }

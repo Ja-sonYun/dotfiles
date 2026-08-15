@@ -32,10 +32,10 @@ let
         [
           gnutar
         ]
-        ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+        ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
           autoPatchelfHook
         ];
-      buildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [
+      buildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
         pkgs.stdenv.cc.cc.lib
       ];
       installPhase = ''

@@ -152,9 +152,14 @@ def _merge_permission(document: Any, fragment: Any) -> None:
 
 
 def _main() -> None:
-    target, fragment_path, mcp_state_path, provider_state_path = map(
-        Path, sys.argv[1:]
-    )
+    (
+        target,
+        fragment_path,
+        mcp_state_path,
+        provider_state_path,
+        marketplace_state_path,
+        plugin_state_path,
+    ) = map(Path, sys.argv[1:])
     target_text = _read(target)
     document = (
         tomlkit.parse(target_text) if target_text.strip() else tomlkit.document()
@@ -179,6 +184,18 @@ def _main() -> None:
         "model_providers",
         _read_state(provider_state_path),
     )
+    marketplace_names = _merge_named_table(
+        document,
+        fragment,
+        "marketplaces",
+        _read_state(marketplace_state_path),
+    )
+    plugin_names = _merge_named_table(
+        document,
+        fragment,
+        "plugins",
+        _read_state(plugin_state_path),
+    )
     _replace_key(document, fragment, "features")
     _replace_key(document, fragment, "hooks")
     _replace_key(document, fragment, "tui")
@@ -188,6 +205,8 @@ def _main() -> None:
     _write_atomic(target, tomlkit.dumps(document))
     _write_atomic(mcp_state_path, json.dumps(mcp_names))
     _write_atomic(provider_state_path, json.dumps(provider_names))
+    _write_atomic(marketplace_state_path, json.dumps(marketplace_names))
+    _write_atomic(plugin_state_path, json.dumps(plugin_names))
 
 
 if __name__ == "__main__":

@@ -32,6 +32,7 @@ in
     enable = true;
     extraPath = [
       pkgs.aws-ro
+      pkgs.uv
       pkgs.pyright
       pkgs.ruff
       pkgs.rustfmt

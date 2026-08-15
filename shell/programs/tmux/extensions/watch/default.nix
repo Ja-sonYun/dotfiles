@@ -7,7 +7,7 @@ let
   tmuxRoot = ../..;
   scripts = "${tmuxRoot}/extensions/watch/scripts";
 in
-lib.mkIf pkgs.stdenv.isDarwin {
+lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
   programs.tmux.bindings = {
     l.command = "run-shell -b ${scripts}/notify-watch.sh";
     "C-l".command = "run-shell -b ${scripts}/notify-cancel.sh";

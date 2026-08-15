@@ -58,7 +58,7 @@ in
   };
 
   config = lib.mkMerge [
-    (lib.mkIf (cfg.chromeNativeHost.enable && pkgs.stdenv.isDarwin) (
+    (lib.mkIf (cfg.chromeNativeHost.enable && pkgs.stdenv.hostPlatform.isDarwin) (
       let
         launcher = pkgs.writeShellScript "claude-chrome-native-host" ''
           exec ${cfg.package}/bin/claude --chrome-native-host "$@"

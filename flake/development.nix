@@ -1,8 +1,11 @@
 { inputs }:
 let
   inherit (inputs)
+    agenix-secrets
     git-hooks
+    home-manager
     mkutils
+    nixlib
     nixpkgs
     ;
   inherit (nixpkgs) lib;
@@ -30,6 +33,17 @@ let
       };
     in
     {
+      ai-tools = import ../tests/modules/programs/ai-agents {
+        inherit
+          agenix-secrets
+          home-manager
+          nixlib
+          pkgs
+          ;
+      };
+      radare2 = import ../tests/modules/programs/radare2 {
+        inherit home-manager pkgs;
+      };
       pre-commit-check = git-hooks.lib.${system}.run {
         src = ../.;
         excludes = excludeRegexes;

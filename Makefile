@@ -107,10 +107,11 @@ endif
 ##@ Maintenance
 
 fmt: ## Format nix files
-	nixpkgs-fmt .
+	pre-commit run nixfmt --all-files
 
-check: ## Run pre-commit checks
+check: ## Run repository checks
 	pre-commit run --all-files
+	nix flake check $(NIX_TRACE_ARGS)
 
 clean: ## Clean nix store
 	nix run nixpkgs#nh clean

@@ -111,7 +111,7 @@ let
         git
         nodejs_20
       ]
-      ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+      ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
         pkgs.gigalixir
         pkgs.inotify-tools
         pkgs.libnotify

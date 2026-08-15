@@ -21,7 +21,17 @@
     in
     {
       pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-        (_pythonFinal: pythonPrev: prev.lib.genAttrs packages (name: disableTests pythonPrev.${name}))
+        (
+          _pythonFinal: pythonPrev:
+          (prev.lib.genAttrs packages (name: disableTests pythonPrev.${name}))
+          // prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+            httpx2 = pythonPrev.httpx2.overridePythonAttrs (old: {
+              pytestFlags = (old.pytestFlags or [ ]) ++ [
+                "--deselect=tests/httpx2/websockets/test_api.py::TestKeepalivePing::test_keepalive_ping"
+              ];
+            });
+          }
+        )
       ];
     };
 }

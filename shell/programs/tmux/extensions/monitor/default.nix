@@ -7,7 +7,7 @@ let
   tmuxRoot = ../..;
   scripts = "${tmuxRoot}/extensions/monitor/scripts";
 in
-lib.mkIf pkgs.stdenv.isDarwin {
+lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
   programs.tmux-menu.menus = {
     menu.items = lib.mkOrder 500 [
       { separator = true; }
