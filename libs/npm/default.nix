@@ -2,6 +2,7 @@
 let
   targetNodeVersion = {
     "22" = "22.15.1";
+    "22.23.2" = "22.23.2";
   };
   targetSystem =
     {
@@ -15,6 +16,10 @@ let
       "sha256-0mibhrF+G1Hnb4Af/i2azKQiXnbtpLhDw9hDjUp81v4=";
     "https://nodejs.org/dist/v22.15.1/node-v22.15.1-linux-x64.tar.gz" =
       "sha256-9LjuxoNwissaKnPHGCui3lRmpd1fcFk0oIMJA98oghw=";
+    "https://nodejs.org/dist/v22.23.2/node-v22.23.2-darwin-arm64.tar.gz" =
+      "sha256-YRMPOUwWMNIR3VCuzENT03lIDzbTrJE82F27oa7VhcY=";
+    "https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.gz" =
+      "sha256-spSlVuY51kM4gjkg5YZsIcAnQXQtLhUp7hoiXB7JJSo=";
   };
   mkNpmUrl =
     version: targetSystem:

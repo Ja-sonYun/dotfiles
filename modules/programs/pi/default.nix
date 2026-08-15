@@ -18,65 +18,24 @@ let
 
   agentDir = ".pi/agent";
 
-  hookEntryType = lib.types.submodule {
-    options = {
-      type = lib.mkOption {
-        type = lib.types.str;
-        default = "command";
-      };
-      command = lib.mkOption { type = lib.types.str; };
-      timeout = lib.mkOption {
-        type = lib.types.nullOr lib.types.int;
-        default = null;
-      };
-    };
-  };
-
-  hookBlockType = lib.types.submodule {
-    options = {
-      matcher = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-      };
-      hooks = lib.mkOption { type = lib.types.listOf hookEntryType; };
-    };
-  };
-
-  bundledExtensions =
-    lib.optional (cfg.mcp.servers != { }) "${cfg.mcp.package}/extension/index.ts"
-    ++ lib.optional cfg.permissions.enable "${cfg.permissions.package}/extension/index.ts"
-    ++ lib.optional (cfg.hooks != { }) "${pkgs.pi-extensions.hooks}/index.ts";
-
-  finalSettings =
-    cfg.settings
-    // lib.optionalAttrs (bundledExtensions != [ ]) {
-      extensions = (cfg.settings.extensions or [ ]) ++ bundledExtensions;
-    };
-
-  # Point at an immutable store copy: extension can neither create (EACCES) nor overwrite it.
-  permissionConfigFile = jsonFormat.generate "pi-permission-system-config.json" {
-    debug = false;
-    yoloMode = false;
-  };
-  permissionConfigFlag = lib.optionalString cfg.permissions.enable "--set-default PI_PERMISSION_SYSTEM_CONFIG_PATH ${permissionConfigFile}";
-
-  # Secrets are read at launch, not baked, so $(cat) must run in the wrapper.
+  # Read secrets at launch to avoid baking them into the store.
   wrappedPackage =
-    if cfg.envFiles == { } && !cfg.permissions.enable then
+    if cfg.envFiles == { } then
       cfg.package
     else
       pkgs.runCommand "${cfg.package.name}-wrapped" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         mkdir -p $out/bin
         makeWrapper ${cfg.package}/bin/pi $out/bin/pi \
           ${lib.concatStringsSep " \\\n      " (
-            lib.optional cfg.permissions.enable permissionConfigFlag
-            ++ lib.mapAttrsToList (
+            lib.mapAttrsToList (
               name: file: "--run ${lib.escapeShellArg ''export ${name}="$(cat ${file} 2>/dev/null)"''}"
             ) cfg.envFiles
           )}
       '';
 in
 {
+  imports = [ ./extensions/providers.nix ];
+
   options.programs.pi = {
     enable = lib.mkEnableOption "Pi coding agent";
 
@@ -128,103 +87,25 @@ in
       default = { };
       description = "Extension files/directories linked into ~/.pi/agent/extensions.";
     };
-
-    hooks = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.listOf hookBlockType);
-      default = { };
-      description = ''
-        Claude Code-style hooks: event -> [ { matcher?; hooks = [ { command; ... } ]; } ].
-        Written to ~/.pi/agent/hooks.json and dispatched by the pi hooks extension.
-      '';
-    };
-
-    mcp = {
-      package = lib.mkOption {
-        type = lib.types.package;
-        default = pkgs.pi-extensions.mcp-adapter;
-        description = "pi-mcp-adapter extension package.";
-      };
-
-      settings = lib.mkOption {
-        inherit (jsonFormat) type;
-        default = { };
-        example = {
-          toolPrefix = "server";
-          idleTimeout = 10;
-          directTools = false;
-        };
-        description = "The `settings` block of ~/.pi/agent/mcp.json.";
-      };
-
-      servers = lib.mkOption {
-        inherit (jsonFormat) type;
-        default = { };
-        description = "MCP servers written to ~/.pi/agent/mcp.json.";
-      };
-    };
-
-    permissions = {
-      enable = lib.mkEnableOption "the pi-permission-system extension";
-
-      package = lib.mkOption {
-        type = lib.types.package;
-        default = pkgs.pi-extensions.permission-system;
-        description = "pi-permission-system extension package.";
-      };
-
-      config = lib.mkOption {
-        inherit (jsonFormat) type;
-        default = { };
-        example = {
-          defaultPolicy = {
-            tools = "ask";
-            bash = "ask";
-            mcp = "ask";
-            skills = "ask";
-          };
-          bash."git status" = "allow";
-        };
-        description = "Permission policy written to the extension's pi-permissions.jsonc.";
-      };
-    };
   };
 
-  config = lib.mkIf cfg.enable (
-    lib.mkMerge [
-      {
-        home.packages = [ wrappedPackage ];
+  config = lib.mkIf cfg.enable {
+    home.packages = [ wrappedPackage ];
 
-        home.file = {
-          "${agentDir}/settings.json".source = jsonFormat.generate "pi-settings.json" finalSettings;
-        }
-        // lib.optionalAttrs (cfg.context != null) {
-          "${agentDir}/AGENTS.md".text = cfg.context;
-        }
-        // lib.optionalAttrs (cfg.systemPrompt != null) {
-          "${agentDir}/SYSTEM.md".text = cfg.systemPrompt;
-        }
-        // lib.optionalAttrs (cfg.hooks != { }) {
-          "${agentDir}/hooks.json".source = jsonFormat.generate "pi-hooks.json" cfg.hooks;
-        }
-        // lib.mapAttrs' (
-          name: source: lib.nameValuePair "${agentDir}/skills/${name}" { inherit source; }
-        ) cfg.skills
-        // lib.mapAttrs' (
-          name: source: lib.nameValuePair "${agentDir}/extensions/${name}" { inherit source; }
-        ) cfg.extensions;
-      }
-
-      (lib.mkIf (cfg.mcp.servers != { }) {
-        home.file."${agentDir}/mcp.json".source = jsonFormat.generate "pi-mcp.json" {
-          settings = cfg.mcp.settings;
-          mcpServers = cfg.mcp.servers;
-        };
-      })
-
-      (lib.mkIf cfg.permissions.enable {
-        home.file."${agentDir}/pi-permissions.jsonc".source =
-          jsonFormat.generate "pi-permissions.jsonc" cfg.permissions.config;
-      })
-    ]
-  );
+    home.file = {
+      "${agentDir}/settings.json".source = jsonFormat.generate "pi-settings.json" cfg.settings;
+    }
+    // lib.optionalAttrs (cfg.context != null) {
+      "${agentDir}/AGENTS.md".text = cfg.context;
+    }
+    // lib.optionalAttrs (cfg.systemPrompt != null) {
+      "${agentDir}/SYSTEM.md".text = cfg.systemPrompt;
+    }
+    // lib.mapAttrs' (
+      name: source: lib.nameValuePair "${agentDir}/skills/${name}" { inherit source; }
+    ) cfg.skills
+    // lib.mapAttrs' (
+      name: source: lib.nameValuePair "${agentDir}/extensions/${name}" { inherit source; }
+    ) cfg.extensions;
+  };
 }

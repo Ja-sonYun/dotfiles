@@ -1,0 +1,16 @@
+diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
+--- a/dist/modes/interactive/interactive-mode.js
++++ b/dist/modes/interactive/interactive-mode.js
+@@ -797,12 +797,6 @@
+                 this.updateTerminalTitle();
+             }
+         });
+-        // Check tmux keyboard setup asynchronously
+-        this.checkTmuxKeyboardSetup().then((warning) => {
+-            if (warning) {
+-                this.showWarning(warning);
+-            }
+-        });
+         // Show startup warnings
+         const { migratedProviders, modelFallbackMessage, initialMessage, initialImages, initialMessages } = this.options;
+         if (migratedProviders && migratedProviders.length > 0) {

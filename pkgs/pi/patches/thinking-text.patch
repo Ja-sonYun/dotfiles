@@ -1,0 +1,12 @@
+diff --git a/dist/modes/interactive/theme/dark.json b/dist/modes/interactive/theme/dark.json
+--- a/dist/modes/interactive/theme/dark.json
++++ b/dist/modes/interactive/theme/dark.json
+@@ -30,7 +30,7 @@
+ 		"muted": "gray",
+ 		"dim": "dimGray",
+ 		"text": "text",
+-		"thinkingText": "gray",
++		"thinkingText": "#b0b0b0",
+ 
+ 		"selectedBg": "selectedBg",
+ 		"scrollbarThumb": "selectedBg",

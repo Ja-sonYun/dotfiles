@@ -19,14 +19,6 @@
     "version": "0.84.2",
     "hash": "sha256-37xrWmXT3kZZhZI9dRhduGq/bedcYUMDfTsMx1DoKf8="
   },
-  "pi-permission-system": {
-    "version": "0.8.0",
-    "hash": "sha256-o5cRLDeXQGXng5nekFQeVF+gY1B45V9urD8ERbkb568="
-  },
-  "pi-mcp-adapter": {
-    "version": "2.26.0",
-    "hash": "sha256-eVbQPJXkITTrWaTkGXIeAMVDFfLgAEW3LLPqkQ7GQxE="
-  },
   "freecad-mcp": {
     "version": "0.1.21",
     "hash": "sha256-i0/sisyqwR8LMkN6iS51itiTbFS910fQWLSNxKhefb0="

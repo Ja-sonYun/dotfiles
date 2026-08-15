@@ -24,16 +24,21 @@ in
       enabledModels = [ "lmp/**" ];
     };
 
-    extensions = {
-      lmp = pkgs.pi-extensions.lmp;
+    providers.lmp = {
+      name = "LMP";
+      baseUrlEnv = "LLM_DOMAIN";
+      apiKeyEnv = "CAPI_KEY";
+      fallbackModels = [ "gpt-5.4" ];
+      defaults = {
+        contextWindow = 256000;
+        maxTokens = 32000;
+      };
+      imageModelMarkers = [
+        "vision"
+        "image"
+      ];
+      nonReasoningModelMarkers = [ "image" ];
     };
-
-    mcp.settings = {
-      toolPrefix = "server";
-      idleTimeout = 10;
-    };
-
-    permissions.enable = true;
 
     envFiles = {
       CAPI_KEY = config.age.secrets."capi-key".path;

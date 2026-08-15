@@ -145,19 +145,6 @@ let
     )
   ) cfg.mcp.servers;
 
-  piMcpServers = lib.mapAttrs (
-    name: server:
-    mkDefaultValue (
-      lib.hm.mcp.transformMcpServer {
-        inherit server;
-        exclude = [ "type" ];
-        extraTransforms = [
-          (lib.hm.mcp.wrapEnvFilesCommand { inherit pkgs name; })
-        ];
-      }
-    )
-  ) cfg.mcp.servers;
-
   disabledMcpServers = builtins.attrNames (
     lib.filterAttrs (
       _: server: server.enabled == false || (server.disabled or null) == true
@@ -258,14 +245,6 @@ let
     SessionEnd = [ (hookBlock (statusCommand "idle")) ];
   };
 
-  piHooks = claudeHooks // {
-    Stop = [ (hookBlock (stopCommand "Pi")) ];
-    Notification = [
-      (matchedHookBlock "permission_prompt" (statusAndNotification "waiting" "Pi" "permission"))
-      (matchedHookBlock "elicitation_dialog|idle_prompt" (statusAndNotification "waiting" "Pi" "input"))
-    ];
-    TurnStart = [ (hookBlock (statusCommand "running")) ];
-  };
 in
 {
   options.programs.ai-agents = {
@@ -381,17 +360,10 @@ in
       })
 
       (lib.mkIf config.programs.pi.enable {
-        programs.pi = lib.mkMerge [
-          {
-            inherit (cfg) context;
-            inherit skills;
-            hooks = piHooks;
-            mcp.servers = piMcpServers;
-          }
-          (lib.mkIf (permissions != null) {
-            permissions.config = permissions.pi;
-          })
-        ];
+        programs.pi = {
+          inherit (cfg) context;
+          inherit skills;
+        };
       })
     ]
   );

@@ -39,14 +39,6 @@
     "version": "0.1.19",
     "hash": "sha256-Nu1xArWGaqpRluMGMz5poDWMXCwal9mTylmCrlzAb3U="
   },
-  "pi-mcp-adapter": {
-    "version": "2.11.0",
-    "hash": "sha256-f7367MfO9XhWfNo9ED+n27ufGYxJ4BxtI+yCCwN7MkI="
-  },
-  "pi-permission-system": {
-    "version": "0.8.0",
-    "hash": "sha256-VSTYg8dUYpkjHbsTKc559Sqsj+svLrBzVJLmuzGTdjQ="
-  },
   "context7-mcp": {
     "version": "3.2.3",
     "hash": "sha256-hD4cjtUyUQqTEYAhEDSGCUxDmhjApXdml62zI98IXu4="
