@@ -37,6 +37,7 @@ in
     package = codex;
     extraPath = [
       pkgs.aws-ro
+      pkgs.gh-ro
       pkgs.uv
     ];
 
@@ -116,14 +117,6 @@ in
       };
 
       mcp_servers = {
-        claude = {
-          command = "${config.home.profileDirectory}/bin/claude";
-          args = [
-            "mcp"
-            "serve"
-          ];
-          env = { };
-        };
         github.bearer_token_env_var = "CODEX_GITHUB_PERSONAL_ACCESS_TOKEN";
       };
     };

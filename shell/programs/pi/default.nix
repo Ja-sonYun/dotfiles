@@ -5,7 +5,10 @@
 }:
 let
   pi = pkgs.pi.override {
-    extraPath = [ pkgs.aws-ro ];
+    extraPath = [
+      pkgs.aws-ro
+      pkgs.gh-ro
+    ];
   };
 in
 {

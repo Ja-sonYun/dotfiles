@@ -30,6 +30,7 @@
     # Local custom packages
     git-extend = final.callPackage ../pkgs/git-extend { };
     aws-ro = final.callPackage ../pkgs/aws-ro { };
+    gh-ro = final.callPackage ../pkgs/gh-ro { };
     awscli-local = final.callPackage ../pkgs/awscli-local { };
     macnotesapp = final.callPackage ../pkgs/macnotesapp { };
     cf-tunnel = final.callPackage ../pkgs/cf-tunnel { };
