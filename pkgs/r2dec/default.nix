@@ -17,13 +17,13 @@ let
 in
 stdenv.mkDerivation {
   pname = "r2dec";
-  version = "6.1.4";
+  version = "6.1.6";
 
   src = fetchFromGitHub {
     owner = "wargio";
     repo = "r2dec-js";
-    rev = "6.1.4";
-    hash = "sha256-FR41dy7pK70ZFKw4ky8yF02Ulkk32BQFNvZ0egnu6JU=";
+    rev = "6.1.6";
+    hash = "sha256-rzeWKvAeJE7sYOg48pMQeq5fSV5GNQLdt7fcFHduzyw=";
   };
 
   nativeBuildInputs = [
@@ -36,6 +36,11 @@ stdenv.mkDerivation {
   postPatch = ''
     cp -r --no-preserve=mode ${quickjs}/. subprojects/libquickjs
     cp -r --no-preserve=mode subprojects/packagefiles/libquickjs/. subprojects/libquickjs
+
+    substituteInPlace c/r2dec-plugin.c \
+      --replace-fail \
+      "r_cons_cmd_help(core->cons, help, core->print->flags & R_PRINT_FLAGS_COLOR);" \
+      "r_cons_cmd_help(core->cons, help);"
   '';
 
   mesonFlags = [ "-Dr2_plugdir=${placeholder "out"}/lib/radare2/last" ];

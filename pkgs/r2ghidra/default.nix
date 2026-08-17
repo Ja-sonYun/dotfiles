@@ -2,6 +2,7 @@
   lib,
   stdenv,
   fetchFromGitHub,
+  fetchurl,
   meson,
   ninja,
   pkg-config,
@@ -22,6 +23,10 @@ let
     repo = "pugixml";
     rev = "v1.15";
     hash = "sha256-t/57lg32KgKPc7qRGQtO/GOwHRqoj78lllSaE/A8Z9Q=";
+  };
+  radare2ApiPatch = fetchurl {
+    url = "https://github.com/radareorg/r2ghidra/commit/e44f22704373630112035bd910e4969bdc9cbde3.patch";
+    hash = "sha256-gfVsrZl1Y4zfc9gKHS09ukCz3MMWCI96Oc60UuXNI3E=";
   };
   # exact diff_files from subprojects/ghidra-native.wrap (0022 is .disabled)
   patches = [
@@ -69,6 +74,8 @@ stdenv.mkDerivation {
   ];
 
   postPatch = ''
+    patch -p1 < ${radare2ApiPatch}
+
     cp -r --no-preserve=mode ${ghidraNative}/. subprojects/ghidra-native
     cp -r --no-preserve=mode subprojects/packagefiles/ghidra-native/. subprojects/ghidra-native
     # case-insensitive APFS: the VERSION file shadows libc++ <version>

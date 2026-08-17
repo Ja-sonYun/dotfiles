@@ -1,0 +1,8 @@
+[project]
+name = "generate-shell-command-with-openai"
+version = "0"
+requires-python = ">=3.12,<3.13"
+dependencies = ["openai", "pydantic"]
+
+[tool.uv]
+package = false

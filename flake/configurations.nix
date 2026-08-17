@@ -31,7 +31,6 @@ let
         ;
       hasTag = hostConfig.hasTag hostname;
       infraSrc = server;
-      homeManagerSrc = home-manager.outPath;
       agenix-secrets = agenix-secrets.outPath;
       inherit
         agenix
@@ -46,7 +45,6 @@ let
       inherit (hosts.${hostname}) system;
       overlays =
         builtins.attrValues (import ../overlays { inherit inputs hostname; })
-        ++ [ agenix-secrets.overlays.default ]
         ++ builtins.attrValues nixlib.overlays;
       config = {
         allowUnfree = true;

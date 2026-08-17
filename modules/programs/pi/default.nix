@@ -34,7 +34,11 @@ let
       '';
 in
 {
-  imports = [ ./extensions/providers.nix ];
+  imports = [
+    ./extensions/hooks.nix
+    ./extensions/mcp.nix
+    ./extensions/providers.nix
+  ];
 
   options.programs.pi = {
     enable = lib.mkEnableOption "Pi coding agent";

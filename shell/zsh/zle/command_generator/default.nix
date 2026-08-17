@@ -4,14 +4,11 @@
     _generate-shell-command-with-openai = {
       body =
         let
-          pythonEnv = pkgs.python312.withPackages (
-            ps: with ps; [
-              openai
-              pydantic
-            ]
-          );
-          python = "${pythonEnv}/bin/python";
-          generator_py = toString ./generate_command.py;
+          generator = pkgs.uv.asPackage {
+            name = "generate-shell-command-with-openai";
+            root = ./.;
+            entrypoint = "generate_command:main";
+          };
         in
         ''
           zle -R "[Generating shell command with OpenAI...]"
@@ -23,7 +20,7 @@
 
           local current_input="''${LBUFFER}''${RBUFFER}"
           local generated_text
-          if ! generated_text=$(${python} ${generator_py} ''$current_input); then
+          if ! generated_text=$(${generator}/bin/generate-shell-command-with-openai ''$current_input); then
             zle -R "[Failed to generate command.]"
             return
           fi

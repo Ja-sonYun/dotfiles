@@ -4,14 +4,11 @@
     _fix-grammar-with-openai = {
       body =
         let
-          pythonEnv = pkgs.python312.withPackages (
-            ps: with ps; [
-              openai
-              pydantic
-            ]
-          );
-          python = "${pythonEnv}/bin/python";
-          better_grammar_py = toString ./better_grammar.py;
+          betterGrammar = pkgs.uv.asPackage {
+            name = "fix-grammar-with-openai";
+            root = ./.;
+            entrypoint = "better_grammar:main";
+          };
         in
         ''
           zle -R "[Fixing grammar with OpenAI...]"
@@ -22,7 +19,7 @@
           fi
 
           local current_input="''${LBUFFER}''${RBUFFER}"
-          local fixed_text=''$(${python} ${better_grammar_py} ''$current_input)
+          local fixed_text=''$(${betterGrammar}/bin/fix-grammar-with-openai ''$current_input)
 
           LBUFFER="''${fixed_text}"
           RBUFFER=""

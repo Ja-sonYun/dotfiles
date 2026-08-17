@@ -19,6 +19,10 @@
     "version": "0.80.6",
     "hash": "sha256-wmunsMmUTLVifOA4pRHauguzMoRE/xFBVt1vT4+tbbg="
   },
+  "pi-mcp-adapter": {
+    "version": "2.26.0",
+    "hash": "sha256-eVbQPJXkITTrWaTkGXIeAMVDFfLgAEW3LLPqkQ7GQxE="
+  },
   "codex": {
     "version": "0.144.1",
     "hash": "sha256-2A+0gybIiVlEpxuAhXMRDqCITnZN9ZSX9++l7RXI07A="

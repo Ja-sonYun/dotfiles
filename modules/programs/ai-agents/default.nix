@@ -16,58 +16,7 @@ let
       str
     ];
 
-  skillSourceType = lib.types.submodule {
-    options = {
-      source = lib.mkOption { type = lib.types.pathInStore; };
-      skills = lib.mkOption { type = lib.types.nonEmptyListOf lib.types.str; };
-    };
-  };
-
-  skillSourceInstallCommands = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (sourceName: source: ''
-      work_dir="$(${pkgs.coreutils}/bin/mktemp -d "$TMPDIR/skills.XXXXXX")"
-      (
-        cd "$work_dir"
-        ${pkgs.skills}/bin/skills add ${lib.escapeShellArg (toString source.source)} \
-          --skill ${lib.escapeShellArgs source.skills} \
-          --agent universal --copy --yes
-      )
-
-      for name in ${lib.escapeShellArgs source.skills}; do
-        skill_dir="$work_dir/.agents/skills/$name"
-        if [ ! -f "$skill_dir/SKILL.md" ]; then
-          printf 'External skill source %s did not install skill %s\n' \
-            ${lib.escapeShellArg sourceName} "$name" >&2
-          exit 1
-        fi
-        if [ -e "$out/$name" ]; then
-          echo "Duplicate external skill name: $name" >&2
-          exit 1
-        fi
-        ${pkgs.coreutils}/bin/cp -R "$skill_dir" "$out/$name"
-      done
-    '') cfg.skillSources
-  );
-
-  externalSkillNames = lib.concatMap (source: source.skills) (builtins.attrValues cfg.skillSources);
-
-  externalSkillsSrc = pkgs.runCommandLocal "ai-agent-external-skills" { } ''
-    set -euo pipefail
-
-    export DISABLE_TELEMETRY=1
-    export HOME="$TMPDIR/home"
-    mkdir -p "$HOME" "$out"
-
-    ${skillSourceInstallCommands}
-  '';
-
-  externalSkills = lib.genAttrs externalSkillNames (name: externalSkillsSrc + "/${name}");
-
-  duplicateSkillNames = lib.intersectLists (builtins.attrNames cfg.skills) (
-    builtins.attrNames externalSkills
-  );
-
-  skills = cfg.skills // externalSkills;
+  inherit (cfg) skills;
 
   mcpServerType = lib.types.submodule {
     freeformType = jsonFormat.type;
@@ -145,6 +94,29 @@ let
     )
   ) cfg.mcp.servers;
 
+  piMcpServers = lib.mapAttrs (
+    name: server:
+    mkDefaultValue (
+      lib.hm.mcp.transformMcpServer {
+        inherit server;
+        exclude = [
+          "enabled"
+          "type"
+        ];
+        extraTransforms = [
+          (
+            value:
+            value
+            // lib.optionalAttrs (server.enabled != null) {
+              disabled = !server.enabled;
+            }
+          )
+          (lib.hm.mcp.wrapEnvFilesCommand { inherit pkgs name; })
+        ];
+      }
+    )
+  ) cfg.mcp.servers;
+
   disabledMcpServers = builtins.attrNames (
     lib.filterAttrs (
       _: server: server.enabled == false || (server.disabled or null) == true
@@ -215,7 +187,7 @@ let
     SessionStart = [ (hookBlock (statusCommand "idle")) ];
     UserPromptSubmit = [ (hookBlock (statusCommand "running")) ];
     PreToolUse = [
-      (matchedHookBlock "request_user_input|request_plugin_install|confirm_|_open_codex_api_key_setup" (
+      (matchedHookBlock "request_user_input|confirm_|_open_codex_api_key_setup" (
         statusAndNotification "waiting" "Codex" "input"
       ))
     ];
@@ -245,6 +217,24 @@ let
     SessionEnd = [ (hookBlock (statusCommand "idle")) ];
   };
 
+  piHooks = {
+    SessionStart = [
+      (matchedHookBlock "resume" (statusCommand "running"))
+      (matchedHookBlock "startup|clear|compact|fork" (statusCommand "idle"))
+    ];
+    UserPromptSubmit = [ (hookBlock (statusCommand "running")) ];
+    PreToolUse = [ (matchedHookBlock "*" (statusCommand "running")) ];
+    PostToolUse = [ (hookBlock (statusCommand "running")) ];
+    PostToolUseFailure = [ (hookBlock (statusCommand "running")) ];
+    Stop = [ (hookBlock (stopCommand "Pi")) ];
+    StopFailure = [ (hookBlock (statusCommand "idle")) ];
+    Notification = [
+      (matchedHookBlock "permission_prompt" (statusAndNotification "waiting" "Pi" "permission"))
+      (matchedHookBlock "idle_prompt" (statusAndNotification "waiting" "Pi" "input"))
+    ];
+    SessionEnd = [ (hookBlock (statusCommand "idle")) ];
+  };
+
 in
 {
   options.programs.ai-agents = {
@@ -257,11 +247,6 @@ in
 
     skills = lib.mkOption {
       type = lib.types.attrsOf sourceType;
-      default = { };
-    };
-
-    skillSources = lib.mkOption {
-      type = lib.types.attrsOf skillSourceType;
       default = { };
     };
 
@@ -284,13 +269,7 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
-        assertions = [
-          {
-            assertion = duplicateSkillNames == [ ];
-            message = "programs.ai-agents has duplicate skill names: ${lib.concatStringsSep ", " duplicateSkillNames}.";
-          }
-        ]
-        ++ lib.concatLists (
+        assertions = lib.concatLists (
           lib.mapAttrsToList (name: server: [
             {
               assertion = (server.command != null) != (server.url != null);
@@ -362,7 +341,9 @@ in
       (lib.mkIf config.programs.pi.enable {
         programs.pi = {
           inherit (cfg) context;
+          hooks = piHooks;
           inherit skills;
+          mcp.servers = piMcpServers;
         };
       })
     ]

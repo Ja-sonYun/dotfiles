@@ -1,7 +1,6 @@
 { inputs }:
 let
   inherit (inputs)
-    agenix-secrets
     git-hooks
     home-manager
     mkutils
@@ -35,7 +34,6 @@ let
     {
       ai-tools = import ../tests/modules/programs/ai-agents {
         inherit
-          agenix-secrets
           home-manager
           nixlib
           pkgs

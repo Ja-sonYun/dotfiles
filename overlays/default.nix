@@ -2,6 +2,6 @@
 (import ./stable.nix { inherit inputs; })
 // (import ./lib.nix)
 // (import ./inputs.nix { inherit inputs; })
-// (import ./patches.nix)
-// (import ./python.nix)
+// (import ./patches.nix { inherit inputs; })
+// (import ./test-ignores.nix)
 // (import ./custom.nix { inherit hostname; })

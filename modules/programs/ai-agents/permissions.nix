@@ -119,14 +119,11 @@ in
       allow =
         lib.optional (data.read == "allow") "Read(**)"
         ++ lib.optional ((data.edit or "ask") == "allow") "Edit(**)"
-        ++ lib.optional ((data.write or "ask") == "allow") "Write(**)"
+        ++ lib.optional ((data.write or "ask") == "allow") "Write"
         ++ lib.optional (data.web_search == "allow") "WebSearch"
         ++ lib.optional (data.web_fetch == "allow") "WebFetch(domain:*)"
         ++ map (path: "Read(${claudePath path})") paths.read
-        ++ lib.concatMap (path: [
-          "Edit(${claudePath path})"
-          "Write(${claudePath path})"
-        ]) paths.allow
+        ++ map (path: "Edit(${claudePath path})") paths.allow
         ++ map (key: if key == "*" then "Skill" else "Skill(${key})") (keysWith data.skill "allow")
         ++ bashRules "allow"
         ++ map (server: "mcp__plugin_${pluginName}_${server}__*") mcpServers
@@ -141,7 +138,7 @@ in
         ++ bashRules "deny"
         ++ lib.optional (data.read == "deny") "Read(**)"
         ++ lib.optional ((data.edit or "ask") == "deny") "Edit(**)"
-        ++ lib.optional ((data.write or "ask") == "deny") "Write(**)";
+        ++ lib.optional ((data.write or "ask") == "deny") "Write";
     };
 
 }

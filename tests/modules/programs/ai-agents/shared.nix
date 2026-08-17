@@ -18,6 +18,7 @@ let
       "*" = "ask";
       local-docs = "allow";
     };
+    mcp_readonly_tools.github = [ "get_file_contents" ];
     path = {
       "*" = "ask";
       "/private/tmp" = "allow";
@@ -34,7 +35,6 @@ let
   };
   configuration = home-manager.lib.homeManagerConfiguration {
     pkgs = testPkgs;
-    extraSpecialArgs.homeManagerSrc = home-manager.outPath;
     modules = [
       ../../../../modules/programs/ai-agents
       ../../../../modules/programs/claude
@@ -81,7 +81,6 @@ let
               pi = {
                 enable = true;
                 package = testPackage "pi";
-                permissions.enable = true;
               };
               tmux.agentStatusScript = toString (pkgs.writeShellScript "test-agent-status" "exit 0");
             };
@@ -107,11 +106,6 @@ let
     );
     Pi = homeFiles.generated [ ".pi/agent/" ];
   };
-  piExtensions = [
-    "${programs.pi.mcp.package}/extension/index.ts"
-    "${programs.pi.permissions.package}/extension/index.ts"
-    "${testPkgs.pi-extensions.hooks}/index.ts"
-  ];
   claudeHookNames = [
     "ElicitationResult"
     "Notification"
@@ -132,14 +126,14 @@ let
     "state"
   ];
   piHookNames = [
-    "ElicitationResult"
     "Notification"
+    "PostToolUse"
+    "PostToolUseFailure"
     "PreToolUse"
     "SessionEnd"
     "SessionStart"
     "Stop"
     "StopFailure"
-    "TurnStart"
     "UserPromptSubmit"
   ];
   claudeMcpServers = {
@@ -194,9 +188,11 @@ let
       "~/.codex/rules/managed.rules" = homeFiles.materialized ".codex/rules/managed.rules";
       "~/.codex/skills/review-code/SKILL.md" = "${homeFiles.source ".codex/skills/review-code"}/SKILL.md";
       "~/.pi/agent/AGENTS.md" = homeFiles.materialized ".pi/agent/AGENTS.md";
-      "~/.pi/agent/hooks.json" = homeFiles.materialized ".pi/agent/hooks.json";
+      "~/.pi/agent/extensions/hooks/hooks.json" =
+        "${homeFiles.source ".pi/agent/extensions/hooks"}/hooks.json";
+      "~/.pi/agent/extensions/mcp-adapter/index.ts" =
+        "${homeFiles.source ".pi/agent/extensions/mcp-adapter"}/index.ts";
       "~/.pi/agent/mcp.json" = homeFiles.materialized ".pi/agent/mcp.json";
-      "~/.pi/agent/pi-permissions.jsonc" = homeFiles.materialized ".pi/agent/pi-permissions.jsonc";
       "~/.pi/agent/settings.json" = homeFiles.materialized ".pi/agent/settings.json";
       "~/.pi/agent/skills/review-code/SKILL.md" =
         "${homeFiles.source ".pi/agent/skills/review-code"}/SKILL.md";
@@ -219,9 +215,9 @@ let
       ];
       Pi = [
         "~/.pi/agent/AGENTS.md"
-        "~/.pi/agent/hooks.json"
+        "~/.pi/agent/extensions/hooks"
+        "~/.pi/agent/extensions/mcp-adapter"
         "~/.pi/agent/mcp.json"
-        "~/.pi/agent/pi-permissions.jsonc"
         "~/.pi/agent/settings.json"
         "~/.pi/agent/skills/review-code"
       ];
@@ -235,13 +231,9 @@ let
             "WebSearch"
             "Read(docs)"
             "Edit(//private/tmp)"
-            "Write(//private/tmp)"
             "Edit(//private/tmp/**)"
-            "Write(//private/tmp/**)"
             "Edit(//tmp)"
-            "Write(//tmp)"
             "Edit(//tmp/**)"
-            "Write(//tmp/**)"
             "Skill"
             "Bash(git status)"
             "mcp__plugin_hm_*__*"
@@ -250,7 +242,7 @@ let
           ask = [ ];
           deny = [
             "Edit(docs)"
-            "Write(**)"
+            "Write"
           ];
         };
         at.hooks.keys = claudeHookNames;
@@ -286,52 +278,16 @@ let
       '';
       "~/.codex/skills/review-code/SKILL.md".sameAs = ./fixtures/review-code/SKILL.md;
       "~/.pi/agent/AGENTS.md".text = "Shared AI tool instructions.";
-      "~/.pi/agent/hooks.json".json.keys = piHookNames;
+      "~/.pi/agent/extensions/hooks/hooks.json".json = {
+        keys = piHookNames;
+        contains.Notification = [ { matcher = "permission_prompt"; } ];
+      };
+      "~/.pi/agent/extensions/mcp-adapter/index.ts".sameAs =
+        "${programs.pi.mcp.package}/extension/index.ts";
       "~/.pi/agent/mcp.json".json.equals = {
         settings = { };
         mcpServers = piMcpServers;
       };
-      "~/.pi/agent/pi-permissions.jsonc".json.equals = {
-        bash = {
-          "*" = "ask";
-          "git status" = "allow";
-        };
-        defaultPolicy = {
-          bash = "ask";
-          mcp = "ask";
-          skills = "allow";
-          special = "ask";
-          tools = "ask";
-        };
-        mcp = {
-          "*" = "ask";
-          local-docs = "allow";
-        };
-        skills."*" = "allow";
-        special.external_directory = "ask";
-        tools = {
-          "edit:/private/tmp" = "allow";
-          "edit:/private/tmp/**" = "allow";
-          "edit:/tmp" = "allow";
-          "edit:/tmp/**" = "allow";
-          "edit:docs" = "deny";
-          read = "allow";
-          "read:/private/tmp" = "allow";
-          "read:/private/tmp/**" = "allow";
-          "read:/tmp" = "allow";
-          "read:/tmp/**" = "allow";
-          "read:docs" = "allow";
-          web_fetch = "deny";
-          web_search = "allow";
-          write = "deny";
-          "write:/private/tmp" = "allow";
-          "write:/private/tmp/**" = "allow";
-          "write:/tmp" = "allow";
-          "write:/tmp/**" = "allow";
-          "write:docs" = "deny";
-        };
-      };
-      "~/.pi/agent/settings.json".json.equals.extensions = piExtensions;
       "~/.pi/agent/skills/review-code/SKILL.md".sameAs = ./fixtures/review-code/SKILL.md;
     };
   };

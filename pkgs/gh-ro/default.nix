@@ -1,29 +1,17 @@
 {
   gh,
   lib,
-  python3,
-  stdenvNoCC,
+  uv,
 }:
 let
-  python = python3.withPackages (packages: [ packages.graphql-core ]);
+  package = uv.asPackage {
+    name = "gh-ro";
+    root = ./.;
+    entrypoint = "gh_ro:main";
+    runtimeInputs = [ gh ];
+  };
 in
-stdenvNoCC.mkDerivation {
-  pname = "gh-ro";
-  version = "0";
-  dontUnpack = true;
-
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p "$out/bin"
-    substitute ${./gh_ro.py} "$out/bin/gh-ro" \
-      --replace-fail '@GH_PATH@' '${gh}/bin/gh' \
-      --replace-fail '@PYTHON_PATH@' '${python}/bin/python'
-    chmod +x "$out/bin/gh-ro"
-
-    runHook postInstall
-  '';
-
+package.overrideAttrs {
   meta = {
     description = "Run GitHub CLI operations classified as read-only";
     mainProgram = "gh-ro";

@@ -1,0 +1,8 @@
+[project]
+name = "merge-codex-config"
+version = "0"
+requires-python = ">=3.12,<3.13"
+dependencies = ["tomlkit"]
+
+[tool.uv]
+package = false

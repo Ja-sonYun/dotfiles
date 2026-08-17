@@ -37,14 +37,7 @@ class _MergeConfigTest(unittest.TestCase):
             fragment = root / "fragment.toml"
             mcp_state = root / "mcp.json"
             provider_state = root / "provider.json"
-            marketplace_state = root / "marketplace.json"
-            plugin_state = root / "plugin.json"
-            state_paths = (
-                mcp_state,
-                provider_state,
-                marketplace_state,
-                plugin_state,
-            )
+            state_paths = (mcp_state, provider_state)
             secret = root / "provider-url"
 
             target.write_text(
@@ -55,10 +48,6 @@ class _MergeConfigTest(unittest.TestCase):
                 "[mcp_servers.old]\nurl = \"https://old.test\"\n"
                 "[model_providers.user]\nname = \"User\"\n"
                 "[model_providers.old]\nname = \"Old\"\n"
-                "[marketplaces.user]\nsource_type = \"local\"\nsource = \"/user\"\n"
-                "[marketplaces.old]\nsource_type = \"local\"\nsource = \"/old\"\n"
-                "[plugins.\"user@user\"]\nenabled = true\n"
-                "[plugins.\"old@old\"]\nenabled = true\n"
                 "[hooks.old]\nenabled = true\n"
                 "[permissions.user]\nextends = \":read-only\"\n"
                 "[permissions.managed]\nextends = \":read-only\"\n"
@@ -67,8 +56,6 @@ class _MergeConfigTest(unittest.TestCase):
             )
             mcp_state.write_text('["old"]')
             provider_state.write_text('["old"]')
-            marketplace_state.write_text('["old"]')
-            plugin_state.write_text('["old@old"]')
             secret.write_text('https://nix.test/"quoted"\n')
 
             managed = {
@@ -79,17 +66,6 @@ class _MergeConfigTest(unittest.TestCase):
                     "nix": {
                         "name": "Nix",
                         "base_url": {"_secret": str(secret)},
-                    }
-                },
-                "marketplaces": {
-                    "nix": {"source_type": "local", "source": "/nix"}
-                },
-                "plugins": {
-                    "nix@nix": {
-                        "enabled": True,
-                        "mcp_servers": {
-                            "aws-mcp": {"default_tools_approval_mode": "writes"}
-                        },
                     }
                 },
                 "hooks": {
@@ -126,14 +102,6 @@ class _MergeConfigTest(unittest.TestCase):
             self.assertEqual(config["model"], "app")
             self.assertEqual(set(config["mcp_servers"]), {"user", "nix"})
             self.assertEqual(set(config["model_providers"]), {"user", "nix"})
-            self.assertEqual(set(config["marketplaces"]), {"user", "nix"})
-            self.assertEqual(set(config["plugins"]), {"user@user", "nix@nix"})
-            self.assertEqual(
-                config["plugins"]["nix@nix"]["mcp_servers"]["aws-mcp"][
-                    "default_tools_approval_mode"
-                ],
-                "writes",
-            )
             self.assertEqual(
                 config["model_providers"]["nix"]["base_url"],
                 'https://nix.test/"quoted"',
@@ -206,8 +174,6 @@ class _MergeConfigTest(unittest.TestCase):
             )
             self.assertIn("[mcp_servers.nix] # nix-generated", output)
             self.assertIn("[model_providers.nix] # nix-generated", output)
-            self.assertIn("[marketplaces.nix] # nix-generated", output)
-            self.assertIn('[plugins."nix@nix"] # nix-generated', output)
             self.assertIn(
                 f'[hooks.state."{hook_state_key}"] # nix-generated',
                 output,
@@ -221,8 +187,6 @@ class _MergeConfigTest(unittest.TestCase):
             self.assertNotIn("[mcp_servers.user] # nix-generated", output)
             self.assertEqual(json.loads(mcp_state.read_text()), ["nix"])
             self.assertEqual(json.loads(provider_state.read_text()), ["nix"])
-            self.assertEqual(json.loads(marketplace_state.read_text()), ["nix"])
-            self.assertEqual(json.loads(plugin_state.read_text()), ["nix@nix"])
             for path in (target, *state_paths):
                 self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
 
@@ -240,8 +204,6 @@ class _MergeConfigTest(unittest.TestCase):
             config = tomlkit.parse(target.read_text())
             self.assertEqual(set(config["mcp_servers"]), {"user"})
             self.assertEqual(set(config["model_providers"]), {"user"})
-            self.assertEqual(set(config["marketplaces"]), {"user"})
-            self.assertEqual(set(config["plugins"]), {"user@user"})
             self.assertNotIn("features", config)
             self.assertNotIn("tui", config)
             self.assertNotIn("[mcp_servers.nix]", target.read_text())
@@ -262,8 +224,6 @@ class _MergeConfigTest(unittest.TestCase):
                 target.read_text(),
                 mcp_state.read_text(),
                 provider_state.read_text(),
-                marketplace_state.read_text(),
-                plugin_state.read_text(),
             )
             result = self._run(target, fragment, *state_paths)
             self.assertNotEqual(result.returncode, 0)
@@ -272,8 +232,6 @@ class _MergeConfigTest(unittest.TestCase):
                     target.read_text(),
                     mcp_state.read_text(),
                     provider_state.read_text(),
-                    marketplace_state.read_text(),
-                    plugin_state.read_text(),
                 ),
                 before,
             )
@@ -283,55 +241,6 @@ class _MergeConfigTest(unittest.TestCase):
             result = self._run(target, fragment, *state_paths)
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(target.read_text(), before)
-
-    def test_first_run_creates_marketplace_and_plugin_state(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            target = root / "config.toml"
-            fragment = root / "fragment.toml"
-            mcp_state = root / "mcp.json"
-            provider_state = root / "provider.json"
-            marketplace_state = root / "marketplace.json"
-            plugin_state = root / "plugin.json"
-            state_paths = (
-                mcp_state,
-                provider_state,
-                marketplace_state,
-                plugin_state,
-            )
-
-            target.write_text(
-                "[marketplaces.user]\n"
-                'source_type = "local"\n'
-                'source = "/user"\n'
-                '[plugins."user@user"]\n'
-                "enabled = true\n"
-            )
-            fragment.write_text(
-                tomlkit.dumps(
-                    {
-                        "marketplaces": {
-                            "nix": {"source_type": "local", "source": "/nix"}
-                        },
-                        "plugins": {"nix@nix": {"enabled": True}},
-                    }
-                )
-            )
-            for path in state_paths:
-                self.assertFalse(path.exists())
-
-            result = self._run(target, fragment, *state_paths)
-
-            self.assertEqual(result.returncode, 0, result.stderr)
-            config = tomlkit.parse(target.read_text())
-            self.assertEqual(set(config["marketplaces"]), {"user", "nix"})
-            self.assertEqual(set(config["plugins"]), {"user@user", "nix@nix"})
-            self.assertEqual(json.loads(mcp_state.read_text()), [])
-            self.assertEqual(json.loads(provider_state.read_text()), [])
-            self.assertEqual(json.loads(marketplace_state.read_text()), ["nix"])
-            self.assertEqual(json.loads(plugin_state.read_text()), ["nix@nix"])
-            for path in state_paths:
-                self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
 
 
 if __name__ == "__main__":

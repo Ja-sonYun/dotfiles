@@ -1,19 +1,25 @@
 {
-  agenix-secrets,
   home-manager,
   nixlib,
   pkgs,
 }:
 let
   inherit (pkgs) lib;
-  testPkgs = ((pkgs.extend nixlib.overlays.tool).extend agenix-secrets.overlays.default).extend (
+  testPkgs = (pkgs.extend nixlib.overlays.tool).extend (
     final: _prev: {
       notifycmd = final.writeShellScriptBin "notifycmd" "exit 0";
-      skills = final.writeShellScriptBin "skills" "exit 0";
       pi-extensions = {
-        hooks = final.writeTextDir "index.ts" "";
+        hooks =
+          hooks:
+          let
+            hooksJson = (final.formats.json { }).generate "pi-hooks.json" hooks;
+          in
+          final.runCommandLocal "pi-ext-hooks-test" { } ''
+            mkdir -p $out
+            touch $out/index.ts
+            cp ${hooksJson} $out/hooks.json
+          '';
         mcp-adapter = final.writeTextDir "extension/index.ts" "";
-        permission-system = final.writeTextDir "extension/index.ts" "";
       };
     }
   );
@@ -24,7 +30,6 @@ let
   });
   scenarioArgs = {
     inherit
-      agenix-secrets
       claudePackage
       home-manager
       testPackage
@@ -32,7 +37,6 @@ let
       ;
   };
   shared = import ./shared.nix scenarioArgs;
-  marketplace = import ./marketplace.nix scenarioArgs;
   manifest =
     name: scenario:
     testPkgs.writeText "${name}-expected-files.json" (
@@ -42,7 +46,6 @@ let
       }
     );
   sharedManifest = manifest "shared AI tools" shared;
-  marketplaceManifest = manifest "AWS marketplace" marketplace;
   managedFragment =
     configuration:
     let
@@ -57,7 +60,10 @@ let
 in
 testPkgs.runCommand "ai-tools-tests"
   {
-    nativeBuildInputs = [ testPython ];
+    nativeBuildInputs = [
+      testPkgs.nodejs
+      testPython
+    ];
   }
   ''
     set -euo pipefail
@@ -68,27 +74,20 @@ testPkgs.runCommand "ai-tools-tests"
       "$test_python" ${codexModule}/merge-config-toml.py \
         "$1" "$2" \
         "$3-mcp.json" \
-        "$3-model-provider.json" \
-        "$3-marketplace.json" \
-        "$3-plugin.json"
+        "$3-model-provider.json"
     }
 
     export SHARED_CODEX_CONFIG="$TMPDIR/shared-config.toml"
-    export MARKETPLACE_CODEX_CONFIG="$TMPDIR/marketplace-config.toml"
 
     merge_codex \
       "$SHARED_CODEX_CONFIG" \
       ${lib.escapeShellArg (managedFragment shared.configuration)} \
       "$TMPDIR/shared"
-    merge_codex \
-      "$MARKETPLACE_CODEX_CONFIG" \
-      ${lib.escapeShellArg (managedFragment marketplace.configuration)} \
-      "$TMPDIR/marketplace"
 
     "$test_python" ${codexModule}/test_merge_config_toml.py
+    node --test ${../../../../pkgs/pi/extensions/hooks}/src/index.test.ts
     "$test_python" ${../../../lib/check-generated-files.py} \
-      ${sharedManifest} \
-      ${marketplaceManifest}
+      ${sharedManifest}
 
-    printf 'PASS: Codex, Claude, and Pi generated the expected AI tool files.\n' > "$out"
+    printf 'PASS: Codex, Claude, and Pi generated the expected AI tool files and hooks.\n' > "$out"
   ''

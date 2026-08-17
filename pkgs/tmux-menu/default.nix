@@ -2,15 +2,15 @@
 
 pkgs.rustPlatform.buildRustPackage rec {
   pname = "tmux-menu";
-  version = "0.1.25";
+  version = "0.1.26";
 
   src = pkgs.fetchFromGitHub {
     owner = "Ja-sonYun";
     repo = "tmux-easy-menu";
-    rev = "13ffeeea7d5762c45386a476ec22d4d55b8e1b89";
-    hash = "sha256-0au5DcSDJX9vm2euxIw58VJ/vS0kTsGjGSDR99CILBQ=";
+    rev = "89f3008a92199997a09113ddb14fbba962e72854";
+    hash = "sha256-08HwEvi3isuGVqqozahzlODxRM3+NnvBAvbIZpBumIs=";
   };
 
-  cargoHash = "sha256-b6Fdlddqiiwd+yB9HHOPYQk83xSqLLYmdnomwgRLJ28=";
+  cargoHash = "sha256-NwZUaXiJkq6wr9dF8cgSIzzeLASscAh6FH6fSaOu4ZM=";
   cargoDepsName = pname;
 }

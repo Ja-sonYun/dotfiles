@@ -1,0 +1,8 @@
+[project]
+name = "gh-ro"
+version = "0"
+requires-python = ">=3.12,<3.13"
+dependencies = ["graphql-core"]
+
+[tool.uv]
+package = false

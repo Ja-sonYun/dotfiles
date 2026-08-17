@@ -1,4 +1,4 @@
-#!@PYTHON_PATH@
+#!/usr/bin/env python3
 import json
 import os
 import sys
@@ -9,7 +9,7 @@ from graphql import OperationType, parse
 from graphql.error import GraphQLError
 from graphql.language import FragmentDefinitionNode, OperationDefinitionNode
 
-GH_PATH = "@GH_PATH@"
+GH_PATH = "gh"
 
 READ_ONLY_COMMANDS = frozenset(
     {
@@ -97,7 +97,7 @@ class ApiRequest:
 
 
 def run_gh(arguments: list[str]) -> int:
-    os.execv(GH_PATH, [GH_PATH, *arguments])
+    os.execvp(GH_PATH, [GH_PATH, *arguments])
     return 0
 
 
@@ -305,7 +305,8 @@ def is_read_only(arguments: list[str]) -> bool:
     return len(arguments) >= 2 and tuple(arguments[:2]) in READ_ONLY_COMMANDS
 
 
-def main(arguments: list[str]) -> int:
+def main() -> int:
+    arguments = sys.argv[1:]
     if is_read_only(arguments):
         return run_gh(arguments)
     print("gh-ro: command is not classified as read-only", file=sys.stderr)
@@ -313,4 +314,4 @@ def main(arguments: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    raise SystemExit(main())

@@ -50,5 +50,9 @@ async def generate() -> str:
     return event.command.strip()
 
 
-if __name__ == "__main__":
+def main() -> None:
     print(asyncio.run(generate()))
+
+
+if __name__ == "__main__":
+    main()
