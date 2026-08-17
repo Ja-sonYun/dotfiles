@@ -99,7 +99,8 @@ let
 
   settingsSecrets = pkgs.tool.secretSettings settings;
   flagSecrets = pkgs.tool.secretSettings flagSettings;
-  managedFragment = tomlFormat.generate "codex-managed-settings.toml" managedSettings;
+  activeManagedSettings = if cfg.enable then managedSettings else { };
+  managedFragment = tomlFormat.generate "codex-managed-settings.toml" activeManagedSettings;
 
   configMerge = pkgs.uv.asPackage {
     name = "merge-codex-config";
@@ -185,38 +186,50 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    home.packages = [ wrappedPackage ];
+  config = lib.mkMerge [
+    {
+      home.activation.codexConfigMerge = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        ${lib.optionalString cfg.enable ''
+          run mkdir -p "${config.home.homeDirectory}/.codex"
+          run ${configMerge}/bin/merge-codex-config \
+            "${codexConfigFile}" ${managedFragment}
+        ''}
+        ${lib.optionalString (!cfg.enable) ''
+          if [[ -f "${codexConfigFile}" ]]; then
+            run ${configMerge}/bin/merge-codex-config \
+              "${codexConfigFile}" ${managedFragment}
+          fi
+        ''}
+        run rm -f \
+          "${config.home.homeDirectory}/.codex/.home-manager-mcp-state.json" \
+          "${config.home.homeDirectory}/.codex/.home-manager-model-provider-state.json"
+      '';
+    }
+    (lib.mkIf cfg.enable {
+      home.packages = [ wrappedPackage ];
 
-    assertions = [
-      {
-        assertion = settingsSecrets.invalidSecretPaths == [ ];
-        message = "programs.codex.settings contains invalid _secret values at: ${lib.concatStringsSep ", " settingsSecrets.invalidSecretPaths}.";
-      }
-      {
-        assertion = flagSecrets.secretPaths == [ ];
-        message = "programs.codex.settings only supports _secret in settings merged into ~/.codex/config.toml.";
-      }
-    ];
+      assertions = [
+        {
+          assertion = settingsSecrets.invalidSecretPaths == [ ];
+          message = "programs.codex.settings contains invalid _secret values at: ${lib.concatStringsSep ", " settingsSecrets.invalidSecretPaths}.";
+        }
+        {
+          assertion = flagSecrets.secretPaths == [ ];
+          message = "programs.codex.settings only supports _secret in settings merged into ~/.codex/config.toml.";
+        }
+      ];
 
-    home.file =
-      lib.optionalAttrs (cfg.context != null) {
-        ".codex/AGENTS.md".text = cfg.context;
-      }
-      // lib.mapAttrs' (
-        name: source: lib.nameValuePair ".codex/skills/${name}" { inherit source; }
-      ) cfg.skills
-      // claudeAgentHomeFiles
-      // lib.mapAttrs' (
-        name: text: lib.nameValuePair ".codex/rules/${name}.rules" { inherit text; }
-      ) cfg.rules;
-
-    home.activation.codexConfigMerge = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      run mkdir -p "${config.home.homeDirectory}/.codex"
-      run ${configMerge}/bin/merge-codex-config \
-        "${codexConfigFile}" ${managedFragment} \
-        "${config.home.homeDirectory}/.codex/.home-manager-mcp-state.json" \
-        "${config.home.homeDirectory}/.codex/.home-manager-model-provider-state.json"
-    '';
-  };
+      home.file =
+        lib.optionalAttrs (cfg.context != null) {
+          ".codex/AGENTS.md".text = cfg.context;
+        }
+        // lib.mapAttrs' (
+          name: source: lib.nameValuePair ".codex/skills/${name}" { inherit source; }
+        ) cfg.skills
+        // claudeAgentHomeFiles
+        // lib.mapAttrs' (
+          name: text: lib.nameValuePair ".codex/rules/${name}.rules" { inherit text; }
+        ) cfg.rules;
+    })
+  ];
 }

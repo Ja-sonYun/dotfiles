@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 import tomlkit
 
@@ -15,7 +16,6 @@ class _MergeConfigTest(unittest.TestCase):
         self,
         target: Path,
         fragment: Path,
-        *state_paths: Path,
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
@@ -23,47 +23,47 @@ class _MergeConfigTest(unittest.TestCase):
                 str(Path(__file__).with_name("merge-config-toml.py")),
                 str(target),
                 str(fragment),
-                *map(str, state_paths),
             ],
             check=False,
             capture_output=True,
             text=True,
         )
 
-    def test_merge_delete_and_failure(self) -> None:
+    def _write_fragment(self, path: Path, value: dict[str, Any]) -> None:
+        path.write_text(tomlkit.dumps(value))
+
+    def test_preserves_user_values_and_removes_generated_paths(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / "config.toml"
             fragment = root / "fragment.toml"
-            mcp_state = root / "mcp.json"
-            provider_state = root / "provider.json"
-            state_paths = (mcp_state, provider_state)
             secret = root / "provider-url"
 
             target.write_text(
                 'model = "app"\n'
                 'default_permissions = "user"\n'
                 "# keep\n"
-                "[mcp_servers.user]\nurl = \"https://user.test\"\n"
-                "[mcp_servers.old]\nurl = \"https://old.test\"\n"
-                "[model_providers.user]\nname = \"User\"\n"
-                "[model_providers.old]\nname = \"Old\"\n"
-                "[hooks.old]\nenabled = true\n"
+                "[features]\nuser_only = true\n"
+                "[tui]\nuser_only = true\n"
                 "[permissions.user]\nextends = \":read-only\"\n"
-                "[permissions.managed]\nextends = \":read-only\"\n"
-                "[features]\nold = true\n"
-                "[tui]\nshow_tooltips = true\n"
+                "[permissions.managed]\nuser_only = true\n"
+                "[mcp_servers.user]\nurl = \"https://user.test\"\n"
+                "[mcp_servers.shared]\nuser_only = true\n"
+                "[model_providers.shared]\nuser_only = true\n"
+                "[[hooks.UserPromptSubmit]]\nmatcher = \"user\"\n"
+                "[[hooks.UserPromptSubmit.hooks]]\n"
+                'type = "command"\ncommand = "user"\n'
             )
-            mcp_state.write_text('["old"]')
-            provider_state.write_text('["old"]')
             secret.write_text('https://nix.test/"quoted"\n')
-
             managed = {
                 "default_permissions": "managed",
                 "features": {"memories": True},
-                "mcp_servers": {"nix": {"url": "https://nix.test"}},
+                "mcp_servers": {
+                    "nix": {"url": "https://nix.test"},
+                    "shared": {"url": "https://shared.test"},
+                },
                 "model_providers": {
-                    "nix": {
+                    "shared": {
                         "name": "Nix",
                         "base_url": {"_secret": str(secret)},
                     }
@@ -73,17 +73,7 @@ class _MergeConfigTest(unittest.TestCase):
                         {
                             "matcher": "x",
                             "hooks": [{"type": "command", "command": "true"}],
-                        },
-                        {
-                            "hooks": [
-                                {
-                                    "type": "command",
-                                    "command": "second",
-                                    "timeout": 5,
-                                    "async": True,
-                                }
-                            ]
-                        },
+                        }
                     ],
                 },
                 "permissions": {"managed": {"extends": ":workspace"}},
@@ -92,26 +82,47 @@ class _MergeConfigTest(unittest.TestCase):
                     "keymap": {"pager": {"half_page_up": "ctrl-u"}},
                 },
             }
-            fragment.write_text(tomlkit.dumps(managed))
+            self._write_fragment(fragment, managed)
 
-            result = self._run(target, fragment, *state_paths)
+            result = self._run(target, fragment)
+
             self.assertEqual(result.returncode, 0, result.stderr)
             output = target.read_text()
             config = tomlkit.parse(output)
             self.assertIn("# keep", output)
             self.assertEqual(config["model"], "app")
-            self.assertEqual(set(config["mcp_servers"]), {"user", "nix"})
-            self.assertEqual(set(config["model_providers"]), {"user", "nix"})
+            self.assertEqual(config["default_permissions"], "managed")
+            self.assertEqual(config["features"], {"user_only": True, "memories": True})
+            self.assertTrue(config["tui"]["user_only"])
+            self.assertFalse(config["tui"]["show_tooltips"])
             self.assertEqual(
-                config["model_providers"]["nix"]["base_url"],
+                config["tui"]["keymap"]["pager"]["half_page_up"],
+                "ctrl-u",
+            )
+            self.assertEqual(config["permissions"]["user"]["extends"], ":read-only")
+            self.assertTrue(config["permissions"]["managed"]["user_only"])
+            self.assertEqual(
+                config["permissions"]["managed"]["extends"],
+                ":workspace",
+            )
+            self.assertEqual(
+                set(config["mcp_servers"]),
+                {"user", "shared", "nix"},
+            )
+            self.assertTrue(config["mcp_servers"]["shared"]["user_only"])
+            self.assertEqual(
+                config["mcp_servers"]["shared"]["url"],
+                "https://shared.test",
+            )
+            self.assertTrue(config["model_providers"]["shared"]["user_only"])
+            self.assertEqual(
+                config["model_providers"]["shared"]["base_url"],
                 'https://nix.test/"quoted"',
             )
-            self.assertNotIn("old", config["hooks"])
-            self.assertEqual(config["features"], {"memories": True})
-            self.assertFalse(config["tui"]["show_tooltips"])
-            self.assertEqual(config["permissions"]["user"]["extends"], ":read-only")
-            self.assertEqual(config["permissions"]["managed"]["extends"], ":workspace")
-            self.assertEqual(config["default_permissions"], "managed")
+            self.assertEqual(
+                set(config["hooks"]),
+                {"UserPromptSubmit", "PreToolUse", "state"},
+            )
             hook_state_key = f"{target}:pre_tool_use:0:0"
             trusted_input = {
                 "event_name": "pre_tool_use",
@@ -133,112 +144,177 @@ class _MergeConfigTest(unittest.TestCase):
                 ).encode()
             ).hexdigest()
             self.assertEqual(
-                config["hooks"]["state"][hook_state_key],
-                {
-                    "enabled": True,
-                    "trusted_hash": f"sha256:{trusted_hash}",
-                },
-            )
-            second_hook_state_key = f"{target}:pre_tool_use:1:0"
-            second_trusted_input = {
-                "event_name": "pre_tool_use",
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "second",
-                        "timeout": 5,
-                        "async": True,
-                    }
-                ],
-            }
-            second_trusted_hash = hashlib.sha256(
-                json.dumps(
-                    second_trusted_input,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ).encode()
-            ).hexdigest()
-            self.assertEqual(
-                config["hooks"]["state"][second_hook_state_key],
-                {
-                    "enabled": True,
-                    "trusted_hash": f"sha256:{second_trusted_hash}",
-                },
+                config["hooks"]["state"][hook_state_key]["trusted_hash"],
+                f"sha256:{trusted_hash}",
             )
             self.assertEqual(
-                set(config["hooks"]["state"]),
-                {hook_state_key, second_hook_state_key},
+                config["features"].item("memories").trivia.comment,
+                "# nix-generated",
             )
-            self.assertIn(
-                'default_permissions = "managed" # nix-generated', output
+            self.assertEqual(
+                config["features"].item("user_only").trivia.comment,
+                "",
             )
-            self.assertIn("[mcp_servers.nix] # nix-generated", output)
-            self.assertIn("[model_providers.nix] # nix-generated", output)
-            self.assertIn(
-                f'[hooks.state."{hook_state_key}"] # nix-generated',
-                output,
+            self.assertEqual(
+                config["mcp_servers"]["nix"].trivia.comment,
+                "# nix-generated-container",
             )
-            self.assertIn("[[hooks.PreToolUse]] # nix-generated", output)
-            self.assertIn("[[hooks.PreToolUse.hooks]] # nix-generated", output)
-            self.assertIn("[permissions.managed] # nix-generated", output)
-            self.assertIn("[features] # nix-generated", output)
-            self.assertIn("[tui] # nix-generated", output)
-            self.assertIn("[tui.keymap.pager] # nix-generated", output)
-            self.assertNotIn("[mcp_servers.user] # nix-generated", output)
-            self.assertEqual(json.loads(mcp_state.read_text()), ["nix"])
-            self.assertEqual(json.loads(provider_state.read_text()), ["nix"])
-            for path in (target, *state_paths):
-                self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
-
-            fragment.write_text(
-                tomlkit.dumps(
-                    {
-                        "hooks": managed["hooks"],
-                        "permissions": managed["permissions"],
-                        "default_permissions": "managed",
-                    }
+            self.assertTrue(
+                all(
+                    table.trivia.comment == "# nix-generated"
+                    for table in config["hooks"]["PreToolUse"]
                 )
             )
-            result = self._run(target, fragment, *state_paths)
+            self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
+            before = target.read_text()
+
+            result = self._run(target, fragment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(target.read_text(), before)
+
+            self._write_fragment(
+                fragment,
+                {
+                    "default_permissions": "managed",
+                    "mcp_servers": {
+                        "shared": {"url": "https://updated.test"},
+                    },
+                    "permissions": {"managed": {"extends": ":read-only"}},
+                },
+            )
+            result = self._run(target, fragment)
+
             self.assertEqual(result.returncode, 0, result.stderr)
             config = tomlkit.parse(target.read_text())
-            self.assertEqual(set(config["mcp_servers"]), {"user"})
-            self.assertEqual(set(config["model_providers"]), {"user"})
-            self.assertNotIn("features", config)
-            self.assertNotIn("tui", config)
-            self.assertNotIn("[mcp_servers.nix]", target.read_text())
-            self.assertEqual(target.read_text().count("# nix-generated"), 8)
+            self.assertEqual(config["features"], {"user_only": True})
+            self.assertEqual(config["tui"], {"user_only": True})
+            self.assertEqual(set(config["mcp_servers"]), {"user", "shared"})
+            self.assertTrue(config["mcp_servers"]["shared"]["user_only"])
+            self.assertEqual(
+                config["mcp_servers"]["shared"]["url"],
+                "https://updated.test",
+            )
+            self.assertEqual(config["model_providers"]["shared"], {"user_only": True})
+            self.assertEqual(set(config["hooks"]), {"UserPromptSubmit"})
+            self.assertTrue(config["permissions"]["managed"]["user_only"])
+            self.assertEqual(
+                config["permissions"]["managed"]["extends"],
+                ":read-only",
+            )
 
-            fragment.write_text(
-                tomlkit.dumps(
-                    {
-                        "model_providers": {
-                            "missing": {
-                                "base_url": {"_secret": str(root / "missing")}
-                            }
+            self._write_fragment(fragment, {})
+            result = self._run(target, fragment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            output = target.read_text()
+            config = tomlkit.parse(output)
+            self.assertNotIn("default_permissions", config)
+            self.assertEqual(config["features"], {"user_only": True})
+            self.assertEqual(config["tui"], {"user_only": True})
+            self.assertEqual(set(config["mcp_servers"]), {"user", "shared"})
+            self.assertEqual(config["mcp_servers"]["shared"], {"user_only": True})
+            self.assertEqual(config["model_providers"]["shared"], {"user_only": True})
+            self.assertEqual(set(config["hooks"]), {"UserPromptSubmit"})
+            self.assertEqual(config["permissions"]["managed"], {"user_only": True})
+            self.assertNotIn("# nix-generated", output)
+
+    def test_cleans_legacy_markers_without_state_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "config.toml"
+            fragment = root / "fragment.toml"
+            target.write_text(
+                'model = "app"\n'
+                'default_permissions = "managed" # nix-generated\n'
+                "[mcp_servers.user]\nurl = \"https://user.test\"\n"
+                "[mcp_servers.old] # nix-generated\n"
+                'url = "https://old.test"\n'
+                "[features] # nix-generated\nold = true\n"
+            )
+            self._write_fragment(fragment, {})
+
+            result = self._run(target, fragment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            output = target.read_text()
+            config = tomlkit.parse(output)
+            self.assertEqual(config["model"], "app")
+            self.assertNotIn("default_permissions", config)
+            self.assertEqual(set(config["mcp_servers"]), {"user"})
+            self.assertNotIn("features", config)
+            self.assertNotIn("# nix-generated", output)
+
+    def test_preserves_values_in_generated_container(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "config.toml"
+            fragment = root / "fragment.toml"
+            self._write_fragment(fragment, {"features": {"nix": True}})
+            result = self._run(target, fragment)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            config = tomlkit.parse(target.read_text())
+            config["features"]["user"] = True
+            target.write_text(tomlkit.dumps(config))
+            self._write_fragment(fragment, {})
+
+            result = self._run(target, fragment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            output = target.read_text()
+            config = tomlkit.parse(output)
+            self.assertEqual(config["features"], {"user": True})
+            self.assertNotIn("# nix-generated", output)
+
+    def test_empty_fragment_leaves_unmanaged_config_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "config.toml"
+            fragment = root / "fragment.toml"
+            original = '# keep\nmodel="app"\n'
+            target.write_text(original)
+            target.chmod(0o644)
+            self._write_fragment(fragment, {})
+
+            result = self._run(target, fragment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(target.read_text(), original)
+            self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o644)
+
+    def test_failures_do_not_modify_target(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "config.toml"
+            fragment = root / "fragment.toml"
+            target.write_text(
+                'model = "app"\n'
+                "[features] # nix-generated\nmemories = true\n"
+            )
+            self._write_fragment(
+                fragment,
+                {
+                    "model_providers": {
+                        "missing": {
+                            "base_url": {"_secret": str(root / "missing")}
                         }
                     }
-                )
+                },
             )
-            before = (
-                target.read_text(),
-                mcp_state.read_text(),
-                provider_state.read_text(),
-            )
-            result = self._run(target, fragment, *state_paths)
+            before = target.read_text()
+
+            result = self._run(target, fragment)
+
             self.assertNotEqual(result.returncode, 0)
-            self.assertEqual(
-                (
-                    target.read_text(),
-                    mcp_state.read_text(),
-                    provider_state.read_text(),
-                ),
-                before,
-            )
+            self.assertEqual(target.read_text(), before)
 
             target.write_text("invalid = [")
             before = target.read_text()
-            result = self._run(target, fragment, *state_paths)
+            self._write_fragment(fragment, {"features": {"memories": True}})
+
+            result = self._run(target, fragment)
+
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(target.read_text(), before)
 

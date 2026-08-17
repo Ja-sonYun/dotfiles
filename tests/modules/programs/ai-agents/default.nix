@@ -57,6 +57,22 @@ let
     ) (throw "Codex activation does not reference a managed settings fragment") words;
   testPython = testPkgs.python3.withPackages (python: [ python.tomlkit ]);
   codexModule = ../../../../modules/programs/codex;
+  disabledConfiguration = home-manager.lib.homeManagerConfiguration {
+    pkgs = testPkgs;
+    modules = [
+      codexModule
+      {
+        home = {
+          username = "test-user";
+          homeDirectory = "/home/test-user";
+          stateVersion = "26.05";
+        };
+      }
+    ];
+  };
+  disabledActivation = disabledConfiguration.config.home.activation.codexConfigMerge.data;
+  disabledActivationFile = testPkgs.writeText "disabled-codex-activation" disabledActivation;
+  disabledFragment = managedFragment disabledConfiguration;
 in
 testPkgs.runCommand "ai-tools-tests"
   {
@@ -72,22 +88,23 @@ testPkgs.runCommand "ai-tools-tests"
 
     merge_codex() {
       "$test_python" ${codexModule}/merge-config-toml.py \
-        "$1" "$2" \
-        "$3-mcp.json" \
-        "$3-model-provider.json"
+        "$1" "$2"
     }
 
     export SHARED_CODEX_CONFIG="$TMPDIR/shared-config.toml"
 
     merge_codex \
       "$SHARED_CODEX_CONFIG" \
-      ${lib.escapeShellArg (managedFragment shared.configuration)} \
-      "$TMPDIR/shared"
+      ${lib.escapeShellArg (managedFragment shared.configuration)}
 
     "$test_python" ${codexModule}/test_merge_config_toml.py
     node --test ${../../../../pkgs/pi/extensions/hooks}/src/index.test.ts
     "$test_python" ${../../../lib/check-generated-files.py} \
       ${sharedManifest}
+    grep -F 'if [[ -f "/home/test-user/.codex/config.toml" ]]; then' ${disabledActivationFile}
+    grep -F '.home-manager-mcp-state.json' ${disabledActivationFile}
+    grep -F '.home-manager-model-provider-state.json' ${disabledActivationFile}
+    test ! -s ${disabledFragment}
 
     printf 'PASS: Codex, Claude, and Pi generated the expected AI tool files and hooks.\n' > "$out"
   ''

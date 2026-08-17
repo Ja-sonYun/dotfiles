@@ -11,6 +11,10 @@ import tomlkit
 from tomlkit.items import AoT, Table
 
 
+GENERATED_COMMENT = "nix-generated"
+CONTAINER_COMMENT = "nix-generated-container"
+
+
 def _read(path: Path) -> str:
     return path.read_text() if path.exists() else ""
 
@@ -43,14 +47,78 @@ def _resolve_secrets(value: Any) -> Any:
     return value
 
 
-def _mark_generated_sections(value: Any) -> None:
+def _has_comment(value: Any, comment: str) -> bool:
+    trivia = getattr(value, "trivia", None)
+    return trivia is not None and trivia.comment.strip() == f"# {comment}"
+
+
+def _clear_comment(value: Any) -> None:
+    value.trivia.comment = ""
+    value.trivia.comment_ws = ""
+
+
+def _item(document: MutableMapping[str, Any], key: str) -> Any:
+    item = getattr(document, "item", None)
+    return item(key) if item is not None else document[key]
+
+
+def _mark_generated(value: Any) -> None:
     if isinstance(value, Table):
-        value.comment("nix-generated")
-        for child in value.values():
-            _mark_generated_sections(child)
+        if value:
+            for key in value:
+                _mark_generated(_item(value, key))
+        else:
+            value.comment(GENERATED_COMMENT)
     elif isinstance(value, AoT):
         for table in value:
-            _mark_generated_sections(table)
+            table.comment(GENERATED_COMMENT)
+    else:
+        value.comment(GENERATED_COMMENT)
+
+
+def _is_generated(value: Any) -> bool:
+    if _has_comment(value, GENERATED_COMMENT):
+        return True
+    return isinstance(value, AoT) and any(
+        _has_comment(table, GENERATED_COMMENT) for table in value
+    )
+
+
+def _remove_generated(document: MutableMapping[str, Any]) -> None:
+    for key in list(document):
+        value = _item(document, key)
+        if _is_generated(value):
+            document.pop(key)
+            continue
+        if not isinstance(value, Table):
+            continue
+
+        _remove_generated(value)
+        if not _has_comment(value, CONTAINER_COMMENT):
+            continue
+        if value:
+            _clear_comment(value)
+        else:
+            document.pop(key)
+
+
+def _merge_generated(
+    document: MutableMapping[str, Any],
+    fragment: MutableMapping[str, Any],
+) -> None:
+    for key in fragment:
+        value = _item(fragment, key)
+        if isinstance(value, Table) and not _is_generated(value):
+            current = document.get(key)
+            if not isinstance(current, Table):
+                document.pop(key, None)
+                current = tomlkit.table()
+                current.comment(CONTAINER_COMMENT)
+                document[key] = current
+            _merge_generated(current, value)
+        else:
+            document.pop(key, None)
+            document[key] = value
 
 
 def _add_hook_state(fragment: Any, target: Path) -> None:
@@ -101,96 +169,34 @@ def _add_hook_state(fragment: Any, target: Path) -> None:
         hooks["state"] = state
 
 
-def _read_state(path: Path) -> list[str]:
-    state = json.loads(_read(path) or "[]")
-    if not isinstance(state, list) or not all(isinstance(name, str) for name in state):
-        raise ValueError(f"invalid state file: {path}")
-    return state
-
-
-def _merge_named_table(
-    document: Any,
-    fragment: Any,
-    key: str,
-    previous_names: list[str],
-) -> list[str]:
-    new_items = fragment.get(key, {})
-    current_items = document.get(key)
-    if current_items is None:
-        current_items = tomlkit.table()
-        document[key] = current_items
-    if not isinstance(current_items, MutableMapping) or not isinstance(
-        new_items, MutableMapping
-    ):
-        raise ValueError(f"{key} must be a table")
-
-    for name in previous_names:
-        current_items.pop(name, None)
-    for name, value in new_items.items():
-        current_items[name] = value
-    return list(new_items)
-
-
-def _replace_key(document: Any, fragment: Any, key: str) -> None:
-    document.pop(key, None)
-    if key in fragment:
-        document[key] = fragment[key]
-
-
-def _merge_permission(document: Any, fragment: Any) -> None:
-    permissions = document.get("permissions")
-    managed = fragment.get("permissions", {}).get("managed")
-    if permissions is None:
-        permissions = tomlkit.table()
-        document["permissions"] = permissions
-    if not isinstance(permissions, MutableMapping):
-        raise ValueError("permissions must be a table")
-
-    permissions.pop("managed", None)
-    if managed is not None:
-        permissions["managed"] = managed
-
-
 def main() -> None:
-    (
-        target,
-        fragment_path,
-        mcp_state_path,
-        provider_state_path,
-    ) = map(Path, sys.argv[1:])
+    if len(sys.argv) != 3:
+        raise SystemExit("usage: merge-codex-config TARGET FRAGMENT")
+
+    target, fragment_path = map(Path, sys.argv[1:])
     target_text = _read(target)
+    fragment_text = _read(fragment_path)
+    markers = (f"# {GENERATED_COMMENT}", f"# {CONTAINER_COMMENT}")
+    if not fragment_text.strip() and not any(
+        marker in target_text for marker in markers
+    ):
+        return
+
     document = (
         tomlkit.parse(target_text) if target_text.strip() else tomlkit.document()
     )
-    fragment = tomlkit.parse(_read(fragment_path))
+    fragment = tomlkit.parse(fragment_text)
     _resolve_secrets(fragment)
     _add_hook_state(fragment, target)
-    for value in fragment.values():
-        _mark_generated_sections(value)
-    if "default_permissions" in fragment:
-        fragment["default_permissions"].comment("nix-generated")
+    for key in fragment:
+        _mark_generated(_item(fragment, key))
 
-    mcp_names = _merge_named_table(
-        document,
-        fragment,
-        "mcp_servers",
-        _read_state(mcp_state_path),
-    )
-    provider_names = _merge_named_table(
-        document,
-        fragment,
-        "model_providers",
-        _read_state(provider_state_path),
-    )
-    _replace_key(document, fragment, "features")
-    _replace_key(document, fragment, "hooks")
-    _replace_key(document, fragment, "tui")
-    _replace_key(document, fragment, "default_permissions")
-    _merge_permission(document, fragment)
+    _remove_generated(document)
+    _merge_generated(document, fragment)
 
-    _write_atomic(target, tomlkit.dumps(document))
-    _write_atomic(mcp_state_path, json.dumps(mcp_names))
-    _write_atomic(provider_state_path, json.dumps(provider_names))
+    output = tomlkit.dumps(document)
+    if output != target_text:
+        _write_atomic(target, output)
 
 
 if __name__ == "__main__":

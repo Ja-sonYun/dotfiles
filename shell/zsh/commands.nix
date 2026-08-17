@@ -1,6 +1,14 @@
 { pkgs, ... }:
 {
   programs.zsh-customize.commands = {
+    lstmp = {
+      description = "List .tmp directories below the current directory with their total sizes";
+      body = ''
+        ${pkgs.fd}/bin/fd --hidden --no-ignore --type directory --glob .tmp . \
+          --exec-batch ${pkgs.eza}/bin/eza --long --treat-dirs-as-files --total-size --
+      '';
+    };
+
     shorten-pwd = {
       description = "Display current path in a shortened format";
       body = ''
