@@ -66,6 +66,10 @@
         tag = "3.7b";
         hash = "sha256-CTq06XP997M0ODxQihTq34dI9H6jSRLUXLYuTWOwDpc=";
       };
+      patches = (oldAttrs.patches or [ ]) ++ [
+        # TODO: Remove this backport when stable tmux includes #5350 and #5398.
+        ./patches/tmux-3.7b-popup-flicker.patch
+      ];
       buildInputs =
         oldAttrs.buildInputs
         ++ prev.lib.optionals prev.stdenv.hostPlatform.isDarwin [

@@ -4,11 +4,6 @@
   ...
 }:
 let
-  codex = pkgs.writeShellScriptBin "codex" ''
-    export CODEX_GITHUB_PERSONAL_ACCESS_TOKEN="$(${pkgs.gh}/bin/gh auth token --hostname github.com)"
-    exec ${pkgs.codex}/bin/codex "$@"
-  '';
-
   codexLmp = pkgs.writeShellScriptBin "codex-lmp" ''
     set -euo pipefail
 
@@ -34,7 +29,6 @@ in
 {
   programs.codex = {
     enable = true;
-    package = codex;
     extraPath = [
       pkgs.aws-ro
       pkgs.gh-ro
@@ -114,10 +108,6 @@ in
         base_url = "$LLM_DOMAIN/v1";
         wire_api = "responses";
         env_key = "CAPI_KEY";
-      };
-
-      mcp_servers = {
-        github.bearer_token_env_var = "CODEX_GITHUB_PERSONAL_ACCESS_TOKEN";
       };
     };
   };

@@ -3,10 +3,6 @@
     "version": "2.69.2",
     "hash": "sha256-xI4tuKgJNmaDNNujPWWpAH227GZTDknCzPK5uH/yeaA="
   },
-  "mcp-remote": {
-    "version": "0.1.38",
-    "hash": "sha256-DupWISNTyBS+m/W8/XL8iMjsi+Fea8w4ImLnRYjICEw="
-  },
   "macnotesapp": {
     "version": "0.8.2",
     "hash": "sha256-c9wZgJVxiUxDgRzQTSWiqxSNkCDj6dM/rJwQx7PtRj4="

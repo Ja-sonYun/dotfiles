@@ -46,7 +46,6 @@
     chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
     exa-mcp-server = final.callPackage ../pkgs/exa-mcp-server { };
     firecrawl-mcp = final.callPackage ../pkgs/firecrawl-mcp { };
-    mcp-remote = final.callPackage ../pkgs/mcp-remote { };
     n8n-mcp = final.callPackage ../pkgs/n8n-mcp { };
 
     # Pypi

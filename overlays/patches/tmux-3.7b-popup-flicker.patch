@@ -1,0 +1,35 @@
+Backport of:
+https://github.com/tmux/tmux/commit/e242da168bb6d50c687ccd1897b82c1d282a651a
+https://github.com/tmux/tmux/commit/824a07290f853a97219ee2624a46c0aada246efb
+
+Adapted to the tmux 3.7b redraw implementation.
+
+diff --git a/popup.c b/popup.c
+--- a/popup.c
++++ b/popup.c
+@@ -261 +261 @@ popup_check_cb(struct client* c, void *data, u_int px, u_int py, u_int nx)
+-			    pd->sy, r->ranges[i].px, py, r->ranges[i].nx,
++			    pd->sy, mr->ranges[i].px, py, mr->ranges[i].nx,
+diff --git a/screen-redraw.c b/screen-redraw.c
+--- a/screen-redraw.c
++++ b/screen-redraw.c
+@@ -754,3 +753,0 @@ screen_redraw_update(struct screen_redraw_ctx *ctx, uint64_t flags)
+-	if (c->overlay_draw != NULL)
+-		flags |= CLIENT_REDRAWOVERLAY;
+-
+@@ -1095 +1092,3 @@ screen_redraw_draw_status(struct screen_redraw_ctx *ctx)
+-	u_int		 i, y;
++	u_int		 i, j, y;
++	struct visible_ranges	*r;
++	struct visible_range	*rr;
+@@ -1104,2 +1103,8 @@ screen_redraw_draw_status(struct screen_redraw_ctx *ctx)
+-		tty_draw_line(tty, s, 0, i, UINT_MAX, 0, y + i,
+-		    &grid_default_cell, NULL);
++		r = tty_check_overlay_range(tty, 0, y + i, tty->sx);
++		for (j = 0; j < r->used; j++) {
++			rr = &r->ranges[j];
++			if (rr->nx == 0)
++				continue;
++			tty_draw_line(tty, s, rr->px, i, rr->nx, rr->px,
++			    y + i, &grid_default_cell, NULL);
++		}
