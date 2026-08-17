@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 
 project_for_path() {
-	local path="$1" root
+	local path="$1" root superproject
 	case "$path" in
 		"~") path="$HOME" ;;
 		"~/"*) path="$HOME/${path#"~/"}" ;;
 	esac
 	if [[ -d "$path" ]]; then
 		root="$(git -C "$path" rev-parse --show-toplevel 2>/dev/null)"
+		while [[ -n "$root" ]]; do
+			superproject="$(git -C "$root" rev-parse --show-superproject-working-tree 2>/dev/null)"
+			[[ -n "$superproject" ]] || break
+			root="$superproject"
+		done
 		printf '%s\n' "${root:-$path}"
 	else
 		printf '%s\n' "$path"
