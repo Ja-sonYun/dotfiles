@@ -20,13 +20,6 @@
       "uv"
     ];
   };
-  python-uv = {
-    description = "Python 3.13 + uv (alias for python313)";
-    tags = [
-      "python"
-      "uv"
-    ];
-  };
   node20 = {
     description = "Node.js 20 + pnpm + yarn";
     tags = [
@@ -167,120 +160,6 @@
       "rust"
       "wasm"
       "aws"
-    ];
-  };
-
-  # Legacy aliases
-  python310 = {
-    description = "Python 3.11 + uv (legacy alias for python311)";
-    tags = [
-      "python"
-      "uv"
-      "legacy"
-    ];
-  };
-  "go1.24" = {
-    description = "Go 1.25 (legacy alias for go)";
-    tags = [
-      "go"
-      "golang"
-      "legacy"
-    ];
-  };
-  "ruby3.3" = {
-    description = "Ruby 3.3 (legacy alias for ruby)";
-    tags = [
-      "ruby"
-      "legacy"
-    ];
-  };
-  "terraform1.8.2" = {
-    description = "Terraform 1.8.2 (legacy alias)";
-    tags = [
-      "terraform"
-      "iac"
-      "legacy"
-    ];
-  };
-  "terraform1.8.2-aws" = {
-    description = "Terraform + AWS (legacy alias)";
-    tags = [
-      "terraform"
-      "aws"
-      "iac"
-      "legacy"
-    ];
-  };
-  "terraform1.8.2-aws-node20" = {
-    description = "Terraform + AWS + Node.js 20 (legacy alias)";
-    tags = [
-      "terraform"
-      "aws"
-      "node"
-      "iac"
-      "legacy"
-    ];
-  };
-  "terraform1.8.2-aws-node20-python310" = {
-    description = "Terraform + AWS + Node.js 20 + Python 3.11 (legacy alias)";
-    tags = [
-      "terraform"
-      "aws"
-      "node"
-      "python"
-      "iac"
-      "legacy"
-    ];
-  };
-  "terraform1.8.2-aws-node20-python312" = {
-    description = "Terraform + AWS + Node.js 20 + Python 3.12 (legacy alias)";
-    tags = [
-      "terraform"
-      "aws"
-      "node"
-      "python"
-      "iac"
-      "legacy"
-    ];
-  };
-  "terraform1.8.2-azure" = {
-    description = "Terraform + Azure (legacy alias)";
-    tags = [
-      "terraform"
-      "azure"
-      "iac"
-      "legacy"
-    ];
-  };
-  aws-node20-python310 = {
-    description = "AWS + Node.js 20 + Python 3.11 (legacy alias)";
-    tags = [
-      "aws"
-      "node"
-      "python"
-      "legacy"
-    ];
-  };
-  terraform-aws-node20-python310 = {
-    description = "Terraform + AWS + Node.js 20 + Python 3.11 (legacy alias)";
-    tags = [
-      "terraform"
-      "aws"
-      "node"
-      "python"
-      "iac"
-      "legacy"
-    ];
-  };
-  terraform-gcloud-python310 = {
-    description = "Terraform + Google Cloud + Python 3.11 (legacy alias)";
-    tags = [
-      "terraform"
-      "gcloud"
-      "gcp"
-      "python"
-      "iac"
-      "legacy"
     ];
   };
 }

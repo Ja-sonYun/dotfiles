@@ -1,0 +1,15 @@
+{
+  "description": "Hooks loaded from a custom plugin-relative path.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file-hook"
+          }
+        ]
+      }
+    ]
+  }
+}

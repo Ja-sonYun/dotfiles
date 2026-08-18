@@ -1,0 +1,22 @@
+{
+  "name": "inline-tools",
+  "mcpServers": {
+    "local-docs": {
+      "command": "marketplace-mcp"
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/pre-tool\" \"$CLAUDE_PROJECT_DIR\"",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

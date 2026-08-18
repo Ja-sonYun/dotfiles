@@ -1,0 +1,4 @@
+{
+  "name": "file-hooks",
+  "hooks": "./config/hooks.json"
+}

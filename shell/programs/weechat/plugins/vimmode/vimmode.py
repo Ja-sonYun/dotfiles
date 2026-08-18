@@ -26,10 +26,7 @@ import json
 import os
 import re
 import subprocess
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 import time
 
 import weechat
@@ -1829,11 +1826,6 @@ def check_warnings():
 if __name__ == "__main__":
     weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION,
                      SCRIPT_LICENSE, SCRIPT_DESC, "", "")
-    # Warn the user if he's using an unsupported WeeChat version.
-    VERSION = weechat.info_get("version_number", "")
-    if int(VERSION) < 0x01000000:
-        print_warning("Please upgrade to WeeChat ≥ 1.0.0. Previous versions"
-                      " are not supported.")
     # Set up script options.
     for option, value in list(vimode_settings.items()):
         if weechat.config_is_set_plugin(option):
@@ -1854,14 +1846,9 @@ if __name__ == "__main__":
     weechat.bar_item_new("cmd_completion", "cb_cmd_completion", "")
     weechat.bar_item_new("vi_buffer", "cb_vi_buffer", "")
     weechat.bar_item_new("line_numbers", "cb_line_numbers", "")
-    if int(VERSION) >= 0x02090000:
-        weechat.bar_new("vi_line_numbers", "on", "0", "window", "", "left",
-                        "vertical", "vertical", "0", "0", "default", "default",
-                        "default", "default", "0", "line_numbers")
-    else:
-        weechat.bar_new("vi_line_numbers", "on", "0", "window", "", "left",
-                        "vertical", "vertical", "0", "0", "default", "default",
-                        "default", "0", "line_numbers")
+    weechat.bar_new("vi_line_numbers", "on", "0", "window", "", "left",
+                    "vertical", "vertical", "0", "0", "default", "default",
+                    "default", "default", "0", "line_numbers")
     weechat.hook_config("plugins.var.python.%s.*" % SCRIPT_NAME, "cb_config",
                         "")
     weechat.hook_signal("key_pressed", "cb_key_pressed", "")
@@ -1879,6 +1866,3 @@ if __name__ == "__main__":
                          ("This command can be used for key bindings to go to "
                           "normal mode."),
                          "", "", "", "cb_vimode_go_to_normal", "")
-    # Remove obsolete bar.
-    vi_cmd_bar = weechat.bar_search("vi_cmd")
-    weechat.bar_remove(vi_cmd_bar)

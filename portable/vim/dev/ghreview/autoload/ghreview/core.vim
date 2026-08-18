@@ -302,7 +302,7 @@ def Finish(done: any, ok: bool, error: string): void
   endif
 enddef
 
-def FetchDrafts(expected_token: number, done: any = v:none): void
+def FetchDrafts(expected_token: number, done: any): void
   GraphQL(repo_root, drafts_query, { id: get(pr, 'id', '') }, (data, error) => {
     if expected_token != session_token
       return
@@ -331,7 +331,7 @@ export def Refresh(): void
     Error('No active GitHub review')
     return
   endif
-  FetchDrafts(session_token)
+  FetchDrafts(session_token, v:none)
 enddef
 
 def HandleFetch(request: number, root: string, info: dict<any>, error: string): void
@@ -356,7 +356,7 @@ def HandleFetch(request: number, root: string, info: dict<any>, error: string): 
     session_head = info.headRefOid
     pending_review_id = ''
     drafts = []
-    FetchDrafts(session_token)
+    FetchDrafts(session_token, v:none)
   catch
     Error(v:exception)
   endtry
@@ -523,7 +523,7 @@ def SaveSucceeded(buf: number, expected_token: number): void
     execute $'silent! bwipeout! {buf}'
   endif
   if expected_token == session_token
-    FetchDrafts(expected_token)
+    FetchDrafts(expected_token, v:none)
   endif
 enddef
 

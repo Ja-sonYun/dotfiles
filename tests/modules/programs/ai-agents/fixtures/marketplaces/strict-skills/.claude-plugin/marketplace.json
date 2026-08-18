@@ -1,0 +1,17 @@
+{
+  "name": "strict-skills-marketplace",
+  "plugins": [
+    {
+      "name": "strict-skills",
+      "source": "./plugin",
+      "strict": false,
+      "skills": "./selected"
+    },
+    {
+      "name": "strict-empty",
+      "source": "./empty-plugin",
+      "strict": false,
+      "skills": []
+    }
+  ]
+}

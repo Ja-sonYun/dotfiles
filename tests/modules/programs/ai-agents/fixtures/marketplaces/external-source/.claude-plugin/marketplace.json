@@ -1,0 +1,11 @@
+{
+  "plugins": [
+    {
+      "name": "external-source",
+      "source": {
+        "source": "github",
+        "repo": "example/external-plugin"
+      }
+    }
+  ]
+}

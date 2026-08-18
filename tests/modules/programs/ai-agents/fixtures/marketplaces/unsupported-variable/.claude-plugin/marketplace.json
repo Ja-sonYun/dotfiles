@@ -1,0 +1,8 @@
+{
+  "plugins": [
+    {
+      "name": "unsupported-variable",
+      "source": "./plugin"
+    }
+  ]
+}

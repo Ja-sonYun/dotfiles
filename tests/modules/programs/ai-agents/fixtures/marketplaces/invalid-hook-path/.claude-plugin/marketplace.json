@@ -1,0 +1,8 @@
+{
+  "plugins": [
+    {
+      "name": "invalid-hook-path",
+      "source": "./plugin"
+    }
+  ]
+}

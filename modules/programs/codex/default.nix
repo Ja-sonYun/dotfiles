@@ -200,9 +200,6 @@ in
               "${codexConfigFile}" ${managedFragment}
           fi
         ''}
-        run rm -f \
-          "${config.home.homeDirectory}/.codex/.home-manager-mcp-state.json" \
-          "${config.home.homeDirectory}/.codex/.home-manager-model-provider-state.json"
       '';
     }
     (lib.mkIf cfg.enable {

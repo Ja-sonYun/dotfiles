@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Decide whether this tool call is safe."
+          }
+        ]
+      }
+    ]
+  }
+}

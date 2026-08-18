@@ -1,0 +1,88 @@
+{
+  "name": "test-marketplace",
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "inline-tools",
+      "source": "inline-tools",
+      "skills": "./extra-skills",
+      "hooks": {
+        "PostCompact": [
+          {
+            "hooks": [
+              {
+                "type": "command",
+                "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/pre-tool\" --entry"
+              }
+            ]
+          }
+        ]
+      },
+      "mcpServers": {
+        "entry-docs": {
+          "command": "marketplace-entry-mcp"
+        }
+      },
+      "commands": "./commands",
+      "agents": "./agents",
+      "lspServers": "./.lsp.json"
+    },
+    {
+      "name": "file-hooks",
+      "source": "file-hooks"
+    },
+    {
+      "name": "default-hooks",
+      "source": "default-hooks",
+      "hooks": {
+        "UserPromptSubmit": [
+          {
+            "hooks": [
+              {
+                "type": "command",
+                "command": "supplement-hook"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "file-mcp",
+      "source": "file-mcp",
+      "mcpServers": {
+        "file-entry-docs": {
+          "command": "marketplace-file-entry-mcp"
+        }
+      }
+    },
+    {
+      "name": "root-skill",
+      "source": "root-skill"
+    },
+    {
+      "name": "strict-entry",
+      "source": "strict-entry",
+      "strict": false,
+      "hooks": {
+        "SessionStart": [
+          {
+            "hooks": [
+              {
+                "type": "command",
+                "command": "strict-hook"
+              }
+            ]
+          }
+        ]
+      },
+      "mcpServers": {
+        "strict-docs": {
+          "command": "strict-entry-mcp"
+        }
+      }
+    }
+  ]
+}

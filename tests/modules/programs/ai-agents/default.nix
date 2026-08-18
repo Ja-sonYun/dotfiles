@@ -6,7 +6,7 @@
 let
   inherit (pkgs) lib;
   testPkgs = (pkgs.extend nixlib.overlays.tool).extend (
-    final: _prev: {
+    final: prev: {
       notifycmd = final.writeShellScriptBin "notifycmd" "exit 0";
       pi-extensions = {
         hooks =
@@ -21,6 +21,11 @@ let
           '';
         mcp-adapter = final.writeTextDir "extension/index.ts" "";
       };
+      uv = prev.uv.overrideAttrs (previous: {
+        passthru = (previous.passthru or { }) // {
+          asPackage = { name, ... }: final.writeShellScriptBin name "exit 0";
+        };
+      });
     }
   );
   testPackage = name: testPkgs.writeShellScriptBin name "exit 0";
@@ -28,24 +33,66 @@ let
     pname = "claude-code";
     version = "2.1.200";
   });
-  scenarioArgs = {
-    inherit
-      claudePackage
-      home-manager
-      testPackage
-      testPkgs
-      ;
+  aiAgentModules = {
+    core = ../../../../modules/programs/ai-agents/core.nix;
+    hooks = ../../../../modules/programs/ai-agents/hooks;
+    marketplace = ../../../../modules/programs/ai-agents/marketplace;
+    mcp = ../../../../modules/programs/ai-agents/mcp.nix;
+    permissions = ../../../../modules/programs/ai-agents/permissions.nix;
   };
-  shared = import ./shared.nix scenarioArgs;
-  manifest =
-    name: scenario:
-    testPkgs.writeText "${name}-expected-files.json" (
-      builtins.toJSON {
-        inherit name;
-        inherit (scenario) actual expected;
-      }
-    );
-  sharedManifest = manifest "shared AI tools" shared;
+  clientModules = [
+    ../../../../modules/programs/claude
+    ../../../../modules/programs/codex
+    ../../../../modules/programs/pi
+  ];
+  baseModule =
+    { lib, pkgs, ... }:
+    {
+      options.programs.tmux.agentStatusScript = lib.mkOption { type = lib.types.str; };
+
+      config = {
+        home = {
+          username = "test-user";
+          homeDirectory = "/home/test-user";
+          stateVersion = "26.05";
+        };
+
+        programs = {
+          claude-code = {
+            enable = true;
+            package = claudePackage;
+          };
+          codex = {
+            enable = true;
+            package = testPackage "codex";
+          };
+          pi = {
+            enable = true;
+            package = testPackage "pi";
+          };
+          tmux.agentStatusScript = toString (pkgs.writeShellScript "test-agent-status" "exit 0");
+        };
+      };
+    };
+  mkConfiguration =
+    { featureModules, module }:
+    home-manager.lib.homeManagerConfiguration {
+      pkgs = testPkgs;
+      modules =
+        featureModules
+        ++ clientModules
+        ++ [
+          baseModule
+          module
+        ];
+    };
+  homeFilesFor =
+    configuration:
+    import ../../../lib/home-files.nix {
+      inherit lib;
+      home = configuration.config.home;
+      pkgs = testPkgs;
+    };
   managedFragment =
     configuration:
     let
@@ -55,8 +102,35 @@ let
     lib.findFirst (
       word: lib.hasSuffix "-codex-managed-settings.toml" word
     ) (throw "Codex activation does not reference a managed settings fragment") words;
+  scenarioArgs = {
+    inherit
+      aiAgentModules
+      homeFilesFor
+      managedFragment
+      mkConfiguration
+      testPkgs
+      ;
+  };
+  scenarios = [
+    (import ./core.nix scenarioArgs)
+    (import ./hooks.nix scenarioArgs)
+    (import ./hook-policy.nix scenarioArgs)
+    (import ./marketplace.nix scenarioArgs)
+    (import ./mcp.nix scenarioArgs)
+    (import ./permissions.nix scenarioArgs)
+  ];
+  manifest =
+    scenario:
+    testPkgs.writeText "${lib.strings.sanitizeDerivationName scenario.name}-expected-files.json" (
+      builtins.toJSON {
+        inherit (scenario) actual expected name;
+      }
+    );
+  manifests = map manifest scenarios;
   testPython = testPkgs.python3.withPackages (python: [ python.tomlkit ]);
   codexModule = ../../../../modules/programs/codex;
+  codexHookAdapter = ../../../../modules/programs/ai-agents/hooks/codex_adapter.py;
+  hookHandlers = ../../../../shell/secrets/modules/home-manager/ai-agents/hooks;
   disabledConfiguration = home-manager.lib.homeManagerConfiguration {
     pkgs = testPkgs;
     modules = [
@@ -85,26 +159,19 @@ testPkgs.runCommand "ai-tools-tests"
     set -euo pipefail
 
     test_python=${testPython}/bin/python3
-
-    merge_codex() {
-      "$test_python" ${codexModule}/merge-config-toml.py \
-        "$1" "$2"
-    }
-
-    export SHARED_CODEX_CONFIG="$TMPDIR/shared-config.toml"
-
-    merge_codex \
-      "$SHARED_CODEX_CONFIG" \
-      ${lib.escapeShellArg (managedFragment shared.configuration)}
+    export AI_AGENTS_CODEX_HOOK_ADAPTER=${lib.escapeShellArg (toString codexHookAdapter)}
+    export AI_AGENTS_HOOKS_DIR=${lib.escapeShellArg (toString hookHandlers)}
 
     "$test_python" ${codexModule}/test_merge_config_toml.py
     node --test ${../../../../pkgs/pi/extensions/hooks}/src/index.test.ts
+    "$test_python" ${./test_codex_hook_adapter.py}
+    "$test_python" ${./test_hook_input.py}
+    "$test_python" ${./test_notification_hook.py}
+    "$test_python" ${./test_status_hook.py}
     "$test_python" ${../../../lib/check-generated-files.py} \
-      ${sharedManifest}
+      ${lib.escapeShellArgs manifests}
     grep -F 'if [[ -f "/home/test-user/.codex/config.toml" ]]; then' ${disabledActivationFile}
-    grep -F '.home-manager-mcp-state.json' ${disabledActivationFile}
-    grep -F '.home-manager-model-provider-state.json' ${disabledActivationFile}
     test ! -s ${disabledFragment}
 
-    printf 'PASS: Codex, Claude, and Pi generated the expected AI tool files and hooks.\n' > "$out"
+    printf 'PASS: AI agent core, hooks, Marketplace, MCP, permissions, and hook handler tests passed.\n' > "$out"
   ''

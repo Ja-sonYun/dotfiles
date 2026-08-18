@@ -1,0 +1,9 @@
+{
+  "name": "invalid-skill-name-marketplace",
+  "plugins": [
+    {
+      "name": "invalid-skill-name",
+      "source": "./plugin"
+    }
+  ]
+}

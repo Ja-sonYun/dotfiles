@@ -54,6 +54,10 @@ in
       language = "korean";
       promptSuggestionEnabled = false;
       effortLevel = "high";
+      statusLine = {
+        type = "command";
+        command = "${pkgs.jq}/bin/jq -rf ${./statusline.jq}";
+      };
     };
 
     keybindings = {

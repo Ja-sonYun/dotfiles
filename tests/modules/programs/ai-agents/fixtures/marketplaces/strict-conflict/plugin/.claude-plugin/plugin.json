@@ -1,0 +1,15 @@
+{
+  "name": "strict-conflict",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "manifest-hook"
+          }
+        ]
+      }
+    ]
+  }
+}

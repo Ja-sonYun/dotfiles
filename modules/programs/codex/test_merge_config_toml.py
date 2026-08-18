@@ -219,32 +219,6 @@ class _MergeConfigTest(unittest.TestCase):
             self.assertEqual(config["permissions"]["managed"], {"user_only": True})
             self.assertNotIn("# nix-generated", output)
 
-    def test_cleans_legacy_markers_without_state_files(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            target = root / "config.toml"
-            fragment = root / "fragment.toml"
-            target.write_text(
-                'model = "app"\n'
-                'default_permissions = "managed" # nix-generated\n'
-                "[mcp_servers.user]\nurl = \"https://user.test\"\n"
-                "[mcp_servers.old] # nix-generated\n"
-                'url = "https://old.test"\n'
-                "[features] # nix-generated\nold = true\n"
-            )
-            self._write_fragment(fragment, {})
-
-            result = self._run(target, fragment)
-
-            self.assertEqual(result.returncode, 0, result.stderr)
-            output = target.read_text()
-            config = tomlkit.parse(output)
-            self.assertEqual(config["model"], "app")
-            self.assertNotIn("default_permissions", config)
-            self.assertEqual(set(config["mcp_servers"]), {"user"})
-            self.assertNotIn("features", config)
-            self.assertNotIn("# nix-generated", output)
-
     def test_preserves_values_in_generated_container(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

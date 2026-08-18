@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "file-docs": {
+      "command": "marketplace-file-mcp"
+    }
+  }
+}

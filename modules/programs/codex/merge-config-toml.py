@@ -68,7 +68,7 @@ def _mark_generated(value: Any) -> None:
             for key in value:
                 _mark_generated(_item(value, key))
         else:
-            value.comment(GENERATED_COMMENT)
+            value.comment(CONTAINER_COMMENT)
     elif isinstance(value, AoT):
         for table in value:
             table.comment(GENERATED_COMMENT)
@@ -77,11 +77,11 @@ def _mark_generated(value: Any) -> None:
 
 
 def _is_generated(value: Any) -> bool:
-    if _has_comment(value, GENERATED_COMMENT):
-        return True
-    return isinstance(value, AoT) and any(
-        _has_comment(table, GENERATED_COMMENT) for table in value
-    )
+    if isinstance(value, Table):
+        return False
+    if isinstance(value, AoT):
+        return any(_has_comment(table, GENERATED_COMMENT) for table in value)
+    return _has_comment(value, GENERATED_COMMENT)
 
 
 def _remove_generated(document: MutableMapping[str, Any]) -> None:

@@ -1,0 +1,21 @@
+{
+  "plugins": [
+    {
+      "name": "strict-conflict",
+      "source": "./plugin",
+      "strict": false,
+      "hooks": {
+        "SessionStart": [
+          {
+            "hooks": [
+              {
+                "type": "command",
+                "command": "entry-hook"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
