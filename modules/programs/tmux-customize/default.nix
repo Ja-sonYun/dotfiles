@@ -189,6 +189,7 @@ let
     logical="''${logical#_popup_}"
     logical="''${logical#*_}"
     logical="''${logical#git_root_}"
+    logical="''${logical#root_}"
     case "$logical" in
     ${encodedCases}
     esac

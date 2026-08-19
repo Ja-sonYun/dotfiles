@@ -31,6 +31,7 @@ in
           sessionName = "agent";
           keyTable = "popup-locked-root";
           sessionOnDir = true;
+          runOnRoot = ".root";
           runOnGitRoot = true;
           environment = {
             CTRL_C_AS_CLOSE = "1";

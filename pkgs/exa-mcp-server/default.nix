@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "exa-mcp-server";
   packageManager = "npm";
   packageName = "exa-mcp-server";
-  packageVersion = "3.4.0";
+  packageVersion = "3.4.1";
   name = "exa-mcp-server";
   exposedBinaries = [
     "exa-mcp-server"

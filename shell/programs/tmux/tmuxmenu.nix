@@ -47,6 +47,7 @@
             sessionName = "tig";
             keyTable = "popup-locked-root";
             sessionOnDir = true;
+            runOnRoot = ".root";
             runOnGitRoot = true;
             position = {
               w = "140";
@@ -63,6 +64,7 @@
             sessionName = "gitui";
             keyTable = "popup-locked-root";
             sessionOnDir = true;
+            runOnRoot = ".root";
             runOnGitRoot = true;
             position = {
               w = "140";
@@ -79,6 +81,7 @@
             sessionName = "gh-dash";
             keyTable = "popup-locked-root";
             sessionOnDir = true;
+            runOnRoot = ".root";
             runOnGitRoot = true;
             position = {
               w = "150";

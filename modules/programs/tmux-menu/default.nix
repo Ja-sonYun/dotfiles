@@ -65,6 +65,10 @@ let
         type = lib.types.bool;
         default = false;
       };
+      runOnRoot = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+      };
       runOnGitRoot = lib.mkOption {
         type = lib.types.bool;
         default = false;
@@ -153,6 +157,7 @@ let
     // lib.optionalAttrs (e.sessionName != null) { session_name = e.sessionName; }
     // lib.optionalAttrs (e.keyTable != null) { key_table = e.keyTable; }
     // lib.optionalAttrs e.sessionOnDir { session_on_dir = true; }
+    // lib.optionalAttrs (e.runOnRoot != null) { run_on_root = e.runOnRoot; }
     // lib.optionalAttrs e.runOnGitRoot { run_on_git_root = true; }
     // lib.optionalAttrs e.background { background = true; }
     // lib.optionalAttrs (e.inputs != [ ]) { inherit (e) inputs; }

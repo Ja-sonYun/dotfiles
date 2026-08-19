@@ -133,6 +133,7 @@
       ".venv"
       ".direnv"
       ".tmp"
+      ".root"
 
       ".ccls-cache"
       "compile_commands.json"

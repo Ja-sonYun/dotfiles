@@ -52,8 +52,11 @@
             hooks_dir=$(find_hooks_dir "$OLDPWD")
             if [[ -n "$hooks_dir" ]]; then
                 project_root=$(dirname "$hooks_dir")
-                name="git_root_''${command}_$(printf '%s' "$project_root:" | sed -e 's/[\/ ]/_/g')"
-                tmux_session_name=$(tmux list-sessions | awk -F: -v pat="$name" 'index($0,pat){print $1}')
+                suffix="''${command}_$(printf '%s' "$project_root:" | sed -e 's/[\/ ]/_/g')"
+                git_name="git_root_$suffix"
+                root_name="root_$suffix"
+                tmux_session_name=$(tmux list-sessions | awk -F: -v git_pat="$git_name" -v root_pat="$root_name" \
+                    'index($0,git_pat) || index($0,root_pat) {print $1; exit}')
                 if [[ -n "$tmux_session_name" ]]; then
                     if ask_yes_no "Kill ''${command}"; then
                         tmux kill-session -t "$tmux_session_name" 2>/dev/null && \

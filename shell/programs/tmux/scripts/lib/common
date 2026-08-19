@@ -7,6 +7,18 @@ project_for_path() {
 		"~/"*) path="$HOME/${path#"~/"}" ;;
 	esac
 	if [[ -d "$path" ]]; then
+		root="${path%/}"
+		[[ -n "$root" ]] || root="/"
+		while :; do
+			if [[ -f "$root/.root" ]]; then
+				printf '%s\n' "$root"
+				return
+			fi
+			[[ "$root" == "/" ]] && break
+			root="${root%/*}"
+			[[ -n "$root" ]] || root="/"
+		done
+
 		root="$(git -C "$path" rev-parse --show-toplevel 2>/dev/null)"
 		while [[ -n "$root" ]]; do
 			superproject="$(git -C "$root" rev-parse --show-superproject-working-tree 2>/dev/null)"
@@ -20,7 +32,7 @@ project_for_path() {
 }
 
 # Same normalization as tmux-customize tmcResolveGroup: popup sessions are
-# named _popup_<id>_[git_root_]<name>_<encoded-path>.
+# named _popup_<id>_[git_root_|root_]<name>_<encoded-path>.
 session_matches() {
 	local session="$1" name="$2" logical
 	[[ "$session" == "$name" || "$session" == "${name}_"* ]] && return 0
@@ -28,6 +40,7 @@ session_matches() {
 	[[ "$logical" == "$session" ]] && return 1
 	logical="${logical#*_}"
 	logical="${logical#git_root_}"
+	logical="${logical#root_}"
 	[[ "$logical" == "$name" || "$logical" == "${name}_"* ]]
 }
 

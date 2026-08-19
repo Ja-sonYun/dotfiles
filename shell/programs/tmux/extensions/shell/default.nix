@@ -19,6 +19,7 @@ in
           sessionName = "subshell";
           keyTable = "popup-root";
           sessionOnDir = true;
+          runOnRoot = ".root";
           runOnGitRoot = true;
           position = {
             w = "60%";
