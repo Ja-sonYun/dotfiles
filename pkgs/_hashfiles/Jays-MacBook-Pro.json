@@ -40,8 +40,8 @@
     "hash": "sha256-I/UyMd3a3ZCPWDMwZzH/IMMQGe7N/ulT4FSqPtWyxh8="
   },
   "context7-mcp": {
-    "version": "4.0.2",
-    "hash": "sha256-BMOb6bQf6D02eRHxwlBV+ZQMMlewbeIlw/nAlJFe+wU="
+    "version": "4.0.3",
+    "hash": "sha256-TUXuTFpKYMkytiamzQtQET2/H5Uf7XOgYVtlRnBFKz8="
   },
   "exa-mcp-server": {
     "version": "3.4.1",
