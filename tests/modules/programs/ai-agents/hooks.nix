@@ -15,16 +15,29 @@ let
     ];
     module.programs.ai-agents = {
       enable = true;
-      hooks.PostCompact = [
-        {
-          hooks = [
-            {
-              command = "test-common-hook";
-              type = "command";
-            }
-          ];
-        }
-      ];
+      hooks = {
+        PostCompact = [
+          {
+            hooks = [
+              {
+                command = "test-common-hook";
+                type = "command";
+              }
+            ];
+          }
+        ];
+        SessionEnd = [
+          {
+            hooks = [
+              {
+                command = "test-session-end-hook";
+                timeout = 5;
+                type = "command";
+              }
+            ];
+          }
+        ];
+      };
     };
   };
   idleNotificationConfiguration = mkConfiguration {
@@ -67,16 +80,17 @@ let
     !evaluated.success;
   home = configuration.config.home;
   homeFiles = homeFilesFor configuration;
-  commonCommand = client: "export AI_AGENT_CLIENT=${lib.escapeShellArg client}; test-common-hook";
+  commonCommand = client: command: "export AI_AGENT_CLIENT=${lib.escapeShellArg client}; ${command}";
   codexCommand =
+    timeout: command:
     let
       arguments = [
         "${testPkgs.python3}/bin/python"
         "${../../../../modules/programs/ai-agents/hooks/codex_adapter.py}"
         "--timeout"
-        "600"
+        (toString timeout)
         "--"
-        "test-common-hook"
+        command
       ];
     in
     "export AI_AGENT_CLIENT=${lib.escapeShellArg "Codex"}; exec ${lib.escapeShellArgs arguments}";
@@ -85,11 +99,30 @@ let
       hooks = [
         (
           {
-            command = if client == "Codex" then codexCommand else commonCommand client;
+            command =
+              if client == "Codex" then
+                codexCommand 600 "test-common-hook"
+              else
+                commonCommand client "test-common-hook";
             type = "command";
           }
           // lib.optionalAttrs (client == "Codex") { timeout = 602; }
         )
+      ];
+    }
+  ];
+  sessionEndHookExpectation = client: [
+    {
+      hooks = [
+        {
+          command =
+            if client == "Codex" then
+              codexCommand 1 "test-session-end-hook"
+            else
+              commonCommand client "test-session-end-hook";
+          timeout = if client == "Codex" then 3 else 5;
+          type = "command";
+        }
       ];
     }
   ];
@@ -117,23 +150,35 @@ let
         at.hooks = {
           keys = [
             "PostCompact"
+            "SessionEnd"
           ];
-          at.PostCompact.equals = commonHookExpectation "Claude";
+          at = {
+            PostCompact.equals = commonHookExpectation "Claude";
+            SessionEnd.equals = sessionEndHookExpectation "Claude";
+          };
         };
       };
       "~/.codex/config.toml".toml = {
         at.hooks = {
           keys = [
             "PostCompact"
+            "SessionEnd"
           ];
-          at.PostCompact.equals = commonHookExpectation "Codex";
+          at = {
+            PostCompact.equals = commonHookExpectation "Codex";
+            SessionEnd.equals = sessionEndHookExpectation "Codex";
+          };
         };
       };
       "~/.pi/agent/extensions/hooks/hooks.json".json = {
         keys = [
           "PostCompact"
+          "SessionEnd"
         ];
-        at.PostCompact.equals = commonHookExpectation "Pi";
+        at = {
+          PostCompact.equals = commonHookExpectation "Pi";
+          SessionEnd.equals = sessionEndHookExpectation "Pi";
+        };
       };
     };
   };

@@ -79,10 +79,10 @@ let
   inlineHookCommand = ''"${inlinePluginRoot}/scripts/pre-tool" "$PWD"'';
   entryHookCommand = ''"${inlinePluginRoot}/scripts/pre-tool" --entry'';
   normalizeCommand =
-    client: hook:
+    client: event: hook:
     let
       clientEnvironment = "export AI_AGENT_CLIENT=${lib.escapeShellArg client}; ";
-      timeout = hook.timeout or 600;
+      timeout = if client == "Codex" && event == "SessionEnd" then 1 else hook.timeout or 600;
       adapterArguments = [
         "${testPkgs.python3}/bin/python"
         "${adapterPath}"
@@ -97,19 +97,19 @@ let
     else
       "${clientEnvironment}${hook.command}";
   normalizeHook =
-    client: hook:
+    client: event: hook:
     hook
     // {
-      command = normalizeCommand client hook;
+      command = normalizeCommand client event hook;
     }
     // lib.optionalAttrs (client == "Codex") {
-      timeout = (hook.timeout or 600) + 2;
+      timeout = (if event == "SessionEnd" then 1 else hook.timeout or 600) + 2;
     };
   normalizeBlock =
-    client: block:
+    client: event: block:
     block
     // {
-      hooks = map (normalizeHook client) block.hooks;
+      hooks = map (normalizeHook client event) block.hooks;
     };
   handlerFor = block: builtins.head block.hooks;
   manualHook = {
@@ -372,15 +372,15 @@ let
     files = {
       "~/.claude/settings.json".json.at.hooks = {
         at = {
-          PostCompact.contains = [ (normalizeBlock "Claude" entryHook) ];
-          PostToolUse.contains = [ (normalizeBlock "Claude" fileHook) ];
+          PostCompact.contains = [ (normalizeBlock "Claude" "PostCompact" entryHook) ];
+          PostToolUse.contains = [ (normalizeBlock "Claude" "PostToolUse" fileHook) ];
           PreToolUse.contains = [
-            (normalizeBlock "Claude" manualHook)
-            (normalizeBlock "Claude" inlineHook)
+            (normalizeBlock "Claude" "PreToolUse" manualHook)
+            (normalizeBlock "Claude" "PreToolUse" inlineHook)
           ];
-          SessionEnd.contains = [ (normalizeBlock "Claude" defaultHook) ];
-          SessionStart.contains = [ (normalizeBlock "Claude" strictHook) ];
-          UserPromptSubmit.contains = [ (normalizeBlock "Claude" supplementHook) ];
+          SessionEnd.contains = [ (normalizeBlock "Claude" "SessionEnd" defaultHook) ];
+          SessionStart.contains = [ (normalizeBlock "Claude" "SessionStart" strictHook) ];
+          UserPromptSubmit.contains = [ (normalizeBlock "Claude" "UserPromptSubmit" supplementHook) ];
         };
       };
       "~/.claude/skills/inline-tools-check-docs/SKILL.md".text = expectedCustomSkill;
@@ -389,15 +389,15 @@ let
       "~/.claude/skills/strict-entry-strict-skill/SKILL.md".text = expectedStrictSkill;
       "~/.codex/config.toml".toml.at.hooks = {
         at = {
-          PostCompact.contains = [ (normalizeBlock "Codex" entryHook) ];
-          PostToolUse.contains = [ (normalizeBlock "Codex" fileHook) ];
+          PostCompact.contains = [ (normalizeBlock "Codex" "PostCompact" entryHook) ];
+          PostToolUse.contains = [ (normalizeBlock "Codex" "PostToolUse" fileHook) ];
           PreToolUse.contains = [
-            (normalizeBlock "Codex" manualHook)
-            (normalizeBlock "Codex" inlineHook)
+            (normalizeBlock "Codex" "PreToolUse" manualHook)
+            (normalizeBlock "Codex" "PreToolUse" inlineHook)
           ];
-          SessionEnd.contains = [ (normalizeBlock "Codex" defaultHook) ];
-          SessionStart.contains = [ (normalizeBlock "Codex" strictHook) ];
-          UserPromptSubmit.contains = [ (normalizeBlock "Codex" supplementHook) ];
+          SessionEnd.contains = [ (normalizeBlock "Codex" "SessionEnd" defaultHook) ];
+          SessionStart.contains = [ (normalizeBlock "Codex" "SessionStart" strictHook) ];
+          UserPromptSubmit.contains = [ (normalizeBlock "Codex" "UserPromptSubmit" supplementHook) ];
         };
       };
       "~/.codex/skills/inline-tools-check-docs/SKILL.md".text = expectedCustomSkill;
@@ -406,15 +406,15 @@ let
       "~/.codex/skills/strict-entry-strict-skill/SKILL.md".text = expectedStrictSkill;
       "~/.pi/agent/extensions/hooks/hooks.json".json = {
         at = {
-          PostCompact.contains = [ (normalizeBlock "Pi" entryHook) ];
-          PostToolUse.contains = [ (normalizeBlock "Pi" fileHook) ];
+          PostCompact.contains = [ (normalizeBlock "Pi" "PostCompact" entryHook) ];
+          PostToolUse.contains = [ (normalizeBlock "Pi" "PostToolUse" fileHook) ];
           PreToolUse.contains = [
-            (normalizeBlock "Pi" manualHook)
-            (normalizeBlock "Pi" inlineHook)
+            (normalizeBlock "Pi" "PreToolUse" manualHook)
+            (normalizeBlock "Pi" "PreToolUse" inlineHook)
           ];
-          SessionEnd.contains = [ (normalizeBlock "Pi" defaultHook) ];
-          SessionStart.contains = [ (normalizeBlock "Pi" strictHook) ];
-          UserPromptSubmit.contains = [ (normalizeBlock "Pi" supplementHook) ];
+          SessionEnd.contains = [ (normalizeBlock "Pi" "SessionEnd" defaultHook) ];
+          SessionStart.contains = [ (normalizeBlock "Pi" "SessionStart" strictHook) ];
+          UserPromptSubmit.contains = [ (normalizeBlock "Pi" "UserPromptSubmit" supplementHook) ];
         };
       };
       "~/.pi/agent/skills/inline-tools-check-docs/SKILL.md".text = expectedCustomSkill;
@@ -426,18 +426,18 @@ let
 in
 assert
   preToolCommands.Claude == [
-    (normalizeCommand "Claude" (handlerFor manualHook))
-    (normalizeCommand "Claude" (handlerFor inlineHook))
+    (normalizeCommand "Claude" "PreToolUse" (handlerFor manualHook))
+    (normalizeCommand "Claude" "PreToolUse" (handlerFor inlineHook))
   ];
 assert
   preToolCommands.Codex == [
-    (normalizeCommand "Codex" (handlerFor manualHook))
-    (normalizeCommand "Codex" (handlerFor inlineHook))
+    (normalizeCommand "Codex" "PreToolUse" (handlerFor manualHook))
+    (normalizeCommand "Codex" "PreToolUse" (handlerFor inlineHook))
   ];
 assert
   preToolCommands.Pi == [
-    (normalizeCommand "Pi" (handlerFor manualHook))
-    (normalizeCommand "Pi" (handlerFor inlineHook))
+    (normalizeCommand "Pi" "PreToolUse" (handlerFor manualHook))
+    (normalizeCommand "Pi" "PreToolUse" (handlerFor inlineHook))
   ];
 assert invalidMarketplaceFails ./fixtures/marketplaces/unsupported-event;
 assert invalidMarketplaceFails ./fixtures/marketplaces/unsupported-handler;

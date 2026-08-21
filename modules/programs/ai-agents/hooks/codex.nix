@@ -29,9 +29,15 @@ let
   };
   passthroughAdapter = adapterFor null null;
   normalizeHook =
-    adapter: hook:
+    event: adapter: hook:
     let
-      timeout = if hook.timeout == null then 600 else hook.timeout;
+      timeout =
+        if event == "SessionEnd" then
+          1
+        else if hook.timeout == null then
+          600
+        else
+          hook.timeout;
       adapterArguments = [
         "${pkgs.python3}/bin/python"
         "${./codex_adapter.py}"
@@ -57,13 +63,13 @@ let
       timeout = timeout + 2;
     };
   normalizeBlock =
-    adapter: block:
+    event: adapter: block:
     block
     // {
-      hooks = map (normalizeHook adapter) block.hooks;
+      hooks = map (normalizeHook event adapter) block.hooks;
     };
   normalizeHookSet =
-    adapter: hooks: lib.mapAttrs (_: blocks: map (normalizeBlock adapter) blocks) hooks;
+    adapter: hooks: lib.mapAttrs (event: blocks: map (normalizeBlock event adapter) blocks) hooks;
   selectEvents = events: lib.filterAttrs (event: _: builtins.elem event events) canonicalHooks;
   mergeHookSets = lib.zipAttrsWith (_: values: lib.concatLists values);
 
@@ -83,12 +89,14 @@ let
       types = notificationTypesFor block.matcher;
       permissionHooks = lib.optional (builtins.elem "permission_prompt" types) {
         PermissionRequest = [
-          (normalizeBlock (adapterFor "Notification" "permission_prompt") (block // { matcher = ""; }))
+          (normalizeBlock "PermissionRequest" (adapterFor "Notification" "permission_prompt") (
+            block // { matcher = ""; }
+          ))
         ];
       };
       inputHooks = lib.optional (builtins.elem "elicitation_dialog" types) {
         PreToolUse = [
-          (normalizeBlock (adapterFor "Notification" "elicitation_dialog") (
+          (normalizeBlock "PreToolUse" (adapterFor "Notification" "elicitation_dialog") (
             block // { matcher = inputToolMatcher; }
           ))
         ];
