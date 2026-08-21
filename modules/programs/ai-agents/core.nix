@@ -22,6 +22,12 @@ in
       default = null;
     };
 
+    customInstructions = lib.mkOption {
+      type = lib.types.lines;
+      default = "";
+      description = "Custom instructions shared by enabled AI agents.";
+    };
+
     skills = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
@@ -43,6 +49,9 @@ in
           (lib.mkIf (cfg.context != null) {
             inherit (cfg) context;
           })
+          (lib.mkIf (cfg.customInstructions != "") {
+            customInstructions = lib.mkBefore cfg.customInstructions;
+          })
           (lib.mkIf (cfg.agentsDir != null) {
             claudeAgentsDir = cfg.agentsDir;
           })
@@ -57,6 +66,9 @@ in
           (lib.mkIf (cfg.context != null) {
             inherit (cfg) context;
           })
+          (lib.mkIf (cfg.customInstructions != "") {
+            customInstructions = lib.mkBefore cfg.customInstructions;
+          })
           (lib.mkIf (cfg.agentsDir != null) {
             inherit (cfg) agentsDir;
           })
@@ -70,6 +82,9 @@ in
           }
           (lib.mkIf (cfg.context != null) {
             inherit (cfg) context;
+          })
+          (lib.mkIf (cfg.customInstructions != "") {
+            customInstructions = lib.mkBefore cfg.customInstructions;
           })
         ];
       })

@@ -138,6 +138,12 @@ let
       "sub-layer" = "normal";
     }
     {
+      label = "Excel";
+      app = "^Excel$";
+      manage = "on";
+      "sub-layer" = "normal";
+    }
+    {
       label = "FreeCAD";
       app = "^FreeCAD$";
       manage = "on";

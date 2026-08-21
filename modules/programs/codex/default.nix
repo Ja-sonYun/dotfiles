@@ -84,7 +84,18 @@ let
 
   selectSettings = keys: lib.filterAttrs (name: _: builtins.elem name keys);
 
-  inherit (cfg) settings;
+  configuredDeveloperInstructions = cfg.settings.developer_instructions or "";
+  developerInstructions = lib.concatStringsSep "\n\n" (
+    lib.filter (instructions: instructions != "") [
+      cfg.customInstructions
+      configuredDeveloperInstructions
+    ]
+  );
+  settings =
+    cfg.settings
+    // lib.optionalAttrs (developerInstructions != "") {
+      developer_instructions = developerInstructions;
+    };
   permissions = settings.permissions or { };
   managedSettings =
     selectSettings managedSettingKeys settings
@@ -165,6 +176,12 @@ in
       type = lib.types.nullOr lib.types.lines;
       default = null;
       description = "Content for ~/.codex/AGENTS.md.";
+    };
+
+    customInstructions = lib.mkOption {
+      type = lib.types.lines;
+      default = "";
+      description = "Instructions prepended to Codex developer instructions.";
     };
 
     claudeAgentsDir = lib.mkOption {

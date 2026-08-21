@@ -74,6 +74,12 @@ in
       description = "Content for ~/.pi/agent/AGENTS.md.";
     };
 
+    customInstructions = lib.mkOption {
+      type = lib.types.lines;
+      default = "";
+      description = "Content appended through ~/.pi/agent/APPEND_SYSTEM.md.";
+    };
+
     systemPrompt = lib.mkOption {
       type = lib.types.nullOr lib.types.lines;
       default = null;
@@ -101,6 +107,9 @@ in
     }
     // lib.optionalAttrs (cfg.context != null) {
       "${agentDir}/AGENTS.md".text = cfg.context;
+    }
+    // lib.optionalAttrs (cfg.customInstructions != "") {
+      "${agentDir}/APPEND_SYSTEM.md".text = cfg.customInstructions;
     }
     // lib.optionalAttrs (cfg.systemPrompt != null) {
       "${agentDir}/SYSTEM.md".text = cfg.systemPrompt;

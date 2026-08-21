@@ -38,6 +38,9 @@ let
 
   settingsFile = jsonFormat.generate "claude-code-settings.json" (
     cfg.settings
+    // lib.optionalAttrs (cfg.customInstructions != "") {
+      outputStyle = "Shared Instructions";
+    }
     // {
       "$schema" = "https://json.schemastore.org/claude-code-settings.json";
     }
@@ -86,6 +89,12 @@ in
       description = "Content for ~/.claude/CLAUDE.md.";
     };
 
+    customInstructions = lib.mkOption {
+      type = lib.types.lines;
+      default = "";
+      description = "Instructions applied through a managed Claude Code output style.";
+    };
+
     skills = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
@@ -130,6 +139,17 @@ in
       }
       // lib.optionalAttrs (cfg.context != null) {
         ".claude/CLAUDE.md".text = cfg.context;
+      }
+      // lib.optionalAttrs (cfg.customInstructions != "") {
+        ".claude/output-styles/shared-instructions.md".text = ''
+          ---
+          name: Shared Instructions
+          description: Shared personal working and response preferences
+          keep-coding-instructions: true
+          ---
+
+          ${cfg.customInstructions}
+        '';
       }
       // lib.mapAttrs' (
         name: source: lib.nameValuePair ".claude/skills/${name}" { inherit source; }

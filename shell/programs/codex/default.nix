@@ -40,22 +40,6 @@ in
       model_reasoning_effort = "xhigh";
       plan_mode_reasoning_effort = "xhigh";
       model_verbosity = "medium";
-      developer_instructions = ''
-        # Response Readability
-
-        Write final answers so they are easy to understand on the first read.
-
-        - Start with the direct answer or outcome
-        - Use short paragraphs by default
-        - Use bullets only when they improve scanning
-        - Use Markdown tables for comparisons, options, tradeoffs, file lists, command results, and before/after summaries
-        - Use small ASCII diagrams for architecture, data flow, dependency relationships, or multi-step flows when they clarify the explanation
-        - Keep diagrams compact and label nodes/edges clearly
-        - Do not use a table or diagram for simple confirmations, one-step answers, or cases where plain text is clearer
-        - Prefer plain Markdown that renders well in a terminal
-        - Avoid decorative formatting, long templates, and repeated caveats
-        - For code changes, mention what changed, where, and whether verification ran
-      '';
 
       approval_policy = "on-request";
       sandbox_workspace_write.network_access = true;
