@@ -80,7 +80,7 @@ rcmd - f : yabai -m window --toggle float
 shift + ctrl + rcmd - r : \
     /usr/bin/env osascript <<< \
         "display notification \"Restarting yabai\" with title \"yabai\""; \
-    launchctl kickstart -k "gui/${UID}/yabai"
+    launchctl kickstart -k "gui/${UID}/org.nixos.yabai"
 
 # Make window native fullscreen
 ctrl + cmd - f  : yabai -m window --toggle zoom-fullscreen

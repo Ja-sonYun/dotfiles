@@ -65,5 +65,6 @@
     icalPal = final.callPackage ../pkgs/icalPal { };
     inputSourceSelector = final.callPackage ../pkgs/inputSourceSelector { };
     notifycmd = final.callPackage ../pkgs/notifycmd { };
+    yabai = final.callPackage ../pkgs/yabai { };
   };
 }

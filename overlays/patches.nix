@@ -83,8 +83,4 @@
     });
   };
 
-  # Override upstream packages using our local pkgs/* definitions
-  unstable-pkgs-override = _final: _prev: {
-    # yabai = final.callPackage ../pkgs/yabai { inherit prev final; };
-  };
 }

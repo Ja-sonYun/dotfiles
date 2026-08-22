@@ -93,11 +93,11 @@ let
     hostname:
     let
       specialArgs = mkSpecialArgs hostname;
+      pkgs = mkPkgsProvider hostname;
     in
     darwin.lib.darwinSystem {
       inherit (specialArgs) system;
-      inherit specialArgs;
-      pkgs = mkPkgsProvider hostname;
+      inherit specialArgs pkgs;
       modules = [
         agenix.darwinModules.default
         agenix-secrets.darwinModules.secrets
@@ -115,6 +115,7 @@ let
 
         ../modules/services
 
+        pkgs.yabai.modules.darwin
         ../hosts/aarch64-darwin/services.nix
 
         home-manager.darwinModules.home-manager
@@ -123,7 +124,10 @@ let
             useGlobalPkgs = true;
             useUserPackages = false;
             extraSpecialArgs = specialArgs;
-            users.${specialArgs.username}.imports = mkHomeManagerConfig hostname;
+            users.${specialArgs.username}.imports = [
+              pkgs.yabai.modules.homeManager
+            ]
+            ++ mkHomeManagerConfig hostname;
           };
         }
 
@@ -131,7 +135,6 @@ let
         {
           nix-homebrew = {
             enable = true;
-            enableRosetta = true;
             user = specialArgs.username;
             autoMigrate = true;
           };

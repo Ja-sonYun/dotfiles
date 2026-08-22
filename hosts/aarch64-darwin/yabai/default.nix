@@ -1,4 +1,8 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   notchDisplayUuid = "37D8832A-2D66-02CA-B9F7-8F30A301B230";

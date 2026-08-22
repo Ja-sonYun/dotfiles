@@ -90,6 +90,7 @@ in
       WindowManager = {
         EnableStandardClickToShowDesktop = false; # Disable click wallpaper to reveal desktop
         GloballyEnabled = false; # Disable Stage Manager
+        StandardHideDesktopIcons = false; # Show items on desktop
       };
 
       dock = {
