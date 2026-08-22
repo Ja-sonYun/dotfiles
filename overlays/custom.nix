@@ -63,8 +63,9 @@
 
     # Mac
     icalPal = final.callPackage ../pkgs/icalPal { };
-    inputSourceSelector = final.callPackage ../pkgs/inputSourceSelector { };
+    macism = final.callPackage ../pkgs/macism { };
     notifycmd = final.callPackage ../pkgs/notifycmd { };
     yabai = final.callPackage ../pkgs/yabai { };
+    yabai-indicator = final.callPackage ../pkgs/yabai-indicator { };
   };
 }

@@ -52,6 +52,14 @@ in
           # Require holding Command before the top-right hot corner opens Notification Center.
           "wvous-tr-modifier" = 1048576;
         };
+        "com.apple.spaces" = {
+          "spans-displays" = false;
+        };
+        "com.apple.HIToolbox" = {
+          AppleGlobalTextInputProperties = {
+            TextInputGlobalPropertyPerContextInput = false;
+          };
+        };
         "kCFPreferencesAnyApplication" = {
           # Hide the language indicator
           TSMLanguageIndicatorEnabled = false;

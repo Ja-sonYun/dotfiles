@@ -5,10 +5,6 @@
 }:
 
 let
-  notchDisplayUuid = "37D8832A-2D66-02CA-B9F7-8F30A301B230";
-  normalBar = 0;
-  notchBar = 0;
-
   yabaiSettings = {
     layout = "bsp";
 
@@ -38,129 +34,7 @@ let
     mouse_action2 = "resize";
   };
 
-  rules = [
-    {
-      label = "default-unmanaged";
-      app = ".*";
-      manage = "off";
-      "sub-layer" = "above";
-    }
-    {
-      label = "Ghostty";
-      app = "^Ghostty$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Chrome";
-      app = "^(Google Chrome|Chrome)$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Mail";
-      app = "^Mail$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Slack";
-      app = "^Slack$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Notion";
-      app = "^Notion$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "ChatGPT Atlas";
-      app = "^ChatGPT Atlas$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Discord";
-      app = "^Discord$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "draw.io";
-      app = "^draw.io$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "PDF Expert";
-      app = "^PDF Expert$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Jump Desktop";
-      app = "^Jump Desktop$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Microsoft Remote Desktop";
-      app = "^Microsoft Remote Desktop$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Safari";
-      app = "^Safari$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Obsidian";
-      app = "^Obsidian$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "VS Code";
-      app = "^(Code|Visual Studio Code)$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "DEVONthink";
-      app = "^(DEVONthink|DEVONthink 3)$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Fusion";
-      app = "^Fusion$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Excel";
-      app = "^Excel$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "FreeCAD";
-      app = "^FreeCAD$";
-      manage = "on";
-      "sub-layer" = "normal";
-    }
-    {
-      label = "Safari Settings";
-      app = "^Safari$";
-      title = "^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$";
-      manage = "off";
-      "sub-layer" = "above";
-    }
-  ];
+  rules = import ./rules.nix;
 
   renderAttrs =
     keys: attrs:
@@ -186,51 +60,28 @@ let
       ] rule
     }";
 
-  renderSignal = signal: "yabai -m signal --add ${renderAttrs [ "event" "action" ] signal}";
-
-  notchExternalBar = pkgs.writeShellApplication {
-    name = "yabai-apply-external-bar";
-    runtimeInputs = [
-      pkgs.jq
-      pkgs.yabai
-    ];
-    text = ''
-      if yabai -m query --displays | jq -e --arg uuid ${lib.escapeShellArg notchDisplayUuid} 'any(.[]; .uuid == $uuid)' >/dev/null; then
-        yabai -m config external_bar ${lib.escapeShellArg "all:${toString notchBar}:0"}
-      else
-        yabai -m config external_bar ${lib.escapeShellArg "all:${toString normalBar}:0"}
-      fi
-    '';
+  displayExtraConfig = import ./display-management.nix {
+    inherit
+      lib
+      pkgs
+      renderAttrs
+      yabaiSettings
+      ;
   };
 
-  signals = [
-    {
-      event = "dock_did_restart";
-      action = "/usr/bin/sudo ${pkgs.yabai}/bin/yabai --load-sa";
-    }
-    {
-      event = "display_added";
-      action = "${notchExternalBar}/bin/yabai-apply-external-bar";
-    }
-    {
-      event = "display_removed";
-      action = "${notchExternalBar}/bin/yabai-apply-external-bar";
-    }
-  ];
-
   yabaiExtraConfig = ''
+    /usr/bin/sudo ${pkgs.yabai}/bin/yabai --load-sa
+
     ${lib.concatMapStringsSep "\n" renderRule rules}
     yabai -m rule --apply
 
-    ${lib.concatMapStringsSep "\n" renderSignal signals}
-
-    ${notchExternalBar}/bin/yabai-apply-external-bar
+    ${displayExtraConfig}
   '';
 in
 {
   services.yabai = {
     enable = true;
-    enableScriptingAddition = true;
+    enableScriptingAddition = false;
     config = yabaiSettings;
     extraConfig = yabaiExtraConfig;
   };

@@ -57,13 +57,12 @@ stdenv.mkDerivation {
         "-isystem ${lib.getDev cups}/include"
         "-F$(SDKROOT)/System/Library/Frameworks"
         "-L$(SDKROOT)/usr/lib"
-        "-Wl,-no_uuid"
       ];
     in
     ''
       substituteInPlace makefile \
         --replace-fail "-arch x86_64 -arch arm64e" "-arch ${archSA}" \
-        --replace-fail "-arch x86_64 -arch arm64" "-arch ${arch}" \
+        --replace-fail "-arch x86_64 -arch arm64" "-arch ${arch} -Wl,-no_uuid" \
         --replace-fail 'xcrun clang' 'clang ${clangFlags}'
     '';
 
@@ -73,11 +72,6 @@ stdenv.mkDerivation {
 
   nativeInstallCheckInputs = [ versionCheckHook ];
   doInstallCheck = true;
-
-  passthru.modules = {
-    homeManager = import ./home-manager.nix;
-    darwin = import ./darwin.nix;
-  };
 
   meta = {
     description = "Tiling window manager for macOS based on binary space partitioning";

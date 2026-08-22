@@ -40,7 +40,6 @@ let
       "orbstack"
       "obsidian"
       "appcleaner"
-      "input-source-pro"
       "slack"
       "bambu-studio"
       "visual-studio-code"

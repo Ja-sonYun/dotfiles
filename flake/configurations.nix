@@ -115,7 +115,6 @@ let
 
         ../modules/services
 
-        pkgs.yabai.modules.darwin
         ../hosts/aarch64-darwin/services.nix
 
         home-manager.darwinModules.home-manager
@@ -125,7 +124,7 @@ let
             useUserPackages = false;
             extraSpecialArgs = specialArgs;
             users.${specialArgs.username}.imports = [
-              pkgs.yabai.modules.homeManager
+              ../modules/services/home-manager.nix
             ]
             ++ mkHomeManagerConfig hostname;
           };

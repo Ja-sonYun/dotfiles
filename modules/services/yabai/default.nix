@@ -22,9 +22,6 @@ in
   config = lib.mkMerge [
     (lib.mkIf config.services.yabai.enable {
       services.yabai.package = signedYabaiPackage;
-    })
-    (lib.mkIf config.services.yabai.enableScriptingAddition {
-      launchd.daemons.yabai-sa.script = lib.mkForce "${pkgs.yabai}/bin/yabai --load-sa";
       environment.etc."sudoers.d/yabai".source = lib.mkForce yabaiSaSudoers;
     })
   ];
