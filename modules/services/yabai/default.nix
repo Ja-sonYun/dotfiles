@@ -23,6 +23,10 @@ in
     (lib.mkIf config.services.yabai.enable {
       services.yabai.package = signedYabaiPackage;
       environment.etc."sudoers.d/yabai".source = lib.mkForce yabaiSaSudoers;
+      launchd.user.agents.yabai.serviceConfig = {
+        StandardOutPath = "/tmp/yabai.out.log";
+        StandardErrorPath = "/tmp/yabai.err.log";
+      };
     })
   ];
 }

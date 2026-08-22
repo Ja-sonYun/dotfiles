@@ -110,7 +110,7 @@
   {
     label = "Safari Settings";
     app = "^Safari$";
-    title = "^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$";
+    title = "^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advanced)$";
     manage = "off";
     "sub-layer" = "above";
   }

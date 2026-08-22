@@ -85,9 +85,4 @@ in
     config = yabaiSettings;
     extraConfig = yabaiExtraConfig;
   };
-
-  launchd.user.agents.yabai.serviceConfig = {
-    StandardOutPath = "/tmp/yabai.out.log";
-    StandardErrorPath = "/tmp/yabai.err.log";
-  };
 }
