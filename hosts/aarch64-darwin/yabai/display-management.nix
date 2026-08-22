@@ -11,7 +11,10 @@ let
   notchBar = 0;
   targetDesktopsPerDisplay = 4;
 
-  renderSignal = signal: "yabai -m signal --add ${renderAttrs [ "event" "action" ] signal}";
+  renderSignal = signal: ''
+    yabai -m signal --remove ${lib.escapeShellArg signal.label} 2>/dev/null || true
+    yabai -m signal --add ${renderAttrs [ "label" "event" "action" ] signal}
+  '';
 
   notchExternalBar = pkgs.writeShellApplication {
     name = "yabai-apply-external-bar";
@@ -45,34 +48,42 @@ let
 
   signals = [
     {
+      label = "load-sa-after-dock-restart";
       event = "dock_did_restart";
       action = "/usr/bin/sudo ${pkgs.yabai}/bin/yabai --load-sa";
     }
     {
+      label = "apply-external-bar-after-display-added";
       event = "display_added";
       action = "${notchExternalBar}/bin/yabai-apply-external-bar";
     }
     {
+      label = "reconcile-spaces-after-display-added";
       event = "display_added";
       action = "${reconcileSpaces}/bin/yabai-reconcile-spaces";
     }
     {
+      label = "apply-external-bar-after-display-removed";
       event = "display_removed";
       action = "${notchExternalBar}/bin/yabai-apply-external-bar";
     }
     {
+      label = "reconcile-spaces-after-display-removed";
       event = "display_removed";
       action = "${reconcileSpaces}/bin/yabai-reconcile-spaces";
     }
     {
+      label = "reconcile-spaces-after-display-moved";
       event = "display_moved";
       action = "${reconcileSpaces}/bin/yabai-reconcile-spaces";
     }
     {
+      label = "reconcile-spaces-after-display-resized";
       event = "display_resized";
       action = "${reconcileSpaces}/bin/yabai-reconcile-spaces";
     }
     {
+      label = "reconcile-spaces-after-system-wake";
       event = "system_woke";
       action = "${reconcileSpaces}/bin/yabai-reconcile-spaces";
     }

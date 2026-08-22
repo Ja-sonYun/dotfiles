@@ -6,7 +6,7 @@
 }:
 
 let
-  packageVersion = "2.1.239";
+  packageVersion = "2.1.240";
   nativePackage =
     {
       aarch64-darwin = "@anthropic-ai/claude-code-darwin-arm64";

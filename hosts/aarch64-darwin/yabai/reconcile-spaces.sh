@@ -6,31 +6,34 @@ trap 'rmdir "$lock_dir"' EXIT
 
 /bin/sleep 2
 
-spaces=$(yabai -m query --spaces)
-displays=$(jq -r '[.[] | select(."is-native-fullscreen" == false) | .display] | unique[]' <<<"$spaces")
+current_spaces=$(yabai -m query --spaces)
+displays=$(jq -r '[.[] | select(."is-native-fullscreen" == false) | .display] | unique[]' <<<"$current_spaces")
 
 while read -r display; do
 	if [[ -z "$display" ]]; then
 		continue
 	fi
 
-	current_spaces=$(yabai -m query --spaces)
 	desktop_count=$(jq --argjson display "$display" '
     [.[] | select(.display == $display and ."is-native-fullscreen" == false)] | length
   ' <<<"$current_spaces")
 
 	missing=$((target_desktops - desktop_count))
+	spaces_created=0
 	while ((missing > 0)); do
 		if yabai -m space --create "$display"; then
 			missing=$((missing - 1))
+			spaces_created=1
 			/bin/sleep 0.2
 		else
 			echo "yabai-reconcile-spaces: display $display is missing $missing desktop(s); creation failed" >&2
 			break
 		fi
 	done
+	if ((spaces_created)); then
+		current_spaces=$(yabai -m query --spaces)
+	fi
 
-	current_spaces=$(yabai -m query --spaces)
 	desktop_count=$(jq --argjson display "$display" '
     [.[] | select(.display == $display and ."is-native-fullscreen" == false)] | length
   ' <<<"$current_spaces")
@@ -52,6 +55,7 @@ while read -r display; do
     | .index
   ' <<<"$current_spaces")
 
+	spaces_destroyed=0
 	while read -r index; do
 		if ((excess == 0)); then
 			break
@@ -81,9 +85,13 @@ while read -r display; do
 
 		if yabai -m space --destroy "$index"; then
 			excess=$((excess - 1))
+			spaces_destroyed=1
 			/bin/sleep 0.2
 		fi
 	done <<<"$candidates"
+	if ((spaces_destroyed)); then
+		current_spaces=$(yabai -m query --spaces)
+	fi
 
 	if ((excess > 0)); then
 		echo "yabai-reconcile-spaces: display $display kept $excess excess desktop(s); none were safely removable" >&2
@@ -103,6 +111,5 @@ while read -r index; do
 		continue
 	fi
 
-	yabai -m space "$index" --padding "$padding_spec"
-	yabai -m space "$index" --gap "$gap_spec"
+	yabai -m space "$index" --padding "$padding_spec" --gap "$gap_spec"
 done <<<"$visible_spaces"

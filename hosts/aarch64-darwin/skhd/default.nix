@@ -24,16 +24,11 @@ in
       "lalt - p" = "${yabai} -m window --focus stack.prev || ${yabai} -m window --focus stack.last";
       "lalt - n" = "${yabai} -m window --focus stack.next || ${yabai} -m window --focus stack.first";
 
-      "shift + lalt - 1" =
-        "${yabai} -m window --space 1; ${yabai} -m space --focus 1; ${yabai} -m window --focus recent";
-      "shift + lalt - 2" =
-        "${yabai} -m window --space 2; ${yabai} -m space --focus 2; ${yabai} -m window --focus recent";
-      "shift + lalt - 3" =
-        "${yabai} -m window --space 3; ${yabai} -m space --focus 3; ${yabai} -m window --focus recent";
-      "shift + lalt - 4" =
-        "${yabai} -m window --space 4; ${yabai} -m space --focus 4; ${yabai} -m window --focus recent";
-      "shift + lalt - 5" =
-        "${yabai} -m window --space 5; ${yabai} -m space --focus 5; ${yabai} -m window --focus recent";
+      "shift + lalt - 1" = "${yabai} -m window --space 1 --focus";
+      "shift + lalt - 2" = "${yabai} -m window --space 2 --focus";
+      "shift + lalt - 3" = "${yabai} -m window --space 3 --focus";
+      "shift + lalt - 4" = "${yabai} -m window --space 4 --focus";
+      "shift + lalt - 5" = "${yabai} -m window --space 5 --focus";
 
       "rcmd - a" =
         "${yabai} -m query --spaces --display | ${jq} -e '.[0].\"has-focus\" == false' >/dev/null && ${yabai} -m space --focus prev";
@@ -51,15 +46,13 @@ in
       "shift + rcmd - n" = "${yabai} -m space --create";
       "shift + rcmd - d" = "${yabai} -m space --destroy";
 
-      "ctrl + lalt - h" =
-        "${yabai} -m window --resize left:-50:0; ${yabai} -m window --resize right:-50:0";
-      "ctrl + lalt - j" = "${yabai} -m window --resize bottom:0:50; ${yabai} -m window --resize top:0:50";
-      "ctrl + lalt - k" =
-        "${yabai} -m window --resize top:0:-50; ${yabai} -m window --resize bottom:0:-50";
-      "ctrl + lalt - l" = "${yabai} -m window --resize right:50:0; ${yabai} -m window --resize left:50:0";
+      "ctrl + lalt - h" = "${yabai} -m window --resize left:-50:0 --resize right:-50:0";
+      "ctrl + lalt - j" = "${yabai} -m window --resize bottom:0:50 --resize top:0:50";
+      "ctrl + lalt - k" = "${yabai} -m window --resize top:0:-50 --resize bottom:0:-50";
+      "ctrl + lalt - l" = "${yabai} -m window --resize right:50:0 --resize left:50:0";
 
       "ctrl + rcmd - e" = "${yabai} -m space --balance";
-      "ctrl + rcmd - g" = "${yabai} -m space --toggle padding; ${yabai} -m space --toggle gap";
+      "ctrl + rcmd - g" = "${yabai} -m space --toggle padding --toggle gap";
 
       "shift + rcmd - x" = "${yabai} -m space --mirror x-axis";
       "shift + rcmd - y" = "${yabai} -m space --mirror y-axis";
