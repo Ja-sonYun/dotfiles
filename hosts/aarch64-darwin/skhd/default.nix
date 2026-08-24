@@ -5,19 +5,14 @@ let
   jq = "${pkgs.jq}/bin/jq";
   macism = "${pkgs.macism}/bin/macism";
   skhd = "${pkgs.skhd}/bin/skhd";
-  rotateInputSource = pkgs.writeShellScript "rotate-input-source" ''
-    case "$(${macism})" in
-      com.apple.keylayout.ABC)
-        exec ${macism} "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"
-        ;;
-      com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese)
-        exec ${macism} "com.apple.inputmethod.Korean.2SetKorean"
-        ;;
-      *)
-        exec ${macism} "com.apple.keylayout.ABC"
-        ;;
-    esac
-  '';
+  rotateInputSource = pkgs.writeShellApplication {
+    name = "rotate-input-source";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.macism
+    ];
+    text = builtins.readFile ./rotate-input-source.sh;
+  };
   focusedDisplaySpace =
     number:
     ''focused_display="$(${yabai} -m query --spaces --space | ${jq} -er '.display')" && target_space="$(${yabai} -m query --spaces --display "$focused_display" | ${jq} -er 'map(select(."is-native-fullscreen" == false))[${toString (number - 1)}].index')" &&'';
@@ -98,7 +93,7 @@ in
       "rcmd - q" = "${macism} \"com.apple.keylayout.ABC\"";
       "rcmd - e" = "${macism} \"com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese\"";
       "rcmd - r" = "${macism} \"com.apple.inputmethod.Korean.2SetKorean\"";
-      "ctrl - space" = "${rotateInputSource}";
+      "ctrl - space" = "${rotateInputSource}/bin/rotate-input-source";
 
       "rcmd - w" = "${skhd} -k \"ctrl - up\"";
 
