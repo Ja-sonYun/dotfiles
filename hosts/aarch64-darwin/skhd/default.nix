@@ -3,13 +3,14 @@
 let
   yabai = "${pkgs.yabai}/bin/yabai";
   jq = "${pkgs.jq}/bin/jq";
-  macism = "${pkgs.macism}/bin/macism";
+  selectInputSource = "${pkgs.select-input-source}/bin/select-input-source";
   skhd = "${pkgs.skhd}/bin/skhd";
   rotateInputSource = pkgs.writeShellApplication {
     name = "rotate-input-source";
     runtimeInputs = [
       pkgs.coreutils
       pkgs.macism
+      pkgs.select-input-source
     ];
     text = builtins.readFile ./rotate-input-source.sh;
   };
@@ -90,10 +91,11 @@ in
       "ctrl + cmd - f" = "${yabai} -m window --toggle zoom-fullscreen";
       "shift + rcmd - f" = "${yabai} -m window --toggle native-fullscreen";
 
-      "rcmd - q" = "${macism} \"com.apple.keylayout.ABC\"";
-      "rcmd - e" = "${macism} \"com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese\"";
-      "rcmd - r" = "${macism} \"com.apple.inputmethod.Korean.2SetKorean\"";
+      "rcmd - q" = "${selectInputSource} \"com.apple.keylayout.ABC\"";
+      "rcmd - e" = "${selectInputSource} \"com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese\"";
+      "rcmd - r" = "${selectInputSource} \"com.apple.inputmethod.Korean.2SetKorean\"";
       "ctrl - space" = "${rotateInputSource}/bin/rotate-input-source";
+      "cmd - space ->" = "${selectInputSource} \"com.apple.keylayout.ABC\"";
 
       "rcmd - w" = "${skhd} -k \"ctrl - up\"";
 

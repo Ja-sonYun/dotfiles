@@ -75,6 +75,9 @@ let
     ${lib.concatMapStringsSep "\n" renderRule rules}
     yabai -m rule --apply
 
+    yabai -m signal --remove ghostty-english-input 2>/dev/null || true
+    yabai -m signal --add label=ghostty-english-input event=window_focused app='^Ghostty$' action='${pkgs.select-input-source}/bin/select-input-source com.apple.keylayout.ABC'
+
     ${displayExtraConfig}
   '';
 in

@@ -7,7 +7,7 @@ if [ -r "$state_file" ]; then
 	elapsed=$((now - previous_at))
 	if [ "$elapsed" -ge 0 ] && [ "$elapsed" -le 500 ]; then
 		rm -f "$state_file"
-		exec macism "$second_source"
+		exec select-input-source "$second_source"
 	fi
 	rm -f "$state_file"
 fi
@@ -34,4 +34,4 @@ esac
 
 mkdir -p "$state_dir"
 printf '%s %s\n' "$now" "$second_source" > "$state_file"
-exec macism "$first_source"
+exec select-input-source "$first_source"
