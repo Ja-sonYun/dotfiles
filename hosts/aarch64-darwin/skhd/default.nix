@@ -83,7 +83,7 @@ in
       "shift + ctrl + lalt - l" = "${yabai} -m window --insert east";
       "shift + ctrl + lalt - s" = "${yabai} -m window --insert stack";
 
-      "rcmd - f" = "${yabai} -m window --toggle float && ${yabai} -m window --sub-layer auto";
+      "rcmd - f" = "${yabai} -m window --toggle float --sub-layer auto";
 
       "shift + ctrl + rcmd - r" =
         "/usr/bin/osascript -e 'display notification \"Restarting yabai\" with title \"yabai\"'; /bin/launchctl kickstart -k \"gui/\${UID}/org.nixos.yabai\"";
