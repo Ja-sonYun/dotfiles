@@ -4,6 +4,7 @@
     ./docker-compose
     ./nixhm-container
     ./skhd
+    ./spotlight-scripts
     ./yabai
   ];
 }

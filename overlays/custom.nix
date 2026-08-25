@@ -67,6 +67,5 @@
     notifycmd = final.callPackage ../pkgs/notifycmd { };
     select-input-source = final.callPackage ../pkgs/select-input-source { };
     yabai = final.callPackage ../pkgs/yabai { };
-    yabai-indicator = final.callPackage ../pkgs/yabai-indicator { };
   };
 }

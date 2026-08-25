@@ -1,7 +1,7 @@
 diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
 --- a/dist/modes/interactive/interactive-mode.js
 +++ b/dist/modes/interactive/interactive-mode.js
-@@ -797,12 +797,6 @@
+@@ -825,12 +825,6 @@
                  this.updateTerminalTitle();
              }
          });
@@ -12,5 +12,5 @@ diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive
 -            }
 -        });
          // Show startup warnings
-         const { migratedProviders, modelFallbackMessage, initialMessage, initialImages, initialMessages } = this.options;
-         if (migratedProviders && migratedProviders.length > 0) {
+         const { migratedProviders, startupDiagnostics, modelFallbackMessage, initialMessage, initialImages, initialMessages, } = this.options;
+         for (const diagnostic of startupDiagnostics ?? []) {

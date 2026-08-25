@@ -12,8 +12,8 @@
     "hash": "sha256-RWEQbSefSHScvXLWqOWK6E1U63RlBFwQd6PXbjXvnpo="
   },
   "pi": {
-    "version": "0.84.2",
-    "hash": "sha256-37xrWmXT3kZZhZI9dRhduGq/bedcYUMDfTsMx1DoKf8="
+    "version": "0.84.3",
+    "hash": "sha256-JpQHS+wY78ipv39ViARaRcUGOgbvltVCnJy/KtyDvHs="
   },
   "pi-mcp-adapter": {
     "version": "2.27.0",
@@ -48,7 +48,7 @@
     "hash": "sha256-pYUmJYvjQWwywNPQPZ5dfO+4xdXY9lmznf/3UQfBDIw="
   },
   "claude-code": {
-    "version": "2.1.241",
-    "hash": "sha256-CcJQa2csrUpXYQtfOPHGOhM5ShORJOoG0jm+TyMZwTY="
+    "version": "2.1.243",
+    "hash": "sha256-5yb9i/TYb3T+6J5fg4StESrqcXQPGpHPKLpQa73iE1w="
   }
 }

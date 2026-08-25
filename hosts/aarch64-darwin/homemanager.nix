@@ -12,7 +12,6 @@
     lib.optionals (hasTag "gui") [
       ./core/finder-sidebar.nix
       ./freecad
-      ./yabai-indicator
     ]
     ++ lib.optionals (hostname == "Jays-MacBook-Pro") [
       ./taskwarrior
