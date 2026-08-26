@@ -2,7 +2,7 @@ Backport of:
 https://github.com/tmux/tmux/commit/e242da168bb6d50c687ccd1897b82c1d282a651a
 https://github.com/tmux/tmux/commit/824a07290f853a97219ee2624a46c0aada246efb
 
-Adapted to the tmux 3.7b redraw implementation.
+Adapted to the tmux 3.7c redraw implementation.
 
 diff --git a/popup.c b/popup.c
 --- a/popup.c

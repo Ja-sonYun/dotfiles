@@ -57,29 +57,12 @@
     });
   };
 
-  tmux-pin = _final: prev: {
+  tmux-popup-flicker-fix = _final: prev: {
     tmux = prev.tmux.overrideAttrs (oldAttrs: {
-      version = "3.7b";
-      src = prev.fetchFromGitHub {
-        owner = "tmux";
-        repo = "tmux";
-        tag = "3.7b";
-        hash = "sha256-CTq06XP997M0ODxQihTq34dI9H6jSRLUXLYuTWOwDpc=";
-      };
       patches = (oldAttrs.patches or [ ]) ++ [
         # TODO: Remove this backport when stable tmux includes #5350 and #5398.
-        ./patches/tmux-3.7b-popup-flicker.patch
+        ./patches/tmux-3.7c-popup-flicker.patch
       ];
-      buildInputs =
-        oldAttrs.buildInputs
-        ++ prev.lib.optionals prev.stdenv.hostPlatform.isDarwin [
-          prev.jemalloc
-        ];
-      configureFlags =
-        oldAttrs.configureFlags
-        ++ prev.lib.optionals prev.stdenv.hostPlatform.isDarwin [
-          "--enable-jemalloc"
-        ];
     });
   };
 
