@@ -39,7 +39,7 @@ in
       model = "gpt-5.6-sol";
       model_reasoning_effort = "xhigh";
       plan_mode_reasoning_effort = "xhigh";
-      model_verbosity = "medium";
+      model_verbosity = "low";
 
       approval_policy = "on-request";
       sandbox_workspace_write.network_access = true;

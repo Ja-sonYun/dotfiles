@@ -17,7 +17,6 @@ let
   brews = [
     "qemu"
     "tccutil"
-    "localstack/tap/localstack-cli"
     "bitwarden-cli"
     "mole"
     "ollama"
