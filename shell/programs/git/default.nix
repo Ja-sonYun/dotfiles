@@ -155,6 +155,7 @@
       ".sisyphus"
       "tfplan.bin"
       "out.tfplan"
+      "*.tfplan"
     ];
 
     includes = [

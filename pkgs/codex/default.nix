@@ -15,7 +15,7 @@ let
     hashKey = "codex";
     packageManager = "npm";
     packageName = "@openai/codex";
-    packageVersion = "0.150.1";
+    packageVersion = "0.151.0";
     name = "codex";
     exposedBinaries = [
       "codex"

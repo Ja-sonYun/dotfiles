@@ -35,14 +35,14 @@
         runAsAdmin = true;
       };
 
-      clean-notifications = {
-        displayName = "Clean Notifications";
+      cn = {
+        displayName = "cn";
         icon = ./icons/clean-notifications.svg;
         command = [
           "/usr/bin/osascript"
           "${./scripts/dismiss-notifications}"
         ];
-        appleEventsUsageDescription = "Clean Notifications uses System Events to dismiss visible notifications.";
+        appleEventsUsageDescription = "cn uses System Events to dismiss visible notifications.";
       };
     };
   };

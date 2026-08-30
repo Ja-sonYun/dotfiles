@@ -143,8 +143,8 @@ def run_command(command: str, hook_input: str, timeout: int) -> int:
             wait_after_signal(process)
             return 128 + forwarded.signum
         except subprocess.TimeoutExpired:
-            terminate_process_group(process, signal.SIGKILL)
-            process.communicate()
+            terminate_process_group(process, signal.SIGTERM)
+            wait_after_signal(process)
             return 124
         assert process.returncode is not None
         return 128 - process.returncode if process.returncode < 0 else process.returncode
