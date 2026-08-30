@@ -8,6 +8,7 @@ let
     extraPath = [
       pkgs.aws-ro
       pkgs.gh-ro
+      pkgs.nodejs_24
     ];
   };
 in
