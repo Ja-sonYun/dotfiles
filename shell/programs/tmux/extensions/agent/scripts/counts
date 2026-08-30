@@ -21,7 +21,7 @@ fi
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
-tmux_lock __agent_counts_lock || exit
+tmux_lock __agent_counts_lock || exit 0
 
 declare -A project_cache idle_counts running_counts waiting_counts
 declare -A win_seen win_project_seen win_idle win_running win_waiting

@@ -6,7 +6,7 @@ session_id_hint="${3:-}"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
-tmux_lock __agent_status_lock || exit
+tmux_lock "__agent_status_lock_${pane_id:-default}" || exit 0
 
 resolve_session_id() {
 	local owner id candidate name

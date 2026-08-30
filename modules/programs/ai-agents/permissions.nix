@@ -102,7 +102,12 @@ let
                 )
                 // {
                   ":workspace_roots" = builtins.listToAttrs (
-                    map (path: lib.nameValuePair ("**/" + path) "read") (workspacePaths "read")
+                    map (path: lib.nameValuePair path "write") (
+                      builtins.filter (path: !(lib.hasInfix "*" path)) (workspacePaths "allow")
+                    )
+                    ++ map (path: lib.nameValuePair path "read") (
+                      builtins.filter (path: !(lib.hasInfix "*" path)) (workspacePaths "read")
+                    )
                     ++ map (path: lib.nameValuePair ("**/" + path) "deny") (workspacePaths "deny")
                   );
                 };
