@@ -3,6 +3,15 @@
 # codex only: claude/pi TUIs expose no reliable pane markers, their hooks self-heal.
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/../../../scripts/lib/common"
+
+tmux_lock __agent_reconcile_lock 0.1 || exit 0
+now="$(date +%s)"
+last="$(tmux show-option -gqv @agent_reconcile_at 2>/dev/null)"
+if [[ "$last" =~ ^[0-9]+$ ]] && ((now - last < 10)); then
+	exit 0
+fi
+tmux set-option -gq @agent_reconcile_at "$now" >/dev/null 2>&1 || exit 0
 
 running_re='esc to interrupt|ctrl\+c to interrupt'
 waiting_re='(❯|›) *[0-9]+\.'

@@ -15,13 +15,13 @@ label_for_path() {
 [[ -z "$target" ]] && target="$(tmux display-message -p '#{pane_id}' 2>/dev/null)"
 [[ -z "$target" ]] && exit 0
 
-fmt=$'#{pane_id}\x1f#{session_name}\x1f#{window_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pcmd}\x1f#{@pane_project_label}\x1f#{@panes}\x1f#{@shell_seq}'
+fmt=$'#{pane_id}\x1f#{session_name}\x1f#{window_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pcmd}\x1f#{@pane_project_label}\x1f#{@panes}\x1f#{@shell_seq}\x1f#{@shell_pwd}\x1f#{@shell_cmd}'
 if [[ "$target" == @* ]]; then
-	IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq < <(
+	IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq shell_path shell_command < <(
 		tmux list-panes -t "$target" -F "$fmt" 2>/dev/null | sed -n '1p'
 	)
 else
-	IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq < <(
+	IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq shell_path shell_command < <(
 		tmux display-message -pt "$target" "$fmt" 2>/dev/null
 	)
 fi
@@ -30,18 +30,18 @@ fi
 mode=full
 if session_matches "$session" subshell; then
 	mode=cmd
-elif tmux show-environment -t "$session" TMUX_AGENT_STATUS >/dev/null 2>&1; then
+elif session_matches "$session" agent || [[ -n "$(tmux display-message -pt "$session" '#{E:TMUX_AGENT_STATUS}' 2>/dev/null)" ]]; then
 	exit 0
 fi
 
-shell_label="$(label_for_cmd "${stored_cmd:-$current_command}")"
+shell_label="$(label_for_cmd "${shell_command:-${stored_cmd:-$current_command}}")"
 
 tmux_begin
 [[ "$shell_label" != "$stored_cmd" ]] &&
 tmux_add set-option -p -q -t "$pane_id" @pcmd "$shell_label"
 
 if [[ "$mode" == full ]]; then
-	pane_path="${pane_path:-${stored_path:-$current_path}}"
+	pane_path="${pane_path:-${shell_path:-${stored_path:-$current_path}}}"
 	if [[ "$pane_path" == "$stored_path" && -n "$stored_project_label" ]]; then
 		pane_label="$stored_project_label"
 	else
@@ -55,7 +55,7 @@ fi
 
 panes=""
 target_is_monitor=0
-while IFS=$'\x1f' read -r id path command option_path stored_label option_cmd monitor_scope; do
+while IFS=$'\x1f' read -r id path command option_path stored_label option_cmd pane_shell_path pane_shell_cmd monitor_scope; do
 	[[ -n "$id" ]] || continue
 	if [[ -n "$monitor_scope" ]]; then
 		[[ "$id" == "$pane_id" ]] && target_is_monitor=1
@@ -66,15 +66,15 @@ while IFS=$'\x1f' read -r id path command option_path stored_label option_cmd mo
 		label="$pane_label"
 		cmd="$shell_label"
 	else
-		cmd="$(label_for_cmd "${option_cmd:-$command}")"
+		cmd="$(label_for_cmd "${pane_shell_cmd:-${option_cmd:-$command}}")"
 		if [[ "$mode" == full ]]; then
-			# never compare stored vs #{pane_current_path}: logical/physical symlink paths differ forever
-			if [[ -n "$stored_label" ]]; then
+			candidate_path="${pane_shell_path:-${option_path:-$path}}"
+			if [[ -n "$stored_label" && "$candidate_path" == "$option_path" ]]; then
 				label="$stored_label"
 			else
-				label="$(label_for_path "${option_path:-$path}")"
+				label="$(label_for_path "$candidate_path")"
 				tmux_add set-option -p -q -t "$id" @pane_project_label "$label"
-				tmux_add set-option -p -q -t "$id" @pane_last_path "${option_path:-$path}"
+				tmux_add set-option -p -q -t "$id" @pane_last_path "$candidate_path"
 			fi
 		fi
 	fi
@@ -85,7 +85,7 @@ while IFS=$'\x1f' read -r id path command option_path stored_label option_cmd mo
 		part="$cmd"
 	fi
 	panes="${panes:+$panes | }$part"
-done < <(tmux list-panes -t "$window_id" -F $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pane_project_label}\x1f#{@pcmd}\x1f#{@pane_monitor_scope}' 2>/dev/null)
+done < <(tmux list-panes -t "$window_id" -F $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pane_project_label}\x1f#{@pcmd}\x1f#{@shell_pwd}\x1f#{@shell_cmd}\x1f#{@pane_monitor_scope}' 2>/dev/null)
 
 if [[ -z "$panes" && "$target_is_monitor" == 0 ]]; then
 	if [[ "$mode" == full ]]; then

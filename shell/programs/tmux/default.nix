@@ -12,6 +12,8 @@
   ];
 
   home.packages = [
+    pkgs.bash
+    pkgs.coreutils
     pkgs.pstree
   ];
 
@@ -50,7 +52,8 @@
 
     extraConfig = ''
       set -gu terminal-features
-      set -ga terminal-features ",xterm*:RGB"
+      set -ga terminal-features ",xterm*:RGB:sync"
+      set -ga terminal-features ",tmux*:sync"
       set-environment -g 'IGNOREEOF' 10
     '';
   };

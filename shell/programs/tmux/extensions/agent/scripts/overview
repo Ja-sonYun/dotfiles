@@ -4,9 +4,17 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
-tmux_lock __popup_lock || exit
+if ! tmux_lock __popup_lock__popup_all_agents 2; then
+	tmux display-message "agent overview: busy"
+	exit 0
+fi
 
 session="_popup_all_agents"
+
+if tmux list-clients -t "$session" -F '#{client_name}' 2>/dev/null | grep -q .; then
+	tmux display-message "agent overview is already open on another client"
+	exit 0
+fi
 
 if tmux has-session -t "$session" 2>/dev/null &&
 ! error=$(tmux kill-session -t "$session" 2>&1); then
@@ -52,9 +60,10 @@ fi
 tmux kill-window -t "$placeholder"
 
 inner="$(tmux display-message -p '#{client_name}' 2>/dev/null)" || inner=""
-outer="$(tmux show-options -gqv @popup_client)"
+outer="${TMUX_MENU_CLIENT:-$inner}"
 if [[ -z "$outer" ]] || ! tmux list-clients -F '#{client_name}' | grep -qxF "$outer"; then
-	outer="$inner"
+	tmux display-message "agent overview: owner client not found"
+	exit 0
 fi
 [[ -n "$outer" ]] || exit 0
 
@@ -69,7 +78,7 @@ else
 fi
 
 tmux_begin
-tmux_add set -g @popup_client "$outer"
+tmux_add set -g @popup_client__popup_all_agents "$outer"
 tmux_add set -g @popup_default_geom__popup_all_agents "C C 75% 70%"
 tmux_add set -g @popup_border__popup_all_agents single
 tmux_add display-popup -C -c "$outer"

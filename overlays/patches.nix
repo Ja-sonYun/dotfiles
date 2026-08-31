@@ -59,10 +59,11 @@
 
   tmux-popup-flicker-fix = _final: prev: {
     tmux = prev.tmux.overrideAttrs (oldAttrs: {
-      patches = (oldAttrs.patches or [ ]) ++ [
-        # TODO: Remove this backport when stable tmux includes #5350 and #5398.
-        ./patches/tmux-3.7c-popup-flicker.patch
-      ];
+      patches =
+        (oldAttrs.patches or [ ])
+        ++ prev.lib.optionals (prev.tmux.version == "3.7c") [
+          ./patches/tmux-3.7c-popup-flicker.patch
+        ];
     });
   };
 

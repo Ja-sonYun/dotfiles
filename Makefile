@@ -136,6 +136,9 @@ update-submodules: ## Update all submodules to latest
 add:
 	git add .
 
+commit:
+	git commit -m "Chore"
+
 lock: add
 	nix flake update vim
 	nix flake update server

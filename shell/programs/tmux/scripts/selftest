@@ -38,50 +38,104 @@ tmux_unlock
 [[ -z "${_TMUX_LOCK:-}" ]]
 [[ -z "$(trap -p EXIT)" ]]
 
+timeout() {
+	timeout_args=("$@")
+	shift
+	"$@"
+}
+tmux_status=7
+if tmux_lock __test_timeout_lock 1; then
+	exit 1
+fi
+[[ "${timeout_args[*]}" == "1 tmux wait-for -L __test_timeout_lock" ]]
+[[ -z "${_TMUX_LOCK:-}" ]]
+unset -f timeout
+
 unset -f tmux
 status_script="$script_dir/../extensions/agent/scripts/status"
-socket="tmux-selftest-$$"
+counts_script="$script_dir/../extensions/agent/scripts/counts"
+update_script="$script_dir/../extensions/shell/scripts/update"
+socket="${TMUX_SELFTEST_SOCKET:?set TMUX_SELFTEST_SOCKET to an absolute path}"
+[[ "$socket" == /* ]]
 cleanup() {
-	tmux -L "$socket" kill-server >/dev/null 2>&1 || true
+	tmux -S "$socket" kill-server >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
-TMUX_AGENT_STATUS=1 tmux -L "$socket" -f /dev/null new-session -d -s main
-tmux -L "$socket" set-environment -t main -u TMUX_AGENT_STATUS
-main_pane="$(tmux -L "$socket" list-panes -t main -F '#{pane_id}')"
-main_session="$(tmux -L "$socket" display-message -pt "$main_pane" '#{session_id}')"
-tmux -L "$socket" run-shell -t "$main_pane" "$status_script init $main_pane '$main_session'"
+TMUX_AGENT_STATUS=1 tmux -S "$socket" -f /dev/null new-session -d -s main
+tmux -S "$socket" set-environment -t main -u TMUX_AGENT_STATUS
+main_pane="$(tmux -S "$socket" list-panes -t main -F '#{pane_id}')"
+main_session="$(tmux -S "$socket" display-message -pt "$main_pane" '#{session_id}')"
+tmux -S "$socket" run-shell -t "$main_pane" "$status_script init $main_pane '$main_session'"
+tmux -S "$socket" set-option -pt "$main_pane" @shell_pwd "$PWD" \; \
+	set-option -pt "$main_pane" @shell_cmd test-command \; \
+	set-option -pt "$main_pane" @shell_seq 1
+tmux -S "$socket" run-shell -t "$main_pane" "$update_script $main_pane 1"
+[[ "$(tmux -S "$socket" display-message -pt "$main_pane" '#{@pcmd}')" == test-command ]]
+[[ "$(tmux -S "$socket" display-message -pt "$main_pane" '#{@pane_last_path}')" == "$PWD" ]]
+tmux -S "$socket" set-option -pt "$main_pane" @shell_cmd newer-command \; \
+	set-option -pt "$main_pane" @shell_seq 2
+tmux -S "$socket" run-shell -t "$main_pane" "$update_script $main_pane 1"
+[[ "$(tmux -S "$socket" display-message -pt "$main_pane" '#{@pcmd}')" == test-command ]]
+tmux -S "$socket" run-shell -t "$main_pane" "$update_script $main_pane 2"
+[[ "$(tmux -S "$socket" display-message -pt "$main_pane" '#{@pcmd}')" == newer-command ]]
 
-tmux -L "$socket" new-session -d -s _popup_test_git_root_agent__tmp -e TMUX_AGENT_STATUS=1
-agent_pane="$(tmux -L "$socket" list-panes -t _popup_test_git_root_agent__tmp -F '#{pane_id}')"
-agent_session="$(tmux -L "$socket" display-message -pt "$agent_pane" '#{session_id}')"
-agent_window="$(tmux -L "$socket" display-message -pt "$agent_pane" '#{window_id}')"
-tmux -L "$socket" run-shell -t "$agent_pane" "$status_script init $agent_pane '$agent_session'"
+tmux -S "$socket" new-session -d -s _popup_test_git_root_agent__tmp -e TMUX_AGENT_STATUS=1
+agent_pane="$(tmux -S "$socket" list-panes -t _popup_test_git_root_agent__tmp -F '#{pane_id}')"
+agent_session="$(tmux -S "$socket" display-message -pt "$agent_pane" '#{session_id}')"
+agent_window="$(tmux -S "$socket" display-message -pt "$agent_pane" '#{window_id}')"
+tmux -S "$socket" run-shell -t "$agent_pane" "$status_script init $agent_pane '$agent_session'"
 
-tmux -L "$socket" new-session -d -s _popup_all_agents -e TMUX_AGENT_STATUS=1
-overview_pane="$(tmux -L "$socket" list-panes -t _popup_all_agents -F '#{pane_id}')"
-overview_session="$(tmux -L "$socket" display-message -pt "$overview_pane" '#{session_id}')"
-tmux -L "$socket" run-shell -t "$overview_pane" "$status_script init $overview_pane '$overview_session'"
-tmux -L "$socket" link-window -d -s "$agent_window" -t _popup_all_agents:
-tmux -L "$socket" set-option -pu -t "$agent_pane" @agent_session_id
-tmux -L "$socket" run-shell -t "$agent_pane" "$status_script idle $agent_pane"
+tmux -S "$socket" new-session -d -s _popup_all_agents -e TMUX_AGENT_STATUS=1
+overview_pane="$(tmux -S "$socket" list-panes -t _popup_all_agents -F '#{pane_id}')"
+overview_session="$(tmux -S "$socket" display-message -pt "$overview_pane" '#{session_id}')"
+tmux -S "$socket" run-shell -t "$overview_pane" "$status_script init $overview_pane '$overview_session'"
+tmux -S "$socket" link-window -d -s "$agent_window" -t _popup_all_agents:
+tmux -S "$socket" set-option -pu -t "$agent_pane" @agent_session_id
+tmux -S "$socket" run-shell -t "$agent_pane" "$status_script idle $agent_pane"
 
-! tmux -L "$socket" show-environment -t main TMUX_AGENT_STATUS >/dev/null 2>&1
-[[ -z "$(tmux -L "$socket" display-message -pt "$main_pane" '#{@agent_enabled}')" ]]
-[[ "$(tmux -L "$socket" display-message -pt "$agent_pane" '#{@agent_enabled}')" == 1 ]]
-[[ "$(tmux -L "$socket" display-message -pt "$agent_pane" '#{@agent_state}')" == idle ]]
-[[ "$(tmux -L "$socket" display-message -pt "$agent_pane" '#{@agent_session_id}')" == "$agent_session" ]]
-[[ -z "$(tmux -L "$socket" display-message -pt "$overview_pane" '#{@agent_enabled}')" ]]
+! tmux -S "$socket" show-environment -t main TMUX_AGENT_STATUS >/dev/null 2>&1
+[[ -z "$(tmux -S "$socket" display-message -pt "$main_pane" '#{@agent_enabled}')" ]]
+[[ "$(tmux -S "$socket" display-message -pt "$agent_pane" '#{@agent_enabled}')" == 1 ]]
+[[ "$(tmux -S "$socket" display-message -pt "$agent_pane" '#{@agent_state}')" == idle ]]
+[[ "$(tmux -S "$socket" display-message -pt "$agent_pane" '#{@agent_session_id}')" == "$agent_session" ]]
+[[ -z "$(tmux -S "$socket" display-message -pt "$overview_pane" '#{@agent_enabled}')" ]]
 
-tmux -L "$socket" set-environment -t main TMUX_AGENT_STATUS 1
-tmux -L "$socket" set-option -pt "$main_pane" @agent_enabled 1
-tmux -L "$socket" set-option -pt "$main_pane" @agent_state idle
-tmux -L "$socket" set-option -wt "$main_pane" @agent_state idle
-tmux -L "$socket" set-option -wt "$main_pane" @agent_name agent
-tmux -L "$socket" rename-window -t "$main_pane" agent:idle
-tmux -L "$socket" run-shell -t "$main_pane" "$status_script init $main_pane '$main_session'"
+second_pane="$(tmux -S "$socket" split-window -dP -t "$agent_pane" -F '#{pane_id}' 'sleep 30')"
+tmux -S "$socket" run-shell -t "$second_pane" "$status_script running $second_pane '$agent_session'"
+tmux -S "$socket" select-pane -t "$second_pane"
+tmux -S "$socket" run-shell -t "$second_pane" "$counts_script"
+[[ "$(tmux -S "$socket" display-message -pt "$agent_window" '#{@agent_state}')" == running ]]
+[[ "$(tmux -S "$socket" display-message -pt "$agent_window" '#{@agent_managed}')" == 1 ]]
 
-! tmux -L "$socket" show-environment -t main TMUX_AGENT_STATUS >/dev/null 2>&1
-[[ -z "$(tmux -L "$socket" display-message -pt "$main_pane" '#{@agent_enabled}')" ]]
-[[ -z "$(tmux -L "$socket" display-message -pt "$main_pane" '#{@agent_name}')" ]]
-[[ "$(tmux -L "$socket" display-message -pt "$main_pane" '#{automatic-rename}')" == 1 ]]
+tmux -S "$socket" wait-for -L __agent_counts_lock
+tmux -S "$socket" set-option -pt "$second_pane" @agent_state waiting
+tmux -S "$socket" run-shell -b -t "$second_pane" "$counts_script"
+tmux -S "$socket" set-option -pt "$second_pane" @agent_state idle
+tmux -S "$socket" run-shell -b -t "$second_pane" "$counts_script"
+tmux -S "$socket" wait-for -U __agent_counts_lock
+for _ in {1..100}; do
+	[[ "$(tmux -S "$socket" display-message -pt "$agent_window" '#{@agent_state}')" == idle ]] && break
+	sleep 0.02
+done
+[[ "$(tmux -S "$socket" display-message -pt "$agent_window" '#{@agent_state}')" == idle ]]
+
+tmux -S "$socket" set-environment -t main TMUX_AGENT_STATUS 1
+tmux -S "$socket" set-option -pt "$main_pane" @agent_enabled 1
+tmux -S "$socket" set-option -pt "$main_pane" @agent_state idle
+tmux -S "$socket" set-option -wt "$main_pane" @agent_state idle
+tmux -S "$socket" set-option -wt "$main_pane" @agent_name agent
+tmux -S "$socket" rename-window -t "$main_pane" agent:idle
+tmux -S "$socket" run-shell -t "$main_pane" "$status_script init $main_pane '$main_session'"
+
+for _ in {1..100}; do
+	if ! tmux -S "$socket" show-environment -t main TMUX_AGENT_STATUS >/dev/null 2>&1 &&
+	[[ "$(tmux -S "$socket" display-message -pt "$main_pane" '#{automatic-rename}')" == 1 ]]; then
+		break
+	fi
+	sleep 0.02
+done
+! tmux -S "$socket" show-environment -t main TMUX_AGENT_STATUS >/dev/null 2>&1
+[[ -z "$(tmux -S "$socket" display-message -pt "$main_pane" '#{@agent_enabled}')" ]]
+[[ -z "$(tmux -S "$socket" display-message -pt "$main_pane" '#{@agent_name}')" ]]
+[[ "$(tmux -S "$socket" display-message -pt "$main_pane" '#{automatic-rename}')" == 1 ]]

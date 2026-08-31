@@ -224,8 +224,8 @@ let
   caseGuard =
     c:
     lib.concatStringsSep " && " (
-      (map (e: "tmux show-environment ${e} >/dev/null 2>&1") c.whenEnv)
-      ++ (map (e: "! tmux show-environment ${e} >/dev/null 2>&1") c.unlessEnv)
+      (map (e: "test -n \"#{E:${e}}\"") c.whenEnv)
+      ++ (map (e: "test -z \"#{E:${e}}\"") c.unlessEnv)
       ++ lib.optional (c.match != null) c.match
     );
 

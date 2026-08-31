@@ -108,7 +108,9 @@ let
 
   dg = cfg.groups.${cfg.defaultGroup};
 
-  statusCmd = g: side: ''"#(cd #{q:pane_current_path};${tmcStatus} ${g} ${side})"'';
+  statusCmd =
+    g: side: segments:
+    if segments == [ ] then ''""'' else ''"#(cd #{q:pane_current_path};${tmcStatus} ${g} ${side})"'';
 
   segmentDefs = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (n: body: ''
@@ -164,7 +166,7 @@ let
 
   envChecks = lib.concatMapStringsSep "\n" (
     g:
-    ''if tmux show-environment -t "$session" ${g.env} >/dev/null 2>&1; then echo ${g.name}; exit 0; fi''
+    ''if [ -n "$(tmux display-message -pt "$session" '#{E:${g.env}}' 2>/dev/null)" ]; then echo ${g.name}; exit 0; fi''
   ) envGroups;
 
   exactCases = lib.concatStringsSep "\n" (
@@ -203,12 +205,20 @@ let
       st = g.status;
       w = g.window;
       optFrag = name: val: if val == null then "-u ${name}" else "${name} ${esc val}";
-      sessionFrags = lib.optional (st.enable != null) "status ${if st.enable then "on" else "off"}" ++ [
+      sessionFrags = [
+        (optFrag "status" (
+          if st.enable == null then
+            null
+          else if st.enable then
+            "on"
+          else
+            "off"
+        ))
         (optFrag "status-position" st.position)
         (optFrag "status-bg" st.bg)
         (optFrag "status-style" st.style)
-        "status-left ${statusCmd gname "left"}"
-        "status-right ${statusCmd gname "right"}"
+        "status-left ${statusCmd gname "left" g.status.left}"
+        "status-right ${statusCmd gname "right" g.status.right}"
         (optFrag "@menu" g.menu)
       ];
       winFrags = [
@@ -232,12 +242,10 @@ let
       }
     '';
 
-  overrideGroups = lib.filterAttrs (n: _: n != cfg.defaultGroup) cfg.groups;
-
-  applyFns = lib.concatStringsSep "\n" (lib.mapAttrsToList applyFn overrideGroups);
+  applyFns = lib.concatStringsSep "\n" (lib.mapAttrsToList applyFn cfg.groups);
 
   applyCases = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (n: _: ''${n}) apply_${n} "$session" ;;'') overrideGroups
+    lib.mapAttrsToList (n: _: ''${n}) apply_${n} "$session" ;;'') cfg.groups
   );
 
   tmcGroupApply = pkgs.writeShellScript "tmc-group-apply" ''
@@ -282,8 +290,8 @@ let
     // lib.optionalAttrs (dg.status.bg != null) { status-bg = ''"${dg.status.bg}"''; }
     // lib.optionalAttrs (dg.status.style != null) { status-style = ''"${dg.status.style}"''; }
     // {
-      status-left = statusCmd cfg.defaultGroup "left";
-      status-right = statusCmd cfg.defaultGroup "right";
+      status-left = statusCmd cfg.defaultGroup "left" dg.status.left;
+      status-right = statusCmd cfg.defaultGroup "right" dg.status.right;
     };
 
   defaultWindowOpts =
@@ -351,7 +359,6 @@ in
     programs.tmux.hooks = {
       tmcGroupApplyNewSession = applyHook "after-new-session";
       tmcGroupApplyNewWindow = applyHook "after-new-window";
-      tmcGroupApplyClientAttached = applyHook "client-attached";
       tmcGroupApplyClientSessionChanged = applyHook "client-session-changed";
     };
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 tmux_bin="${TMUX_BIN:-tmux}"
 
@@ -49,9 +49,14 @@ message() {
 }
 
 acquire_lock() {
-	# ponytail: server-wide serialization; split by window only if reflow becomes slow.
-	"$tmux_bin" wait-for -L __pane_monitor_lock || exit
+	if ! timeout 2 "$tmux_bin" wait-for -L __pane_monitor_lock; then
+		message "busy"
+		exit 0
+	fi
 	trap '"$tmux_bin" wait-for -U __pane_monitor_lock' EXIT
+	trap 'exit 129' HUP
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
 }
 
 monitor_width() {
@@ -85,7 +90,7 @@ next_order() {
 
 origin_pane() {
 	local pane
-	pane=$(global_get @menu_origin_pane)
+	pane=${TMUX_MENU_ORIGIN_PANE:-}
 	if ! pane_exists "$pane"; then
 		pane=$("$tmux_bin" display-message -p '#{pane_id}')
 	fi
@@ -94,7 +99,7 @@ origin_pane() {
 
 origin_window() {
 	local window pane
-	window=$(global_get @menu_origin_window)
+	window=${TMUX_MENU_ORIGIN_WINDOW:-}
 	if ! window_exists "$window"; then
 		pane=$(origin_pane)
 		window=$("$tmux_bin" display-message -pt "$pane" '#{window_id}')
@@ -181,8 +186,10 @@ create_view() {
 	"$tmux_bin" select-pane -d -t "$pane" ';' select-pane -t "$active"
 	status_script=$(dirname "$0")/../../shell/scripts/panes
 	counts_script=$(dirname "$0")/../../agent/scripts/counts
-	if { [ ! -x "$status_script" ] || "$status_script" "$active"; } &&
-	{ [ ! -x "$counts_script" ] || "$counts_script"; }; then
+	if [ -x "$counts_script" ]; then
+		"$counts_script" >/dev/null 2>&1 &
+	fi
+	if [ ! -x "$status_script" ] || "$status_script" "$active"; then
 		return 0
 	fi
 	if [ "$scope" = global ]; then

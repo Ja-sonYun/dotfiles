@@ -20,7 +20,7 @@
             menu = {
               name = "Navi";
               shortcut = "n";
-              command = "navi --path=$CONFIG/navi --print | pbcopy";
+              command = "navi --path=$CONFIG/navi --print | tmux load-buffer -w -";
               keyTable = "popup-root";
               position = {
                 w = "40%";
@@ -94,7 +94,7 @@
           menu = {
             name = "dump gitignore";
             shortcut = "i";
-            command = "gibo dump %%LANGUAGE%% | less && gibo dump %%LANGUAGE%% | pbcopy";
+            command = "gibo dump %%LANGUAGE%% | less && gibo dump %%LANGUAGE%% | tmux load-buffer -w -";
             keyTable = "popup-root";
             inputs = [ "LANGUAGE" ];
             position = {

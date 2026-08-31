@@ -222,13 +222,21 @@ in
     home.packages = [ cfg.package ];
 
     programs.tmux-menu.showScript = pkgs.writeShellScript "tmux-menu-show" ''
-      IFS=$'\x1f' read -r pane_current_path pane_id window_id < <(
-        tmux display-message -p $'#{pane_current_path}\x1f#{pane_id}\x1f#{window_id}'
-      )
-      tmux set-option -g @menu_origin_pane "$pane_id" ';' set-option -g @menu_origin_window "$window_id"
-      menu=$(tmux show -v @menu 2>/dev/null)
+      pane_current_path="$1"
+      pane_id="$2"
+      window_id="$3"
+      client_name="$4"
+      if [ -z "$pane_current_path" ] || [ -z "$pane_id" ] || [ -z "$window_id" ] || [ -z "$client_name" ]; then
+        IFS=$'\x1f' read -r pane_current_path pane_id window_id client_name < <(
+          tmux display-message -p $'#{pane_current_path}\x1f#{pane_id}\x1f#{window_id}\x1f#{client_name}'
+        )
+      fi
+      export TMUX_MENU_ORIGIN_PANE="$pane_id"
+      export TMUX_MENU_ORIGIN_WINDOW="$window_id"
+      export TMUX_MENU_CLIENT="$client_name"
+      menu=$(tmux show-options -qv @menu)
       menu=''${menu:-menu}
-      if tmux show-environment DEFAULT >/dev/null 2>&1; then
+      if [ -n "$(tmux display-message -p '#{E:DEFAULT}')" ]; then
         ${cfg.package}/bin/tmux-menu show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
       else
         tmux detach

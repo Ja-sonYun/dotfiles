@@ -1,4 +1,5 @@
 {
+  hasTag,
   lib,
   ...
 }:
@@ -33,9 +34,17 @@ in
   programs.zsh-customize.blocks = [
     {
       order = 1100;
-      variables._tmux_update_seq = {
-        flags = "-gi";
-        value = "0";
+      variables = {
+        _tmux_update_seq = {
+          flags = "-gi";
+          value = "0";
+        };
+      }
+      // lib.optionalAttrs (hasTag "ai") {
+        _tmux_count_pwd = {
+          flags = "-g";
+          value = "";
+        };
       };
 
       functions = {
@@ -54,7 +63,12 @@ in
             set-option -p -q -t "$TMUX_PANE" @shell_cmd "''${ZSH_NAME:-zsh}" ';' \
             set-option -p -q -t "$TMUX_PANE" @shell_seq "$_tmux_update_seq" 2>/dev/null
           "${scripts}/update" "$TMUX_PANE" "$_tmux_update_seq" >/dev/null 2>&1 &!
-          "${agentScripts}/counts" >/dev/null 2>&1 &!
+          ${lib.optionalString (hasTag "ai") ''
+            if [[ "$_tmux_count_pwd" != "$PWD" ]]; then
+              _tmux_count_pwd="$PWD"
+              "${agentScripts}/counts" >/dev/null 2>&1 &!
+            fi
+          ''}
         '';
       };
 

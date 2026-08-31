@@ -126,7 +126,7 @@ in
         "C-r".command = "detach-client";
         w.command = "detach-client";
         s.command = "detach-client";
-        k.command = "run-shell -b ${config.programs.tmux-menu.showScript}";
+        k.command = "run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_current_path} #{q:pane_id} #{q:window_id} #{q:client_name}'";
         n.command = "next-window";
         "C-n" = {
           repeat = true;
@@ -172,7 +172,7 @@ in
 
   programs.tmux-customize = {
     sessions.agent.group = "agent";
-    segments.reconcile = ''"${scripts}/reconcile"'';
+    segments.reconcile = ''"${scripts}/reconcile" >/dev/null 2>&1 &'';
     groups = {
       normal.status.right = lib.mkBefore [ "reconcile" ];
       agent = {

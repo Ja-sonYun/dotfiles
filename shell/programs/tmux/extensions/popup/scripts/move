@@ -24,16 +24,12 @@
 #   @popup_geom_<key>    "x y w h" in cells, canonical per popup session
 #   @popup_default_geom_<key> raw geometry restored by reset
 #   @popup_border_<key>  border-lines style for this popup session
-#   @popup_client        outer client recorded by whoever opened the popup
-#   @popup_pending_geom  raw geometry recorded by the opener (may contain
-#                        %, C, R, P), used only before the first move
-#   @popup_pending_border same, for the border style
+#   @popup_client_<key>  outer client recorded by whoever opened the popup
 #
 # Usage: move <dx> <dy> <dw> <dh> | move reset
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
-tmux_lock __popup_lock || exit
 
 if [[ "${1:-}" == reset ]]; then
 	reset=1
@@ -50,17 +46,16 @@ fi
 # Option-name-safe key derived from the session name (user options should
 # stay alphanumeric; menu sessions look like `_popup_3af2_name`).
 key="${inner//[^A-Za-z0-9]/_}"
-
-# The OUTER client is the terminal the popup is drawn on. Prefer the client
-# recorded by the opener; if it is gone (terminal closed, stale value), fall
-# back to any client that is not itself displaying popup content.
-outer="$(tmux show-options -gqv @popup_client)"
-if [[ -z "$outer" ]] || ! tmux list-clients -F '#{client_name}' | grep -qxF "$outer"; then
-	# ponytail: assumes a single non-popup client; ambiguous with multiple terminals
-	outer="$(tmux list-clients -F $'#{client_name}\t#{client_session}' |
-		awk -F '\t' '$2 != "popup" && $2 !~ /^_popup_/ { print $1; exit }')"
+if ! tmux_lock "__popup_lock_$key" 2; then
+	tmux display-message "popup move: busy"
+	exit 0
 fi
-[[ -n "$outer" ]] || exit 0
+
+outer="$(tmux show-options -gqv "@popup_client_$key")"
+if [[ -z "$outer" ]] || ! tmux list-clients -F '#{client_name}' | grep -qxF "$outer"; then
+	tmux display-message "popup move: owner client not found"
+	exit 0
+fi
 
 # Outer terminal size — the coordinate space for the popup.
 # NOTE: `display-message -p -c <client>` does NOT resolve formats against
@@ -72,11 +67,6 @@ awk -F '\t' -v c="$outer" '$1 == c { print $2; exit }')
 
 # Load stored geometry, or the launcher's raw default for reset/first move.
 default_geom="$(tmux show-options -gqv "@popup_default_geom_$key")"
-save_default=0
-if [[ -z "$default_geom" ]]; then
-	default_geom="$(tmux show-options -gqv @popup_pending_geom)"
-	[[ -n "$default_geom" ]] && save_default=1
-fi
 if ((reset)); then
 	geom="$default_geom"
 else
@@ -122,23 +112,13 @@ x=$((x + dx)) y=$((y + dy)) w=$((w + dw)) h=$((h + dh))
 ((y < h)) && y=$h # bottom edge can't be above row h, or the top would go off screen
 ((y > ch)) && y=$ch
 
-# Border style: same canonical-then-pending lookup as the geometry, promoted
-# to the per-session option on first use so later pending values from other
-# popups can't leak into this one.
 border="$(tmux show-options -gqv "@popup_border_$key")"
-save_border=0
-if [[ -z "$border" ]]; then
-	border="$(tmux show-options -gqv @popup_pending_border)"
-	[[ -n "$border" ]] && save_border=1
-fi
 
 # Close the current popup on the outer client. This kills the inner
 # `tmux attach` job (and with it the inner client — the one whose key
 # binding invoked us; run-shell keeps this script alive server-side).
 tmux_begin
-((save_default)) && tmux_add set -g "@popup_default_geom_$key" "$default_geom"
 tmux_add set -g "@popup_geom_$key" "$x $y $w $h"
-((save_border)) && tmux_add set -g "@popup_border_$key" "$border"
 tmux_add display-popup -C -c "$outer"
 tmux_flush || exit
 

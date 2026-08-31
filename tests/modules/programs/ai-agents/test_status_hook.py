@@ -150,7 +150,22 @@ class MainTest(unittest.TestCase):
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            timeout=1.0,
         )
+
+    def test_status_timeout_does_not_block_hook(self) -> None:
+        hook_input = json.dumps({"hook_event_name": "Stop"})
+        with (
+            patch.dict(os.environ, {"AI_AGENT_CLIENT": "Claude"}),
+            patch.object(sys, "argv", ["status.py", "status-command"]),
+            patch.object(sys, "stdin", io.StringIO(hook_input)),
+            patch.object(
+                subprocess,
+                "run",
+                side_effect=subprocess.TimeoutExpired("status-command", 1.0),
+            ),
+        ):
+            self.assertEqual(MAIN(), 0)
 
     def test_codex_input_tool_does_not_run_status_command(self) -> None:
         hook_input = json.dumps(

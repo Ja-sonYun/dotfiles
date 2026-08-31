@@ -79,11 +79,11 @@ in
       };
       Enter = {
         table = "copy-mode-vi";
-        command = ''send-keys -X copy-pipe-and-cancel "pbcopy"'';
+        command = "send-keys -X copy-selection-and-cancel";
       };
 
       k = {
-        command = "run-shell -b ${config.programs.tmux-menu.showScript}";
+        command = "run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_current_path} #{q:pane_id} #{q:window_id} #{q:client_name}'";
       };
 
       B = {

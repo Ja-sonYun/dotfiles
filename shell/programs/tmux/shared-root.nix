@@ -1,5 +1,4 @@
 {
-  Any.command = "send-keys";
   "C-h".command = "if-shell -F '#{==:#{pane_current_command},vim}' 'send-keys C-h' 'select-pane -L'";
   "C-j".command = "if-shell -F '#{==:#{pane_current_command},vim}' 'send-keys C-j' 'select-pane -D'";
   "C-k".command = "if-shell -F '#{==:#{pane_current_command},vim}' 'send-keys C-k' 'select-pane -U'";
@@ -21,8 +20,9 @@
   F11.command = "set -gq @nop 1";
   F12.command = "set -gq @nop 1";
   "C-d".script = ''
-    if tmux show-environment TMUX_REMAP_CTRL_D >/dev/null 2>&1; then
-      tmux send-keys "$(tmux show-environment TMUX_REMAP_CTRL_D | cut -d= -f2-)"
+    remap="$(tmux display-message -p '#{E:TMUX_REMAP_CTRL_D}')"
+    if [ -n "$remap" ]; then
+      tmux send-keys "$remap"
     else
       tmux send-keys C-d
     fi
