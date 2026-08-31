@@ -222,14 +222,16 @@ in
     home.packages = [ cfg.package ];
 
     programs.tmux-menu.showScript = pkgs.writeShellScript "tmux-menu-show" ''
-      pane_current_path="$1"
-      pane_id="$2"
-      window_id="$3"
-      client_name="$4"
-      if [ -z "$pane_current_path" ] || [ -z "$pane_id" ] || [ -z "$window_id" ] || [ -z "$client_name" ]; then
-        IFS=$'\x1f' read -r pane_current_path pane_id window_id client_name < <(
-          tmux display-message -p $'#{pane_current_path}\x1f#{pane_id}\x1f#{window_id}\x1f#{client_name}'
-        )
+      pane_id="$1"
+      window_id="$2"
+      client_name="$3"
+      pane_current_path="$4"
+      if [ -z "$pane_id" ] || [ -z "$window_id" ] || [ -z "$client_name" ]; then
+        exit 0
+      fi
+      if [ -z "$pane_current_path" ]; then
+        pane_current_path=$(tmux display-message -pt "$pane_id" '#{pane_current_path}' 2>/dev/null) || exit 0
+        [ -n "$pane_current_path" ] || exit 0
       fi
       export TMUX_MENU_ORIGIN_PANE="$pane_id"
       export TMUX_MENU_ORIGIN_WINDOW="$window_id"

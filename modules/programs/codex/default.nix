@@ -56,7 +56,7 @@ let
 
       expression='{"name": strenv(AGENT_NAME), "description": strenv(AGENT_DESCRIPTION), "developer_instructions": strenv(AGENT_INSTRUCTIONS)}'
       if [[ "$AGENT_TOOLS" != *Write* && "$AGENT_TOOLS" != *Edit* ]]; then
-        expression+=' + {"sandbox_mode": "read-only"}'
+        expression+=' + {"default_permissions": ":read-only"}'
       fi
 
       ${pkgs.yq-go}/bin/yq --null-input --output-format=toml "$expression" \

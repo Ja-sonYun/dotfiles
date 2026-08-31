@@ -8,6 +8,9 @@ source "$script_dir/lib/common"
 tmux_status=0
 tmux() {
 	tmux_args=("$@")
+	if [[ "$*" == "display-message -p #{pid}" ]]; then
+		printf '123\n'
+	fi
 	return "$tmux_status"
 }
 
@@ -31,27 +34,29 @@ fi
 [[ "${#_TMUX_BATCH[@]}" == 0 ]]
 
 tmux_status=0
+flock_status=0
+flock() {
+	flock_args=("$@")
+	return "$flock_status"
+}
 tmux_lock __test_lock
-[[ "${tmux_args[*]}" == "wait-for -L __test_lock" ]]
+lock_fd="$_TMUX_LOCK_FD"
+[[ "${flock_args[*]}" == "$lock_fd" ]]
 tmux_unlock
-[[ "${tmux_args[*]}" == "wait-for -U __test_lock" ]]
-[[ -z "${_TMUX_LOCK:-}" ]]
+[[ "${flock_args[*]}" == "-u $lock_fd" ]]
+[[ -z "${_TMUX_LOCK_FD:-}" ]]
 [[ -z "$(trap -p EXIT)" ]]
 
-timeout() {
-	timeout_args=("$@")
-	shift
-	"$@"
-}
-tmux_status=7
+flock_status=7
 if tmux_lock __test_timeout_lock 1; then
 	exit 1
 fi
-[[ "${timeout_args[*]}" == "1 tmux wait-for -L __test_timeout_lock" ]]
-[[ -z "${_TMUX_LOCK:-}" ]]
-unset -f timeout
+[[ "${flock_args[0]}" == "-w" ]]
+[[ "${flock_args[1]}" == 1 ]]
+[[ -z "${_TMUX_LOCK_FD:-}" ]]
 
 unset -f tmux
+unset -f flock
 status_script="$script_dir/../extensions/agent/scripts/status"
 counts_script="$script_dir/../extensions/agent/scripts/counts"
 update_script="$script_dir/../extensions/shell/scripts/update"
@@ -108,12 +113,17 @@ tmux -S "$socket" run-shell -t "$second_pane" "$counts_script"
 [[ "$(tmux -S "$socket" display-message -pt "$agent_window" '#{@agent_state}')" == running ]]
 [[ "$(tmux -S "$socket" display-message -pt "$agent_window" '#{@agent_managed}')" == 1 ]]
 
-tmux -S "$socket" wait-for -L __agent_counts_lock
+server_pid="$(tmux -S "$socket" display-message -p '#{pid}')"
+lock_dir="${TMPDIR:-/tmp}/tmux-locks-$UID"
+mkdir -p "$lock_dir"
+exec {counts_lock_fd}>"$lock_dir/$server_pid-__agent_counts_lock.lock"
+flock "$counts_lock_fd"
 tmux -S "$socket" set-option -pt "$second_pane" @agent_state waiting
 tmux -S "$socket" run-shell -b -t "$second_pane" "$counts_script"
 tmux -S "$socket" set-option -pt "$second_pane" @agent_state idle
 tmux -S "$socket" run-shell -b -t "$second_pane" "$counts_script"
-tmux -S "$socket" wait-for -U __agent_counts_lock
+flock -u "$counts_lock_fd"
+exec {counts_lock_fd}>&-
 for _ in {1..100}; do
 	[[ "$(tmux -S "$socket" display-message -pt "$agent_window" '#{@agent_state}')" == idle ]] && break
 	sleep 0.02

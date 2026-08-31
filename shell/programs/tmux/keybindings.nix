@@ -83,7 +83,7 @@ in
       };
 
       k = {
-        command = "run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_current_path} #{q:pane_id} #{q:window_id} #{q:client_name}'";
+        command = "run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_id} #{q:window_id} #{q:client_name} #{q:pane_current_path}'";
       };
 
       B = {

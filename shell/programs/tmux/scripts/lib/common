@@ -63,18 +63,28 @@ label_for_cmd() {
 #   tmux_refresh_clients             # refresh all current clients
 #   tmux_flush                       # fire everything in one tmux call
 _TMUX_BATCH=()
+_TMUX_LOCK_FD=""
 
 tmux_lock() {
-	local timeout_seconds="${2:-}"
-	_TMUX_LOCK="$1"
+	local name="$1" timeout_seconds="${2:-}" server_pid lock_dir lock_path
+	server_pid="$(tmux display-message -p '#{pid}' 2>/dev/null)" || return 1
+	[[ "$server_pid" =~ ^[0-9]+$ ]] || return 1
+	name="${name//[^[:alnum:]_.-]/_}"
+	lock_dir="${TMPDIR:-/tmp}/tmux-locks-$UID"
+	lock_path="$lock_dir/$server_pid-$name.lock"
+	umask 077
+	mkdir -p "$lock_dir" || return 1
+	exec {_TMUX_LOCK_FD}>"$lock_path" || return 1
 	if [[ -n "$timeout_seconds" ]]; then
-		timeout "$timeout_seconds" tmux wait-for -L "$_TMUX_LOCK" || {
-			_TMUX_LOCK=""
+		flock -w "$timeout_seconds" "$_TMUX_LOCK_FD" || {
+			exec {_TMUX_LOCK_FD}>&-
+			_TMUX_LOCK_FD=""
 			return 1
 		}
 	else
-		tmux wait-for -L "$_TMUX_LOCK" || {
-			_TMUX_LOCK=""
+		flock "$_TMUX_LOCK_FD" || {
+			exec {_TMUX_LOCK_FD}>&-
+			_TMUX_LOCK_FD=""
 			return 1
 		}
 	fi
@@ -85,10 +95,10 @@ tmux_lock() {
 }
 
 tmux_unlock() {
-	local lock="${_TMUX_LOCK:-}"
-	[[ -n "$lock" ]] || return 0
-	tmux wait-for -U "$lock" || return
-	_TMUX_LOCK=""
+	[[ "${_TMUX_LOCK_FD:-}" =~ ^[0-9]+$ ]] || return 0
+	flock -u "$_TMUX_LOCK_FD" >/dev/null 2>&1 || true
+	exec {_TMUX_LOCK_FD}>&-
+	_TMUX_LOCK_FD=""
 	trap - EXIT HUP INT TERM
 }
 

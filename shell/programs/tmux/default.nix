@@ -14,6 +14,7 @@
   home.packages = [
     pkgs.bash
     pkgs.coreutils
+    pkgs.flock
     pkgs.pstree
   ];
 

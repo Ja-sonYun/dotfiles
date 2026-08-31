@@ -8,6 +8,8 @@ let
   scripts = "${tmuxRoot}/extensions/agent/scripts";
   popupScripts = "${tmuxRoot}/extensions/popup/scripts";
   sharedRootBindings = import ../../shared-root.nix;
+  agentFg = "#{?#{@agent_fg},#{@agent_fg},#[fg=color244]}";
+  agentBg = "#{?#{@agent_bg},#{@agent_bg},#[bg=color244]}";
   agentMenu = ''
     tmux display-menu -T ' agent ' \
       claude c "new-window 'direnv exec . claude'" \
@@ -75,6 +77,10 @@ in
         event = "after-split-window";
         command = ''run-shell -b "${scripts}/counts"'';
       };
+      agentSessionCountsClientSessionChanged = {
+        event = "client-session-changed";
+        command = ''run-shell -b "${scripts}/counts"'';
+      };
       agentStatusNewSession = {
         event = "after-new-session";
         command = ''run-shell -b "${scripts}/status init #{pane_id} #{q:session_id}"'';
@@ -126,7 +132,7 @@ in
         "C-r".command = "detach-client";
         w.command = "detach-client";
         s.command = "detach-client";
-        k.command = "run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_current_path} #{q:pane_id} #{q:window_id} #{q:client_name}'";
+        k.command = "run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_id} #{q:window_id} #{q:client_name} #{q:pane_current_path}'";
         n.command = "next-window";
         "C-n" = {
           repeat = true;
@@ -190,12 +196,12 @@ in
           right = [ ];
         };
         window = {
-          format = "#[bg=default]#{@agent_fg}▐#{@agent_bg}#[fg=black]#I:#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#W#{@agent_fg}#[bg=default]▌#[default]";
+          format = "#[bg=default]${agentFg}▐${agentBg}#[fg=black]#I:#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#W${agentFg}#[bg=default]▌#[default]";
           currentFormat =
             let
               highlightColor = "magenta";
             in
-            "#{@agent_bg}#[fg=${highlightColor}]▌#[fg=black]#I:#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#{@agent_name}:#{@agent_state}#{@agent_fg}#[fg=${highlightColor}]▐#[default]";
+            "${agentBg}#[fg=${highlightColor}]▌#[fg=black]#I:#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#{@agent_name}:#{@agent_state}${agentFg}#[fg=${highlightColor}]▐#[default]";
         };
       };
     };
