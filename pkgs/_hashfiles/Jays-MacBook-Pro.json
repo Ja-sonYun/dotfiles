@@ -1,15 +1,15 @@
 {
   "n8n-mcp": {
-    "version": "2.76.0",
-    "hash": "sha256-dWsZ0kQToZm6K/kI5QmPzNeYfpCYrmzcRYVnfiif4ek="
+    "version": "2.77.0",
+    "hash": "sha256-n4AZn5XCt2zveSLfdJcbByxvQy1uB3J4P4Nray42Nf0="
   },
   "macnotesapp": {
     "version": "0.8.2",
     "hash": "sha256-c9wZgJVxiUxDgRzQTSWiqxSNkCDj6dM/rJwQx7PtRj4="
   },
   "open-code-review": {
-    "version": "1.11.0",
-    "hash": "sha256-nUO8IfsEEyXKQzdCk6LFXl3WOraQJN1xgyR7eDSnD+M="
+    "version": "1.11.1",
+    "hash": "sha256-/QYiQuQgMrVh1Xr0t1tS88Jt7cuPii1slymg6gh9F7s="
   },
   "pi": {
     "version": "0.84.4",
@@ -36,8 +36,8 @@
     "hash": "sha256-rB4SveDbM8jpPpazU4KCWTOB7qa0Yq2tJejl8wz1MaA="
   },
   "codex": {
-    "version": "0.151.0",
-    "hash": "sha256-6rd3oBTnnj4Q7TeppEmEBo1It7JSO1zPQRdrO4A2UTs="
+    "version": "0.152.0",
+    "hash": "sha256-1asQiTU5/CTFv8fTd6+bej59kRfcGHTHwILIh2QjYfY="
   },
   "context7-mcp": {
     "version": "4.0.4",
@@ -48,7 +48,7 @@
     "hash": "sha256-pYUmJYvjQWwywNPQPZ5dfO+4xdXY9lmznf/3UQfBDIw="
   },
   "claude-code": {
-    "version": "2.1.251",
-    "hash": "sha256-U43Irlma8qFhXOCfxDBG2nSnL+y1TgtNj55aTweZCvc="
+    "version": "2.1.252",
+    "hash": "sha256-sttvCws2xF0Xks2gyAbUM1/aCI90nv64PQQz/Ub6frE="
   }
 }

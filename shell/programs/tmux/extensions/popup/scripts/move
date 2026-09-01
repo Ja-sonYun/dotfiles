@@ -117,6 +117,7 @@ border="$(tmux show-options -gqv "@popup_border_$key")"
 # Close the current popup on the outer client. This kills the inner
 # `tmux attach` job (and with it the inner client — the one whose key
 # binding invoked us; run-shell keeps this script alive server-side).
+[[ -n "$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null)" ]] || exit 0
 tmux_begin
 tmux_add set -g "@popup_geom_$key" "$x $y $w $h"
 tmux_add display-popup -C -c "$outer"

@@ -51,7 +51,9 @@ in
         _tmux_set_pane_command = ''
           [[ -n "$TMUX" && -n "$TMUX_PANE" ]] || return
           _tmux_update_seq=$(( _tmux_update_seq + 1 ))
-          tmux set-option -p -q -t "$TMUX_PANE" @shell_cmd "''${1%% *}" ';' \
+          local tmux_shell_cmd="''${1%% *}"
+          [[ "$tmux_shell_cmd" == *';' ]] && tmux_shell_cmd="''${tmux_shell_cmd%;}\\;"
+          tmux set-option -p -q -t "$TMUX_PANE" @shell_cmd "$tmux_shell_cmd" ';' \
             set-option -p -q -t "$TMUX_PANE" @shell_seq "$_tmux_update_seq" 2>/dev/null
           "${scripts}/update" "$TMUX_PANE" "$_tmux_update_seq" >/dev/null 2>&1 &!
         '';
@@ -59,8 +61,11 @@ in
         _tmux_clear_pane_command = ''
           [[ -n "$TMUX" && -n "$TMUX_PANE" ]] || return
           _tmux_update_seq=$(( _tmux_update_seq + 1 ))
-          tmux set-option -p -q -t "$TMUX_PANE" @shell_pwd "$PWD" ';' \
-            set-option -p -q -t "$TMUX_PANE" @shell_cmd "''${ZSH_NAME:-zsh}" ';' \
+          local tmux_pwd="$PWD" tmux_shell_name="''${ZSH_NAME:-zsh}"
+          [[ "$tmux_pwd" == *';' ]] && tmux_pwd="''${tmux_pwd%;}\\;"
+          [[ "$tmux_shell_name" == *';' ]] && tmux_shell_name="''${tmux_shell_name%;}\\;"
+          tmux set-option -p -q -t "$TMUX_PANE" @shell_pwd "$tmux_pwd" ';' \
+            set-option -p -q -t "$TMUX_PANE" @shell_cmd "$tmux_shell_name" ';' \
             set-option -p -q -t "$TMUX_PANE" @shell_seq "$_tmux_update_seq" 2>/dev/null
           "${scripts}/update" "$TMUX_PANE" "$_tmux_update_seq" >/dev/null 2>&1 &!
           ${lib.optionalString (hasTag "ai") ''

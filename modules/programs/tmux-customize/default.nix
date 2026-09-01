@@ -258,6 +258,14 @@ let
     ${applyFns}
 
     group="$(${tmcResolveGroup} "$session")"
+    case "$session" in
+      _popup_*)
+        if [ "$group" = ${esc cfg.defaultGroup} ]; then
+          tmux set-option -t "$pane_id" status off
+          exit 0
+        fi
+        ;;
+    esac
     case "$group" in
     ${applyCases}
     esac

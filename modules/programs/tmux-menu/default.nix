@@ -238,14 +238,25 @@ in
       export TMUX_MENU_CLIENT="$client_name"
       menu=$(tmux show-options -qv @menu)
       menu=''${menu:-menu}
-      if [ -n "$(tmux display-message -p '#{E:DEFAULT}')" ]; then
-        ${cfg.package}/bin/tmux-menu show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
-      else
-        tmux detach
-        W=$(tmux display -p "#{client_width}"); W=$((W - 1))
-        H=$(tmux display -p "#{client_height}")
-        ${cfg.package}/bin/tmux-menu show -x "$W" -y "$H" --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
+      if [ -n "$(tmux display-message -pt "$pane_id" '#{E:DEFAULT}')" ]; then
+        exec ${cfg.package}/bin/tmux-menu show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
       fi
+
+      session=$(tmux display-message -pt "$pane_id" '#{session_name}' 2>/dev/null)
+      key="''${session//[^A-Za-z0-9]/_}"
+      outer=$(tmux show-options -gqv "@popup_client_$key" 2>/dev/null)
+      W="" H=""
+      if [ -n "$outer" ] && [ "$outer" != "$client_name" ]; then
+        read -r W H < <(tmux list-clients -F $'#{client_name}\t#{client_width} #{client_height}' 2>/dev/null |
+          awk -F '\t' -v c="$outer" '$1 == c { print $2; exit }')
+      fi
+      tmux detach-client -t "$client_name" 2>/dev/null
+      if [ -n "$W" ] && [ -n "$H" ]; then
+        export TMUX_MENU_CLIENT="$outer"
+        exec ${cfg.package}/bin/tmux-menu show -x "$((W - 1))" -y "$H" --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
+      fi
+      unset TMUX_MENU_CLIENT
+      exec ${cfg.package}/bin/tmux-menu show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
     '';
 
     programs.tmux-menu.configDir = pkgs.runCommand "tmux-config" { } (

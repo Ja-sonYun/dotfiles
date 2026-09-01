@@ -91,5 +91,14 @@ if [[ -n "$inner" && "$inner" != "$outer" ]]; then
 fi
 tmux_unlock || exit
 
+status=0
 tmux display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
-	-b single -E "tmux attach -f active-pane -t $session" || [[ "$?" -eq 129 ]]
+	-b single -E "tmux attach -f active-pane -t $session" || status=$?
+
+if tmux_lock __popup_lock__popup_all_agents 2; then
+	if [[ -z "$(tmux list-clients -t "$session" -F '#{client_name}' 2>/dev/null)" ]]; then
+		tmux kill-session -t "$session" 2>/dev/null || true
+	fi
+	tmux_unlock
+fi
+[[ "$status" -eq 0 || "$status" -eq 129 ]]

@@ -7,8 +7,8 @@ pkgs.rustPlatform.buildRustPackage rec {
   src = pkgs.fetchFromGitHub {
     owner = "Ja-sonYun";
     repo = "tmux-easy-menu";
-    rev = "01b110cb596c8bf3e57f2e85f5a25dfc13b019d1";
-    hash = "sha256-e+h1djILK7tCWsDUYy2nLNw/7wnOXbzWCUJawgmxd+8=";
+    rev = "34af6476f8a7252478b2a1ee41e4121c3e28839d";
+    hash = "sha256-9JEG/4dgctsChcyTIm+Mlvgv0GGoTbBadZIjipAwXlk=";
   };
 
   cargoHash = "sha256-s9AOVhKTdm/yQOWlES4YFc1Yj1YcGXPM/oi/zpCGisc=";

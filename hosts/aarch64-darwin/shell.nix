@@ -5,17 +5,6 @@
   ...
 }:
 {
-  environment.etc = lib.mkIf (hasTag "ai") {
-    "codex/requirements.toml".text = ''
-      default_permissions = "managed"
-
-      [allowed_permission_profiles]
-      managed = true
-      ":read-only" = true
-      ":danger-full-access" = true
-    '';
-  };
-
   environment.shells = [
     pkgs.zsh
   ];

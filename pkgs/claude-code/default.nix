@@ -6,7 +6,7 @@
 }:
 
 let
-  packageVersion = "2.1.251";
+  packageVersion = "2.1.252";
   nativePackage =
     {
       aarch64-darwin = "@anthropic-ai/claude-code-darwin-arm64";
@@ -33,6 +33,7 @@ let
         --set DISABLE_BUG_COMMAND              1 \
         --set DISABLE_INSTALLATION_CHECKS      1 \
         --set DISABLE_AUTOUPDATER              1 \
+        --set CLAUDE_CODE_DISABLE_AUTO_MEMORY  1 \
         --set CLAUDE_CODE_DISABLE_MOUSE_CLICKS 1 \
         --set DISABLE_ERROR_REPORTING          1 \
         ${pkgs.lib.optionalString (extraPath != [ ]) "--prefix PATH : ${pkgs.lib.makeBinPath extraPath}"}
