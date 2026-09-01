@@ -34,6 +34,7 @@
     awscli-local = final.callPackage ../pkgs/awscli-local { };
     macnotesapp = final.callPackage ../pkgs/macnotesapp { };
     cf-tunnel = final.callPackage ../pkgs/cf-tunnel { };
+    dcf = final.callPackage ../pkgs/dcf { };
     agenix-utils = final.callPackage ../libs/nixlib/pkg/agenix-utils { };
 
     # Npm

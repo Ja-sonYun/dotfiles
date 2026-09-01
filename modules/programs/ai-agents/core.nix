@@ -33,6 +33,12 @@ in
       default = { };
     };
 
+    extraPath = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [ ];
+      description = "Packages added to the PATH of every enabled AI agent.";
+    };
+
     agentsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
@@ -44,7 +50,7 @@ in
       (lib.mkIf config.programs.codex.enable {
         programs.codex = lib.mkMerge [
           {
-            inherit (cfg) skills;
+            inherit (cfg) skills extraPath;
           }
           (lib.mkIf (cfg.context != null) {
             inherit (cfg) context;
@@ -61,7 +67,7 @@ in
       (lib.mkIf config.programs.claude-code.enable {
         programs.claude-code = lib.mkMerge [
           {
-            inherit (cfg) skills;
+            inherit (cfg) skills extraPath;
           }
           (lib.mkIf (cfg.context != null) {
             inherit (cfg) context;
@@ -78,7 +84,7 @@ in
       (lib.mkIf config.programs.pi.enable {
         programs.pi = lib.mkMerge [
           {
-            inherit (cfg) skills;
+            inherit (cfg) skills extraPath;
           }
           (lib.mkIf (cfg.context != null) {
             inherit (cfg) context;

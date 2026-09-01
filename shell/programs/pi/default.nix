@@ -3,19 +3,10 @@
   pkgs,
   ...
 }:
-let
-  pi = pkgs.pi.override {
-    extraPath = [
-      pkgs.aws-ro
-      pkgs.gh-ro
-      pkgs.nodejs_24
-    ];
-  };
-in
 {
   programs.pi = {
     enable = true;
-    package = pi;
+    extraPath = [ pkgs.nodejs_24 ];
 
     settings = {
       quietStartup = true;

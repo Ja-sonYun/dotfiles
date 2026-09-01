@@ -18,14 +18,17 @@ let
 
   agentDir = ".pi/agent";
 
+  basePackage =
+    if cfg.extraPath == [ ] then cfg.package else cfg.package.override { inherit (cfg) extraPath; };
+
   # Read secrets at launch to avoid baking them into the store.
   wrappedPackage =
     if cfg.envFiles == { } then
-      cfg.package
+      basePackage
     else
-      pkgs.runCommand "${cfg.package.name}-wrapped" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
+      pkgs.runCommand "${basePackage.name}-wrapped" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         mkdir -p $out/bin
-        makeWrapper ${cfg.package}/bin/pi $out/bin/pi \
+        makeWrapper ${basePackage}/bin/pi $out/bin/pi \
           ${lib.concatStringsSep " \\\n      " (
             lib.mapAttrsToList (
               name: file: "--run ${lib.escapeShellArg ''export ${name}="$(cat ${file} 2>/dev/null)"''}"
@@ -47,6 +50,12 @@ in
       type = lib.types.package;
       default = pkgs.pi;
       description = "Pi coding agent package to install.";
+    };
+
+    extraPath = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [ ];
+      description = "Packages added to Pi's PATH.";
     };
 
     envFiles = lib.mkOption {

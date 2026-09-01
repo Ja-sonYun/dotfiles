@@ -6,6 +6,7 @@
 
     # Code
     pmd
+    dcf
 
     # Binary analysis
     rizin

@@ -29,11 +29,6 @@ in
 {
   programs.codex = {
     enable = true;
-    extraPath = [
-      pkgs.aws-ro
-      pkgs.gh-ro
-      pkgs.uv
-    ];
 
     settings = {
       model = "gpt-5.6-sol";

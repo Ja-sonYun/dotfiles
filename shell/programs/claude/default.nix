@@ -30,19 +30,6 @@ in
 {
   programs.claude-code = {
     enable = true;
-    extraPath = [
-      pkgs.aws-ro
-      pkgs.gh-ro
-      pkgs.uv
-      pkgs.pyright
-      pkgs.ruff
-      pkgs.rustfmt
-      pkgs.shfmt
-      pkgs.prettier
-      pkgs.terraform
-      pkgs.rust-analyzer
-      pkgs.clang-tools
-    ];
     chromeNativeHost.enable = true;
 
     settings = {

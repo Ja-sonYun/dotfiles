@@ -50,5 +50,9 @@
   "claude-code": {
     "version": "2.1.252",
     "hash": "sha256-sttvCws2xF0Xks2gyAbUM1/aCI90nv64PQQz/Ub6frE="
+  },
+  "knip": {
+    "version": "6.34.0",
+    "hash": "sha256-fAJ1MOfZboKwJcJGHvAwPK0Bv1idF6Uux9sOLoNEgco="
   }
 }
