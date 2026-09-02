@@ -84,7 +84,7 @@ in
       "shift + ctrl + lalt - s" = "${yabai} -m window --insert stack";
 
       "rcmd - f" =
-        ''focused_window="$(${yabai} -m query --windows | ${jq} -er 'map(select(."has-focus" == true))[0].id')" && ${yabai} -m window "$focused_window" --toggle float --sub-layer auto'';
+        ''focused_window="$(${yabai} -m query --windows | ${jq} -er 'map(select(."has-focus" == true))[0].id')" && layer="$(${yabai} -m query --windows --window "$focused_window" | ${jq} -er 'if ."is-floating" then "below" else "above" end')" && ${yabai} -m window "$focused_window" --toggle float --sub-layer "$layer"'';
 
       "shift + ctrl + rcmd - r" =
         "/usr/bin/osascript -e 'display notification \"Restarting yabai\" with title \"yabai\"'; /bin/launchctl kickstart -k \"gui/\${UID}/org.nixos.yabai\"";
