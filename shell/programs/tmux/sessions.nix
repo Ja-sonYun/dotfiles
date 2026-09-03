@@ -1,3 +1,28 @@
+{ pkgs, ... }:
+let
+  closeHookTemplate = pkgs.writeText "tmux-close-hook-template" ''
+    if [[ ! -z "$TMUX" ]]; then
+        hooks_dir=$(find_hooks_dir "$OLDPWD")
+        if [[ -n "$hooks_dir" ]]; then
+            project_root=$(dirname "$hooks_dir")
+            suffix="@command@_$(printf '%s' "$project_root" | sed -e 's#[/ .:]#_#g'):"
+            git_name="git_root_$suffix"
+            root_name="root_$suffix"
+            tmux_session_name=$(tmux list-sessions | awk -F: -v git_pat="$git_name" -v root_pat="$root_name" \
+                'index($0,git_pat) || index($0,root_pat) {print $1; exit}')
+            if [[ -n "$tmux_session_name" ]]; then
+                if ask_yes_no "Kill @command@"; then
+                    tmux kill-session -t "$tmux_session_name" 2>/dev/null && \
+                        echo "Closed tmux session for @command@_$(echo "$project_root" | tr '/' '_' | tr ' ' '_')" || \
+                        echo "Failed to close tmux session for @command@_$(echo "$project_root" | tr '/' '_' | tr ' ' '_')"
+                else
+                    echo "Cancelled."
+                fi
+            fi
+        fi
+    fi
+  '';
+in
 {
   programs.tmux-customize = {
     sessions = {
@@ -44,36 +69,13 @@
     _gen-close-hook = {
       description = "Generate a tmux close hook for a given command";
       body = ''
-                command="$1"
-                mkdir -p .hooks/on_leave .hooks/on_exit
+        command="$1"
+        hook_path=".hooks/on_exit/close_$command"
+        mkdir -p .hooks/on_leave .hooks/on_exit
 
-                cat <<'EOF' >".hooks/on_exit/close_''${command}.tmp"
-                if [[ ! -z "$TMUX" ]]; then
-                    hooks_dir=$(find_hooks_dir "$OLDPWD")
-                    if [[ -n "$hooks_dir" ]]; then
-                        project_root=$(dirname "$hooks_dir")
-        				suffix="''${command}_$(printf '%s' "$project_root" | sed -e 's#[/ .:]#_#g'):"
-                        git_name="git_root_$suffix"
-                        root_name="root_$suffix"
-                        tmux_session_name=$(tmux list-sessions | awk -F: -v git_pat="$git_name" -v root_pat="$root_name" \
-                            'index($0,git_pat) || index($0,root_pat) {print $1; exit}')
-                        if [[ -n "$tmux_session_name" ]]; then
-                            if ask_yes_no "Kill ''${command}"; then
-                                tmux kill-session -t "$tmux_session_name" 2>/dev/null && \
-                                    echo "Closed tmux session for ''${command}_$(echo "$project_root" | tr '/' '_' | tr ' ' '_')" || \
-                                    echo "Failed to close tmux session for ''${command}_$(echo "$project_root" | tr '/' '_' | tr ' ' '_')"
-                            else
-                                echo "Cancelled."
-                            fi
-                        fi
-                    fi
-                fi
-                EOF
-
-                sed "s/\''${command}/$command/g" ".hooks/on_exit/close_''${command}.tmp" >".hooks/on_exit/close_''${command}"
-                rm ".hooks/on_exit/close_''${command}.tmp"
-
-                cp ".hooks/on_exit/close_''${command}" ".hooks/on_leave/close_''${command}"
+        hook_template=$(<${closeHookTemplate})
+        print -r -- "''${hook_template//@command@/$command}" > "$hook_path"
+        cp "$hook_path" ".hooks/on_leave/close_$command"
       '';
     };
   };

@@ -29,7 +29,7 @@ _: {
               if [[ -n "$old_hooks" && -d "$old_hooks/on_leave" ]]; then
                   setopt localoptions nullglob
                   for file in "$old_hooks/on_leave/"*; do
-                      if [[ -f "$file" ]]; then
+                      if [[ -f "$file" && "$file" != *.tmp ]]; then
                           source "$file"
                       fi
                   done
@@ -38,7 +38,7 @@ _: {
               if [[ -n "$new_hooks" && -d "$new_hooks/on_enter" ]]; then
                   setopt localoptions nullglob
                   for file in "$new_hooks/on_enter/"*; do
-                      if [[ -f "$file" ]]; then
+                      if [[ -f "$file" && "$file" != *.tmp ]]; then
                           source "$file"
                       fi
                   done
