@@ -11,6 +11,7 @@ let
   modelMapFile = jsonFormat.generate "ai-agent-model-map.json" cfg.modelMap;
   mcpServersFile = jsonFormat.generate "ai-agent-mcp-servers.json" {
     servers = builtins.attrNames cfg.mcp.servers;
+    codex_servers = config.programs.codex.settings.mcp_servers or { };
   };
   adaptedAgents = pkgs.runCommandLocal "adapted-ai-agents" { } ''
     set -euo pipefail

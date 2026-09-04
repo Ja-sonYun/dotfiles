@@ -63,14 +63,22 @@ def read_model_map(path: Path) -> dict[str, dict[str, str]]:
     return model_map
 
 
-def read_mcp_servers(path: Path) -> tuple[str, ...]:
+def read_mcp_servers(
+    path: Path,
+) -> tuple[tuple[str, ...], dict[str, dict[str, Any]]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     servers = data.get("servers")
+    codex_servers = data.get("codex_servers")
     if not isinstance(servers, list) or not all(
         isinstance(server, str) for server in servers
     ):
         raise ValueError(f"Invalid MCP server manifest: {path}")
-    return tuple(sorted(servers, key=len, reverse=True))
+    if not isinstance(codex_servers, dict) or not all(
+        isinstance(name, str) and isinstance(config, dict)
+        for name, config in codex_servers.items()
+    ):
+        raise ValueError(f"Invalid Codex MCP server manifest: {path}")
+    return tuple(sorted(servers, key=len, reverse=True)), codex_servers
 
 
 def split_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
@@ -242,22 +250,22 @@ def codex_sandbox_mode(agent: Agent) -> str | None:
 
 def codex_mcp_servers(
     agent: Agent,
-    servers: tuple[str, ...],
-) -> dict[str, dict[str, object]] | None:
+    servers: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]] | None:
     if agent.tools is None:
         return None
 
     allowed_servers = {tool.server for tool in agent.tools}
-    settings: dict[str, dict[str, object]] = {}
-    for server in servers:
-        if server not in allowed_servers:
-            settings[server] = {"enabled": False}
+    settings: dict[str, dict[str, Any]] = {}
+    for name, config in servers.items():
+        if name not in allowed_servers:
+            settings[name] = config | {"enabled": False}
     return settings
 
 
 def render_codex(
     agent: Agent,
-    servers: tuple[str, ...],
+    servers: dict[str, dict[str, Any]],
     model_map: dict[str, dict[str, str]],
     output_dir: Path,
 ) -> dict[str, object]:
@@ -338,6 +346,7 @@ def write_outputs(
     output_dir: Path,
     model_map: dict[str, dict[str, str]],
     servers: tuple[str, ...],
+    codex_servers: dict[str, dict[str, Any]],
     claude_plugin: str,
 ) -> None:
     validate_pi_server_names(servers)
@@ -352,7 +361,7 @@ def write_outputs(
         render_claude(agent, model_map, output_dir)
         registry["agents"][agent.name] = render_codex(
             agent,
-            servers,
+            codex_servers,
             model_map,
             output_dir,
         )
@@ -367,12 +376,13 @@ def write_outputs(
 def main() -> None:
     args = parse_arguments()
     model_map = read_model_map(args.model_map)
-    servers = read_mcp_servers(args.mcp_servers)
+    servers, codex_servers = read_mcp_servers(args.mcp_servers)
     write_outputs(
         args.source_dir,
         args.output_dir,
         model_map,
         servers,
+        codex_servers,
         args.claude_plugin,
     )
 
