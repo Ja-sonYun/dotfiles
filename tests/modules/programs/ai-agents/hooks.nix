@@ -96,6 +96,7 @@ let
     "export AI_AGENT_CLIENT=${lib.escapeShellArg "Codex"}; exec ${lib.escapeShellArgs arguments}";
   commonHookExpectation = client: [
     {
+      matcher = "";
       hooks = [
         (
           {
@@ -107,12 +108,15 @@ let
             type = "command";
           }
           // lib.optionalAttrs (client == "Codex") { timeout = 602; }
+          # the Pi module keeps its nullable timeout option in hooks.json
+          // lib.optionalAttrs (client == "Pi") { timeout = null; }
         )
       ];
     }
   ];
   sessionEndHookExpectation = client: [
     {
+      matcher = "";
       hooks = [
         {
           command =

@@ -27,46 +27,46 @@
     };
 
   custom-packages = final: _prev: {
-    # Local custom packages
-    git-extend = final.callPackage ../pkgs/git-extend { };
-    aws-ro = final.callPackage ../pkgs/aws-ro { };
-    gh-ro = final.callPackage ../pkgs/gh-ro { };
-    awscli-local = final.callPackage ../pkgs/awscli-local { };
-    macnotesapp = final.callPackage ../pkgs/macnotesapp { };
-    cf-tunnel = final.callPackage ../pkgs/cf-tunnel { };
-    dcf = final.callPackage ../pkgs/dcf { };
     agenix-utils = final.callPackage ../libs/nixlib/pkg/agenix-utils { };
 
-    # Npm
-    claude-code = final.callPackage ../pkgs/claude-code { };
-    codex = final.callPackage ../pkgs/codex { };
-    open-code-review = final.callPackage ../pkgs/open-code-review { };
-    pi = final.callPackage ../pkgs/pi { };
-    pi-extensions = import ../pkgs/pi/extensions.nix { pkgs = final; };
-    context7 = final.callPackage ../pkgs/context7 { };
-    chrome-devtools-mcp = final.callPackage ../pkgs/chrome-devtools-mcp { };
-    exa-mcp-server = final.callPackage ../pkgs/exa-mcp-server { };
-    firecrawl-mcp = final.callPackage ../pkgs/firecrawl-mcp { };
-    n8n-mcp = final.callPackage ../pkgs/n8n-mcp { };
+    claude-code = final.callPackage ../pkgs/ai-agents/claude-code { };
+    codex = final.callPackage ../pkgs/ai-agents/codex { };
+    pi = final.callPackage ../pkgs/ai-agents/pi { };
+    pi-extensions = import ../pkgs/ai-agents/pi/extensions.nix { pkgs = final; };
 
-    # Pypi
-    freecad-mcp = final.callPackage ../pkgs/freecad-mcp { };
+    aws-ro = final.callPackage ../pkgs/ai-tools/aws-ro { };
+    dcf = final.callPackage ../pkgs/ai-tools/dcf { };
+    gh-ro = final.callPackage ../pkgs/ai-tools/gh-ro { };
+    open-code-review = final.callPackage ../pkgs/ai-tools/open-code-review { };
 
-    r2dec = final.callPackage ../pkgs/r2dec { };
-    r2ghidra = final.callPackage ../pkgs/r2ghidra { };
+    git-extend = final.callPackage ../pkgs/cli-tools/git-extend { };
+    mermaid-ascii = final.callPackage ../pkgs/cli-tools/mermaid-ascii { };
+    tmux-menu = final.callPackage ../pkgs/cli-tools/tmux-menu { };
 
-    # Cargo
-    tmux-menu = final.callPackage ../pkgs/tmux-menu { };
+    awsdac = final.callPackage ../pkgs/cloud/awsdac { };
+    awscli-local = final.callPackage ../pkgs/cloud/awscli-local { };
+    cf-tunnel = final.callPackage ../pkgs/cloud/cf-tunnel { };
 
-    # Go
-    awsdac = final.callPackage ../pkgs/awsdac { };
-    mermaid-ascii = final.callPackage ../pkgs/mermaid-ascii { };
+    audio-process-watcher = final.callPackage ../pkgs/darwin/audio-process-watcher { };
+    calendar-event-query = final.callPackage ../pkgs/darwin/calendar-event-query { };
+    meeting-recorder = final.callPackage ../pkgs/darwin/meeting-recorder { };
+    icalPal = final.callPackage ../pkgs/darwin/icalPal { };
+    macism = final.callPackage ../pkgs/darwin/macism { };
+    macnotesapp = final.callPackage ../pkgs/darwin/macnotesapp { };
+    notifycmd = final.callPackage ../pkgs/darwin/notifycmd { };
+    select-input-source = final.callPackage ../pkgs/darwin/select-input-source { };
+    yabai = final.callPackage ../pkgs/darwin/yabai { };
 
-    # Mac
-    icalPal = final.callPackage ../pkgs/icalPal { };
-    macism = final.callPackage ../pkgs/macism { };
-    notifycmd = final.callPackage ../pkgs/notifycmd { };
-    select-input-source = final.callPackage ../pkgs/select-input-source { };
-    yabai = final.callPackage ../pkgs/yabai { };
+    aws-documentation-mcp-server = final.callPackage ../pkgs/mcp/aws-documentation-mcp-server { };
+    chrome-devtools-mcp = final.callPackage ../pkgs/mcp/chrome-devtools-mcp { };
+    context7 = final.callPackage ../pkgs/mcp/context7 { };
+    exa-mcp-server = final.callPackage ../pkgs/mcp/exa-mcp-server { };
+    firecrawl-mcp = final.callPackage ../pkgs/mcp/firecrawl-mcp { };
+    freecad-mcp = final.callPackage ../pkgs/mcp/freecad-mcp { };
+    mcp-remote = final.callPackage ../pkgs/mcp/mcp-remote { };
+    n8n-mcp = final.callPackage ../pkgs/mcp/n8n-mcp { };
+
+    r2dec = final.callPackage ../pkgs/radare2/r2dec { };
+    r2ghidra = final.callPackage ../pkgs/radare2/r2ghidra { };
   };
 }

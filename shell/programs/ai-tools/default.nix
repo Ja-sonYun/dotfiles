@@ -1,5 +1,15 @@
 { pkgs, ... }:
 {
+  imports = [
+    ./hooks.nix
+    ./tool-guard.nix
+  ];
+
+  home.packages = with pkgs; [
+    aws-ro
+    gh-ro
+  ];
+
   programs.ai-agents.extraPath = with pkgs; [
     aws-ro
     gh-ro

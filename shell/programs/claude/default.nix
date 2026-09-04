@@ -28,6 +28,13 @@ let
   '';
 in
 {
+  programs.ai-agents.modelMap.claude = {
+    xhigh = "claude-fable-5-1";
+    high = "claude-opus-5";
+    middle = "claude-sonnet-5";
+    low = "claude-haiku-4-5-20251001";
+  };
+
   programs.claude-code = {
     enable = true;
     chromeNativeHost.enable = true;

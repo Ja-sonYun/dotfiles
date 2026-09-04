@@ -12,7 +12,7 @@ let
     featureModules = [
       aiAgentModules.core
       aiAgentModules.hooks
-      ../../../../shell/secrets/modules/home-manager/ai-agents/hooks.nix
+      ../../../../shell/programs/ai-tools/hooks.nix
     ];
     module.programs.ai-agents.enable = true;
   };

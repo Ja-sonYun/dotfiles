@@ -21,6 +21,12 @@ in
 {
   config = lib.mkMerge [
     (lib.mkIf config.services.yabai.enable {
+      services.codeSigning.targets.yabai = {
+        source = "${pkgs.yabai}/bin/yabai";
+        target = signedYabaiPath;
+        restartLaunchAgent = "org.nixos.yabai";
+      };
+
       services.yabai.package = signedYabaiPackage;
       environment.etc."sudoers.d/yabai".source = lib.mkForce yabaiSaSudoers;
       launchd.user.agents.yabai.serviceConfig = {

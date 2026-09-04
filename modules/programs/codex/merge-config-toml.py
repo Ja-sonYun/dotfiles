@@ -194,7 +194,9 @@ def main() -> None:
     _remove_generated(document)
     _merge_generated(document, fragment)
 
-    output = tomlkit.dumps(document)
+    # Re-adding generated entries after removal leaves blank lines that would
+    # otherwise grow on every activation.
+    output = re.sub(r"\n{3,}", "\n\n", tomlkit.dumps(document))
     if output != target_text:
         _write_atomic(target, output)
 

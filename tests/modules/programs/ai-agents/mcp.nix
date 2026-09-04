@@ -63,6 +63,7 @@ let
   programs = configuration.config.programs;
   homeFiles = homeFilesFor configuration;
   secretCommand = programs.codex.settings.mcp_servers.secret-docs.command;
+  bridgeCommand = programs.claude-code.desktopConfig.mcpServers.remote-docs.command;
   claudeMcpServers = {
     disabled-docs = {
       command = "disabled-mcp";
@@ -82,6 +83,12 @@ let
     secret-docs = {
       command = secretCommand;
       env.MODE = "secret";
+      type = "stdio";
+    };
+  };
+  claudeDesktopMcpServers = claudeMcpServers // {
+    remote-docs = {
+      command = bridgeCommand;
       type = "stdio";
     };
   };
@@ -142,6 +149,7 @@ let
         "${homeFiles.source ".claude/skills/claude-code-home-manager"}/.mcp.json";
       "~/Library/Application Support/Claude/claude_desktop_config.json" =
         homeFiles.materialized "Library/Application Support/Claude/claude_desktop_config.json";
+      "mcp remote bridge" = bridgeCommand;
       "~/.codex/config.toml" = managedFragment configuration;
       "~/.pi/agent/extensions/mcp-adapter/index.ts" =
         "${homeFiles.source ".pi/agent/extensions/mcp-adapter"}/index.ts";
@@ -167,8 +175,21 @@ let
         mcpServers = claudeMcpServers;
       };
       "~/Library/Application Support/Claude/claude_desktop_config.json".json.equals = {
-        mcpServers = claudeMcpServers;
+        mcpServers = claudeDesktopMcpServers;
       };
+      "mcp remote bridge".text = ''
+        #!${testPkgs.runtimeShell}
+        exec ${
+          lib.escapeShellArgs [
+            "${testPkgs.mcp-remote}/bin/mcp-remote"
+            "https://example.invalid/mcp"
+            "--header"
+            "X-Test: value"
+          ]
+        }
+      ''
+      # writeShellScript appends a trailing newline of its own
+      + "\n";
       "~/.codex/config.toml".toml.equals.mcp_servers = codexMcpServers;
       "~/.pi/agent/extensions/mcp-adapter/index.ts".sameAs =
         "${programs.pi.mcp.package}/extension/index.ts";

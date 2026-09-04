@@ -4,6 +4,13 @@
   ...
 }:
 {
+  programs.ai-agents.modelMap.pi = {
+    xhigh = "lmp/syn:large:text:xhigh";
+    high = "lmp/syn:large:text:high";
+    middle = "lmp/syn:large:text:medium";
+    low = "lmp/syn:large:text:low";
+  };
+
   programs.pi = {
     enable = true;
     extraPath = [ pkgs.nodejs_24 ];
@@ -36,5 +43,7 @@
       CAPI_KEY = config.age.secrets."capi-key".path;
       LLM_DOMAIN = config.age.secrets."llm-domain".path;
     };
+
+    extensions.subagent = "${pkgs.pi-extensions.subagent}/extension";
   };
 }

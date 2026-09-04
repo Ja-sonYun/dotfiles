@@ -58,8 +58,8 @@ in
           (lib.mkIf (cfg.customInstructions != "") {
             customInstructions = lib.mkBefore cfg.customInstructions;
           })
-          (lib.mkIf (cfg.agentsDir != null) {
-            claudeAgentsDir = cfg.agentsDir;
+          (lib.mkIf (cfg.adaptedAgents != null) {
+            agentsDir = "${cfg.adaptedAgents}/codex";
           })
         ];
       })
@@ -75,8 +75,8 @@ in
           (lib.mkIf (cfg.customInstructions != "") {
             customInstructions = lib.mkBefore cfg.customInstructions;
           })
-          (lib.mkIf (cfg.agentsDir != null) {
-            inherit (cfg) agentsDir;
+          (lib.mkIf (cfg.adaptedAgents != null) {
+            agentsDir = "${cfg.adaptedAgents}/claude";
           })
         ];
       })
@@ -91,6 +91,9 @@ in
           })
           (lib.mkIf (cfg.customInstructions != "") {
             customInstructions = lib.mkBefore cfg.customInstructions;
+          })
+          (lib.mkIf (cfg.adaptedAgents != null) {
+            agentsDir = "${cfg.adaptedAgents}/pi";
           })
         ];
       })

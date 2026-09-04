@@ -228,7 +228,7 @@ class MainTest(unittest.TestCase):
             text=True,
             start_new_session=True,
         )
-        killpg.assert_called_once_with(123, signal.SIGKILL)
+        killpg.assert_called_once_with(123, signal.SIGTERM)
         self.assertEqual(process.communicate.call_count, 2)
 
     def test_signal_is_forwarded_and_normalized(self) -> None:

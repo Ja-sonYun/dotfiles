@@ -49,6 +49,7 @@ let
     };
   };
   programs = configuration.config.programs;
+  home = configuration.config.home;
   homeFiles = homeFilesFor configuration;
   inlinePluginRoot = "${validMarketplace}/plugins/inline-tools";
   inlineHooksForHandler =
@@ -261,13 +262,15 @@ let
         ".claude/skills/strict-entry-strict-skill"
         "Library/Application Support/Claude/claude_desktop_config.json"
       ];
-      Codex = homeFiles.generated [
-        ".codex/config.toml"
-        ".codex/skills/inline-tools-check-docs"
-        ".codex/skills/inline-tools-review-code"
-        ".codex/skills/root-skill-root-helper"
-        ".codex/skills/strict-entry-strict-skill"
-      ];
+      Codex = builtins.sort builtins.lessThan (
+        homeFiles.generated [
+          ".codex/skills/inline-tools-check-docs"
+          ".codex/skills/inline-tools-review-code"
+          ".codex/skills/root-skill-root-helper"
+          ".codex/skills/strict-entry-strict-skill"
+        ]
+        ++ lib.optional (lib.hasInfix "/.codex/config.toml" home.activation.codexConfigMerge.data) "~/.codex/config.toml"
+      );
       Pi = homeFiles.generated [
         ".pi/agent/extensions/hooks"
         ".pi/agent/extensions/mcp-adapter"

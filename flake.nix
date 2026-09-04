@@ -47,7 +47,7 @@
 
     nix-homebrew = {
       url = "github:zhaofengli/nix-homebrew";
-      inputs.brew-src.url = "github:Homebrew/brew/master";
+      inputs.brew-src.url = "github:Homebrew/brew/main";
     };
     homebrew-bundle = {
       url = "github:homebrew/homebrew-bundle";

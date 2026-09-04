@@ -7,6 +7,7 @@ let
   inherit (pkgs) lib;
   testPkgs = (pkgs.extend nixlib.overlays.tool).extend (
     final: prev: {
+      mcp-remote = final.writeShellScriptBin "mcp-remote" "exit 0";
       notifycmd = final.writeShellScriptBin "notifycmd" "exit 0";
       pi-extensions = {
         hooks =
@@ -34,6 +35,7 @@ let
     version = "2.1.200";
   });
   aiAgentModules = {
+    agents = ../../../../modules/programs/ai-agents/agents.nix;
     core = ../../../../modules/programs/ai-agents/core.nix;
     hooks = ../../../../modules/programs/ai-agents/hooks;
     marketplace = ../../../../modules/programs/ai-agents/marketplace;
@@ -130,7 +132,7 @@ let
   testPython = testPkgs.python3.withPackages (python: [ python.tomlkit ]);
   codexModule = ../../../../modules/programs/codex;
   codexHookAdapter = ../../../../modules/programs/ai-agents/hooks/codex_adapter.py;
-  hookHandlers = ../../../../shell/secrets/modules/home-manager/ai-agents/hooks;
+  hookHandlers = ../../../../shell/programs/ai-tools/hooks;
   disabledConfiguration = home-manager.lib.homeManagerConfiguration {
     pkgs = testPkgs;
     modules = [
@@ -163,7 +165,7 @@ testPkgs.runCommand "ai-tools-tests"
     export AI_AGENTS_HOOKS_DIR=${lib.escapeShellArg (toString hookHandlers)}
 
     "$test_python" ${codexModule}/test_merge_config_toml.py
-    node --test ${../../../../pkgs/pi/extensions/hooks}/src/index.test.ts
+    node --test ${../../../../pkgs/ai-agents/pi/extensions/hooks}/src/index.test.ts
     "$test_python" ${./test_codex_hook_adapter.py}
     "$test_python" ${./test_hook_input.py}
     "$test_python" ${./test_notification_hook.py}

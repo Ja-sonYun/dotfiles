@@ -1,5 +1,5 @@
 {
   imports = [
-    ./yabai/home-manager.nix
+    ./code-signing/home-manager.nix
   ];
 }

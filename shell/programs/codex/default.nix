@@ -27,8 +27,20 @@ let
   '';
 in
 {
+  programs.ai-agents.modelMap.codex = {
+    xhigh = "gpt-5.6-sol";
+    high = "gpt-5.6-terra";
+    middle = "gpt-5.6-luna";
+    low = "gpt-5.4-mini";
+  };
+
   programs.codex = {
     enable = true;
+
+    toolGuard.computer-use = {
+      matcher = "^mcp__cua_repl__";
+      approvalToken = "ALLOW_COMPUTER_USE";
+    };
 
     settings = {
       model = "gpt-5.6-sol";

@@ -16,7 +16,7 @@ let
       str
     ];
 
-  agentDir = ".pi/agent";
+  configDir = ".pi/agent";
 
   basePackage =
     if cfg.extraPath == [ ] then cfg.package else cfg.package.override { inherit (cfg) extraPath; };
@@ -101,6 +101,12 @@ in
       description = "Skill directories linked into ~/.pi/agent/skills.";
     };
 
+    agentsDir = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Directory containing adapted Pi subagents.";
+    };
+
     extensions = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
@@ -112,22 +118,25 @@ in
     home.packages = [ wrappedPackage ];
 
     home.file = {
-      "${agentDir}/settings.json".source = jsonFormat.generate "pi-settings.json" cfg.settings;
+      "${configDir}/settings.json".source = jsonFormat.generate "pi-settings.json" cfg.settings;
     }
     // lib.optionalAttrs (cfg.context != null) {
-      "${agentDir}/AGENTS.md".text = cfg.context;
+      "${configDir}/AGENTS.md".text = cfg.context;
     }
     // lib.optionalAttrs (cfg.customInstructions != "") {
-      "${agentDir}/APPEND_SYSTEM.md".text = cfg.customInstructions;
+      "${configDir}/APPEND_SYSTEM.md".text = cfg.customInstructions;
     }
     // lib.optionalAttrs (cfg.systemPrompt != null) {
-      "${agentDir}/SYSTEM.md".text = cfg.systemPrompt;
+      "${configDir}/SYSTEM.md".text = cfg.systemPrompt;
     }
     // lib.mapAttrs' (
-      name: source: lib.nameValuePair "${agentDir}/skills/${name}" { inherit source; }
+      name: source: lib.nameValuePair "${configDir}/skills/${name}" { inherit source; }
     ) cfg.skills
+    // lib.optionalAttrs (cfg.agentsDir != null) {
+      "${configDir}/agents".source = cfg.agentsDir;
+    }
     // lib.mapAttrs' (
-      name: source: lib.nameValuePair "${agentDir}/extensions/${name}" { inherit source; }
+      name: source: lib.nameValuePair "${configDir}/extensions/${name}" { inherit source; }
     ) cfg.extensions;
   };
 }

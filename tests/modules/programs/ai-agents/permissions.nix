@@ -102,7 +102,7 @@ let
             "/private/tmp/**" = "write";
             "/tmp" = "write";
             "/tmp/**" = "write";
-            ":workspace_roots"."**/docs" = "read";
+            ":workspace_roots".docs = "read";
           };
           network.enabled = true;
         };

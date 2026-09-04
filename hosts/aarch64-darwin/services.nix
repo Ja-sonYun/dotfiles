@@ -8,6 +8,8 @@
 {
   imports =
     lib.optionals (hasTag "gui") [
+      ./code-signing
+      ./hammerspoon
       ./yabai
       ./skhd
     ]
