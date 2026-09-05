@@ -51,7 +51,7 @@
             ${final.lib.optionalString (runtimeInputs != [ ]) ''
               export PATH=${final.lib.makeBinPath runtimeInputs}:$PATH
             ''}
-            exec ${virtualenv}/bin/python ${launcher} "$@"
+            exec ${virtualenv}/bin/python -I ${launcher} "$@"
           '';
       };
     });

@@ -31,6 +31,7 @@ let
         recorderStopNotification
         ;
       recorderAppPath = "${helpersDirectory}/Meeting Recorder.app";
+      transcriberPath = if cfg.transcription.enable then "${pkgs.whisper-local}/bin/whisper" else null;
     };
     inherit refreshNotification stateNotification;
   };
@@ -97,6 +98,8 @@ in
       default = 180;
       description = "Seconds to keep recording while waiting for a meeting reconnect.";
     };
+
+    transcription.enable = lib.mkEnableOption "local meeting transcription";
   };
 
   config = lib.mkIf cfg.enable {

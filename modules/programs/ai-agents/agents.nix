@@ -36,8 +36,24 @@ let
 in
 {
   options.programs.ai-agents.modelMap = lib.mkOption {
-    type = lib.types.attrsOf (lib.types.attrsOf lib.types.nonEmptyStr);
-    description = "Per-client model mappings for portable custom agent tiers.";
+    type = lib.types.attrsOf (
+      lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            model = lib.mkOption {
+              type = lib.types.nonEmptyStr;
+              description = "Client model identifier.";
+            };
+            reasoning_effort = lib.mkOption {
+              type = lib.types.nullOr lib.types.nonEmptyStr;
+              default = null;
+              description = "Optional reasoning effort supported by the client and model.";
+            };
+          };
+        }
+      )
+    );
+    description = "Per-client model and reasoning mappings for portable custom agent tiers.";
   };
 
   options.programs.ai-agents.adaptedAgents = lib.mkOption {

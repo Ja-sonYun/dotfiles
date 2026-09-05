@@ -5,10 +5,22 @@
 }:
 {
   programs.ai-agents.modelMap.pi = {
-    xhigh = "lmp/syn:large:text:xhigh";
-    high = "lmp/syn:large:text:high";
-    middle = "lmp/syn:large:text:medium";
-    low = "lmp/syn:large:text:low";
+    xhigh = {
+      model = "lmp/syn:large:text";
+      reasoning_effort = "xhigh";
+    };
+    high = {
+      model = "lmp/syn:large:text";
+      reasoning_effort = "high";
+    };
+    middle = {
+      model = "lmp/syn:large:text";
+      reasoning_effort = "medium";
+    };
+    low = {
+      model = "lmp/syn:large:text";
+      reasoning_effort = "low";
+    };
   };
 
   programs.pi = {

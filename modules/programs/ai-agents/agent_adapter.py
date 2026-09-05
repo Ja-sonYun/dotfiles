@@ -21,6 +21,15 @@ CODEX_PREAMBLE = (
 
 
 @dataclass(frozen=True)
+class ModelConfig:
+    model: str
+    reasoning_effort: str | None = None
+
+
+ModelMap = dict[str, dict[str, ModelConfig]]
+
+
+@dataclass(frozen=True)
 class ParsedTool:
     server: str
 
@@ -47,19 +56,27 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def read_model_map(path: Path) -> dict[str, dict[str, str]]:
+def read_model_map(path: Path) -> ModelMap:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or set(data) != set(MODEL_CLIENTS):
         raise ValueError(f"Invalid model map clients in {path}")
 
-    model_map: dict[str, dict[str, str]] = {}
+    model_map: ModelMap = {}
     for client in MODEL_CLIENTS:
         models = data[client]
         if not isinstance(models, dict) or set(models) != set(MODEL_TIERS):
             raise ValueError(f"Invalid {client} model tiers in {path}")
-        if not all(isinstance(model, str) and model for model in models.values()):
-            raise ValueError(f"Invalid {client} model values in {path}")
-        model_map[client] = models
+        model_map[client] = {}
+        for tier, value in models.items():
+            if not isinstance(value, dict):
+                raise ValueError(f"Invalid {client} {tier} model config in {path}")
+            model = value.get("model")
+            effort = value.get("reasoning_effort")
+            if not isinstance(model, str) or not model:
+                raise ValueError(f"Invalid {client} {tier} model in {path}")
+            if effort is not None and (not isinstance(effort, str) or not effort):
+                raise ValueError(f"Invalid {client} {tier} reasoning effort in {path}")
+            model_map[client][tier] = ModelConfig(model, effort)
     return model_map
 
 
@@ -210,18 +227,16 @@ def read_agent(
 def resolve_model(
     agent: Agent,
     client: str,
-    model_map: dict[str, dict[str, str]],
-) -> str | None:
-    if agent.model is None:
+    model_map: ModelMap,
+) -> ModelConfig | None:
+    if agent.model in (None, "inherit"):
         return None
-    if agent.model == "inherit":
-        return "inherit" if client == "claude" else None
     return model_map[client][agent.model]
 
 
 def render_claude(
     agent: Agent,
-    model_map: dict[str, dict[str, str]],
+    model_map: ModelMap,
     output_dir: Path,
 ) -> None:
     path = output_dir / "claude" / agent.source.name
@@ -230,7 +245,10 @@ def render_claude(
         return
 
     frontmatter = dict(agent.frontmatter)
-    frontmatter["model"] = resolve_model(agent, "claude", model_map)
+    if (model := resolve_model(agent, "claude", model_map)) is not None:
+        frontmatter["model"] = model.model
+        if model.reasoning_effort is not None:
+            frontmatter["effort"] = model.reasoning_effort
     rendered = yaml.safe_dump(
         frontmatter,
         allow_unicode=True,
@@ -266,7 +284,7 @@ def codex_mcp_servers(
 def render_codex(
     agent: Agent,
     servers: dict[str, dict[str, Any]],
-    model_map: dict[str, dict[str, str]],
+    model_map: ModelMap,
     output_dir: Path,
 ) -> dict[str, object]:
     config: dict[str, object] = {
@@ -275,7 +293,9 @@ def render_codex(
         "developer_instructions": CODEX_PREAMBLE + agent.body.lstrip("\n"),
     }
     if (model := resolve_model(agent, "codex", model_map)) is not None:
-        config["model"] = model
+        config["model"] = model.model
+        if model.reasoning_effort is not None:
+            config["model_reasoning_effort"] = model.reasoning_effort
     if (sandbox_mode := codex_sandbox_mode(agent)) is not None:
         config["sandbox_mode"] = sandbox_mode
     if (mcp_servers := codex_mcp_servers(agent, servers)) is not None:
@@ -308,7 +328,7 @@ def pi_tools(agent: Agent) -> list[str] | None:
 
 def render_pi(
     agent: Agent,
-    model_map: dict[str, dict[str, str]],
+    model_map: ModelMap,
     output_dir: Path,
 ) -> None:
     frontmatter: dict[str, object] = {
@@ -316,7 +336,11 @@ def render_pi(
         "description": agent.description,
     }
     if (model := resolve_model(agent, "pi", model_map)) is not None:
-        frontmatter["model"] = model
+        frontmatter["model"] = (
+            f"{model.model}:{model.reasoning_effort}"
+            if model.reasoning_effort is not None
+            else model.model
+        )
     if (tools := pi_tools(agent)) is not None:
         frontmatter["tools"] = tools
     rendered = yaml.safe_dump(
@@ -344,7 +368,7 @@ def validate_pi_server_names(servers: tuple[str, ...]) -> None:
 def write_outputs(
     source_dir: Path,
     output_dir: Path,
-    model_map: dict[str, dict[str, str]],
+    model_map: ModelMap,
     servers: tuple[str, ...],
     codex_servers: dict[str, dict[str, Any]],
     claude_plugin: str,

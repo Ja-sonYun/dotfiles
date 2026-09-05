@@ -22,6 +22,9 @@ let
           tags = [
             "gui"
             "ai"
+            "unsafe-ai"
+            "meeting"
+            "task"
           ];
         };
         "Jays-MacBook-Pro-Server" = {

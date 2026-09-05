@@ -13,7 +13,7 @@
       ./core/finder-sidebar.nix
       ./freecad
     ]
-    ++ lib.optionals (hostname == "Jays-MacBook-Pro") [
+    ++ lib.optionals (hasTag "task") [
       ./taskwarrior
     ];
 
@@ -37,9 +37,18 @@
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  home.packages = lib.optionals (hasTag "gui") [
-    pkgs.macnotesapp
+  services.autostartApps = lib.optionals (hostname == "Jays-MacBook-Pro-Server") [
+    "ChatGPT"
+    "OrbStack"
   ];
+
+  home.packages =
+    lib.optionals (hasTag "gui") [
+      pkgs.macnotesapp
+    ]
+    ++ lib.optionals (hasTag "meeting") [
+      pkgs.whisper-local
+    ];
 
   home.sessionVariables = {
     CONTAINERS_MACHINE_PROVIDER = "applehv";

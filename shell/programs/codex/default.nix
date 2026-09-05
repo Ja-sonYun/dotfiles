@@ -1,6 +1,8 @@
 {
   pkgs,
   config,
+  hasTag,
+  lib,
   ...
 }:
 let
@@ -28,23 +30,35 @@ let
 in
 {
   programs.ai-agents.modelMap.codex = {
-    xhigh = "gpt-5.6-sol";
-    high = "gpt-5.6-terra";
-    middle = "gpt-5.6-luna";
-    low = "gpt-5.4-mini";
+    xhigh = {
+      model = "gpt-6-astra";
+      reasoning_effort = "xhigh";
+    };
+    high = {
+      model = "gpt-6-astra";
+      reasoning_effort = "medium";
+    };
+    middle = {
+      model = "gpt-6-astra";
+      reasoning_effort = "low";
+    };
+    low = {
+      model = "gpt-5.6-luna";
+      reasoning_effort = "medium";
+    };
   };
 
   programs.codex = {
     enable = true;
 
-    toolGuard.computer-use = {
+    toolGuard.computer-use = lib.mkIf (!hasTag "unsafe-ai") {
       matcher = "^mcp__cua_repl__";
       approvalToken = "ALLOW_COMPUTER_USE";
     };
 
     settings = {
-      model = "gpt-5.6-sol";
-      model_reasoning_effort = "xhigh";
+      model = "gpt-6-astra";
+      model_reasoning_effort = "medium";
       plan_mode_reasoning_effort = "xhigh";
       model_verbosity = "low";
 
@@ -58,7 +72,7 @@ in
 
       web_search = "live";
 
-      service_tier = "fast";
+      # service_tier = "fast";
 
       features = {
         unified_exec = true;

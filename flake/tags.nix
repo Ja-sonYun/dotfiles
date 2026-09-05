@@ -4,7 +4,10 @@ let
     "server"
     "gpu"
     "ai"
+    "unsafe-ai"
     "wsl"
+    "meeting"
+    "task"
   ];
   validateTag =
     context: tag:

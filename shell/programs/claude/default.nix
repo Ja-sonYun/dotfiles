@@ -29,10 +29,21 @@ let
 in
 {
   programs.ai-agents.modelMap.claude = {
-    xhigh = "claude-fable-5-1";
-    high = "claude-opus-5";
-    middle = "claude-sonnet-5";
-    low = "claude-haiku-4-5-20251001";
+    xhigh = {
+      model = "claude-fable-5-1";
+      reasoning_effort = "xhigh";
+    };
+    high = {
+      model = "claude-opus-5";
+      reasoning_effort = "high";
+    };
+    middle = {
+      model = "claude-sonnet-5";
+      reasoning_effort = "low";
+    };
+    low = {
+      model = "claude-haiku-4-5-20251001";
+    };
   };
 
   programs.claude-code = {

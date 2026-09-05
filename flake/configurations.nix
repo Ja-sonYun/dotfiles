@@ -114,6 +114,7 @@ let
         ../hosts/aarch64-darwin/core/display
 
         ../modules/services
+        ../modules/services/darwin
 
         ../hosts/aarch64-darwin/services.nix
 
@@ -124,7 +125,7 @@ let
             useUserPackages = false;
             extraSpecialArgs = specialArgs;
             users.${specialArgs.username}.imports = [
-              ../modules/services/home-manager.nix
+              ../modules/services/darwin/home-manager.nix
             ]
             ++ mkHomeManagerConfig hostname;
           };

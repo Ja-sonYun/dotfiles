@@ -1,5 +1,4 @@
-{ hostname, ... }:
-
+{ hasTag, lib, ... }:
 {
   services.hammerspoon = {
     enable = true;
@@ -11,9 +10,11 @@
         rules.Ghostty = "com.apple.keylayout.ABC";
       };
 
-      meetingRecorder = {
-        enable = hostname == "Jays-MacBook-Pro";
+      meetingRecorder = lib.mkIf (hasTag "meeting") {
+        enable = true;
+        outputDirectory = "/Users/jaykuroyanagi/Library/Mobile Documents/iCloud~md~obsidian/Documents/Life/Meetings";
         calendarEventBufferMinutes = 4;
+        transcription.enable = true;
         browserRules = [
           {
             host = "meet.google.com";
@@ -43,7 +44,7 @@
     };
   };
 
-  programs.spotlightScripts.apps.start-meeting-recording = {
+  programs.spotlightScripts.apps.start-meeting-recording = lib.mkIf (hasTag "meeting") {
     displayName = "Start Meeting Recording";
     command = [
       "/usr/bin/open"

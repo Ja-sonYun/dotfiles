@@ -13,9 +13,9 @@
 static NSString *const StateNotification = @"com.jaykuroyanagi.meeting-recorder.state";
 static NSString *const StopNotification = @"com.jaykuroyanagi.meeting-recorder.stop";
 
-static void SendState(NSString *requestID, NSString *status, NSString *message) {
+static BOOL SendState(NSString *requestID, NSString *statePath, NSString *status, NSString *message) {
   if (requestID.length == 0) {
-    return;
+    return NO;
   }
   NSMutableDictionary *userInfo = [@{
     @"requestID": requestID,
@@ -24,11 +24,29 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
   if (message.length > 0) {
     userInfo[@"message"] = message;
   }
+  BOOL saved = YES;
+  if (statePath.length > 0) {
+    NSError *error = nil;
+    NSData *data = [NSJSONSerialization dataWithJSONObject:userInfo options:0 error:&error];
+    saved = data != nil && [[NSFileManager defaultManager]
+      createDirectoryAtPath:[statePath stringByDeletingLastPathComponent]
+      withIntermediateDirectories:YES
+      attributes:nil
+      error:&error] && [data writeToFile:statePath options:NSDataWritingAtomic error:&error];
+    if (!saved) {
+      NSString *stateError = [NSString stringWithFormat:
+        @"Could not save recording state: %@", error.localizedDescription ?: @"Unknown error"];
+      fprintf(stderr, "meeting-recorder: %s\n", stateError.UTF8String);
+      userInfo[@"status"] = @"error";
+      userInfo[@"message"] = stateError;
+    }
+  }
   [[NSDistributedNotificationCenter defaultCenter]
     postNotificationName:StateNotification
                    object:@"com.jaykuroyanagi.meeting-recorder"
                  userInfo:userInfo
        deliverImmediately:YES];
+  return saved;
 }
 
 @interface MeetingRecorder : NSObject <SCStreamDelegate, SCStreamOutput>
@@ -41,17 +59,21 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
 @property(nonatomic, strong) dispatch_source_t interruptSource;
 @property(nonatomic, strong) dispatch_source_t parentSource;
 @property(nonatomic, strong) dispatch_source_t terminateSource;
+@property(nonatomic, strong) dispatch_source_t stopRequestSource;
 @property(nonatomic, copy) void (^completion)(int);
 @property(nonatomic, copy) NSString *failureMessage;
 @property(nonatomic, copy) NSString *bundleIdentifier;
 @property(nonatomic, copy) NSString *requestID;
+@property(nonatomic, copy) NSString *statePath;
 @property(nonatomic, strong) id stopObserver;
 @property(nonatomic) CGDirectDisplayID displayID;
 @property(nonatomic) pid_t parentPID;
 @property(nonatomic) CMTime sessionStart;
 @property(nonatomic) BOOL sessionStarted;
 @property(nonatomic) BOOL stopping;
+@property(nonatomic) BOOL stopTimedOut;
 @property(nonatomic) BOOL writerFinished;
+@property(nonatomic) BOOL completed;
 @property(nonatomic) NSUInteger writtenSystemSamples;
 @property(nonatomic) NSUInteger writtenMicrophoneSamples;
 @property(nonatomic) NSUInteger droppedSystemSamples;
@@ -64,6 +86,7 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
                         displayID:(CGDirectDisplayID)displayID
                  bundleIdentifier:(NSString *)bundleIdentifier
                         requestID:(NSString *)requestID
+                        statePath:(NSString *)statePath
                          parentPID:(pid_t)parentPID
                        completion:(void (^)(int))completion
                             error:(NSError **)resultError {
@@ -76,6 +99,7 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
   _displayID = displayID;
   _bundleIdentifier = [bundleIdentifier copy];
   _requestID = [requestID copy];
+  _statePath = [statePath copy];
   _parentPID = parentPID;
   _completion = [completion copy];
   _sampleQueue = dispatch_queue_create(
@@ -138,6 +162,12 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
 }
 
 - (void)start {
+  if ([[NSFileManager defaultManager]
+        fileExistsAtPath:[self.statePath stringByAppendingString:@".stop"]]) {
+    [self stop];
+    return;
+  }
+
   AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
   if (status == AVAuthorizationStatusDenied || status == AVAuthorizationStatusRestricted) {
     [self failWithMessage:@"Microphone permission is required"];
@@ -256,16 +286,11 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
         }
 
         [recorder.stream startCaptureWithCompletionHandler:^(NSError *startError) {
-          dispatch_async(dispatch_get_main_queue(), ^{
-            if (startError) {
+          if (startError) {
+            dispatch_async(dispatch_get_main_queue(), ^{
               [recorder failWithMessage:startError.localizedDescription];
-              return;
-            }
-            if (recorder.stopping) {
-              return;
-            }
-            SendState(recorder.requestID, @"started", nil);
-          });
+            });
+          }
         }];
       });
     }];
@@ -321,6 +346,14 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
     return;
   }
 
+  if (self.writtenSystemSamples == 0 && self.writtenMicrophoneSamples == 0) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      if (!self.stopping && !SendState(self.requestID, self.statePath, @"started", nil)) {
+        [self failWithMessage:@"Could not save recording state"];
+      }
+    });
+  }
+
   if (type == SCStreamOutputTypeAudio) {
     self.writtenSystemSamples += 1;
   } else {
@@ -356,6 +389,17 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
     return;
   }
   self.stopping = YES;
+  if (self.stopRequestSource) {
+    dispatch_source_cancel(self.stopRequestSource);
+    self.stopRequestSource = nil;
+  }
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    if (self.completed) {
+      return;
+    }
+    self.stopTimedOut = YES;
+    [self completeWithCode:1];
+  });
 
   if (!self.stream) {
     [self finishWriter];
@@ -380,15 +424,21 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
     }
     self.writerFinished = YES;
 
-    if (!self.failureMessage && self.writtenSystemSamples == 0 &&
-        self.writtenMicrophoneSamples == 0) {
-      self.failureMessage = @"No audio samples were recorded";
-      fprintf(stderr, "meeting-recorder: %s\n", self.failureMessage.UTF8String);
+    if (!self.failureMessage) {
+      if (self.writtenSystemSamples == 0 && self.writtenMicrophoneSamples == 0) {
+        self.failureMessage = @"No audio samples were recorded";
+      } else if (self.writtenSystemSamples == 0) {
+        self.failureMessage = @"No system audio samples were recorded";
+      } else if (self.writtenMicrophoneSamples == 0) {
+        self.failureMessage = @"No microphone audio samples were recorded";
+      }
+      if (self.failureMessage) {
+        fprintf(stderr, "meeting-recorder: %s\n", self.failureMessage.UTF8String);
+      }
     }
 
     if (self.writer.status == AVAssetWriterStatusUnknown) {
       [self.writer cancelWriting];
-      [[NSFileManager defaultManager] removeItemAtURL:self.outputURL error:nil];
       [self completeWithCode:self.failureMessage ? 1 : 0];
       return;
     }
@@ -428,16 +478,28 @@ static void SendState(NSString *requestID, NSString *status, NSString *message) 
 
 - (void)completeWithCode:(int)code {
   dispatch_async(dispatch_get_main_queue(), ^{
+    if (self.completed) {
+      return;
+    }
+    self.completed = YES;
+    NSString *message = self.stopTimedOut
+      ? @"Recording did not stop within 30 seconds; the output may be incomplete"
+      : self.failureMessage;
+    if (self.stopTimedOut) {
+      fprintf(stderr, "meeting-recorder: %s\n", message.UTF8String);
+    }
+    int exitCode = message ? 1 : code;
     if (self.stopObserver) {
       [[NSDistributedNotificationCenter defaultCenter] removeObserver:self.stopObserver];
       self.stopObserver = nil;
     }
-    SendState(
+    BOOL saved = SendState(
       self.requestID,
-      code == 0 ? @"finished" : @"error",
-      code == 0 ? nil : self.failureMessage
+      self.statePath,
+      exitCode == 0 ? @"finished" : @"error",
+      exitCode == 0 ? nil : message
     );
-    self.completion(code);
+    self.completion(saved ? exitCode : 1);
   });
 }
 
@@ -449,15 +511,19 @@ int main(int argc, const char *argv[]) {
     NSString *bundleIdentifier = nil;
     NSString *outputPath = nil;
     NSString *requestID = nil;
+    NSString *statePath = nil;
     pid_t parentPID = 0;
     for (int index = 1; index < argc; index++) {
       if (strcmp(argv[index], "--request-id") == 0 && index + 1 < argc) {
         requestID = [NSString stringWithUTF8String:argv[++index]];
+      } else if (strcmp(argv[index], "--state-path") == 0 && index + 1 < argc) {
+        statePath = [[[NSString stringWithUTF8String:argv[++index]]
+          stringByExpandingTildeInPath] stringByStandardizingPath];
       } else if (strcmp(argv[index], "--parent-pid") == 0 && index + 1 < argc) {
         char *end = NULL;
         unsigned long value = strtoul(argv[++index], &end, 10);
         if (!end || *end != '\0' || value <= 1 || value > INT_MAX) {
-          SendState(requestID, @"error", @"Invalid parent process ID");
+          SendState(requestID, statePath, @"error", @"Invalid parent process ID");
           fprintf(stderr, "meeting-recorder: invalid parent process ID\n");
           return 2;
         }
@@ -466,7 +532,7 @@ int main(int argc, const char *argv[]) {
         char *end = NULL;
         unsigned long value = strtoul(argv[++index], &end, 10);
         if (!end || *end != '\0' || value > UINT32_MAX) {
-          SendState(requestID, @"error", @"Invalid display ID");
+          SendState(requestID, statePath, @"error", @"Invalid display ID");
           fprintf(stderr, "meeting-recorder: invalid display ID\n");
           return 2;
         }
@@ -476,17 +542,17 @@ int main(int argc, const char *argv[]) {
       } else if (argv[index][0] != '-' && !outputPath) {
         outputPath = [NSString stringWithUTF8String:argv[index]];
       } else {
-        SendState(requestID, @"error", @"Invalid arguments");
+        SendState(requestID, statePath, @"error", @"Invalid arguments");
         fprintf(stderr, "meeting-recorder: invalid arguments\n");
         return 2;
       }
     }
 
-    if (requestID.length == 0 || !outputPath) {
-      SendState(requestID, @"error", @"A request ID and output path are required");
+    if (requestID.length == 0 || statePath.length == 0 || !outputPath) {
+      SendState(requestID, statePath, @"error", @"A request ID, state path and output path are required");
       fprintf(
         stderr,
-        "usage: meeting-recorder --request-id ID [--parent-pid PID] [--display-id ID] [--bundle-id ID] OUTPUT.mov\n"
+        "usage: meeting-recorder --request-id ID --state-path PATH [--parent-pid PID] [--display-id ID] [--bundle-id ID] OUTPUT.mov\n"
       );
       return 2;
     }
@@ -501,6 +567,7 @@ int main(int argc, const char *argv[]) {
         displayID:displayID
         bundleIdentifier:bundleIdentifier
         requestID:requestID
+        statePath:statePath
         parentPID:parentPID
         completion:^(int code) {
           exitCode = code;
@@ -509,7 +576,7 @@ int main(int argc, const char *argv[]) {
         error:&error];
       if (!recorder) {
         NSString *message = error.localizedDescription ?: @"Could not initialize Meeting Recorder";
-        SendState(requestID, @"error", message);
+        SendState(requestID, statePath, @"error", message);
         fprintf(stderr, "meeting-recorder: %s\n", message.UTF8String);
         return 1;
       }
@@ -568,12 +635,32 @@ int main(int argc, const char *argv[]) {
         }
       }];
 
+      recorder.stopRequestSource = dispatch_source_create(
+        DISPATCH_SOURCE_TYPE_TIMER,
+        0,
+        0,
+        dispatch_get_main_queue()
+      );
+      dispatch_source_set_timer(
+        recorder.stopRequestSource,
+        DISPATCH_TIME_NOW,
+        NSEC_PER_SEC,
+        NSEC_PER_SEC / 10
+      );
+      NSString *stopRequestPath = [statePath stringByAppendingString:@".stop"];
+      dispatch_source_set_event_handler(recorder.stopRequestSource, ^{
+        if ([[NSFileManager defaultManager] fileExistsAtPath:stopRequestPath]) {
+          [weakRecorder stop];
+        }
+      });
+      dispatch_resume(recorder.stopRequestSource);
+
       [recorder start];
       CFRunLoopRun();
       return exitCode;
     }
 
-    SendState(requestID, @"error", @"macOS 15 or newer is required");
+    SendState(requestID, statePath, @"error", @"macOS 15 or newer is required");
     fprintf(stderr, "meeting-recorder: macOS 15 or newer is required\n");
     return 1;
   }

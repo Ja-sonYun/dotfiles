@@ -31,6 +31,10 @@ let
     "model_providers"
     "tui"
   ];
+  mirroredSettingKeys = [
+    "model_verbosity"
+    "web_search"
+  ];
 
   selectSettings = keys: lib.filterAttrs (name: _: builtins.elem name keys);
 
@@ -48,7 +52,7 @@ let
     };
   permissions = settings.permissions or { };
   managedSettings =
-    selectSettings managedSettingKeys settings
+    selectSettings (managedSettingKeys ++ mirroredSettingKeys) settings
     // lib.optionalAttrs (permissions ? managed) {
       permissions.managed = permissions.managed;
     };

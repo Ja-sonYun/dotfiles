@@ -38,6 +38,7 @@
     dcf = final.callPackage ../pkgs/ai-tools/dcf { };
     gh-ro = final.callPackage ../pkgs/ai-tools/gh-ro { };
     open-code-review = final.callPackage ../pkgs/ai-tools/open-code-review { };
+    whisper-local = final.callPackage ../pkgs/ai-tools/whisper-local { };
 
     git-extend = final.callPackage ../pkgs/cli-tools/git-extend { };
     mermaid-ascii = final.callPackage ../pkgs/cli-tools/mermaid-ascii { };
