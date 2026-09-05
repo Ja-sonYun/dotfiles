@@ -1,3 +1,5 @@
+require("hs.ipc")
+
 hs.autoLaunch(@autoLaunch@)
 
 _nixConfigWatcher = hs.pathwatcher.new(hs.configdir, function(paths)

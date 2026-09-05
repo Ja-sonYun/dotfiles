@@ -465,29 +465,225 @@ local function stopDelayText()
 	return string.format("%02d:%02d", math.floor(remaining / 60), remaining % 60)
 end
 
+local function recordingPanel(options, callback)
+	local panel = {}
+	local screen = (options.screen or hs.screen.mainScreen()):frame()
+	options.screen = nil
+	local height = options.mode == "selection" and 400 or 330
+	local data = hs.json.encode(options):gsub("<", "\\u003c")
+	panel.controller = hs.webview.usercontent.new("meetingRecorderPanel")
+	function panel:delete()
+		if self.view then
+			local view = self.view
+			self.view = nil
+			self.controller:setCallback(nil)
+			self.controller = nil
+			view:windowCallback(nil):deleteOnClose(false)
+			view:evaluateJavaScript("window.closePanel ? window.closePanel() : 0", function(duration)
+				if type(duration) == "number" and duration > 0 then
+					hs.timer.doAfter(duration / 1000, function()
+						view:delete()
+					end)
+				else
+					view:delete()
+				end
+			end)
+		end
+	end
+	local function respond(action, value)
+		if panel.view then
+			panel:delete()
+			callback(action, value)
+		end
+	end
+	panel.controller:setCallback(function(message)
+		local body = message.body
+		if type(body) == "table" and (body.action == "primary" or body.action == "secondary") then
+			respond(body.action, body.value)
+		end
+	end)
+	panel.view = hs.webview.new({
+		x = screen.x + (screen.w - 420) / 2,
+		y = screen.y + 34,
+		w = 420,
+		h = height + 8,
+	}, { privateBrowsing = true }, panel.controller)
+		:windowStyle(0)
+		:allowTextEntry(true)
+		:transparent(true)
+		:deleteOnClose(true)
+		:windowCallback(function(action)
+			if action == "closing" then
+				panel.view = nil
+				panel.controller:setCallback(nil)
+				panel.controller = nil
+				callback("secondary")
+			end
+		end)
+	panel.view:html([=[
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: transparent; overflow: hidden; }
+body { color: #f2f2f2; font: 13px -apple-system, BlinkMacSystemFont, sans-serif; }
+main { height: calc(100% - 8px); padding: 24px; border: 1px solid #454545; border-radius: 18px; background: linear-gradient(150deg, #282828, #1f1f1f 65%); box-shadow: inset 0 1px 0 #ffffff0a; display: flex; flex-direction: column; opacity: 0; }
+h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.4px; }
+.description { margin: 10px 0 19px; color: #aaa; line-height: 1.5; }
+form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.content { overflow: auto; padding: 3px; margin: -3px; }
+label { display: block; margin-bottom: 8px; color: #d1d1d1; font-size: 12px; font-weight: 500; }
+input[type="text"] { width: 100%; height: 43px; padding: 0 12px; border: 1px solid #4b4b4b; border-radius: 9px; color: #fff; background: #242424; font: inherit; outline: none; box-shadow: inset 0 1px 3px #00000020; transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease; }
+input[type="text"]::placeholder { color: #818181; }
+input[type="text"]:hover { border-color: #707070; }
+input[type="text"]:focus { border-color: #d6a0a3; background: #292627; box-shadow: 0 0 0 3px #d96a731a; }
+.event, .option { padding: 13px; border: 1px solid #434343; border-radius: 10px; background: #ffffff04; overflow-wrap: anywhere; }
+.event strong { font-weight: 500; }
+.url { color: #bb9397; font-size: 11px; line-height: 1.5; margin-top: 7px; }
+.option { display: flex; gap: 10px; align-items: center; cursor: pointer; transition: background 150ms ease, border-color 150ms ease; }
+.option:hover { background: #ffffff09; border-color: #777; }
+.option:has(input:checked) { background: #ce42490d; border-color: #a36267; }
+.option:focus-within { outline: 2px solid #edc2c5; outline-offset: 1px; }
+input[type="radio"] { margin: 0; accent-color: #dd6770; flex-shrink: 0; }
+.countdown { margin-top: 15px; color: #e99a9f; font-size: 12px; font-variant-numeric: tabular-nums; }
+progress { width: 100%; height: 4px; border: none; margin-top: 10px; accent-color: #ce4249; }
+progress::-webkit-progress-bar { background: #3e3334; border-radius: 3px; }
+progress::-webkit-progress-value { background: #ce4249; border-radius: 3px; }
+footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: auto; padding-top: 20px; }
+button { height: 35px; padding: 0 15px; border: 1px solid #4b4b4b; border-radius: 8px; color: #eee; background: #343434; font: inherit; font-weight: 500; cursor: pointer; box-shadow: 0 2px 4px #00000020, inset 0 1px 0 #ffffff06; transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease; }
+button:hover { background: #454545; border-color: #666; transform: translateY(-1px); box-shadow: 0 4px 8px #00000035; }
+button:focus-visible { outline: 2px solid #edc2c5; outline-offset: 3px; }
+button.primary { border-color: #dd5961; background: #ce4249; color: #fff; box-shadow: 0 2px 6px #9b202530, inset 0 1px 0 #ffffff15; }
+button.primary:hover { background: #e0525a; border-color: #ef737a; box-shadow: 0 4px 12px #c82e3b35; }
+button:active { transform: translateY(0) scale(.98); box-shadow: inset 0 2px 4px #00000025; }
+@media (prefers-reduced-motion: reduce) { input, button, .option { transition: none; } button:hover, button:active { transform: none; } }
+</style>
+<main><h1></h1><p class="description"></p><form><div class="content"></div><footer><button type="button" id="secondary"></button><button type="submit" class="primary"></button></footer></form></main>
+<script>
+const options = ]=] .. data .. [=[;
+const panel = document.querySelector('main');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let openingAnimation;
+const content = document.querySelector('.content');
+const primary = document.querySelector('.primary');
+document.querySelector('h1').textContent = options.title;
+document.querySelector('.description').textContent = options.description;
+document.querySelector('#secondary').textContent = options.secondary;
+primary.textContent = options.primary;
+function add(tag, text, className, parent = content) {
+    const element = document.createElement(tag);
+    element.textContent = text || '';
+    if (className) element.className = className;
+    parent.appendChild(element);
+    return element;
+}
+if (options.mode === 'title') {
+    add('label', 'Title').htmlFor = 'title';
+    const input = add('input');
+    input.type = 'text'; input.id = 'title'; input.required = true;
+    input.placeholder = 'e.g. Design sync'; input.autocomplete = 'off';
+} else if (options.mode === 'selection') {
+    content.setAttribute('role', 'radiogroup');
+    content.setAttribute('aria-label', 'Meetings');
+    options.urls.forEach((url, index) => {
+        const label = add('label', '', 'option');
+        const input = add('input', '', '', label);
+        input.type = 'radio'; input.name = 'meeting'; input.value = index + 1; input.checked = index === 0;
+        add('span', url, '', label);
+    });
+} else {
+    const event = add('div', '', 'event');
+    add('strong', options.eventText, '', event);
+    if (options.url) add('div', options.url, 'url', event);
+}
+window.updateCountdown = (remaining, maximum) => {
+    let label = document.querySelector('.countdown');
+    let progress = document.querySelector('progress');
+    if (!label) { label = add('div', '', 'countdown'); progress = add('progress'); progress.setAttribute('aria-label', 'Seconds until automatic stop'); }
+    label.textContent = `Automatic stop in ${remaining}s unless you reconnect.`;
+    progress.max = Math.max(1, maximum); progress.value = remaining;
+};
+if (options.mode === 'ended') window.updateCountdown(options.remaining, options.maximum);
+let sent = false;
+window.closePanel = () => {
+    sent = true;
+    panel.querySelectorAll('button, input').forEach(element => element.disabled = true);
+    if (reducedMotion.matches) return 0;
+    const style = getComputedStyle(panel);
+    const from = { opacity: style.opacity, transform: style.transform };
+    if (openingAnimation) openingAnimation.cancel();
+    panel.animate([
+        from,
+        { opacity: 0, transform: 'translateY(8px)' }
+    ], { duration: 150, easing: 'ease-in', fill: 'forwards' });
+    return 150;
+};
+function send(action, value) {
+    if (sent) return;
+    sent = true;
+    window.webkit.messageHandlers.meetingRecorderPanel.postMessage({ action, value });
+}
+document.querySelector('#secondary').addEventListener('click', () => send('secondary'));
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); send('secondary'); }
+    if (event.key === 'Enter' && event.target.matches('input[type="radio"]')) {
+        event.preventDefault(); document.querySelector('form').requestSubmit();
+    }
+});
+document.querySelector('form').addEventListener('submit', event => {
+    event.preventDefault();
+    let value;
+    if (options.mode === 'title') {
+        const input = document.querySelector('#title'); value = input.value.trim();
+        if (!value) { input.value = ''; input.reportValidity(); return; }
+    }
+    if (options.mode === 'selection') value = Number(document.querySelector('input:checked').value);
+    send('primary', value);
+});
+window.addEventListener('load', () => {
+    if (sent) return;
+    panel.style.opacity = '1';
+    if (!reducedMotion.matches) {
+        openingAnimation = panel.animate([
+            { opacity: 0, transform: 'translateY(8px)' },
+            { opacity: 1, transform: 'translateY(0)' }
+        ], { duration: 180, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+    }
+    (content.querySelector('input') || primary).focus();
+});
+</script></html>
+]=])
+	panel.view:show():bringToFront(true)
+	if options.focus then
+		panel.view:hswindow():focus()
+	end
+	return panel
+end
+
 local function dismissStopPrompt()
 	if module.stopPrompt then
-		module.stopPrompt:delete(0.1)
+		module.stopPrompt:delete()
 		module.stopPrompt = nil
 	end
 end
 
 local function dismissMeetingPrompt()
 	if module.meetingPrompt then
-		module.meetingPrompt:delete(0.1)
+		module.meetingPrompt:delete()
 		module.meetingPrompt = nil
 	end
-	if module.meetingURLChooser then
-		local chooser = module.meetingURLChooser
-		module.meetingURLChooser = nil
-		chooser:hide()
+	if module.pendingPrompt and module.pendingPrompt.manual then
+		module.manualStartPending = nil
 	end
 	module.pendingPrompt = nil
 end
 
 local function updateStopPrompt()
 	if module.stopPrompt and module.stopDeadline then
-		module.stopPrompt[3].text = "Automatic stop in " .. stopDelayText() .. " unless you reconnect."
+		module.stopPrompt.view:evaluateJavaScript(string.format(
+			"if (window.updateCountdown) window.updateCountdown(%d, %d)",
+			stopDelayRemaining(),
+			config.stopDelaySeconds
+		))
 	end
 end
 
@@ -496,97 +692,29 @@ local function showStopPrompt()
 		return
 	end
 
-	local iconFrame = module.menuBar:frame()
-	if not iconFrame then
-		return
-	end
-
-	local width = 360
-	local height = 126
-	local screenFrame = hs.screen.mainScreen():fullFrame()
-	local x = iconFrame.x + iconFrame.w / 2 - width / 2
-	x = math.max(screenFrame.x + 8, math.min(x, screenFrame.x + screenFrame.w - width - 8))
-	local prompt = hs.canvas.new({
-		x = x,
-		y = iconFrame.y + iconFrame.h + 4,
-		w = width,
-		h = height,
-	})
-	prompt[1] = {
-		type = "rectangle",
-		action = "fill",
-		fillColor = { white = 0.12, alpha = 0.98 },
-		withShadow = true,
-	}
-	prompt[2] = {
-		type = "text",
-		frame = { x = 16, y = 12, w = 328, h = 22 },
-		text = "Meeting ended",
-		textColor = { white = 1 },
-		textSize = 15,
-	}
-	prompt[3] = {
-		type = "text",
-		frame = { x = 16, y = 38, w = 328, h = 22 },
-		text = "",
-		textColor = { white = 0.82 },
-		textSize = 12,
-	}
-	prompt[4] = {
-		id = "keep",
-		type = "rectangle",
-		frame = { x = 16, y = 76, w = 158, h = 34 },
-		action = "fill",
-		fillColor = { white = 0.28 },
-		trackMouseUp = true,
-	}
-	prompt[5] = {
-		type = "text",
-		frame = { x = 16, y = 84, w = 158, h = 20 },
-		text = "Keep Recording",
-		textAlignment = "center",
-		textColor = { white = 1 },
-		textSize = 12,
-	}
-	prompt[6] = {
-		id = "stop",
-		type = "rectangle",
-		frame = { x = 186, y = 76, w = 158, h = 34 },
-		action = "fill",
-		fillColor = { red = 0.82, green = 0.16, blue = 0.16 },
-		trackMouseUp = true,
-	}
-	prompt[7] = {
-		type = "text",
-		frame = { x = 186, y = 84, w = 158, h = 20 },
-		text = "Stop Now",
-		textAlignment = "center",
-		textColor = { white = 1 },
-		textSize = 12,
-	}
-	prompt:clickActivating(false)
-	prompt:level("floating")
-	prompt:mouseCallback(function(_, event, element)
-		if event ~= "mouseUp" then
-			return
-		end
-		if element == "keep" then
-			cancelStopDelay()
-		elseif element == "stop" then
+	module.stopPrompt = recordingPanel({
+		mode = "ended",
+		title = "Meeting ended",
+		description = "The meeting is no longer using your microphone.",
+		eventText = module.sessionEvent and module.sessionEvent.title or "Meeting recording",
+		url = module.sessionMeetingURL,
+		remaining = stopDelayRemaining(),
+		maximum = config.stopDelaySeconds,
+		primary = "Stop Now",
+		secondary = "Keep Recording",
+	}, function(action)
+		module.stopPrompt = nil
+		if action == "primary" then
 			stopRecording("manual")
+		else
+			cancelStopDelay()
 		end
 	end)
-	module.stopPrompt = prompt
-	updateStopPrompt()
-	prompt:show()
 end
 
 local function menuBarTitle(text)
-	local mode = hs.screen.mainScreen():currentMode()
-	local scale = mode and mode.scale or 1
 	return hs.styledtext.new(text, {
 		font = hs.styledtext.defaultFonts.menuBar,
-		baselineOffset = -1 / scale,
 	})
 end
 
@@ -1065,27 +1193,25 @@ local function selectCalendarEvent(events, browserURLs)
 	return nil, "No matching Calendar event was found."
 end
 
-local function promptForRecordingEvent(detectedAt, reason)
-	local button, title = hs.dialog.textPrompt(
-		"Meeting Recorder",
-		(reason or "Calendar lookup failed.") .. " Enter a recording title.",
-		"",
-		"Use Title",
-		"Cancel"
-	)
-	if button ~= "Use Title" then
-		return nil
-	end
-
-	title = sanitizedEventTitle(title)
-	if not title then
-		notifyStatus("A recording title is required.")
-		return nil
-	end
-	return {
-		title = title,
-		startTimestamp = detectedAt,
-	}
+local function promptForRecordingEvent(detectedAt, reason, pending, callback)
+	module.pendingPrompt = pending
+	module.meetingPrompt = recordingPanel({
+		mode = "title",
+		screen = pending.screen,
+		title = "Recording title",
+		description = (reason or "Calendar lookup failed.") .. " Enter a title for this recording.",
+		primary = "Start Recording",
+		secondary = "Cancel",
+		focus = true,
+	}, function(action, value)
+		if module.pendingPrompt ~= pending then
+			return
+		end
+		module.meetingPrompt = nil
+		module.pendingPrompt = nil
+		local title = action == "primary" and sanitizedEventTitle(value)
+		callback(title and { title = title, startTimestamp = detectedAt } or nil)
+	end)
 end
 
 local function selectMeetingURL(generation, callback)
@@ -1095,26 +1221,29 @@ local function selectMeetingURL(generation, callback)
 		return
 	end
 
-	local choices = {}
-	for _, url in ipairs(candidates) do
-		table.insert(choices, { text = url, url = url })
-	end
-	local chooser
-	chooser = hs.chooser.new(function(choice)
-		if module.meetingURLChooser ~= chooser then
+	dismissMeetingPrompt()
+	local pending = { generation = generation }
+	module.pendingPrompt = pending
+	module.meetingPrompt = recordingPanel({
+		mode = "selection",
+		title = "Choose a meeting",
+		description = "More than one meeting is open. Choose the meeting to record.",
+		urls = candidates,
+		primary = "Continue",
+		secondary = "Cancel",
+		focus = true,
+	}, function(action, value)
+		if module.pendingPrompt ~= pending then
 			return
 		end
-		module.meetingURLChooser = nil
+		module.meetingPrompt = nil
 		module.pendingPrompt = nil
-		if choice then
-			callback(choice.url)
+		if action == "primary" and type(value) == "number" and candidates[value] then
+			callback(candidates[value])
+		else
+			module.handledGeneration = generation
 		end
 	end)
-	chooser:choices(choices)
-	chooser:placeholderText("Choose the meeting to record")
-	module.pendingPrompt = { generation = generation }
-	module.meetingURLChooser = chooser
-	chooser:show()
 end
 
 local function nextCalendarRequestID()
@@ -1564,113 +1693,59 @@ local function showMeetingPrompt(source, key, generation, event, fallbackReason,
 	end
 	dismissMeetingPrompt()
 
-	local width = 420
-	local height = 132
-	local screenFrame = meetingPromptScreen(source):fullFrame()
-	local prompt = hs.canvas.new({
-		x = screenFrame.x + (screenFrame.w - width) / 2,
-		y = screenFrame.y + 34,
-		w = width,
-		h = height,
-	})
-	prompt[1] = {
-		type = "rectangle",
-		action = "fill",
-		fillColor = { white = 0.12, alpha = 0.98 },
-		withShadow = true,
-	}
-	prompt[2] = {
-		type = "text",
-		frame = { x = 16, y = 12, w = 388, h = 22 },
-		text = "Meeting detected",
-		textColor = { white = 1 },
-		textSize = 15,
-	}
-	prompt[3] = {
-		type = "text",
-		frame = { x = 16, y = 39, w = 388, h = 22 },
-		text = eventTimeText(event),
-		textColor = { white = 0.82 },
-		textSize = 12,
-	}
-	prompt[4] = {
-		id = "ignore",
-		type = "rectangle",
-		frame = { x = 16, y = 82, w = 188, h = 34 },
-		action = "fill",
-		fillColor = { white = 0.28 },
-		trackMouseUp = true,
-	}
-	prompt[5] = {
-		type = "text",
-		frame = { x = 16, y = 90, w = 188, h = 20 },
-		text = "Not Now",
-		textAlignment = "center",
-		textColor = { white = 1 },
-		textSize = 12,
-	}
-	prompt[6] = {
-		id = "start",
-		type = "rectangle",
-		frame = { x = 216, y = 82, w = 188, h = 34 },
-		action = "fill",
-		fillColor = { red = 0.82, green = 0.16, blue = 0.16 },
-		trackMouseUp = true,
-	}
-	prompt[7] = {
-		type = "text",
-		frame = { x = 216, y = 90, w = 188, h = 20 },
-		text = "Start Recording",
-		textAlignment = "center",
-		textColor = { white = 1 },
-		textSize = 12,
-	}
-	prompt:clickActivating(false)
-	prompt:level("floating")
-	prompt:mouseCallback(function(_, mouseEvent, element)
-		if mouseEvent ~= "mouseUp" then
-			return
-		end
-
-		local pending = module.pendingPrompt
-		if not pending or pending.generation ~= generation then
-			return
-		end
-		dismissMeetingPrompt()
-		if element ~= "start" then
-			module.handledGeneration = generation
-			return
-		end
-		if not module.meetingActive
-			or module.meetingCandidateKey ~= key
-			or module.meetingGeneration ~= generation
-			or module.task
-		then
-			return
-		end
-
-		local recordingEvent = event
-		if not recordingEvent then
-			recordingEvent = promptForRecordingEvent(detectedAt, fallbackReason)
-		end
-		if recordingEvent
-			and module.meetingActive
+	local pending = { generation = generation, screen = meetingPromptScreen(source) }
+	local function isCurrentMeeting()
+		return module.meetingActive
+			and module.meetingSource == source
 			and module.meetingCandidateKey == key
 			and module.meetingGeneration == generation
 			and not module.task
 			and not module.manualStartPending
-		then
+	end
+	local function record(eventToRecord)
+		if not isCurrentMeeting() then
+			return
+		end
+		module.handledGeneration = generation
+		if eventToRecord then
+			startRecording("meeting", eventToRecord, meetingURL)
+		end
+	end
+	module.pendingPrompt = pending
+	module.meetingPrompt = recordingPanel({
+		mode = "detected",
+		screen = pending.screen,
+		title = "Meeting detected",
+		description = "Record this meeting?",
+		eventText = eventTimeText(event),
+		url = meetingURL,
+		primary = "Start Recording",
+		secondary = "Not Now",
+	}, function(action)
+		if module.pendingPrompt ~= pending then
+			return
+		end
+		module.meetingPrompt = nil
+		module.pendingPrompt = nil
+		if action ~= "primary" then
 			module.handledGeneration = generation
-			startRecording("meeting", recordingEvent, meetingURL)
+			return
+		end
+		if not isCurrentMeeting() then
+			return
+		end
+		if event then
+			record(event)
+		else
+			promptForRecordingEvent(detectedAt, fallbackReason, pending, record)
 		end
 	end)
-	module.pendingPrompt = { generation = generation, event = event }
-	module.meetingPrompt = prompt
-	prompt:show()
 end
 
 requestMeetingPrompt = function(source, key, generation)
-	if module.task or module.manualStartPending or module.handledGeneration == generation then
+	if module.task or module.manualStartPending or module.handledGeneration == generation
+		or (module.pendingPrompt and module.pendingPrompt.generation == generation)
+	then
 		return
 	end
 
@@ -1705,28 +1780,36 @@ local function requestManualStart()
 		return
 	end
 
+	dismissMeetingPrompt()
+	local pending = { manual = true }
+	module.pendingPrompt = pending
 	module.manualStartPending = true
 	module.handledGeneration = module.meetingGeneration
-	dismissMeetingPrompt()
 	local detectedAt = hs.timer.secondsSinceEpoch()
 	queryCalendar(detectedAt, function(events, calendarError)
-		module.manualStartPending = false
-		if module.task then
+		if module.pendingPrompt ~= pending or not module.manualStartPending or module.task then
 			return
 		end
 
-		local event, selectionError = selectCalendarEvent(events, {})
-		if not event then
-			event = promptForRecordingEvent(detectedAt, calendarError or selectionError)
-			if not event then
-				return
+		local function record(eventToRecord)
+			module.manualStartPending = nil
+			module.pendingPrompt = nil
+			if eventToRecord and not module.task then
+				startRecording("manual", eventToRecord)
 			end
 		end
-		startRecording("manual", event)
+		local event, selectionError = selectCalendarEvent(events, {})
+		if event then
+			record(event)
+		else
+			promptForRecordingEvent(detectedAt, calendarError or selectionError, pending, record)
+		end
 	end)
 end
 
 stopRecording = function(reason)
+	dismissMeetingPrompt()
+	module.manualStartPending = nil
 	if not module.task then
 		return
 	end
@@ -1831,7 +1914,7 @@ handleMeetingState = function(active, source, key, generation)
 			stopRecording("browser-switch")
 			return
 		end
-		if module.pendingPrompt and module.pendingPrompt.generation ~= generation then
+		if module.pendingPrompt and not module.pendingPrompt.manual and module.pendingPrompt.generation ~= generation then
 			dismissMeetingPrompt()
 		end
 		if not module.task then
@@ -1840,7 +1923,9 @@ handleMeetingState = function(active, source, key, generation)
 		return
 	end
 
-	dismissMeetingPrompt()
+	if not (module.pendingPrompt and module.pendingPrompt.manual) then
+		dismissMeetingPrompt()
+	end
 	module.handledGeneration = nil
 	if module.sessionType == "meeting" then
 		beginStopDelay()
