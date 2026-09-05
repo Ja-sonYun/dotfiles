@@ -1,3 +1,5 @@
+{ hostname, ... }:
+
 {
   services.hammerspoon = {
     enable = true;
@@ -10,7 +12,7 @@
       };
 
       meetingRecorder = {
-        enable = true;
+        enable = hostname == "Jays-MacBook-Pro";
         calendarEventBufferMinutes = 4;
         browserRules = [
           {

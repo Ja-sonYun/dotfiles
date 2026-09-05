@@ -1,54 +1,66 @@
 {
-  "n8n-mcp": {
-    "version": "2.63.2",
-    "hash": "sha256-Iy8FnDR2Oo1VoUpwE+IFJrqpt9yERWf0cHz3vLGdA40="
+  "macnotesapp": {
+    "version": "0.8.2",
+    "hash": "sha256-i/8uh0upUUkIKynbogMJ8bcfGohE5hRXL96t82a8aUU="
   },
-  "chrome-devtools-mcp": {
-    "version": "1.5.0",
-    "hash": "sha256-zO6SVz5BEBUvobz0o1LMbZxiNjNdlznStCJUvLSyVFw="
+  "knip": {
+    "version": "6.34.0",
+    "hash": "sha256-lJLaoIG9FOl8SJzrd4U6LdvlyZUI6goKLLe6VO9ZXRE="
+  },
+  "pi": {
+    "version": "0.85.0",
+    "hash": "sha256-TAWB9j33P2wSQiDeQAhszpz11/uTeqtkCtNP34Wasf8="
   },
   "open-code-review": {
-    "version": "1.7.7",
-    "hash": "sha256-YGQ9HWErk7uv/GVRdw/ItHC4c50pNPH/Q1togvtmToM="
+    "version": "1.11.4",
+    "hash": "sha256-yFiaKZM8JiE/79Jmdbb70lf416oL+wboaUr6WB+6vXo="
   },
   "awscli-local": {
     "version": "0.22.2",
-    "hash": "sha256-f0xSXoYjlvS0KTtUnQL4BBA4FBY3HwYx58/axeUVNRA="
-  },
-  "pi": {
-    "version": "0.80.6",
-    "hash": "sha256-wmunsMmUTLVifOA4pRHauguzMoRE/xFBVt1vT4+tbbg="
-  },
-  "pi-mcp-adapter": {
-    "version": "2.26.0",
-    "hash": "sha256-eVbQPJXkITTrWaTkGXIeAMVDFfLgAEW3LLPqkQ7GQxE="
+    "hash": "sha256-QGLTkhO+Q35tkq6hXk9GuHlTLXngmcX1t6xVa4UPcpM="
   },
   "codex": {
-    "version": "0.144.1",
-    "hash": "sha256-2A+0gybIiVlEpxuAhXMRDqCITnZN9ZSX9++l7RXI07A="
+    "version": "0.153.2",
+    "hash": "sha256-maMlTmlJbbT0vdWq7Hn67Jw51+fDUcxF6kcW25JF+Mw="
   },
-  "macnotesapp": {
-    "version": "0.8.2",
-    "hash": "sha256-QMcCfuWz/Hl+w9mprsGEkQ1IqR0YwSa6F0/nTCuEzJQ="
+  "n8n-mcp": {
+    "version": "2.82.1",
+    "hash": "sha256-ejPmQDizSGi3tpkfIcvThAAlmLHV/ayPwbQgyA7pH4k="
+  },
+  "chrome-devtools-mcp": {
+    "version": "1.8.0",
+    "hash": "sha256-r8QgIqxuxy61qOOq3uhnPb8QO/LNCwaD7Xlk+anMP7o="
   },
   "claude-code": {
-    "version": "2.1.207",
-    "hash": "sha256-LtQbq9x8yPSNLK8iQoeXNUvolHDWEEMemMGAlpDIBJQ="
+    "version": "2.1.260",
+    "hash": "sha256-DTzSREkH98YEhQV2LzZOvIQmHdX1G7Tr2AbSA4gSwEk="
   },
   "firecrawl-mcp": {
-    "version": "3.22.3",
-    "hash": "sha256-Qr7lUGcmvpfr9LbqbGHWDDHkLZ14SZLxDWMV8j/0ygA="
+    "version": "3.24.0",
+    "hash": "sha256-DFjCDg4sVSQwIgAY3hFwwafKpkGejseaxvcRB1tfllo="
   },
-  "freecad-mcp": {
-    "version": "0.1.19",
-    "hash": "sha256-Nu1xArWGaqpRluMGMz5poDWMXCwal9mTylmCrlzAb3U="
+  "pi-mcp-adapter": {
+    "version": "2.32.1",
+    "hash": "sha256-VDnNEuhxh6gaHPfYg8asfYvui9CrJEb3UcpfMUYH794="
+  },
+  "mcp-remote": {
+    "version": "0.8.3",
+    "hash": "sha256-FL/NnL/L0jgPk0tA+XsN/XYjIZSmOCAwqAPzaPunB8s="
   },
   "context7-mcp": {
-    "version": "3.2.3",
-    "hash": "sha256-hD4cjtUyUQqTEYAhEDSGCUxDmhjApXdml62zI98IXu4="
+    "version": "4.0.5",
+    "hash": "sha256-9xS3LAryNP/VPg3eoDFnNYJgxs+8mNybuSoB99UPKwk="
+  },
+  "freecad-mcp": {
+    "version": "0.1.22",
+    "hash": "sha256-F2J3oawRkc5DlYNN0Pmq21+LatwhWktCYUv9ET/QgZs="
+  },
+  "aws-documentation-mcp-server": {
+    "version": "1.2.0",
+    "hash": "sha256-K3MoS7iYXf5QKF+yK226Bkec0lToHA3GJvg6Ga/QmgM="
   },
   "exa-mcp-server": {
-    "version": "3.2.1",
-    "hash": "sha256-Iy8NVmMjLXsj/5rdIYJ45THzaKT3ODGRZIq/FzxfWAQ="
+    "version": "3.4.1",
+    "hash": "sha256-mMzLfMiJLYFbSDjSo5hvmJatWNfEVmb83wYb/d+O3xA="
   }
 }
