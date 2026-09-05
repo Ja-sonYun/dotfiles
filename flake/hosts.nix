@@ -22,7 +22,6 @@ let
           tags = [
             "gui"
             "ai"
-            "unsafe-ai"
             "meeting"
             "task"
           ];
@@ -36,6 +35,7 @@ let
             "gui"
             "server"
             "ai"
+            "unsafe-ai"
           ];
         };
         "linux-devel" = {
