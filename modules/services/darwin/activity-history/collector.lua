@@ -45,7 +45,11 @@ end
 
 local function prepare()
 	local day = os.date("%Y-%m-%d")
-	if activityDay ~= day then
+	if
+		activityDay ~= day
+		or hs.fs.attributes(cfg.dataDirectory, "mode") ~= "directory"
+		or hs.fs.attributes(cfg.stateDirectory, "mode") ~= "directory"
+	then
 		local output, ok = hs.execute('"' .. helper .. '" _init', false)
 		assert(ok, "Cannot prepare activity history directories")
 		local prepared = assert(hs.json.decode(output))
