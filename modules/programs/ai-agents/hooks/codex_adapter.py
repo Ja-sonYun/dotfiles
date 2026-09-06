@@ -147,7 +147,9 @@ def run_command(command: str, hook_input: str, timeout: int) -> int:
             wait_after_signal(process)
             return 124
         assert process.returncode is not None
-        return 128 - process.returncode if process.returncode < 0 else process.returncode
+        return (
+            128 - process.returncode if process.returncode < 0 else process.returncode
+        )
     finally:
         for signum, handler in previous_handlers.items():
             signal.signal(signum, handler)

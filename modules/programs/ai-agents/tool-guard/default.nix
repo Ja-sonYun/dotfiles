@@ -21,6 +21,14 @@ let
         type = nonEmptyString;
         description = "Standalone approval token line; surrounding whitespace, backticks, and backslashes are ignored.";
       };
+      onBlock = lib.mkOption {
+        type = lib.types.enum [
+          "request-approval"
+          "revise-input"
+        ];
+        default = "request-approval";
+        description = "Recovery guidance after denial; revised calls are still checked by the guard.";
+      };
       inputFields = lib.mkOption {
         type = lib.types.listOf nonEmptyString;
         default = [ ];

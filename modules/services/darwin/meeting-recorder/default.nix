@@ -2,18 +2,22 @@
   config,
   lib,
   pkgs,
+  username,
   userhome,
   ...
 }:
 let
-  cfg = config.services.hammerspoon.features.meetingRecorder;
+  cfg = config.services.meetingRecorder;
+  audioProcessWatcher = pkgs.callPackage ./pkgs/audio-process-watcher { };
+  calendarEventQuery = pkgs.callPackage ./pkgs/calendar-event-query { };
+  meetingRecorder = pkgs.callPackage ./pkgs/meeting-recorder { };
   helpersDirectory = "${userhome}/.local/libexec/hammerspoon";
   stateNotification = "com.jaykuroyanagi.audio-process-watcher.state";
   refreshNotification = "com.jaykuroyanagi.audio-process-watcher.refresh";
   calendarResponseNotification = "com.jaykuroyanagi.calendar-event-query.response";
   recorderStateNotification = "com.jaykuroyanagi.meeting-recorder.state";
   recorderStopNotification = "com.jaykuroyanagi.meeting-recorder.stop";
-  script = pkgs.replaceVars ./script.lua {
+  script = pkgs.replaceVars ./recorder.lua {
     configJson = builtins.toJSON {
       inherit (cfg)
         browserRules
@@ -37,7 +41,7 @@ let
   };
 in
 {
-  options.services.hammerspoon.features.meetingRecorder = {
+  options.services.meetingRecorder = {
     enable = lib.mkEnableOption "meeting audio recording";
 
     browserRules = lib.mkOption {
@@ -105,25 +109,42 @@ in
   config = lib.mkIf cfg.enable {
     services.codeSigning.targets = {
       calendar-event-query = {
-        source = "${pkgs.calendar-event-query}/Applications/Calendar Event Query.app";
+        source = "${calendarEventQuery}/Applications/Calendar Event Query.app";
         target = "${helpersDirectory}/Calendar Event Query.app";
       };
 
       meeting-recorder = {
-        source = "${pkgs.meeting-recorder}/Applications/Meeting Recorder.app";
+        source = "${meetingRecorder}/Applications/Meeting Recorder.app";
         target = "${helpersDirectory}/Meeting Recorder.app";
       };
     };
 
-    services.hammerspoon.preparedScripts = [
-      {
-        name = "meeting-recorder.lua";
-        path = script;
-      }
-    ];
+    services.hammerspoon = {
+      enable = lib.mkDefault true;
+      preparedScripts = [
+        {
+          name = "meeting-recorder.lua";
+          path = script;
+        }
+      ];
+    };
+
+    programs.spotlightScripts = {
+      enable = lib.mkDefault true;
+      apps.start-meeting-recording = {
+        displayName = "Start Meeting Recording";
+        command = [
+          "/usr/bin/open"
+          "-g"
+          "hammerspoon://meeting-recorder-start"
+        ];
+      };
+    };
+
+    home-manager.users.${username}.home.packages = [ pkgs.whisper-local ];
 
     launchd.user.agents.hammerspoon-audio-process-watcher.serviceConfig = {
-      ProgramArguments = [ "${pkgs.audio-process-watcher}/bin/audio-process-watcher" ];
+      ProgramArguments = [ "${audioProcessWatcher}/bin/audio-process-watcher" ];
       RunAtLoad = true;
       KeepAlive.SuccessfulExit = false;
       ProcessType = "Background";

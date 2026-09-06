@@ -42,13 +42,9 @@
     "OrbStack"
   ];
 
-  home.packages =
-    lib.optionals (hasTag "gui") [
-      pkgs.macnotesapp
-    ]
-    ++ lib.optionals (hasTag "meeting") [
-      pkgs.whisper-local
-    ];
+  home.packages = lib.optionals (hasTag "gui") [
+    pkgs.macnotesapp
+  ];
 
   home.sessionVariables = {
     CONTAINERS_MACHINE_PROVIDER = "applehv";

@@ -13,6 +13,7 @@ class Guard:
     name: str
     matcher: re.Pattern[str]
     approval_token: str
+    on_block: str
     input_fields: tuple[str, ...]
     input_patterns: tuple[re.Pattern[str], ...]
     reason: str
@@ -62,13 +63,15 @@ def load_guards(config_path: Path, client: str) -> list[Guard]:
             raise ValueError(f"Tool Guard configuration for {client} is invalid.")
         matcher = fields.get("matcher")
         approval_token = fields.get("approvalToken")
+        on_block = fields.get("onBlock", "request-approval")
         input_fields = fields.get("inputFields", [])
         input_patterns = fields.get("inputPatterns", [])
         reason = fields.get("reason", "")
         if not isinstance(matcher, str) or not isinstance(approval_token, str):
             raise ValueError(f"Tool Guard {client}.{name} is invalid.")
         if (
-            not isinstance(reason, str)
+            on_block not in ("request-approval", "revise-input")
+            or not isinstance(reason, str)
             or not isinstance(input_fields, list)
             or not isinstance(input_patterns, list)
             or not all(isinstance(item, str) for item in input_fields)
@@ -84,6 +87,7 @@ def load_guards(config_path: Path, client: str) -> list[Guard]:
                 name=name,
                 matcher=re.compile(matcher),
                 approval_token=approval_token,
+                on_block=on_block,
                 input_fields=tuple(input_fields),
                 input_patterns=tuple(re.compile(pattern) for pattern in input_patterns),
                 reason=reason,
@@ -261,17 +265,28 @@ def check_authorization(
     if not missing:
         return 0
 
-    tokens = ", ".join(guard.approval_token for guard in missing)
+    approval_required = [
+        guard for guard in missing if guard.on_block == "request-approval"
+    ]
     reasons = "".join(
         f"{reason} "
         for reason in dict.fromkeys(guard.reason for guard in missing)
         if reason
     )
-    emit_denial(
-        f"{reasons}{tool_name} requires explicit user authorization. Do not retry in this "
-        "turn. End the turn and ask the user to send a new message containing each "
-        f"required approval token as its own line: {tokens}."
-    )
+    if approval_required:
+        tokens = ", ".join(guard.approval_token for guard in approval_required)
+        emit_denial(
+            f"{reasons}{tool_name} requires explicit user authorization. Do not retry "
+            "in this turn. End the turn and ask the user to send a new message "
+            f"containing each required approval token as its own line: {tokens}."
+        )
+    else:
+        emit_denial(
+            f"{reasons}{tool_name} was blocked before execution by Tool Guard. "
+            "Correct the input to comply with the stated rules, then retry in this "
+            "turn. Do not repeat the unchanged call or hide matching input to evade "
+            "the guard. Every retry is checked again."
+        )
     return 0
 
 

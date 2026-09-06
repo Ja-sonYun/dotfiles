@@ -23,7 +23,6 @@ async def generate() -> str:
     client = openai.AsyncClient(
         base_url=base_url,
         api_key=api_key,
-
     )
     response = await client.beta.chat.completions.parse(
         model="gpt-5.3-codex-spark",

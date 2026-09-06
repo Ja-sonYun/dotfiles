@@ -1,0 +1,8 @@
+[project]
+name = "activity-history"
+version = "0"
+requires-python = ">=3.12,<3.13"
+dependencies = ["pydantic>=2,<3", "pydantic-settings>=2,<3"]
+
+[tool.uv]
+package = false

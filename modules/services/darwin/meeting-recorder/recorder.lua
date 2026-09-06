@@ -502,12 +502,13 @@ local function recordingPanel(options, callback)
 			respond(body.action, body.value)
 		end
 	end)
-	panel.view = hs.webview.new({
-		x = screen.x + (screen.w - 420) / 2,
-		y = screen.y + 34,
-		w = 420,
-		h = height + 8,
-	}, { privateBrowsing = true }, panel.controller)
+	panel.view = hs.webview
+		.new({
+			x = screen.x + (screen.w - 420) / 2,
+			y = screen.y + 34,
+			w = 420,
+			h = height + 8,
+		}, { privateBrowsing = true }, panel.controller)
 		:windowStyle(0)
 		:allowTextEntry(true)
 		:transparent(true)
@@ -679,11 +680,13 @@ end
 
 local function updateStopPrompt()
 	if module.stopPrompt and module.stopDeadline then
-		module.stopPrompt.view:evaluateJavaScript(string.format(
-			"if (window.updateCountdown) window.updateCountdown(%d, %d)",
-			stopDelayRemaining(),
-			config.stopDelaySeconds
-		))
+		module.stopPrompt.view:evaluateJavaScript(
+			string.format(
+				"if (window.updateCountdown) window.updateCountdown(%d, %d)",
+				stopDelayRemaining(),
+				config.stopDelaySeconds
+			)
+		)
 	end
 end
 
@@ -719,9 +722,7 @@ local function menuBarTitle(text)
 end
 
 local function updateMenuBar()
-	local recordingActive = module.state == "starting"
-		or module.state == "recording"
-		or module.state == "stopping"
+	local recordingActive = module.state == "starting" or module.state == "recording" or module.state == "stopping"
 	local transcriptionActive = module.transcriptionPath ~= nil
 	if not recordingActive then
 		dismissStopPrompt()
@@ -752,10 +753,7 @@ local function updateMenuBar()
 		table.insert(tooltips, "Meeting recording is stopping")
 	elseif module.stopDeadline then
 		table.insert(titles, "● REC " .. elapsedTime())
-		table.insert(
-			tooltips,
-			"Waiting for reconnect; automatic stop in " .. stopDelayText()
-		)
+		table.insert(tooltips, "Waiting for reconnect; automatic stop in " .. stopDelayText())
 		if module.stopPrompt then
 			updateStopPrompt()
 		else
@@ -772,10 +770,7 @@ local function updateMenuBar()
 			table.insert(tooltips, "Preparing local transcription")
 		else
 			table.insert(titles, "TXT " .. tostring(module.transcriptionProgress) .. "%")
-			table.insert(
-				tooltips,
-				"Transcribing " .. (module.transcriptionPhase or "audio") .. " locally"
-			)
+			table.insert(tooltips, "Transcribing " .. (module.transcriptionPhase or "audio") .. " locally")
 		end
 	end
 
@@ -851,7 +846,8 @@ local function restorePendingRecordings()
 		return
 	end
 	for requestID, recording in pairs(saved) do
-		if type(requestID) == "string"
+		if
+			type(requestID) == "string"
 			and type(recording) == "table"
 			and type(recording.path) == "string"
 			and type(recording.statePath) == "string"
@@ -868,7 +864,8 @@ local function readRecordingState(requestID)
 		return nil
 	end
 	local payload = hs.json.read(recording.statePath)
-	if type(payload) == "table"
+	if
+		type(payload) == "table"
 		and payload.requestID == requestID
 		and (payload.status == "started" or payload.status == "finished" or payload.status == "error")
 	then
@@ -883,8 +880,7 @@ end
 
 local function transcriptOutputsExist(path)
 	local base = path:gsub("%.[^./]+$", "") .. ".transcript"
-	return hs.fs.attributes(base .. ".json") ~= nil
-		and hs.fs.attributes(base .. ".md") ~= nil
+	return hs.fs.attributes(base .. ".json") ~= nil and hs.fs.attributes(base .. ".md") ~= nil
 end
 
 local function persistTranscriptionQueue()
@@ -906,7 +902,8 @@ local function restoreTranscriptionQueue()
 
 	local seen = {}
 	for _, path in ipairs(saved) do
-		if type(path) == "string"
+		if
+			type(path) == "string"
 			and not seen[path]
 			and hs.fs.attributes(path)
 			and not transcriptOutputsExist(path)
@@ -926,9 +923,7 @@ end
 
 local function handleTranscriptionOutput(stdout, stderr)
 	if stderr and stderr ~= "" then
-		module.transcriptionStderr = ((module.transcriptionStderr or "") .. stderr):sub(
-			-8192
-		)
+		module.transcriptionStderr = ((module.transcriptionStderr or "") .. stderr):sub(-8192)
 	end
 	if not stdout or stdout == "" then
 		return
@@ -940,18 +935,12 @@ local function handleTranscriptionOutput(stdout, stderr)
 		if not newline then
 			return
 		end
-		local line = module.transcriptionOutputBuffer:sub(1, newline - 1):gsub(
-			"\r$",
-			""
-		)
+		local line = module.transcriptionOutputBuffer:sub(1, newline - 1):gsub("\r$", "")
 		module.transcriptionOutputBuffer = module.transcriptionOutputBuffer:sub(newline + 1)
 		local decoded, payload = pcall(hs.json.decode, line)
 		if decoded and type(payload) == "table" then
 			if payload.status == "progress" and type(payload.progress) == "number" then
-				module.transcriptionProgress = math.max(
-					0,
-					math.min(100, math.floor(payload.progress))
-				)
+				module.transcriptionProgress = math.max(0, math.min(100, math.floor(payload.progress)))
 				module.transcriptionPhase = payload.phase
 				updateMenuBar()
 			elseif payload.status == "finished" and type(payload.markdown_path) == "string" then
@@ -962,10 +951,7 @@ local function handleTranscriptionOutput(stdout, stderr)
 end
 
 startNextTranscription = function()
-	if not config.transcriberPath
-		or module.transcriptionTask
-		or #module.transcriptionQueue == 0
-	then
+	if not config.transcriberPath or module.transcriptionTask or #module.transcriptionQueue == 0 then
 		return
 	end
 
@@ -988,42 +974,36 @@ startNextTranscription = function()
 	module.transcriptionStderr = ""
 	persistTranscriptionQueue()
 	local task
-	task = hs.task.new(
-		config.transcriberPath,
-		function(exitCode, stdout, stderr)
-			if module.transcriptionTask ~= task then
-				return
-			end
-			handleTranscriptionOutput(stdout, stderr)
-			local outputPath = module.transcriptionOutputPath
-				or transcriptOutputPath(sourcePath)
-			local taskStderr = module.transcriptionStderr
-			module.transcriptionTask = nil
-			module.transcriptionPath = nil
-			module.transcriptionPhase = nil
-			module.transcriptionOutputBuffer = nil
-			module.transcriptionOutputPath = nil
-			module.transcriptionStderr = nil
-			persistTranscriptionQueue()
-			if exitCode == 0 then
-				notifyStatus("Transcript saved: " .. fileName(outputPath))
-			else
-				local message = transcriptionError(taskStderr)
-				logger:e(message)
-				notifyFailure("Transcription failed: " .. message)
-			end
-			updateMenuBar()
-			startNextTranscription()
-		end,
-		function(_, stdout, stderr)
-			if module.transcriptionTask ~= task then
-				return false
-			end
-			handleTranscriptionOutput(stdout, stderr)
-			return true
-		end,
-		{ "--meeting", "--progress-json", sourcePath }
-	)
+	task = hs.task.new(config.transcriberPath, function(exitCode, stdout, stderr)
+		if module.transcriptionTask ~= task then
+			return
+		end
+		handleTranscriptionOutput(stdout, stderr)
+		local outputPath = module.transcriptionOutputPath or transcriptOutputPath(sourcePath)
+		local taskStderr = module.transcriptionStderr
+		module.transcriptionTask = nil
+		module.transcriptionPath = nil
+		module.transcriptionPhase = nil
+		module.transcriptionOutputBuffer = nil
+		module.transcriptionOutputPath = nil
+		module.transcriptionStderr = nil
+		persistTranscriptionQueue()
+		if exitCode == 0 then
+			notifyStatus("Transcript saved: " .. fileName(outputPath))
+		else
+			local message = transcriptionError(taskStderr)
+			logger:e(message)
+			notifyFailure("Transcription failed: " .. message)
+		end
+		updateMenuBar()
+		startNextTranscription()
+	end, function(_, stdout, stderr)
+		if module.transcriptionTask ~= task then
+			return false
+		end
+		handleTranscriptionOutput(stdout, stderr)
+		return true
+	end, { "--meeting", "--progress-json", sourcePath })
 	module.transcriptionTask = task
 	updateMenuBar()
 	if not task or not task:start() then
@@ -1069,8 +1049,8 @@ local function completeRestoredRecording(requestID)
 	if recording.status == "finished" then
 		enqueueTranscription(recording.path)
 	elseif recording.status == "error" then
-		local message = type(recording.message) == "string" and recording.message ~= ""
-			and recording.message or "Recording failed"
+		local message = type(recording.message) == "string" and recording.message ~= "" and recording.message
+			or "Recording failed"
 		logger:e(message)
 		notifyFailure(message)
 	else
@@ -1309,7 +1289,8 @@ local function queryCalendar(detectedAt, callback)
 
 		local message = payload.message
 		if payload.status == "denied" then
-			message = "Calendar access is denied. Enable Calendar Event Query in System Settings > Privacy & Security > Calendars."
+			message =
+				"Calendar access is denied. Enable Calendar Event Query in System Settings > Privacy & Security > Calendars."
 		elseif type(message) ~= "string" or message == "" then
 			message = "Calendar lookup failed."
 		end
@@ -1625,7 +1606,10 @@ startRecording = function(sessionType, event, meetingURL)
 				return
 			end
 			local message = taskStderr:match("([^\n]+)")
-				or (taskExitCode ~= 0 and "Could not launch Meeting Recorder." or "Meeting Recorder returned no final status.")
+				or (
+					taskExitCode ~= 0 and "Could not launch Meeting Recorder."
+					or "Meeting Recorder returned no final status."
+				)
 			finalPayload = { status = "error", message = message }
 			completeTask()
 		end)
@@ -1683,7 +1667,8 @@ local function meetingPromptScreen(source)
 end
 
 local function showMeetingPrompt(source, key, generation, event, fallbackReason, detectedAt, meetingURL)
-	if not module.meetingActive
+	if
+		not module.meetingActive
 		or module.meetingSource ~= source
 		or module.meetingCandidateKey ~= key
 		or module.meetingGeneration ~= generation
@@ -1743,7 +1728,10 @@ local function showMeetingPrompt(source, key, generation, event, fallbackReason,
 end
 
 requestMeetingPrompt = function(source, key, generation)
-	if module.task or module.manualStartPending or module.handledGeneration == generation
+	if
+		module.task
+		or module.manualStartPending
+		or module.handledGeneration == generation
 		or (module.pendingPrompt and module.pendingPrompt.generation == generation)
 	then
 		return
@@ -1853,9 +1841,7 @@ recordingMenu = function()
 		if #menu > 0 then
 			table.insert(menu, { title = "-" })
 		end
-		local transcriptionStatus = "Transcription: "
-			.. tostring(module.transcriptionProgress)
-			.. "%"
+		local transcriptionStatus = "Transcription: " .. tostring(module.transcriptionProgress) .. "%"
 		if module.transcriptionPhase == "preparing" then
 			transcriptionStatus = "Transcription: Preparing…"
 		elseif module.transcriptionPhase then
@@ -1905,7 +1891,8 @@ handleMeetingState = function(active, source, key, generation)
 			module.sessionMeetingGeneration = generation
 			cancelStopDelay()
 		end
-		if module.sessionType == "meeting"
+		if
+			module.sessionType == "meeting"
 			and module.task
 			and module.recordingBundleID
 			and browserBundleID
@@ -1914,7 +1901,11 @@ handleMeetingState = function(active, source, key, generation)
 			stopRecording("browser-switch")
 			return
 		end
-		if module.pendingPrompt and not module.pendingPrompt.manual and module.pendingPrompt.generation ~= generation then
+		if
+			module.pendingPrompt
+			and not module.pendingPrompt.manual
+			and module.pendingPrompt.generation ~= generation
+		then
 			dismissMeetingPrompt()
 		end
 		if not module.task then
@@ -2029,9 +2020,6 @@ module.applicationWatcher = hs.application.watcher.new(function(_, event)
 end)
 module.applicationWatcher:start()
 
-hs.distributednotifications.post(
-	"@refreshNotification@",
-	"org.hammerspoon.Hammerspoon"
-)
+hs.distributednotifications.post("@refreshNotification@", "org.hammerspoon.Hammerspoon")
 
 return module

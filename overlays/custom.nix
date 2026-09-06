@@ -48,9 +48,6 @@
     awscli-local = final.callPackage ../pkgs/cloud/awscli-local { };
     cf-tunnel = final.callPackage ../pkgs/cloud/cf-tunnel { };
 
-    audio-process-watcher = final.callPackage ../pkgs/darwin/audio-process-watcher { };
-    calendar-event-query = final.callPackage ../pkgs/darwin/calendar-event-query { };
-    meeting-recorder = final.callPackage ../pkgs/darwin/meeting-recorder { };
     icalPal = final.callPackage ../pkgs/darwin/icalPal { };
     macism = final.callPackage ../pkgs/darwin/macism { };
     macnotesapp = final.callPackage ../pkgs/darwin/macnotesapp { };

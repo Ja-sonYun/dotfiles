@@ -48,8 +48,8 @@
     "hash": "sha256-pYUmJYvjQWwywNPQPZ5dfO+4xdXY9lmznf/3UQfBDIw="
   },
   "claude-code": {
-    "version": "2.1.261",
-    "hash": "sha256-cdue6UMAYCh1lCNigG+/R8ocntZOLNWNKNcprUEGG9g="
+    "version": "2.1.263",
+    "hash": "sha256-ITlm4lOOgQOJq9uigDwYto1kK41ysHVYDYI70i3tVb8="
   },
   "knip": {
     "version": "6.34.0",

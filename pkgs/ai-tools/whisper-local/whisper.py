@@ -264,9 +264,7 @@ def extract_audio(source: Path, stream: AudioStream, destination: Path) -> None:
 
 def whisper_error(lines: list[str]) -> str:
     useful = [
-        line.strip()
-        for line in lines
-        if line.strip() and "progress =" not in line
+        line.strip() for line in lines if line.strip() and "progress =" not in line
     ]
     return useful[-1] if useful else "whisper-cli exited with an error"
 
@@ -367,10 +365,7 @@ def timestamp_ms(value: object) -> int | None:
         return None
     hours, minutes, seconds, fraction = match.groups()
     milliseconds = int(fraction[:3].ljust(3, "0"))
-    return (
-        ((int(hours) * 60 + int(minutes)) * 60 + int(seconds)) * 1000
-        + milliseconds
-    )
+    return ((int(hours) * 60 + int(minutes)) * 60 + int(seconds)) * 1000 + milliseconds
 
 
 def segment_time(segment: dict[str, Any], name: str) -> int | None:
@@ -470,8 +465,7 @@ def merged_segments(results: list[TrackResult]) -> list[dict[str, Any]]:
         if segment["channel"] == "microphone":
             while (
                 system_start < len(system_segments)
-                and system_segments[system_start]["end_ms"]
-                < segment["start_ms"] - 1500
+                and system_segments[system_start]["end_ms"] < segment["start_ms"] - 1500
             ):
                 system_start += 1
             duplicate = False
@@ -500,9 +494,7 @@ def render_markdown(
     results: list[TrackResult],
     segments: list[dict[str, Any]],
 ) -> str:
-    speakers = ", ".join(
-        f"{result.speaker} = {result.channel}" for result in results
-    )
+    speakers = ", ".join(f"{result.speaker} = {result.channel}" for result in results)
     lines = [
         "# Transcript",
         "",
@@ -577,9 +569,9 @@ def write_outputs(
     payload = {
         "schema_version": 1,
         "source_file": source.name,
-        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace(
-            "+00:00", "Z"
-        ),
+        "created_at": datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z"),
         "engine": {
             "name": "whisper.cpp",
             "model": "large-v3",

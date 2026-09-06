@@ -85,7 +85,9 @@ def override_instructions(
         return line
 
     result["instructions"] = instructions
-    return json.dumps(message, ensure_ascii=False, separators=(",", ":")).encode() + b"\n"
+    return (
+        json.dumps(message, ensure_ascii=False, separators=(",", ":")).encode() + b"\n"
+    )
 
 
 def forward_responses(

@@ -29,7 +29,6 @@ in
   imports = [
     ./scripts/mute-microphone-on-lock/module.nix
     ./scripts/application-input-sources/module.nix
-    ./scripts/meeting-recorder/module.nix
   ];
 
   options.services.hammerspoon = {

@@ -8,10 +8,14 @@
 {
   imports =
     lib.optionals (hasTag "gui") [
+      ./activity-history
       ./code-signing
       ./hammerspoon
       ./yabai
       ./skhd
+    ]
+    ++ lib.optionals (hasTag "meeting") [
+      ./meeting-recorder
     ]
     ++ lib.optionals (hasTag "server") [
       ./sharing.nix

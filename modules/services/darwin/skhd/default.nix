@@ -18,9 +18,15 @@ in
       );
     }
     (lib.mkIf cfg.enable {
-      launchd.user.agents.skhd.serviceConfig = {
-        StandardOutPath = "/tmp/skhd.out.log";
-        StandardErrorPath = "/tmp/skhd.err.log";
+      launchd.user.agents.skhd = {
+        startupGuard = {
+          enable = true;
+          readableFileFlags = [ "-c" ];
+        };
+        serviceConfig = {
+          StandardOutPath = "/tmp/skhd.out.log";
+          StandardErrorPath = "/tmp/skhd.err.log";
+        };
       };
     })
   ];

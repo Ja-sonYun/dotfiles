@@ -29,9 +29,16 @@ in
 
       services.yabai.package = signedYabaiPackage;
       environment.etc."sudoers.d/yabai".source = lib.mkForce yabaiSaSudoers;
-      launchd.user.agents.yabai.serviceConfig = {
-        StandardOutPath = "/tmp/yabai.out.log";
-        StandardErrorPath = "/tmp/yabai.err.log";
+      launchd.user.agents.yabai = {
+        startupGuard = {
+          enable = true;
+          extraExecutables = [ signedYabaiPath ];
+          readableFileFlags = [ "-c" ];
+        };
+        serviceConfig = {
+          StandardOutPath = "/tmp/yabai.out.log";
+          StandardErrorPath = "/tmp/yabai.err.log";
+        };
       };
     })
   ];

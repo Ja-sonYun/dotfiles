@@ -45,12 +45,12 @@ class _MergeConfigTest(unittest.TestCase):
                 "# keep\n"
                 "[features]\nuser_only = true\n"
                 "[tui]\nuser_only = true\n"
-                "[permissions.user]\nextends = \":read-only\"\n"
+                '[permissions.user]\nextends = ":read-only"\n'
                 "[permissions.managed]\nuser_only = true\n"
-                "[mcp_servers.user]\nurl = \"https://user.test\"\n"
+                '[mcp_servers.user]\nurl = "https://user.test"\n'
                 "[mcp_servers.shared]\nuser_only = true\n"
                 "[model_providers.shared]\nuser_only = true\n"
-                "[[hooks.UserPromptSubmit]]\nmatcher = \"user\"\n"
+                '[[hooks.UserPromptSubmit]]\nmatcher = "user"\n'
                 "[[hooks.UserPromptSubmit.hooks]]\n"
                 'type = "command"\ncommand = "user"\n'
             )
@@ -263,16 +263,13 @@ class _MergeConfigTest(unittest.TestCase):
             target = root / "config.toml"
             fragment = root / "fragment.toml"
             target.write_text(
-                'model = "app"\n'
-                "[features] # nix-generated\nmemories = true\n"
+                'model = "app"\n[features] # nix-generated\nmemories = true\n'
             )
             self._write_fragment(
                 fragment,
                 {
                     "model_providers": {
-                        "missing": {
-                            "base_url": {"_secret": str(root / "missing")}
-                        }
+                        "missing": {"base_url": {"_secret": str(root / "missing")}}
                     }
                 },
             )

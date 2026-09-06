@@ -63,6 +63,11 @@ let
             ];
           };
           prettier.enable = true;
+          stylua = {
+            enable = true;
+            excludes = [ "^modules/services/darwin/hammerspoon/init\\.lua$" ];
+          };
+          ruff-format.enable = true;
           taplo.enable = true;
         };
       };

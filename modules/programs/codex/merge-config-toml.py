@@ -182,9 +182,7 @@ def main() -> None:
     ):
         return
 
-    document = (
-        tomlkit.parse(target_text) if target_text.strip() else tomlkit.document()
-    )
+    document = tomlkit.parse(target_text) if target_text.strip() else tomlkit.document()
     fragment = tomlkit.parse(fragment_text)
     _resolve_secrets(fragment)
     _add_hook_state(fragment, target)

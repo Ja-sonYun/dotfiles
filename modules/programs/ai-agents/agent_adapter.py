@@ -204,9 +204,7 @@ def read_agent(
 
     permission_mode = string_field(data, "permissionMode", path)
     if permission_mode not in (None, "default", "plan"):
-        raise ValueError(
-            f"Unsupported permissionMode {permission_mode!r} in {path}"
-        )
+        raise ValueError(f"Unsupported permissionMode {permission_mode!r} in {path}")
 
     model = string_field(data, "model", path)
     if model not in (None, "inherit", *MODEL_TIERS):
