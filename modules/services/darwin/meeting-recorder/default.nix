@@ -133,6 +133,7 @@ in
       enable = lib.mkDefault true;
       apps.start-meeting-recording = {
         displayName = "Start Meeting Recording";
+        icon = ./misc/icon.svg;
         command = [
           "/usr/bin/open"
           "-g"

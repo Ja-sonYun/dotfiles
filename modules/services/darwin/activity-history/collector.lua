@@ -442,15 +442,7 @@ local function locationIdentity(value)
 end
 
 local function allowsLocation(current)
-	if not current or not supportedApps[current.app_id] then
-		return false
-	end
-	for _, bundle in ipairs(cfg.capture.allowedApps) do
-		if bundle == current.app_id then
-			return true
-		end
-	end
-	return false
+	return current ~= nil and supportedApps[current.app_id] ~= nil
 end
 
 local function capture(reason)

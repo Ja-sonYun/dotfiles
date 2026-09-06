@@ -69,18 +69,6 @@ in
       description = "Application bundle IDs excluded from recording.";
     };
     capture = {
-      allowedApps = lib.mkOption {
-        type = lib.types.listOf (
-          lib.types.enum [
-            "com.apple.Safari"
-            "com.google.Chrome"
-            "notion.id"
-            "com.tinyspeck.slackmacgap"
-          ]
-        );
-        default = [ ];
-        description = "Supported application bundle IDs allowed for location capture; empty disables location capture.";
-      };
       intervalSeconds = lib.mkOption {
         type = lib.types.ints.positive;
         default = 30;

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="background" x1="72" y1="48" x2="440" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#419AF4"/>
+      <stop offset="1" stop-color="#1756BD"/>
+    </linearGradient>
+    <linearGradient id="microphone" x1="224" y1="128" x2="284" y2="304" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DEEEFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#background)"/>
+  <rect x="25" y="25" width="462" height="462" rx="107" stroke="#FFFFFF" stroke-opacity=".18" stroke-width="2"/>
+  <rect x="210" y="124" width="92" height="184" rx="46" fill="url(#microphone)"/>
+  <path d="M168 242V264C168 312.6 207.4 352 256 352C304.6 352 344 312.6 344 264V242"
+        stroke="#FFFFFF" stroke-width="22" stroke-linecap="round"/>
+  <path d="M256 354V402M210 404H302" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="374" cy="136" r="40" fill="#FFFFFF"/>
+  <circle cx="374" cy="136" r="30" fill="#F04452"/>
+</svg>

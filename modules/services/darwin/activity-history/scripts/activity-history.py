@@ -40,7 +40,6 @@ class Model(BaseModel):
 
 class CaptureSettings(Model):
     model_config = ConfigDict(alias_generator=to_camel)
-    allowed_apps: list[str]
     interval_seconds: PositiveInt
     debounce_milliseconds: PositiveInt
     on_context_change: bool

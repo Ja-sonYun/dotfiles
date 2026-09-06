@@ -4,12 +4,6 @@ _: {
     startPaused = false;
     excludedApps = [ ];
     capture = {
-      allowedApps = [
-        "com.apple.Safari"
-        "notion.id"
-        "com.tinyspeck.slackmacgap"
-        "com.google.Chrome"
-      ];
       intervalSeconds = 30;
       debounceMilliseconds = 700;
       onContextChange = true;
