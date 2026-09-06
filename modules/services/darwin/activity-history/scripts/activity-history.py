@@ -631,7 +631,9 @@ def run() -> None:
         prog="activity-history", description="Local application and terminal history"
     )
     parser.add_argument("--config", required=True, type=Path)
-    commands = parser.add_subparsers(dest="action", required=True)
+    commands = parser.add_subparsers(
+        dest="action", required=True, metavar="{status,start,pause,today,show}"
+    )
     commands.add_parser("status")
     commands.add_parser("start")
     commands.add_parser("pause")
