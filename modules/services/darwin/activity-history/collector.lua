@@ -6,15 +6,26 @@ local stateFile = cfg.stateDirectory .. "/state.json"
 local session = hs.caffeinate.sessionProperties() or {}
 local recorder = {
 	running = true,
+	initialized = false,
 	paused = cfg.startPaused,
 	locked = session.CGSSessionScreenIsLocked == true,
 	sleeping = false,
 	electron = {},
+	applications = {},
+	windows = {},
 	runID = hs.host.uuid(),
 	pid = assert(hs.application.get("org.hammerspoon.Hammerspoon")):pid(),
 }
 local activityPath, activityDay, context, lastLocation, lastState, state
 local schedule, syncContext, restoreAccessibility
+
+local function cancelLocation()
+	if recorder.cancelLocation then
+		local cancel = recorder.cancelLocation
+		recorder.cancelLocation = nil
+		cancel()
+	end
+end
 
 local function timestamp(epoch)
 	return os.date("!%Y-%m-%dT%H:%M:%S", math.floor(epoch)) .. string.format(".%03dZ", math.floor((epoch % 1) * 1000))
@@ -93,6 +104,7 @@ local function safe(fn)
 		if not ok then
 			recorder.paused = true
 			recorder.error = tostring(err)
+			cancelLocation()
 			if recorder.pending then
 				recorder.pending:stop()
 			end
@@ -122,18 +134,19 @@ end
 
 local function foreground()
 	local app = hs.application.frontmostApplication()
-	if not app then
+	local pid = app and app:pid()
+	if not pid or pid <= 0 then
 		return nil
 	end
 	local window = hs.window.frontmostWindow()
-	if window and (not window:application() or window:application():pid() ~= app:pid()) then
+	if window and (not window:application() or window:application():pid() ~= pid) then
 		window = nil
 	end
 	return {
 		app = app,
 		app_id = app:bundleID() or app:name(),
 		app_name = app:name(),
-		pid = app:pid(),
+		pid = pid,
 		window_id = window and window:id() or 0,
 		window_title = window and window:title() or "",
 	}
@@ -141,6 +154,19 @@ end
 
 local function contextKey(current)
 	return current and table.concat({ current.app_id, current.pid, current.window_id }, ":")
+end
+
+local function recordIdle()
+	local seconds = hs.host.idleTime()
+	local idle = seconds >= cfg.capture.idleThresholdSeconds
+	if recorder.idle ~= idle then
+		emit("idle_state", {
+			state = idle and "idle" or "active",
+			idle_seconds = seconds,
+			threshold_seconds = cfg.capture.idleThresholdSeconds,
+		})
+		recorder.idle = idle
+	end
 end
 
 local function saveState(reason, force)
@@ -181,6 +207,8 @@ local function saveState(reason, force)
 		lastState = identity
 	end
 	if not allowed then
+		recorder.idle = nil
+		cancelLocation()
 		if recorder.pending then
 			recorder.pending:stop()
 		end
@@ -201,6 +229,7 @@ syncContext = function(reason, force)
 		return nil
 	end
 	if not context or context.key ~= contextKey(current) or context.day ~= os.date("%Y-%m-%d") then
+		cancelLocation()
 		context = {
 			key = contextKey(current),
 			id = hs.host.uuid(),
@@ -217,9 +246,11 @@ syncContext = function(reason, force)
 			window_title = current.window_title,
 		})
 	elseif context.title ~= current.window_title then
+		cancelLocation()
 		context.title = current.window_title
 		emit("context_update", { context_id = context.id, window_title = current.window_title })
 	end
+	recordIdle()
 	return current
 end
 
@@ -252,6 +283,9 @@ local supportedApps = {
 	["com.google.Chrome"] = "chrome",
 	["notion.id"] = "notion",
 	["com.tinyspeck.slackmacgap"] = "slack",
+	["com.openai.codex"] = "codex",
+	["com.anthropic.claudefordesktop"] = "claude",
+	["md.obsidian"] = "obsidian",
 }
 local extractors = {}
 for _, kind in pairs(supportedApps) do
@@ -455,24 +489,37 @@ local function capture(reason)
 		return
 	end
 	local key, id = context.key, context.id
-	local result = extract(current)
-	if key ~= contextKey(foreground()) then
-		return
+	local function record(result)
+		local latest = saveState(reason)
+		if
+			not latest
+			or not context
+			or context.id ~= id
+			or key ~= contextKey(latest)
+			or latest.window_title ~= current.window_title
+		then
+			return
+		end
+		local identity =
+			locationIdentity({ result.location, result.result, result.partial, result.missing_fields or {} })
+		if identity == lastLocation then
+			return
+		end
+		result.context_id = id
+		result.trigger = reason
+		emit("location_snapshot", result)
+		lastLocation = identity
 	end
-	if not saveState(reason) then
-		return
+	if current.app_id == "md.obsidian" then
+		cancelLocation()
+		recorder.cancelLocation = extractors.obsidian.start(current.app, safe(record))
+	else
+		record(extract(current))
 	end
-	local identity = locationIdentity({ result.location, result.result, result.partial, result.missing_fields or {} })
-	if identity == lastLocation then
-		return
-	end
-	result.context_id = id
-	result.trigger = reason
-	emit("location_snapshot", result)
-	lastLocation = identity
 end
 
 schedule = function(reason, delay)
+	cancelLocation()
 	if recorder.pending then
 		recorder.pending:stop()
 	end
@@ -502,9 +549,107 @@ local function changed()
 	end
 end
 
+local function rememberApplication(app)
+	local pid = app and app:pid()
+	if not pid or pid <= 0 then
+		return nil
+	end
+	local name = app:name() or ""
+	local fields = { app_id = app:bundleID() or name, app_name = name, pid = pid }
+	recorder.applications[pid] = fields
+	return fields
+end
+
+local function recordLifecycle(kind, metadata)
+	if not recorder.initialized or not saveState(kind) or isExcluded(metadata.app_id) then
+		return
+	end
+	local fields = {}
+	for key, value in pairs(metadata) do
+		fields[key] = value
+	end
+	emit(kind, fields)
+end
+
+local function applicationChanged(name, event, app)
+	local pid = app and app:pid()
+	if pid and pid > 0 then
+		if event == hs.application.watcher.terminated then
+			local fields = recorder.applications[pid] or { app_id = "", app_name = name or "", pid = pid }
+			recordLifecycle("app_terminated", fields)
+			recorder.applications[pid] = nil
+		else
+			local fields = rememberApplication(app)
+			if fields and event == hs.application.watcher.launched then
+				recordLifecycle("app_launched", fields)
+			end
+		end
+	end
+	changed()
+end
+
+local function rememberWindow(window)
+	local id = window:id()
+	local app = rememberApplication(window:application())
+	if not id or id <= 0 or not app then
+		return nil
+	end
+	local entry = recorder.windows[window]
+	if not entry then
+		entry = { minimized = window:isMinimized(), fullscreen = window:isFullScreen() }
+		recorder.windows[window] = entry
+	end
+	entry.fields = {
+		app_id = app.app_id,
+		app_name = app.app_name,
+		pid = app.pid,
+		window_id = id,
+		window_title = window:title() or "",
+	}
+	return entry
+end
+
+local function windowChanged(window, _, event)
+	local filter = hs.window.filter
+	local previous = recorder.windows[window]
+	if event == filter.windowDestroyed then
+		if previous then
+			recordLifecycle("window_destroyed", previous.fields)
+		end
+		recorder.windows[window] = nil
+		return
+	end
+	local entry = rememberWindow(window)
+	if not entry then
+		return
+	end
+	local kind
+	if event == filter.windowCreated and not previous then
+		kind = "window_created"
+	elseif event == filter.windowMinimized or event == filter.windowUnminimized then
+		local minimized = event == filter.windowMinimized
+		if previous and entry.minimized ~= minimized then
+			kind = minimized and "window_minimized" or "window_unminimized"
+		end
+		entry.minimized = minimized
+	elseif event == filter.windowFullscreened or event == filter.windowUnfullscreened then
+		local fullscreen = event == filter.windowFullscreened
+		if previous and entry.fullscreen ~= fullscreen then
+			kind = fullscreen and "window_fullscreened" or "window_unfullscreened"
+		end
+		entry.fullscreen = fullscreen
+	end
+	if kind then
+		recordLifecycle(kind, entry.fields)
+	end
+end
+
 function recorder.control(action)
 	assert(recorder.running, "Activity history is stopped; reload Hammerspoon")
 	assert(action == "start" or action == "pause", "Invalid activity history action")
+	if action == "start" then
+		assert(recorder.initialized, "Activity history initialization failed; reload Hammerspoon")
+	end
 	safe(function()
 		recorder.paused = action == "pause"
 		recorder.error = nil
@@ -519,12 +664,29 @@ end
 
 safe(function()
 	prepare()
-	recorder.appWatcher = hs.application.watcher.new(safe(changed)):start()
+	for _, app in ipairs(hs.application.runningApplications()) do
+		rememberApplication(app)
+	end
+	recorder.appWatcher = hs.application.watcher.new(safe(applicationChanged)):start()
 	recorder.windowFilter = hs.window.filter.new()
 	recorder.windowFilter:subscribe(
 		{ hs.window.filter.windowFocused, hs.window.filter.windowTitleChanged },
 		safe(changed)
 	)
+	local filter = hs.window.filter
+	recorder.lifecycleFilter = filter.new(false):setDefaultFilter({ allowRoles = "AXStandardWindow" })
+	recorder.lifecycleFilter:subscribe({
+		filter.windowCreated,
+		filter.windowDestroyed,
+		filter.windowTitleChanged,
+		filter.windowMinimized,
+		filter.windowUnminimized,
+		filter.windowFullscreened,
+		filter.windowUnfullscreened,
+	}, safe(windowChanged))
+	for _, window in ipairs(recorder.lifecycleFilter:getWindows()) do
+		rememberWindow(window)
+	end
 	local types, events = hs.eventtap.event.types, {}
 	if cfg.capture.onClick then
 		events = { types.leftMouseUp, types.rightMouseUp, types.otherMouseUp }
@@ -594,11 +756,13 @@ safe(function()
 	)
 	syncContext("startup", true)
 	schedule("startup")
+	recorder.initialized = true
 end)()
 
 local previousShutdown = hs.shutdownCallback
 hs.shutdownCallback = function()
 	recorder.running = false
+	cancelLocation()
 	if recorder.pending then
 		recorder.pending:stop()
 	end
@@ -613,6 +777,9 @@ hs.shutdownCallback = function()
 	end
 	if recorder.windowFilter then
 		recorder.windowFilter:unsubscribeAll()
+	end
+	if recorder.lifecycleFilter then
+		recorder.lifecycleFilter:unsubscribeAll()
 	end
 	if recorder.powerWatcher then
 		recorder.powerWatcher:stop()

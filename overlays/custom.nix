@@ -42,6 +42,7 @@
 
     git-extend = final.callPackage ../pkgs/cli-tools/git-extend { };
     mermaid-ascii = final.callPackage ../pkgs/cli-tools/mermaid-ascii { };
+    state-get = final.callPackage ../pkgs/state-get { };
     tmux-menu = final.callPackage ../pkgs/cli-tools/tmux-menu { };
 
     awsdac = final.callPackage ../pkgs/cloud/awsdac { };

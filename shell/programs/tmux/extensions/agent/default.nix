@@ -10,15 +10,77 @@ let
   sharedRootBindings = import ../../shared-root.nix;
   agentFg = "#{?#{@agent_fg},#{@agent_fg},#[fg=color244]}";
   agentBg = "#{?#{@agent_bg},#{@agent_bg},#[bg=color244]}";
-  agentMenu = ''
-    tmux display-menu -T ' agent ' \
-      claude c "new-window 'direnv exec . claude'" \
-      "claude lmp" l "new-window 'direnv exec . claude-lmp'" \
-      codex x "new-window 'direnv exec . codex'" \
-      "codex lmp" X "new-window 'direnv exec . codex-lmp'" \
-      pi p "new-window 'direnv exec . pi'" \
-      "claude chrome" b "new-window 'direnv exec . claude --chrome'"
-  '';
+  agents = [
+    {
+      command = "agent";
+      key = "c";
+    }
+    {
+      command = "codex";
+      key = "x";
+    }
+    {
+      command = config.programs.codex.defaultProfileName;
+      key = "1";
+      kind = "codex";
+    }
+    {
+      command = "codex-2";
+      key = "2";
+      kind = "codex";
+    }
+    {
+      command = "codex-work";
+      key = "w";
+      kind = "codex";
+    }
+    {
+      command = "claude";
+      key = "a";
+    }
+    {
+      command = "pi";
+      key = "p";
+    }
+    {
+      command = "claude";
+      args = [ "--chrome" ];
+      label = "claude chrome";
+      key = "b";
+    }
+  ];
+  directAgents = lib.filter (agent: agent.command != "agent") agents;
+  agentKinds = lib.unique (map (agent: agent.kind or agent.command) directAgents);
+  agentDisplayNames = builtins.listToAttrs (
+    map (agent: lib.nameValuePair agent.command (agent.displayName or agent.command)) directAgents
+  );
+  agentCommandMap = lib.concatStringsSep " " (
+    lib.unique (map (agent: "${agent.command}=${agent.kind or agent.command}") directAgents)
+    ++ map (kind: "${kind}-*=${kind}") agentKinds
+  );
+  agentMenu =
+    "tmux display-menu -T ' agent ' "
+    + lib.escapeShellArgs (
+      lib.concatMap (
+        agent:
+        let
+          command = lib.escapeShellArgs (
+            [
+              "direnv"
+              "exec"
+              "."
+              agent.command
+            ]
+            ++ (agent.args or [ ])
+          );
+        in
+        [
+          (agent.label or agent.command)
+          agent.key
+          "new-window ${lib.escapeShellArg command}"
+        ]
+      ) agents
+    );
 in
 {
   programs.tmux-menu = {
@@ -28,7 +90,7 @@ in
         menu = {
           name = "agent";
           shortcut = "a";
-          command = "_gen-close-hook agent && direnv exec . codex";
+          command = "_gen-close-hook agent && direnv exec . agent";
           session = true;
           sessionName = "agent";
           keyTable = "popup-locked-root";
@@ -59,6 +121,16 @@ in
 
   programs.tmux = {
     agentStatusScript = "${scripts}/status";
+
+    extraConfig = ''
+      set-option -g @agent_command_map ${lib.escapeShellArg agentCommandMap}
+      ${lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (
+          command: displayName:
+          "set-option -g ${lib.escapeShellArg "@agent_display_${command}"} ${lib.escapeShellArg displayName}"
+        ) agentDisplayNames
+      )}
+    '';
 
     hooks = {
       agentSessionCountsNewWindow = {
@@ -201,7 +273,7 @@ in
             let
               highlightColor = "magenta";
             in
-            "${agentBg}#[fg=${highlightColor}]▌#[fg=black]#I:#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#{@agent_name}:#{@agent_state}${agentFg}#[fg=${highlightColor}]▐#[default]";
+            "${agentBg}#[fg=${highlightColor}]▌#[fg=black]#I:#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#{@agent_display_name}:#{@agent_state}${agentFg}#[fg=${highlightColor}]▐#[default]";
         };
       };
     };

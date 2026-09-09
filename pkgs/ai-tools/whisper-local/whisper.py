@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import shutil
@@ -28,6 +29,7 @@ VAD_MODEL = "@VAD_MODEL@"
 STALE_WORK_DIRECTORY_SECONDS = 24 * 60 * 60
 WORK_DIRECTORY_PATTERN = re.compile(r"^whisper-(\d+)-\d+$")
 TERMINATION_SIGNALS = {signal.SIGINT, signal.SIGTERM}
+ARCHIVE_TAG = "aac-mono-32k-v1"
 
 _active_process: subprocess.Popen[str] | None = None
 _process_starting = False
@@ -157,8 +159,20 @@ def parse_arguments() -> argparse.Namespace:
         help="Output base path without .json or .md",
     )
     parser.add_argument("--language", default="auto", help="Whisper language code")
+    parser.add_argument(
+        "--archive-audio",
+        action="store_true",
+        help="After meeting transcription, replace input with two mono 32 kbps AAC tracks",
+    )
     parser.add_argument("--progress-json", action="store_true", help=argparse.SUPPRESS)
-    return parser.parse_args()
+    arguments = parser.parse_args()
+    if arguments.archive_audio and (
+        not arguments.meeting or arguments.output is not None
+    ):
+        parser.error(
+            "--archive-audio requires --meeting and the default output location"
+        )
+    return arguments
 
 
 def emit_event(enabled: bool, status: str, **values: object) -> None:
@@ -704,6 +718,217 @@ def transcribe(
     return [microphone, system]
 
 
+def run_archive_command(command: list[str]) -> str:
+    global _active_process, _pending_termination_signal, _process_starting
+
+    process: subprocess.Popen[str] | None = None
+    try:
+        _process_starting = True
+        try:
+            process = subprocess.Popen(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            )
+            _active_process = process
+        finally:
+            _process_starting = False
+        pending_signal = _pending_termination_signal
+        _pending_termination_signal = None
+        if pending_signal is not None:
+            handle_termination(pending_signal, None)
+        stdout, stderr = process.communicate()
+        if process.returncode != 0:
+            raise TranscriptionError(stderr.strip() or "Audio archive command failed")
+        return stdout
+    finally:
+        _process_starting = False
+        _pending_termination_signal = None
+        if process is not None:
+            stop_process(process)
+            if _active_process is process:
+                _active_process = None
+
+
+def inspect_archive_audio(source: Path) -> tuple[list[dict[str, Any]], bool]:
+    if source.suffix.lower() != ".mov":
+        raise TranscriptionError("Audio archive requires a MOV recording")
+    payload = json.loads(
+        run_archive_command(
+            [
+                FFPROBE,
+                "-v",
+                "error",
+                "-show_entries",
+                "stream=index,codec_type,codec_name,channels,sample_rate,start_time,duration:"
+                "format=format_name:format_tags=major_brand,meeting_recorder_archive",
+                "-of",
+                "json",
+                str(source),
+            ]
+        )
+    )
+    container = payload.get("format", {})
+    if (
+        "mov" not in container.get("format_name", "").split(",")
+        or container.get("tags", {}).get("major_brand", "").strip() != "qt"
+    ):
+        raise TranscriptionError("Audio archive requires a QuickTime MOV container")
+    streams = payload.get("streams", [])
+    if len(streams) != 2 or any(
+        stream.get("codec_type") != "audio" for stream in streams
+    ):
+        raise TranscriptionError("Audio archive requires exactly two audio tracks")
+    for stream in streams:
+        for field in ("start_time", "duration"):
+            try:
+                value = float(stream[field])
+            except (KeyError, TypeError, ValueError) as error:
+                raise TranscriptionError(f"Missing audio {field}") from error
+            if not math.isfinite(value) or (field == "duration" and value <= 0):
+                raise TranscriptionError(f"Invalid audio {field}")
+            stream[field] = value
+    archived = (
+        payload.get("format", {}).get("tags", {}).get("meeting_recorder_archive")
+        == ARCHIVE_TAG
+    )
+    return streams, archived
+
+
+def require_archive_format(streams: list[dict[str, Any]]) -> None:
+    if any(
+        stream.get("codec_name") != "aac"
+        or stream.get("channels") != 1
+        or stream.get("sample_rate") != "48000"
+        for stream in streams
+    ):
+        raise TranscriptionError("Archive must contain two mono 48 kHz AAC tracks")
+
+
+def archive_audio(source: Path, work_directory: Path) -> None:
+    original, archived = inspect_archive_audio(source)
+    if archived:
+        require_archive_format(original)
+        return
+    temporary = work_directory / "archive.mov"
+    run_archive_command(
+        [
+            FFMPEG,
+            "-nostdin",
+            "-v",
+            "error",
+            "-n",
+            "-copyts",
+            "-start_at_zero",
+            "-i",
+            str(source),
+            "-map",
+            "0:a:0",
+            "-map",
+            "0:a:1",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "32k",
+            "-ac:a",
+            "1",
+            "-ar:a",
+            "48000",
+            "-avoid_negative_ts",
+            "disabled",
+            "-use_editlist",
+            "1",
+            "-movflags",
+            "+use_metadata_tags",
+            "-metadata",
+            f"meeting_recorder_archive={ARCHIVE_TAG}",
+            "-f",
+            "mov",
+            str(temporary),
+        ]
+    )
+    compressed, tagged = inspect_archive_audio(temporary)
+    require_archive_format(compressed)
+    if not tagged:
+        raise TranscriptionError("Archive completion tag was not preserved")
+    for before, after in zip(original, compressed, strict=True):
+        if abs(before["duration"] - after["duration"]) > 0.05:
+            raise TranscriptionError("Archive changed an audio track duration")
+    original_offset = original[1]["start_time"] - original[0]["start_time"]
+    compressed_offset = compressed[1]["start_time"] - compressed[0]["start_time"]
+    if abs(original_offset - compressed_offset) > 0.05:
+        raise TranscriptionError("Archive changed the relative audio track timing")
+    run_archive_command(
+        [
+            FFMPEG,
+            "-nostdin",
+            "-v",
+            "error",
+            "-xerror",
+            "-i",
+            str(temporary),
+            "-map",
+            "0:a:0",
+            "-map",
+            "0:a:1",
+            "-f",
+            "null",
+            "-",
+        ]
+    )
+    if temporary.stat().st_size < source.stat().st_size:
+        temporary.chmod(source.stat().st_mode & 0o777)
+        os.replace(temporary, source)
+
+
+def reusable_meeting_outputs(
+    source: Path, json_path: Path, markdown_path: Path
+) -> bool:
+    try:
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+        markdown = markdown_path.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    tracks = payload.get("tracks")
+    segments = payload.get("segments")
+    if (
+        payload.get("schema_version") != 1
+        or payload.get("source_file") != source.name
+        or not isinstance(tracks, list)
+        or len(tracks) != 2
+        or not all(isinstance(track, dict) for track in tracks)
+        or not isinstance(segments, list)
+        or not all(isinstance(segment, dict) for segment in segments)
+        or not markdown.strip()
+    ):
+        return False
+    streams = probe_audio_streams(source)
+    if len(streams) != 2:
+        return False
+    expected = {
+        "system": ("Remote", streams[0].index),
+        "microphone": ("You", streams[1].index),
+    }
+    if any(not isinstance(track.get("channel"), str) for track in tracks):
+        return False
+    for segment in segments:
+        if (
+            not isinstance(segment.get("text"), str)
+            or not isinstance(segment.get("start_ms"), int)
+            or not isinstance(segment.get("end_ms"), int)
+            or segment["start_ms"] < 0
+            or segment["end_ms"] < segment["start_ms"]
+            or not isinstance(segment.get("channel"), str)
+            or segment["channel"] not in expected
+            or segment.get("speaker") != expected[segment["channel"]][0]
+        ):
+            return False
+    return {track.get("channel") for track in tracks} == set(expected) and all(
+        (track.get("speaker"), track.get("stream_index")) == expected[track["channel"]]
+        for track in tracks
+    )
+
+
 def main() -> int:
     install_signal_handlers()
     arguments = parse_arguments()
@@ -721,23 +946,34 @@ def main() -> int:
     try:
         work_directory.mkdir(parents=True)
         emit_event(arguments.progress_json, "progress", phase="preparing", progress=0)
-        results = transcribe(
-            source,
-            arguments.meeting,
-            arguments.language,
-            arguments.progress_json,
-            work_directory,
-        )
-        segments = merged_segments(results)
-        write_outputs(
-            source,
-            results,
-            segments,
-            json_path,
-            markdown_path,
-            work_directory,
-        )
+        if arguments.archive_audio:
+            inspect_archive_audio(source)
+        if not (
+            arguments.archive_audio
+            and reusable_meeting_outputs(source, json_path, markdown_path)
+        ):
+            results = transcribe(
+                source,
+                arguments.meeting,
+                arguments.language,
+                arguments.progress_json,
+                work_directory,
+            )
+            segments = merged_segments(results)
+            write_outputs(
+                source,
+                results,
+                segments,
+                json_path,
+                markdown_path,
+                work_directory,
+            )
         outputs_written = True
+        if arguments.archive_audio:
+            emit_event(
+                arguments.progress_json, "progress", phase="archiving", progress=0
+            )
+            archive_audio(source, work_directory)
         emit_event(
             arguments.progress_json,
             "finished",

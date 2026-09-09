@@ -97,6 +97,8 @@
 
   outputs =
     inputs:
-    (import ./flake/configurations.nix { inherit inputs; })
-    // (import ./flake/development.nix { inherit inputs; });
+    inputs.nixpkgs.lib.recursiveUpdate (
+      (import ./flake/configurations.nix { inherit inputs; })
+      // (import ./flake/development.nix { inherit inputs; })
+    ) (import ./vm { inherit inputs; });
 }

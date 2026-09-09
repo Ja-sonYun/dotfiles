@@ -6,6 +6,12 @@
 }:
 {
   nix.enable = true;
+  nix.gc = {
+    automatic = true;
+    options = "--delete-older-than 30d";
+  };
+  nix.optimise.automatic = true;
+
   nix.settings = {
     # enable flakes globally
     experimental-features = [
@@ -52,6 +58,13 @@
     package = nixpkgs-stable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.darwin.linux-builder;
     systems = [ "aarch64-linux" ];
     config = {
+      nix.gc = {
+        automatic = true;
+        dates = "weekly";
+        persistent = true;
+        options = "--delete-older-than 30d";
+      };
+
       virtualisation = {
         cores = 4;
         darwin-builder.memorySize = 8192;

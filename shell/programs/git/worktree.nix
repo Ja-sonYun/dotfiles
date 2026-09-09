@@ -15,31 +15,33 @@ let
     }
 
     main_worktree_path() {
-      local root
-      root="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
-      [ -n "$root" ] || err "could not find main worktree"
-      echo "$root"
-    }
-
-    repo_paths() {
-      local root parent base
-      root="$(main_worktree_path)"
-      parent="$(dirname "$root")"
-      base="$(basename "$root")"
-      echo "$parent" "$base"
+      local field
+      while IFS= read -r -d "" field; do
+        if [[ "$field" == "worktree "* ]]; then
+          printf '%s\n' "''${field#worktree }"
+          return 0
+        fi
+      done < <(git worktree list --porcelain -z)
+      err "could not find main worktree"
     }
 
     find_wt_by_branch() {
-      local br="$1"
-      git worktree list --porcelain | awk -v br="$br" '
-        $1=="worktree"{p=$2}
-        $1=="branch" && $2=="refs/heads/"br{print p; exit}
-      '
+      local br="$1" field path=""
+      while IFS= read -r -d "" field; do
+        if [[ "$field" == "worktree "* ]]; then
+          path="''${field#worktree }"
+        elif [[ "$field" == "branch refs/heads/$br" ]]; then
+          printf '%s\n' "$path"
+          return 0
+        fi
+      done < <(git worktree list --porcelain -z)
     }
 
     default_wt_path_for_branch() {
-      local br="$1"
-      read -r parent base < <(repo_paths)
+      local br="$1" root parent base
+      root="$(main_worktree_path)"
+      parent="$(dirname "$root")"
+      base="$(basename "$root")"
       echo "''${parent}/''${base}+$(safe "$br")"
     }
 

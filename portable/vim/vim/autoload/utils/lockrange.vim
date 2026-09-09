@@ -26,15 +26,23 @@ export class LockRangeContext
   def Lines(): list<string>
     return this.manager.GetLines(this.id)
   enddef
+
+  def Buffer(): number
+    return this.manager.buffer
+  enddef
 endclass
 
 class LockRangeManager
+  var buffer: number
+  var window: number
   var ranges: dict<dict<any>> = {}
   var suppress: bool = false
   var last_linecount: number = 0
   var last_cursor: list<number> = []
 
   def new()
+    this.buffer = bufnr('%')
+    this.window = win_getid()
   enddef
 
   def EnsureHighlight(): void
@@ -96,7 +104,7 @@ class LockRangeManager
   enddef
 
   def UpdateStatusForLock(id: string): void
-    if !has_key(this.ranges, id)
+    if !bufloaded(this.buffer) || !has_key(this.ranges, id)
       return
     endif
     var info = this.ranges[id]
@@ -109,7 +117,7 @@ class LockRangeManager
     endif
     var old_lnum = get(info, 'status_lnum', 0)
     var status = get(info, 'status', '')
-    var buf = bufnr('%')
+    var buf = this.buffer
     if old_lnum > 0 && old_lnum != start
       this.ClearStatusAt(buf, old_lnum)
       info['status_lnum'] = 0
@@ -146,18 +154,22 @@ class LockRangeManager
     return sha256(reltimestr(reltime()) .. string(rand()))
   enddef
 
-  def UpdateHighlight(start: number, end: number, match_id: number): number
-    if match_id != 0
-      matchdelete(match_id)
+  def DeleteHighlight(match_id: number): void
+    if match_id != 0 && !empty(getwininfo(this.window))
+      silent! matchdelete(match_id, this.window)
     endif
-    if start <= 0 || end < start
+  enddef
+
+  def UpdateHighlight(start: number, end: number, match_id: number): number
+    this.DeleteHighlight(match_id)
+    if start <= 0 || end < start || winbufnr(this.window) != this.buffer
       return 0
     endif
-    return matchaddpos('GptLockRange', this.BuildLockPositions(start, end))
+    return matchaddpos('GptLockRange', this.BuildLockPositions(start, end), 10, -1, {window: this.window})
   enddef
 
   def LastChangeLnum(): number
-    const changes = getchangelist(bufnr('%'))
+    const changes = getchangelist(this.buffer)
     if len(changes) == 0
       return 0
     endif
@@ -197,9 +209,9 @@ class LockRangeManager
   enddef
 
   def ClearAutocmd(): void
-    augroup GptSoftLock
-      autocmd! * <buffer>
-    augroup END
+    if bufexists(this.buffer)
+      execute 'autocmd! GptSoftLock * <buffer=' .. this.buffer .. '>'
+    endif
   enddef
 
   def Cleanup(): void
@@ -207,9 +219,10 @@ class LockRangeManager
     this.suppress = false
     this.last_linecount = 0
     this.last_cursor = []
-    var buf = bufnr('%')
-    this.ClearStatusAll(buf)
-    this.ClearStatusType(buf)
+    if bufloaded(this.buffer)
+      this.ClearStatusAll(this.buffer)
+      this.ClearStatusType(this.buffer)
+    endif
     this.ClearAutocmd()
   enddef
 
@@ -355,19 +368,21 @@ class LockRangeManager
       return
     endif
     var info = this.ranges[id]
-    var buf = bufnr('%')
-    this.ClearStatusAt(buf, get(info, 'status_lnum', 0))
-    const match_id = get(info, 'match_id', 0)
-    if match_id != 0
-      matchdelete(match_id)
+    var buf = this.buffer
+    if bufloaded(buf)
+      this.ClearStatusAt(buf, get(info, 'status_lnum', 0))
     endif
+    const match_id = get(info, 'match_id', 0)
+    this.DeleteHighlight(match_id)
     remove(this.ranges, id)
     if empty(this.ranges)
       this.Cleanup()
       return
     endif
-    this.ClearStatusType(buf)
-    this.last_linecount = line('$')
+    if bufloaded(buf)
+      this.ClearStatusType(buf)
+    endif
+    this.last_linecount = len(getbufline(buf, 1, '$'))
   enddef
 
   def UnlockAll(): void
@@ -376,9 +391,7 @@ class LockRangeManager
     endif
     for info in values(this.ranges)
       const match_id = get(info, 'match_id', 0)
-      if match_id != 0
-        matchdelete(match_id)
-      endif
+      this.DeleteHighlight(match_id)
     endfor
     this.Cleanup()
   enddef
@@ -400,6 +413,9 @@ class LockRangeManager
   enddef
 
   def ReplaceRange(id: string, lines: list<string>): void
+    if !bufloaded(this.buffer)
+      throw 'GPT target buffer is no longer loaded.'
+    endif
     if empty(this.ranges) || !has_key(this.ranges, id)
       return
     endif
@@ -411,11 +427,16 @@ class LockRangeManager
     endif
     const old_end = end
     this.suppress = true
-    deletebufline('%', start, end)
-    if len(lines) > 0
-      append(start - 1, lines)
-    endif
-    this.suppress = false
+    try
+      if !empty(lines) && appendbufline(this.buffer, start - 1, lines) != 0
+        throw 'Could not insert GPT response.'
+      endif
+      if deletebufline(this.buffer, start + len(lines), end + len(lines)) != 0
+        throw 'Could not replace GPT target range.'
+      endif
+    finally
+      this.suppress = false
+    endtry
     const new_end = start + len(lines) - 1
     const delta = new_end - old_end
     info['end'] = new_end
@@ -438,7 +459,7 @@ class LockRangeManager
       endfor
     endif
     this.UpdateAllStatuses()
-    this.last_linecount = line('$')
+    this.last_linecount = len(getbufline(this.buffer, 1, '$'))
   enddef
 
   def SetStatus(id: string, text: string): void

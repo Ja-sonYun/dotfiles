@@ -1,5 +1,10 @@
 local module = {}
-local logger = hs.logger.new("mute-microphone-on-lock")
+local actions = require("shared-actions")
+local logger = hs.logger.new("on-lock")
+local muteMicrophone = "@muteMicrophone@" == "true"
+local muteAudio = "@muteAudio@" == "true"
+local quitApps = hs.json.decode([==[@quitAppsJson@]==])
+local wallpaper = hs.json.decode([==[@wallpaperJson@]==])
 
 local function muteDefaultInput()
 	local device = hs.audiodevice.defaultInputDevice()
@@ -16,7 +21,16 @@ end
 
 module.screenLockWatcher = hs.caffeinate.watcher.new(function(event)
 	if event == hs.caffeinate.watcher.screensDidLock then
-		muteDefaultInput()
+		if muteMicrophone then
+			muteDefaultInput()
+		end
+		if muteAudio then
+			local device = hs.audiodevice.defaultOutputDevice()
+			if device and not device:setOutputMuted(true) then
+				logger:e("Could not mute the default audio output.")
+			end
+		end
+		actions.run(quitApps, wallpaper)
 	end
 end)
 

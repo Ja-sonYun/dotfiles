@@ -6,7 +6,7 @@
 }:
 let
   hooksDir = ./hooks;
-  statusCommand = "${pkgs.python3}/bin/python ${hooksDir}/status.py ${lib.escapeShellArg config.programs.tmux.agentStatusScript}";
+  statusCommand = "${pkgs.python3}/bin/python ${hooksDir}/status.py ${lib.escapeShellArg config.programs.tmux.agentStatusScript} ${pkgs.tmux}/bin/tmux";
   notificationCommand = "${pkgs.python3}/bin/python ${hooksDir}/notification.py ${pkgs.notifycmd}/bin/notifycmd";
 
   hook = command: {

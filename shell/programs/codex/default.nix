@@ -1,33 +1,8 @@
 {
-  pkgs,
-  config,
   hasTag,
   lib,
   ...
 }:
-let
-  codexLmp = pkgs.writeShellScriptBin "codex-lmp" ''
-    set -euo pipefail
-
-    llm_domain="$(${pkgs.coreutils}/bin/cat ${
-      config.age.secrets."llm-domain".path
-    } 2>/dev/null || true)"
-    export LLM_DOMAIN="$llm_domain"
-    export CAPI_KEY="$(${pkgs.coreutils}/bin/cat ${
-      config.age.secrets."capi-key".path
-    } 2>/dev/null || true)"
-
-    if [ -n "$llm_domain" ]; then
-      exec codex \
-        --config "model_provider=\"lmp\"" \
-        --config "model_providers.lmp.base_url=\"''${llm_domain%/}/v1\"" \
-        --model "syn:large:text" \
-        "$@"
-    fi
-
-    exec codex "$@"
-  '';
-in
 {
   programs.ai-agents.modelMap.codex = {
     xhigh = {
@@ -50,10 +25,20 @@ in
 
   programs.codex = {
     enable = true;
+    defaultProfileName = "codex-1";
+
+    instances = {
+      codex-2 = {
+        home = ".codex2";
+        shareWith = ".codex";
+      };
+      codex-work = {
+        home = ".codex-work";
+      };
+    };
 
     toolGuard.computer-use = lib.mkIf (!hasTag "unsafe-ai") {
       matcher = "^mcp__cua_repl__";
-      approvalToken = "ALLOW_COMPUTER_USE";
     };
 
     settings = {
@@ -106,15 +91,6 @@ in
       feedback = {
         enabled = false;
       };
-
-      model_providers.lmp = {
-        name = "LMP";
-        base_url = "$LLM_DOMAIN/v1";
-        wire_api = "responses";
-        env_key = "CAPI_KEY";
-      };
     };
   };
-
-  home.packages = [ codexLmp ];
 }

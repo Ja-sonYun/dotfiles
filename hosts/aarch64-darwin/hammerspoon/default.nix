@@ -2,7 +2,21 @@
   services.hammerspoon = {
     enable = true;
     features = {
-      muteMicrophoneOnLock.enable = true;
+      systemMonitor.enable = true;
+
+      onLock = {
+        enable = true;
+        muteMicrophone = true;
+        muteAudio = true;
+        quitApps = [ "Wallspace" ];
+        wallpaper = "Valley";
+      };
+
+      onBattery = {
+        enable = true;
+        quitApps = [ "Wallspace" ];
+        wallpaper = "Valley";
+      };
 
       applicationInputSources = {
         enable = true;

@@ -4,6 +4,12 @@
   ...
 }:
 let
+  statusLine = pkgs.writeShellScript "claude-statusline" ''
+    input="$(${pkgs.coreutils}/bin/cat)"
+    printf '%s' "$input" | AI_AGENT_CLIENT=Claude ${pkgs.python3}/bin/python \
+      ${../ai-tools/hooks}/status.py --statusline ${pkgs.tmux}/bin/tmux || true
+    printf '%s' "$input" | ${pkgs.jq}/bin/jq -rf ${./statusline.jq}
+  '';
   claudeLmp = pkgs.writeShellScriptBin "claude-lmp" ''
     set -euo pipefail
 
@@ -61,7 +67,7 @@ in
       effortLevel = "high";
       statusLine = {
         type = "command";
-        command = "${pkgs.jq}/bin/jq -rf ${./statusline.jq}";
+        command = "${statusLine}";
       };
     };
 

@@ -67,7 +67,7 @@ def load_metadata() -> Metadata:
         return cast(Metadata, json.load(metadata_file))
 
 
-def parse_command(arguments: list[str]) -> tuple[str, str] | None:
+def parse_command(arguments: list[str]) -> list[str] | None:
     index = 0
     while index < len(arguments) and arguments[index].startswith("-"):
         option, separator, _ = arguments[index].partition("=")
@@ -78,9 +78,7 @@ def parse_command(arguments: list[str]) -> tuple[str, str] | None:
         else:
             return None
 
-    if len(arguments) - index < 2:
-        return None
-    return arguments[index], arguments[index + 1]
+    return arguments[index:]
 
 
 def is_read_only(metadata: Metadata, service: str, operation: str) -> bool:
@@ -106,12 +104,16 @@ def run_aws(arguments: list[str]) -> int:
 def main(arguments: list[str]) -> int:
     if not arguments or arguments == ["--version"]:
         return run_aws(arguments)
-    if arguments[-1] in {"help", "--help"}:
-        return run_aws(arguments)
-
     command = parse_command(arguments)
-    if command is not None:
-        service, operation = command
+    if command:
+        if (
+            len(command) <= 3
+            and command[-1] in {"help", "--help"}
+            and all(not part.startswith("-") for part in command[:-1])
+        ):
+            return run_aws(arguments)
+    if command is not None and len(command) >= 2:
+        service, operation = command[:2]
         if is_read_only(load_metadata(), service, operation):
             return run_aws(arguments)
 

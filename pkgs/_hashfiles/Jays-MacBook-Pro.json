@@ -8,16 +8,16 @@
     "hash": "sha256-c9wZgJVxiUxDgRzQTSWiqxSNkCDj6dM/rJwQx7PtRj4="
   },
   "open-code-review": {
-    "version": "1.11.5",
-    "hash": "sha256-R9Vrm1+kssCHsMrD4r7l1EifsDbgLnXhj7zann3FJJ4="
+    "version": "1.11.6",
+    "hash": "sha256-bp8J+T9ZJe7RdLeeYNm5M6WIqy7NTqSqZjed9g1493U="
   },
   "pi": {
     "version": "0.85.1",
-    "hash": "sha256-1//VvIr2SyygXvfezb4v40dIbMfvzyudEr5K9J+h5a8="
+    "hash": "sha256-HWH14clIk8greGbqAg7QC9jU4pdJe7k5gAfl8B7zZho="
   },
   "pi-mcp-adapter": {
     "version": "2.32.1",
-    "hash": "sha256-7IzMboroYqEPiR4YqXMr0XocMXcUUtleSj6UFfMHenE="
+    "hash": "sha256-qNsm8Iu3gVBb4lNswTRGtI2NzwCHKhEaW3Y1QZIUQFY="
   },
   "freecad-mcp": {
     "version": "0.1.22",
@@ -32,35 +32,35 @@
     "hash": "sha256-ubTOzhTZD5LuZb4wiYF0eyIjYnuyMNoZ9CRPExxe3VI="
   },
   "chrome-devtools-mcp": {
-    "version": "1.8.0",
-    "hash": "sha256-rB4SveDbM8jpPpazU4KCWTOB7qa0Yq2tJejl8wz1MaA="
+    "version": "1.9.0",
+    "hash": "sha256-k47iugE5rDv4DFlm8DPnLlyHyKuPUPOZKsOsXgHMglY="
   },
   "codex": {
     "version": "0.153.4",
     "hash": "sha256-+vtugz/cl3yttyx6U6iE/aCrTl1Xmi47qoIEyIEsoJw="
   },
   "context7-mcp": {
-    "version": "4.0.5",
-    "hash": "sha256-aTx2zCTx757ViEmqMlmaBCloqwGFqz3OqvxRtb3T8TI="
+    "version": "4.0.6",
+    "hash": "sha256-PccR0TJC7Q6OV/DG9wnlrCssHbst29ELs1Yd9behLfk="
   },
   "exa-mcp-server": {
     "version": "3.4.1",
     "hash": "sha256-pYUmJYvjQWwywNPQPZ5dfO+4xdXY9lmznf/3UQfBDIw="
   },
   "claude-code": {
-    "version": "2.1.263",
-    "hash": "sha256-ITlm4lOOgQOJq9uigDwYto1kK41ysHVYDYI70i3tVb8="
+    "version": "2.1.266",
+    "hash": "sha256-lwi9RJvGHatl8xtTSpnMkH8t498YLc1C7xk9tjZlFEA="
   },
   "knip": {
-    "version": "6.34.0",
-    "hash": "sha256-fAJ1MOfZboKwJcJGHvAwPK0Bv1idF6Uux9sOLoNEgco="
+    "version": "6.35.0",
+    "hash": "sha256-Emcz3WXpcnLgDnNJLNmOE368khyJUpTRvXwy9nWtZNs="
   },
   "mcp-remote": {
-    "version": "0.8.3",
-    "hash": "sha256-RpiMGtSTM7+B4T9Lt62jwa+dXBhCdgdrlDmeU5f8syI="
+    "version": "0.8.5",
+    "hash": "sha256-JGkRHwQhHhZjMedXB2UKFuGmIX6zMSY5lEe1WEXg9BA="
   },
   "aws-documentation-mcp-server": {
-    "version": "1.2.0",
-    "hash": "sha256-Ye+YLPP25KMtU2nWBOx2/gjZTbiQy/+fFNdnXVNtNr8="
+    "version": "1.2.1",
+    "hash": "sha256-u678j1b1SkiuzCLn6h4c+lTFqv/7IVOaYmtujDwS6ls="
   }
 }

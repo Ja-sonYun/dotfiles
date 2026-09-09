@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "mcp-remote";
   packageManager = "npm";
   packageName = "mcp-remote";
-  packageVersion = "0.8.3";
+  packageVersion = "0.8.5";
   name = "mcp-remote";
   exposedBinaries = [
     "mcp-remote"

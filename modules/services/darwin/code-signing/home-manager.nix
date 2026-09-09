@@ -107,7 +107,7 @@ in
           fi
 
           run /bin/rm -rf "$backup_path"
-          /usr/bin/printf '%s\n' "$fingerprint" >"$marker_path.new"
+          run /bin/sh -c '/usr/bin/printf "%s\n" "$1" >"$2"' sh "$fingerprint" "$marker_path.new"
           run /bin/rm -f "$marker_path"
           run /bin/mv "$marker_path.new" "$marker_path"
 

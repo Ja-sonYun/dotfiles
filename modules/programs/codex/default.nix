@@ -32,7 +32,10 @@ let
     "tui"
   ];
   mirroredSettingKeys = [
+    "model"
+    "model_provider"
     "model_verbosity"
+    "model_reasoning_effort"
     "web_search"
   ];
 
@@ -114,6 +117,42 @@ let
       --config "projects.\"$PWD\".trust_level=\"trusted\"" \
       "$@"
   '';
+
+  primaryPackage = pkgs.writeShellScriptBin cfg.defaultProfileName ''
+    export CODEX_HOME=${lib.escapeShellArg "${config.home.homeDirectory}/.codex"}
+    exec ${wrappedPackage}/bin/codex "$@"
+  '';
+
+  instancePackages = lib.mapAttrs (
+    name: instance:
+    let
+      package = if instance.shareWith == null then cfg.package else wrappedPackage;
+    in
+    pkgs.writeShellScriptBin name ''
+      set -euo pipefail
+      umask 077
+
+      export CODEX_HOME=${lib.escapeShellArg "${config.home.homeDirectory}/${instance.home}"}
+      ${pkgs.coreutils}/bin/mkdir -p "$CODEX_HOME"
+      ${lib.optionalString (instance.shareWith != null) ''
+        shared_home=${lib.escapeShellArg "${config.home.homeDirectory}/${instance.shareWith}"}
+        shopt -s dotglob nullglob
+        for source in "$shared_home"/*; do
+          entry="''${source##*/}"
+          if [[ "$entry" == auth.json ]]; then
+            continue
+          fi
+          target="$CODEX_HOME/$entry"
+          if [[ ! -e "$target" && ! -L "$target" ]]; then
+            ${pkgs.coreutils}/bin/ln -s "$source" "$target"
+          fi
+        done
+      ''}
+      exec ${package}/bin/codex \
+        --config 'cli_auth_credentials_store="file"' \
+        "$@"
+    ''
+  ) cfg.instances;
 in
 {
   disabledModules = [ "programs/codex" ];
@@ -131,6 +170,32 @@ in
       type = lib.types.listOf lib.types.package;
       default = [ ];
       description = "Packages added to Codex's PATH.";
+    };
+
+    defaultProfileName = lib.mkOption {
+      type = lib.types.strMatching "[A-Za-z0-9_-]+";
+      description = "Command name for the primary Codex profile.";
+    };
+
+    instances = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            home = lib.mkOption {
+              type = lib.types.str;
+              description = "Instance home directory relative to the user's home.";
+            };
+
+            shareWith = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Codex home to link missing entries from, except auth.json, relative to the user's home. Null uses an independent home without personal settings.";
+            };
+          };
+        }
+      );
+      default = { };
+      description = "Additional Codex commands with separate file-based authentication.";
     };
 
     settings = lib.mkOption {
@@ -187,9 +252,23 @@ in
       '';
     }
     (lib.mkIf cfg.enable {
-      home.packages = [ wrappedPackage ];
+      programs.state.commands.codex = {
+        key = "defaults.codex";
+        default = cfg.defaultProfileName;
+        choices = {
+          ${cfg.defaultProfileName} = "${primaryPackage}/bin/${cfg.defaultProfileName}";
+        }
+        // lib.mapAttrs (name: package: "${package}/bin/${name}") instancePackages;
+      };
+
+      home.packages = [ primaryPackage ] ++ lib.attrValues instancePackages;
 
       assertions = [
+        {
+          assertion =
+            cfg.defaultProfileName != "codex" && !(builtins.hasAttr cfg.defaultProfileName cfg.instances);
+          message = "programs.codex.defaultProfileName must differ from codex and additional instance names.";
+        }
         {
           assertion = settingsSecrets.invalidSecretPaths == [ ];
           message = "programs.codex.settings contains invalid _secret values at: ${lib.concatStringsSep ", " settingsSecrets.invalidSecretPaths}.";

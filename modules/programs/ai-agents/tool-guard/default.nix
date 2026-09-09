@@ -17,17 +17,13 @@ let
         type = nonEmptyString;
         description = "Regular expression matched against the tool name.";
       };
-      approvalToken = lib.mkOption {
-        type = nonEmptyString;
-        description = "Standalone approval token line; surrounding whitespace, backticks, and backslashes are ignored.";
-      };
       onBlock = lib.mkOption {
         type = lib.types.enum [
           "request-approval"
           "revise-input"
         ];
         default = "request-approval";
-        description = "Recovery guidance after denial; revised calls are still checked by the guard.";
+        description = "Recovery guidance after the first matching call is blocked in a conversation.";
       };
       inputFields = lib.mkOption {
         type = lib.types.listOf nonEmptyString;
@@ -55,19 +51,15 @@ let
   hasConfiguredGuards = lib.any (guards: guards != { }) (lib.attrValues agentGuards);
   rules = lib.mapAttrs' (client: guards: lib.nameValuePair clientNames.${client} guards) agentGuards;
   rulesFile = pkgs.writeText "ai-agent-tool-guard-rules.json" (builtins.toJSON rules);
-  toolGuardCommand =
-    event:
-    lib.escapeShellArgs [
-      "${pkgs.python3}/bin/python"
-      "${./tool_guard.py}"
-      "--config"
-      rulesFile
-      "--event"
-      event
-    ];
-  toolGuardHook = event: {
+  toolGuardCommand = lib.escapeShellArgs [
+    "${pkgs.python3}/bin/python"
+    "${./tool_guard.py}"
+    "--config"
+    rulesFile
+  ];
+  toolGuardHook = {
     type = "command";
-    command = toolGuardCommand event;
+    command = toolGuardCommand;
     timeout = 5;
   };
   hooksFor =
@@ -76,17 +68,11 @@ let
       matcher = lib.concatMapStringsSep "|" (guard: "(${guard.matcher})") (lib.attrValues guards);
     in
     lib.optionalAttrs (guards != { }) {
-      UserPromptSubmit = [
-        { hooks = [ (toolGuardHook "UserPromptSubmit") ]; }
-      ];
       PreToolUse = [
         {
           inherit matcher;
-          hooks = [ (toolGuardHook "PreToolUse") ];
+          hooks = [ toolGuardHook ];
         }
-      ];
-      SessionEnd = [
-        { hooks = [ (toolGuardHook "SessionEnd") ]; }
       ];
     };
 in

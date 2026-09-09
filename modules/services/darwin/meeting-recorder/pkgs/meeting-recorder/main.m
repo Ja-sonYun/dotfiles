@@ -128,8 +128,8 @@ static BOOL SendState(NSString *requestID, NSString *statePath, NSString *status
   NSDictionary *systemSettings = @{
     AVFormatIDKey: @(kAudioFormatMPEG4AAC),
     AVSampleRateKey: @48000,
-    AVNumberOfChannelsKey: @2,
-    AVEncoderBitRateKey: @160000,
+    AVNumberOfChannelsKey: @1,
+    AVEncoderBitRateKey: @64000,
   };
   NSDictionary *microphoneSettings = @{
     AVFormatIDKey: @(kAudioFormatMPEG4AAC),
@@ -261,7 +261,7 @@ static BOOL SendState(NSString *requestID, NSString *statePath, NSString *status
         configuration.showsCursor = NO;
         configuration.capturesAudio = YES;
         configuration.sampleRate = 48000;
-        configuration.channelCount = 2;
+        configuration.channelCount = 1;
         configuration.excludesCurrentProcessAudio = YES;
         configuration.captureMicrophone = YES;
 

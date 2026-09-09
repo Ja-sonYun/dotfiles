@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import tomlkit
-from tomlkit.items import AoT, Table
+from tomlkit.container import Container
+from tomlkit.items import AoT, Null, Table, Whitespace
 
 
 GENERATED_COMMENT = "nix-generated"
@@ -121,6 +122,30 @@ def _merge_generated(
             document[key] = value
 
 
+def _normalize_whitespace(container: Container) -> None:
+    blank_line = False
+    for index, (key, value) in enumerate(container.body):
+        if isinstance(value, Null):
+            continue
+        if isinstance(value, Whitespace):
+            text = (
+                value.s.replace("\n", "")
+                if blank_line
+                else re.sub(r"\n{2,}", "\n", value.s)
+            )
+            container.body[index] = (key, Whitespace(text, fixed=value.is_fixed()))
+            blank_line = blank_line or "\n" in text
+            continue
+        blank_line = False
+        if isinstance(value, Table):
+            value.trivia.indent = re.sub(r"\n{2,}", "\n", value.trivia.indent)
+            _normalize_whitespace(value.value)
+        elif isinstance(value, AoT):
+            for table in value:
+                table.trivia.indent = re.sub(r"\n{2,}", "\n", table.trivia.indent)
+                _normalize_whitespace(table.value)
+
+
 def _add_hook_state(fragment: Any, target: Path) -> None:
     hooks = fragment.get("hooks")
     if hooks is None:
@@ -192,9 +217,8 @@ def main() -> None:
     _remove_generated(document)
     _merge_generated(document, fragment)
 
-    # Re-adding generated entries after removal leaves blank lines that would
-    # otherwise grow on every activation.
-    output = re.sub(r"\n{3,}", "\n\n", tomlkit.dumps(document))
+    _normalize_whitespace(document)
+    output = tomlkit.dumps(document)
     if output != target_text:
         _write_atomic(target, output)
 

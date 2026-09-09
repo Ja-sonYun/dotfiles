@@ -23,6 +23,7 @@
     ./programs/weechat
   ]
   ++ lib.optionals (hasTag "ai") [
+    ./programs/agent
     ./programs/ai-tools
     ./programs/claude
     ./programs/codex

@@ -10,6 +10,7 @@ local module = {
 	task = nil,
 	transcriptionProgress = 0,
 	transcriptionQueue = {},
+	failedTranscriptions = {},
 }
 local logger = hs.logger.new("meeting-recorder")
 local detectionLogger = hs.logger.new("meeting-detection")
@@ -465,63 +466,177 @@ local function stopDelayText()
 	return string.format("%02d:%02d", math.floor(remaining / 60), remaining % 60)
 end
 
+local panelUI = { sequence = 0 }
+local presentPanel
+local preparePanelUI
+
+local function failPanelUI(view, message)
+	if not rawequal(panelUI.view, view) then
+		return
+	end
+	local panel = panelUI.current
+	local controller = panelUI.controller
+	if panelUI.closeTimer then
+		panelUI.closeTimer:stop()
+		panelUI.closeTimer = nil
+	end
+	panelUI.current = nil
+	panelUI.displayed = nil
+	panelUI.rendering = nil
+	panelUI.closing = nil
+	panelUI.ready = nil
+	panelUI.reducedMotion = nil
+	panelUI.view = nil
+	panelUI.controller = nil
+	controller:setCallback(nil)
+	view:windowCallback(nil):navigationCallback(nil):delete()
+	logger:e(message)
+	if panel then
+		panel.callback("error")
+	end
+end
+
 local function recordingPanel(options, callback)
-	local panel = {}
+	if panelUI.current then
+		panelUI.current:delete()
+	end
+	panelUI.sequence = panelUI.sequence + 1
+	local panel = { id = panelUI.sequence, options = options, callback = callback }
 	local screen = (options.screen or hs.screen.mainScreen()):frame()
 	options.screen = nil
 	local height = options.mode == "selection" and 400 or 330
-	local data = hs.json.encode(options):gsub("<", "\\u003c")
-	panel.controller = hs.webview.usercontent.new("meetingRecorderPanel")
-	function panel:delete()
-		if self.view then
-			local view = self.view
-			self.view = nil
-			self.controller:setCallback(nil)
-			self.controller = nil
-			view:windowCallback(nil):deleteOnClose(false)
-			view:evaluateJavaScript("window.closePanel ? window.closePanel() : 0", function(duration)
-				if type(duration) == "number" and duration > 0 then
-					hs.timer.doAfter(duration / 1000, function()
-						view:delete()
-					end)
-				else
-					view:delete()
+	panel.frame = { x = screen.x + (screen.w - 420) / 2, y = screen.y + 34, w = 420, h = height + 8 }
+	function panel:delete(nativeClosing)
+		if panelUI.current ~= self then
+			return
+		end
+		panelUI.current = nil
+		panelUI.displayed = nil
+		local view = panelUI.view
+		if not panelUI.closing and view and (view:isVisible() or nativeClosing) then
+			panelUI.closing = true
+			if not nativeClosing then
+				view:hide(panelUI.reducedMotion and 0 or 0.1)
+			end
+			panelUI.closeTimer = hs.timer.doEvery(0.02, function()
+				if not rawequal(panelUI.view, view) then
+					return
+				end
+				if not view:isVisible() then
+					panelUI.closeTimer:stop()
+					panelUI.closeTimer = nil
+					panelUI.closing = nil
+					presentPanel()
 				end
 			end)
 		end
 	end
-	local function respond(action, value)
-		if panel.view then
-			panel:delete()
-			callback(action, value)
+	function panel:updateCountdown(remaining, maximum)
+		self.options.remaining = remaining
+		self.options.maximum = maximum
+		if panelUI.current == self and panelUI.displayed == self then
+			panelUI.view:evaluateJavaScript(
+				string.format("window.updateCountdown(%d, %d, %d)", self.id, remaining, maximum)
+			)
 		end
 	end
-	panel.controller:setCallback(function(message)
+	panelUI.current = panel
+	preparePanelUI()
+	presentPanel()
+	return panel
+end
+
+presentPanel = function()
+	local panel = panelUI.current
+	if not panel or not panelUI.ready or panelUI.closing or panelUI.rendering or panelUI.displayed == panel then
+		return
+	end
+	if panel.options.mode == "ended" then
+		panel.options.remaining = stopDelayRemaining()
+	end
+	panelUI.rendering = panel
+	local view = panelUI.view
+	local data = hs.json.encode(panel.options):gsub("<", "\\u003c")
+	view:evaluateJavaScript(string.format("window.renderPanel(%d, %s); true", panel.id, data), function(result, err)
+		if not rawequal(panelUI.view, view) then
+			return
+		end
+		panelUI.rendering = nil
+		if panelUI.current ~= panel then
+			presentPanel()
+			return
+		end
+		if result ~= true then
+			failPanelUI(view, "Could not render recording panel: " .. hs.inspect(err))
+			return
+		end
+		panelUI.displayed = panel
+		panelUI.view:frame(panel.frame):show():bringToFront(true)
+		if panel.options.focus then
+			hs.application.launchOrFocusByBundleID("org.hammerspoon.Hammerspoon")
+		end
+		if panel.options.mode == "ended" then
+			panel:updateCountdown(stopDelayRemaining(), panel.options.maximum)
+		end
+		panelUI.view:evaluateJavaScript(string.format("window.openPanel(%d)", panel.id))
+	end)
+end
+
+preparePanelUI = function()
+	if panelUI.view then
+		return
+	end
+	local view
+	panelUI.controller = hs.webview.usercontent.new("meetingRecorderPanel")
+	panelUI.controller:setCallback(function(message)
+		if not rawequal(panelUI.view, view) then
+			return
+		end
 		local body = message.body
-		if type(body) == "table" and (body.action == "primary" or body.action == "secondary") then
-			respond(body.action, body.value)
+		if type(body) ~= "table" then
+			return
+		end
+		if body.action == "motion" then
+			panelUI.reducedMotion = body.reducedMotion == true
+			return
+		end
+		local panel = panelUI.current
+		if panel and body.id == panel.id and (body.action == "primary" or body.action == "secondary") then
+			panelUI.reducedMotion = body.reducedMotion == true
+			panel:delete()
+			panel.callback(body.action, body.value)
 		end
 	end)
-	panel.view = hs.webview
-		.new({
-			x = screen.x + (screen.w - 420) / 2,
-			y = screen.y + 34,
-			w = 420,
-			h = height + 8,
-		}, { privateBrowsing = true }, panel.controller)
+	view = hs.webview
+		.new({ x = 0, y = 0, w = 420, h = 338 }, { privateBrowsing = true }, panelUI.controller)
 		:windowStyle(0)
 		:allowTextEntry(true)
 		:transparent(true)
-		:deleteOnClose(true)
+		:deleteOnClose(false)
 		:windowCallback(function(action)
-			if action == "closing" then
-				panel.view = nil
-				panel.controller:setCallback(nil)
-				panel.controller = nil
-				callback("secondary")
+			if not rawequal(panelUI.view, view) then
+				return
+			end
+			local panel = panelUI.displayed
+			if action == "closing" and panel then
+				panel:delete(true)
+				panel.callback("secondary")
 			end
 		end)
-	panel.view:html([=[
+		:navigationCallback(function(action, _, _, err)
+			if not rawequal(panelUI.view, view) then
+				return true
+			end
+			if action == "didFinishNavigation" then
+				panelUI.ready = true
+				presentPanel()
+			elseif action == "didFailNavigation" or action == "didFailProvisionalNavigation" then
+				failPanelUI(view, "Could not load recording panel: " .. hs.inspect(err))
+				return true
+			end
+		end)
+	panelUI.view = view
+	view:html([=[
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 * { box-sizing: border-box; }
@@ -560,16 +675,14 @@ button:active { transform: translateY(0) scale(.98); box-shadow: inset 0 2px 4px
 </style>
 <main><h1></h1><p class="description"></p><form><div class="content"></div><footer><button type="button" id="secondary"></button><button type="submit" class="primary"></button></footer></form></main>
 <script>
-const options = ]=] .. data .. [=[;
+let options;
+let presentationID;
+let sent = true;
 const panel = document.querySelector('main');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 let openingAnimation;
 const content = document.querySelector('.content');
 const primary = document.querySelector('.primary');
-document.querySelector('h1').textContent = options.title;
-document.querySelector('.description').textContent = options.description;
-document.querySelector('#secondary').textContent = options.secondary;
-primary.textContent = options.primary;
 function add(tag, text, className, parent = content) {
     const element = document.createElement(tag);
     element.textContent = text || '';
@@ -577,51 +690,62 @@ function add(tag, text, className, parent = content) {
     parent.appendChild(element);
     return element;
 }
-if (options.mode === 'title') {
-    add('label', 'Title').htmlFor = 'title';
-    const input = add('input');
-    input.type = 'text'; input.id = 'title'; input.required = true;
-    input.placeholder = 'e.g. Design sync'; input.autocomplete = 'off';
-} else if (options.mode === 'selection') {
-    content.setAttribute('role', 'radiogroup');
-    content.setAttribute('aria-label', 'Meetings');
-    options.urls.forEach((url, index) => {
-        const label = add('label', '', 'option');
-        const input = add('input', '', '', label);
-        input.type = 'radio'; input.name = 'meeting'; input.value = index + 1; input.checked = index === 0;
-        add('span', url, '', label);
-    });
-} else {
-    const event = add('div', '', 'event');
-    add('strong', options.eventText, '', event);
-    if (options.url) add('div', options.url, 'url', event);
-}
-window.updateCountdown = (remaining, maximum) => {
+window.renderPanel = (id, data) => {
+    options = data;
+    presentationID = id;
+    sent = false;
+    if (openingAnimation) openingAnimation.cancel();
+    openingAnimation = null;
+    content.replaceChildren();
+    content.removeAttribute('role');
+    content.removeAttribute('aria-label');
+    panel.querySelectorAll('button').forEach(element => element.disabled = false);
+    document.querySelector('h1').textContent = options.title;
+    document.querySelector('.description').textContent = options.description;
+    document.querySelector('#secondary').textContent = options.secondary;
+    primary.textContent = options.primary;
+    if (options.mode === 'title') {
+        add('label', 'Title').htmlFor = 'title';
+        const input = add('input');
+        input.type = 'text'; input.id = 'title'; input.required = true;
+        input.placeholder = 'e.g. Design sync'; input.autocomplete = 'off';
+    } else if (options.mode === 'selection') {
+        content.setAttribute('role', 'radiogroup');
+        content.setAttribute('aria-label', 'Meetings');
+        options.urls.forEach((url, index) => {
+            const label = add('label', '', 'option');
+            const input = add('input', '', '', label);
+            input.type = 'radio'; input.name = 'meeting'; input.value = index + 1; input.checked = index === 0;
+            add('span', url, '', label);
+        });
+    } else {
+        const event = add('div', '', 'event');
+        add('strong', options.eventText, '', event);
+        if (options.url) add('div', options.url, 'url', event);
+    }
+    if (options.mode === 'ended') window.updateCountdown(id, options.remaining, options.maximum);
+    panel.style.opacity = '1';
+    if (!reducedMotion.matches) {
+        openingAnimation = panel.animate([
+            { opacity: 0, transform: 'translateY(8px)' },
+            { opacity: 1, transform: 'translateY(0)' }
+        ], { duration: 180, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'both' });
+        openingAnimation.pause();
+    }
+};
+window.updateCountdown = (id, remaining, maximum) => {
+    if (id !== presentationID || options.mode !== 'ended') return;
     let label = document.querySelector('.countdown');
     let progress = document.querySelector('progress');
     if (!label) { label = add('div', '', 'countdown'); progress = add('progress'); progress.setAttribute('aria-label', 'Seconds until automatic stop'); }
     label.textContent = `Automatic stop in ${remaining}s unless you reconnect.`;
     progress.max = Math.max(1, maximum); progress.value = remaining;
 };
-if (options.mode === 'ended') window.updateCountdown(options.remaining, options.maximum);
-let sent = false;
-window.closePanel = () => {
-    sent = true;
-    panel.querySelectorAll('button, input').forEach(element => element.disabled = true);
-    if (reducedMotion.matches) return 0;
-    const style = getComputedStyle(panel);
-    const from = { opacity: style.opacity, transform: style.transform };
-    if (openingAnimation) openingAnimation.cancel();
-    panel.animate([
-        from,
-        { opacity: 0, transform: 'translateY(8px)' }
-    ], { duration: 150, easing: 'ease-in', fill: 'forwards' });
-    return 150;
-};
 function send(action, value) {
     if (sent) return;
     sent = true;
-    window.webkit.messageHandlers.meetingRecorderPanel.postMessage({ action, value });
+    panel.querySelectorAll('button, input').forEach(element => element.disabled = true);
+    window.webkit.messageHandlers.meetingRecorderPanel.postMessage({ id: presentationID, action, value, reducedMotion: reducedMotion.matches });
 }
 document.querySelector('#secondary').addEventListener('click', () => send('secondary'));
 document.addEventListener('keydown', event => {
@@ -640,24 +764,19 @@ document.querySelector('form').addEventListener('submit', event => {
     if (options.mode === 'selection') value = Number(document.querySelector('input:checked').value);
     send('primary', value);
 });
-window.addEventListener('load', () => {
-    if (sent) return;
-    panel.style.opacity = '1';
-    if (!reducedMotion.matches) {
-        openingAnimation = panel.animate([
-            { opacity: 0, transform: 'translateY(8px)' },
-            { opacity: 1, transform: 'translateY(0)' }
-        ], { duration: 180, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
-    }
+window.openPanel = id => {
+    if (id !== presentationID || sent) return;
+    if (openingAnimation && !reducedMotion.matches) openingAnimation.play();
     (content.querySelector('input') || primary).focus();
-});
+};
+function updateMotion() {
+    if (reducedMotion.matches && openingAnimation) openingAnimation.cancel();
+    window.webkit.messageHandlers.meetingRecorderPanel.postMessage({ action: 'motion', reducedMotion: reducedMotion.matches });
+}
+reducedMotion.addEventListener('change', updateMotion);
+updateMotion();
 </script></html>
 ]=])
-	panel.view:show():bringToFront(true)
-	if options.focus then
-		panel.view:hswindow():focus()
-	end
-	return panel
 end
 
 local function dismissStopPrompt()
@@ -680,13 +799,7 @@ end
 
 local function updateStopPrompt()
 	if module.stopPrompt and module.stopDeadline then
-		module.stopPrompt.view:evaluateJavaScript(
-			string.format(
-				"if (window.updateCountdown) window.updateCountdown(%d, %d)",
-				stopDelayRemaining(),
-				config.stopDelaySeconds
-			)
-		)
+		module.stopPrompt:updateCountdown(stopDelayRemaining(), config.stopDelaySeconds)
 	end
 end
 
@@ -706,10 +819,13 @@ local function showStopPrompt()
 		primary = "Stop Now",
 		secondary = "Keep Recording",
 	}, function(action)
+		if action == "error" then
+			return
+		end
 		module.stopPrompt = nil
 		if action == "primary" then
 			stopRecording("manual")
-		else
+		elseif action == "secondary" then
 			cancelStopDelay()
 		end
 	end)
@@ -768,6 +884,9 @@ local function updateMenuBar()
 		if module.transcriptionPhase == "preparing" then
 			table.insert(titles, "TXT Preparing…")
 			table.insert(tooltips, "Preparing local transcription")
+		elseif module.transcriptionPhase == "archiving" then
+			table.insert(titles, "Compressing…")
+			table.insert(tooltips, "Compressing meeting audio")
 		else
 			table.insert(titles, "TXT " .. tostring(module.transcriptionProgress) .. "%")
 			table.insert(tooltips, "Transcribing " .. (module.transcriptionPhase or "audio") .. " locally")
@@ -878,11 +997,6 @@ local function transcriptOutputPath(path)
 	return path:gsub("%.[^./]+$", "") .. ".transcript.md"
 end
 
-local function transcriptOutputsExist(path)
-	local base = path:gsub("%.[^./]+$", "") .. ".transcript"
-	return hs.fs.attributes(base .. ".json") ~= nil and hs.fs.attributes(base .. ".md") ~= nil
-end
-
 local function persistTranscriptionQueue()
 	local pending = {}
 	if module.transcriptionPath then
@@ -902,12 +1016,7 @@ local function restoreTranscriptionQueue()
 
 	local seen = {}
 	for _, path in ipairs(saved) do
-		if
-			type(path) == "string"
-			and not seen[path]
-			and hs.fs.attributes(path)
-			and not transcriptOutputsExist(path)
-		then
+		if type(path) == "string" and not seen[path] and hs.fs.attributes(path) then
 			seen[path] = true
 			table.insert(module.transcriptionQueue, path)
 		end
@@ -956,9 +1065,15 @@ startNextTranscription = function()
 	end
 
 	local sourcePath
-	while #module.transcriptionQueue > 0 and not sourcePath do
-		local candidate = table.remove(module.transcriptionQueue, 1)
-		if hs.fs.attributes(candidate) and not transcriptOutputsExist(candidate) then
+	local index = 1
+	while index <= #module.transcriptionQueue and not sourcePath do
+		local candidate = module.transcriptionQueue[index]
+		if not hs.fs.attributes(candidate) then
+			table.remove(module.transcriptionQueue, index)
+		elseif module.failedTranscriptions[candidate] then
+			index = index + 1
+		else
+			table.remove(module.transcriptionQueue, index)
 			sourcePath = candidate
 		end
 	end
@@ -981,20 +1096,24 @@ startNextTranscription = function()
 		handleTranscriptionOutput(stdout, stderr)
 		local outputPath = module.transcriptionOutputPath or transcriptOutputPath(sourcePath)
 		local taskStderr = module.transcriptionStderr
+		local failedPhase = module.transcriptionPhase
 		module.transcriptionTask = nil
 		module.transcriptionPath = nil
 		module.transcriptionPhase = nil
 		module.transcriptionOutputBuffer = nil
 		module.transcriptionOutputPath = nil
 		module.transcriptionStderr = nil
-		persistTranscriptionQueue()
 		if exitCode == 0 then
 			notifyStatus("Transcript saved: " .. fileName(outputPath))
 		else
+			module.failedTranscriptions[sourcePath] = true
+			table.insert(module.transcriptionQueue, sourcePath)
 			local message = transcriptionError(taskStderr)
 			logger:e(message)
-			notifyFailure("Transcription failed: " .. message)
+			local prefix = failedPhase == "archiving" and "Audio compression failed: " or "Transcription failed: "
+			notifyFailure(prefix .. message)
 		end
+		persistTranscriptionQueue()
 		updateMenuBar()
 		startNextTranscription()
 	end, function(_, stdout, stderr)
@@ -1003,10 +1122,12 @@ startNextTranscription = function()
 		end
 		handleTranscriptionOutput(stdout, stderr)
 		return true
-	end, { "--meeting", "--progress-json", sourcePath })
+	end, { "--meeting", "--archive-audio", "--progress-json", sourcePath })
 	module.transcriptionTask = task
 	updateMenuBar()
 	if not task or not task:start() then
+		module.failedTranscriptions[sourcePath] = true
+		table.insert(module.transcriptionQueue, sourcePath)
 		module.transcriptionTask = nil
 		module.transcriptionPath = nil
 		module.transcriptionPhase = nil
@@ -1019,7 +1140,7 @@ startNextTranscription = function()
 end
 
 local function enqueueTranscription(path)
-	if not config.transcriberPath or not path or transcriptOutputsExist(path) then
+	if not config.transcriberPath or not path then
 		return
 	end
 	if module.transcriptionPath == path then
@@ -1842,14 +1963,18 @@ recordingMenu = function()
 			table.insert(menu, { title = "-" })
 		end
 		local transcriptionStatus = "Transcription: " .. tostring(module.transcriptionProgress) .. "%"
+		local fileStatus = "Transcribing: "
 		if module.transcriptionPhase == "preparing" then
 			transcriptionStatus = "Transcription: Preparing…"
+		elseif module.transcriptionPhase == "archiving" then
+			transcriptionStatus = "Audio: Compressing…"
+			fileStatus = "Compressing: "
 		elseif module.transcriptionPhase then
 			transcriptionStatus = transcriptionStatus .. " (" .. module.transcriptionPhase .. ")"
 		end
 		table.insert(menu, { title = transcriptionStatus, disabled = true })
 		table.insert(menu, {
-			title = "Transcribing: " .. fileName(module.transcriptionPath),
+			title = fileStatus .. fileName(module.transcriptionPath),
 			disabled = true,
 		})
 	end
@@ -2021,5 +2146,7 @@ end)
 module.applicationWatcher:start()
 
 hs.distributednotifications.post("@refreshNotification@", "org.hammerspoon.Hammerspoon")
+
+module.panelWarmupTimer = hs.timer.doAfter(0, preparePanelUI)
 
 return module

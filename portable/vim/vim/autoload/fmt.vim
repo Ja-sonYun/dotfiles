@@ -14,15 +14,20 @@ function! fmt#RunFmt(ext, cmds) abort
     let dir = getcwd()
   endif
 
-  " Create a temporary file in the same directory
   let fmt_ext = empty(a:ext) ? 'tmp' : a:ext
   let bufname = expand('%:t:r')
-  let tmp_name = bufname . '.__fmt__.' . fmt_ext
-  let tmp = dir . '/' . tmp_name
-  let err = tempname()
+  let tmp_dir = trim(system('mktemp -d ' . shellescape(dir . '/.vim-fmt.XXXXXXXXXX')))
+  if v:shell_error != 0
+    echohl ErrorMsg
+    echomsg '[fmt] could not create temporary directory'
+    echohl None
+    return 0
+  endif
+  let tmp = tmp_dir . '/' . bufname . '.' . fmt_ext
+  let err = tmp_dir . '/stderr'
 
   " Build the shell command
-  let sc = ['cd ' . shellescape(dir), 'status=0', 'cat >' . shellescape(tmp_name) . ' || status=$?']
+  let sc = ['cd ' . shellescape(dir), 'status=0', 'cat >' . shellescape(tmp) . ' || status=$?']
 
   " Run each formatter command
   for cmd in a:cmds
@@ -33,7 +38,7 @@ function! fmt#RunFmt(ext, cmds) abort
   call add(sc, '[ $status -ne 0 ] && exit $status')
 
   " Output formatted file
-  call add(sc, 'cat ' . shellescape(tmp_name) . ' || status=$?')
+  call add(sc, 'cat ' . shellescape(tmp) . ' || status=$?')
   call add(sc, 'exit $status')
   let shcmd = 'sh -c ' . shellescape(join(sc, ' ; '))
 
@@ -63,13 +68,9 @@ function! fmt#RunFmt(ext, cmds) abort
       endfor
       echohl None
     endif
-    call delete(err)
   endif
 
-  " Cleanup tmp now
-  if filereadable(tmp)
-    call delete(tmp)
-  endif
+  call delete(tmp_dir, 'rf')
 
   " Failure -> revert and exit
   if shell_error !=# 0 || has_error
@@ -94,4 +95,3 @@ function! fmt#RunFmt(ext, cmds) abort
   echomsg '[fmt] done'
   return 0
 endfunction
-

@@ -31,15 +31,15 @@ agent_colors() {
 }
 
 recompute() {
-	local changed=0 entry key owner pane_id path project selected state agent fg bg display
+	local changed=0 entry key owner pane_id path project selected state agent fg bg display display_name
 	local session_id session_name window_id active enabled stored_project monitor_scope
 	local window_name automatic_rename current_marker desired_marker
 	local idle running waiting
 	local -A project_cache idle_counts running_counts waiting_counts
-	local -A pane_seen pane_project pane_old_project pane_state pane_agent stale_panes
+	local -A pane_seen pane_project pane_old_project pane_state pane_agent pane_display_name stale_panes
 	local -A session_exists session_name_by_id session_marker session_has_agent
 	local -A window_seen window_choice window_choice_active
-	local -A window_old_state window_old_agent window_old_fg window_old_bg window_old_managed
+	local -A window_old_state window_old_agent window_old_display_name window_old_fg window_old_bg window_old_managed
 	local -A window_name_by_id window_automatic_rename window_old_counts
 	local -A main_pane_seen main_window_seen main_project_seen
 	local -A main_idle main_running main_waiting
@@ -53,12 +53,13 @@ recompute() {
 		session_marker[$session_id]="$current_marker"
 	done < <(tmux list-sessions -F $'#{session_id}\x1f#{session_name}\x1f#{E:TMUX_AGENT_STATUS}' 2>/dev/null)
 
-	while IFS=$'\x1f' read -r window_id window_name automatic_rename state agent fg bg enabled display; do
+	while IFS=$'\x1f' read -r window_id window_name automatic_rename state agent fg bg enabled display display_name; do
 		[[ -n "$window_id" && -z "${window_seen[$window_id]:-}" ]] || continue
 		window_seen[$window_id]=1
 		windows+=("$window_id")
 		window_old_state[$window_id]="$state"
 		window_old_agent[$window_id]="$agent"
+		window_old_display_name[$window_id]="$display_name"
 		window_old_fg[$window_id]="$fg"
 		window_old_bg[$window_id]="$bg"
 		window_old_managed[$window_id]="$enabled"
@@ -66,10 +67,10 @@ recompute() {
 		window_name_by_id[$window_id]="$window_name"
 		window_automatic_rename[$window_id]="$automatic_rename"
 		done < <(
-		tmux list-windows -a -F $'#{window_id}\x1f#{window_name}\x1f#{automatic-rename}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_fg}\x1f#{@agent_bg}\x1f#{@agent_managed}\x1f#{@agent_counts_display}' 2>/dev/null
+		tmux list-windows -a -F $'#{window_id}\x1f#{window_name}\x1f#{automatic-rename}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_fg}\x1f#{@agent_bg}\x1f#{@agent_managed}\x1f#{@agent_counts_display}\x1f#{@agent_display_name}' 2>/dev/null
 	)
 
-	while IFS=$'\x1f' read -r session_id session_name window_id pane_id active path enabled state agent stored_project owner window_name automatic_rename monitor_scope; do
+	while IFS=$'\x1f' read -r session_id session_name window_id pane_id active path enabled state agent stored_project owner window_name automatic_rename monitor_scope display_name; do
 		[[ -n "$pane_id" && -n "$window_id" ]] || continue
 
 		if [[ "$session_name" == "main" && -z "$monitor_scope" ]]; then
@@ -90,6 +91,7 @@ recompute() {
 		pane_old_project[$pane_id]="$stored_project"
 		pane_state[$pane_id]="$state"
 		pane_agent[$pane_id]="$agent"
+		pane_display_name[$pane_id]="$display_name"
 		owner="${owner:-$session_id}"
 		[[ "$enabled" == "1" ]] || continue
 		if [[ -z "${session_exists[$owner]:-}" ]]; then
@@ -116,7 +118,7 @@ recompute() {
 			window_choice_active[$window_id]="$active"
 		fi
 		done < <(
-		tmux list-panes -a -F $'#{session_id}\x1f#{session_name}\x1f#{window_id}\x1f#{pane_id}\x1f#{pane_active}\x1f#{pane_current_path}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_project}\x1f#{@agent_session_id}\x1f#{window_name}\x1f#{automatic-rename}\x1f#{@pane_monitor_scope}' 2>/dev/null
+		tmux list-panes -a -F $'#{session_id}\x1f#{session_name}\x1f#{window_id}\x1f#{pane_id}\x1f#{pane_active}\x1f#{pane_current_path}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_project}\x1f#{@agent_session_id}\x1f#{window_name}\x1f#{automatic-rename}\x1f#{@pane_monitor_scope}\x1f#{@agent_display_name}' 2>/dev/null
 	)
 
 	tmux_begin
@@ -125,6 +127,7 @@ recompute() {
 			tmux_add set-option -p -q -u -t "$pane_id" @agent_enabled
 			tmux_add set-option -p -q -u -t "$pane_id" @agent_state
 			tmux_add set-option -p -q -u -t "$pane_id" @agent_name
+			tmux_add set-option -p -q -u -t "$pane_id" @agent_display_name
 			tmux_add set-option -p -q -u -t "$pane_id" @agent_path
 			tmux_add set-option -p -q -u -t "$pane_id" @agent_project
 			tmux_add set-option -p -q -u -t "$pane_id" @agent_session_id
@@ -159,6 +162,7 @@ recompute() {
 		if [[ -n "$selected" ]]; then
 			state="${pane_state[$selected]:-idle}"
 			agent="${pane_agent[$selected]:-agent}"
+			display_name="${pane_display_name[$selected]:-$agent}"
 			IFS=$'\t' read -r fg bg < <(agent_colors "$state")
 			if [[ "${window_old_state[$window_id]}" != "$state" ]]; then
 				tmux_add set-option -w -q -t "$window_id" @agent_state "$state"
@@ -166,6 +170,10 @@ recompute() {
 			fi
 			if [[ "${window_old_agent[$window_id]}" != "$agent" ]]; then
 				tmux_add set-option -w -q -t "$window_id" @agent_name "$agent"
+				changed=1
+			fi
+			if [[ "${window_old_display_name[$window_id]}" != "$display_name" ]]; then
+				tmux_add set-option -w -q -t "$window_id" @agent_display_name "$display_name"
 				changed=1
 			fi
 			if [[ "${window_old_fg[$window_id]}" != "$fg" ]]; then
@@ -180,18 +188,19 @@ recompute() {
 				tmux_add set-option -w -q -t "$window_id" @agent_managed 1
 				changed=1
 			fi
-			if [[ "${window_name_by_id[$window_id]}" != "$agent:$state" ]]; then
-				tmux_add rename-window -t "$window_id" "$agent:$state"
+			if [[ "${window_name_by_id[$window_id]}" != "$display_name:$state" ]]; then
+				tmux_add rename-window -t "$window_id" "$display_name:$state"
 				changed=1
 			fi
 			if [[ "${window_automatic_rename[$window_id]}" != "0" ]]; then
 				tmux_add set-option -w -q -t "$window_id" automatic-rename off
 				changed=1
 			fi
-		elif [[ -n "${window_old_managed[$window_id]}${window_old_state[$window_id]}${window_old_agent[$window_id]}${window_old_fg[$window_id]}${window_old_bg[$window_id]}" ]]; then
+		elif [[ -n "${window_old_managed[$window_id]}${window_old_state[$window_id]}${window_old_agent[$window_id]}${window_old_display_name[$window_id]}${window_old_fg[$window_id]}${window_old_bg[$window_id]}" ]]; then
 			tmux_add set-option -w -q -u -t "$window_id" @agent_managed
 			tmux_add set-option -w -q -u -t "$window_id" @agent_state
 			tmux_add set-option -w -q -u -t "$window_id" @agent_name
+			tmux_add set-option -w -q -u -t "$window_id" @agent_display_name
 			tmux_add set-option -w -q -u -t "$window_id" @agent_fg
 			tmux_add set-option -w -q -u -t "$window_id" @agent_bg
 			tmux_add set-option -w -q -u -t "$window_id" automatic-rename

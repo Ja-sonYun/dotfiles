@@ -96,7 +96,8 @@ def BuildAskPrompt(instruction: string, lines: list<string>): string
 enddef
 
 def ApplyIndent(ctx: any): void
-  if &l:indentexpr == ''
+  const target_buffer = ctx.Buffer()
+  if !bufloaded(target_buffer) || getbufvar(target_buffer, '&indentexpr') == ''
     return
   endif
 
@@ -107,14 +108,21 @@ def ApplyIndent(ctx: any): void
     return
   endif
 
-  const save_pos = getpos('.')
+  const save_buffer = bufnr('%')
+  const save_view = winsaveview()
   try
+    if save_buffer != target_buffer
+      execute 'noautocmd keepalt keepjumps hide buffer ' .. target_buffer
+    endif
     for lnum in range(start, end_)
       keepjumps call cursor(lnum, 1)
       silent! normal! ==
     endfor
   finally
-    keepjumps call setpos('.', save_pos)
+    if bufnr('%') != save_buffer
+      execute 'noautocmd keepalt keepjumps hide buffer ' .. save_buffer
+    endif
+    winrestview(save_view)
   endtry
 enddef
 

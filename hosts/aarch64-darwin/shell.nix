@@ -10,8 +10,6 @@
   ];
   environment.pathsToLink = [ "/share/zsh" ];
 
-  time.timeZone = "Asia/Tokyo";
-
   environment.variables.EDITOR = "vim";
   environment.systemPath = [ ];
   environment.systemPackages = with pkgs; [

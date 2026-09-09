@@ -6,6 +6,7 @@
   ...
 }:
 let
+  hasSignedYabai = config.services.codeSigning.targets ? yabai;
   signedYabaiPath = "${userhome}/.local/libexec/yabai/yabai";
   signedYabaiPackage = pkgs.writeShellScriptBin "yabai" ''
     exec ${lib.escapeShellArg signedYabaiPath} "$@"
@@ -27,12 +28,12 @@ in
         restartLaunchAgent = "org.nixos.yabai";
       };
 
-      services.yabai.package = signedYabaiPackage;
+      services.yabai.package = if hasSignedYabai then signedYabaiPackage else pkgs.yabai;
       environment.etc."sudoers.d/yabai".source = lib.mkForce yabaiSaSudoers;
       launchd.user.agents.yabai = {
         startupGuard = {
           enable = true;
-          extraExecutables = [ signedYabaiPath ];
+          extraExecutables = lib.optional hasSignedYabai signedYabaiPath;
           readableFileFlags = [ "-c" ];
         };
         serviceConfig = {

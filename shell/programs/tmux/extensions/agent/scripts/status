@@ -40,17 +40,22 @@ resolve_session_id() {
 }
 
 detect_agent() {
-	local word base
+	local word base mapping pattern display_name
+	local -a mappings
+	read -r -a mappings <<< "$(tmux show-option -gqv @agent_command_map)"
 	for word in "$@"; do
 		for word in $word; do
 			base="${word##*/}"
 			base="${base%\"}"
 			base="${base#\"}"
-			case "$base" in
-				codex | codex-*) printf 'codex\n'; return ;;
-				claude | claude-*) printf 'claude\n'; return ;;
-				pi | pi-*) printf 'pi\n'; return ;;
-			esac
+			for mapping in "${mappings[@]}"; do
+				pattern="${mapping%%=*}"
+				if [[ "$base" == $pattern ]]; then
+					display_name="$(tmux show-option -gqv "@agent_display_$base")"
+					printf '%s\x1f%s\n' "${mapping#*=}" "${display_name:-$base}"
+					return
+				fi
+			done
 		done
 	done
 }
@@ -62,6 +67,7 @@ clear_pane_state() {
 	tmux_add set-option -p -q -u -t "$target" @agent_enabled
 	tmux_add set-option -p -q -u -t "$target" @agent_state
 	tmux_add set-option -p -q -u -t "$target" @agent_name
+	tmux_add set-option -p -q -u -t "$target" @agent_display_name
 	tmux_add set-option -p -q -u -t "$target" @agent_path
 	tmux_add set-option -p -q -u -t "$target" @agent_project
 	tmux_add set-option -p -q -u -t "$target" @agent_session_id
@@ -93,8 +99,8 @@ session_name="$(tmux display-message -pt "$session_id:" '#{session_name}' 2>/dev
 if [[ "$session_name" == "_popup_all_agents" ]]; then
 	exit 0
 fi
-IFS=$'\x1f' read -r pane_id pane_path start_command current_command enabled prev_state stored_agent stored_path stored_session_id < <(
-	tmux display-message -pt "$pane_id" $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_start_command}\x1f#{pane_current_command}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_path}\x1f#{@agent_session_id}' 2>/dev/null
+IFS=$'\x1f' read -r pane_id pane_path start_command current_command enabled prev_state stored_agent stored_path stored_session_id stored_display_name < <(
+	tmux display-message -pt "$pane_id" $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_start_command}\x1f#{pane_current_command}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_path}\x1f#{@agent_session_id}\x1f#{@agent_display_name}' 2>/dev/null
 )
 if [[ -z "$pane_id" || -z "$session_id" || -z "$session_name" ]]; then
 	schedule_counts
@@ -117,15 +123,16 @@ if ! session_matches "$session_name" agent; then
 	exit 0
 fi
 agent_status="$(tmux display-message -pt "$session_id" '#{E:TMUX_AGENT_STATUS}' 2>/dev/null)"
-agent="$(detect_agent "$start_command" "$current_command")"
+IFS=$'\x1f' read -r agent display_name < <(detect_agent "$start_command" "$current_command")
 if [[ -z "$agent_status" && -z "$agent" ]]; then
 	[[ "$enabled" != "1" ]] || clear_pane_state "$pane_id" || exit 1
 	schedule_counts
 	exit 0
 fi
 agent="${agent:-${stored_agent:-agent}}"
+display_name="${display_name:-${stored_display_name:-$agent}}"
 
-if [[ "$enabled" == "1" && "$prev_state" == "$state" && "$stored_agent" == "$agent" && "$stored_path" == "$pane_path" && "$stored_session_id" == "$session_id" ]]; then
+if [[ "$enabled" == "1" && "$prev_state" == "$state" && "$stored_agent" == "$agent" && "$stored_display_name" == "$display_name" && "$stored_path" == "$pane_path" && "$stored_session_id" == "$session_id" ]]; then
 	exit 0
 fi
 
@@ -133,6 +140,7 @@ tmux_begin
 tmux_add set-option -p -q -t "$pane_id" @agent_enabled 1
 tmux_add set-option -p -q -t "$pane_id" @agent_state "$state"
 tmux_add set-option -p -q -t "$pane_id" @agent_name "$agent"
+tmux_add set-option -p -q -t "$pane_id" @agent_display_name "$display_name"
 tmux_add set-option -p -q -t "$pane_id" @agent_path "$pane_path"
 tmux_add set-option -p -q -t "$pane_id" @agent_session_id "$session_id"
 if ! tmux_flush; then

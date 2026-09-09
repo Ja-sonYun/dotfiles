@@ -54,7 +54,7 @@ _: {
               export OLDPWD="$PWD"
               setopt localoptions nullglob
               for file in "$current_hooks/on_exit/"*; do
-                  if [[ -f "$file" ]]; then
+                  if [[ -f "$file" && "$file" != *.tmp ]]; then
                       source "$file"
                   fi
               done
@@ -62,7 +62,7 @@ _: {
         '';
 
         chpwd-hook-init = ''
-          mkdir -p .hooks/on_enter .hooks/on_leave
+          mkdir -p .hooks/on_enter .hooks/on_leave .hooks/on_exit
           echo "echo 'You have entered $(basename \"$PWD\")'" > .hooks/on_enter/enter.sh
           echo "echo 'You have left $(basename \"$PWD\")'" > .hooks/on_leave/leave.sh
           echo "echo 'You have exited $(basename \"$PWD\")'" > .hooks/on_exit/exit.sh

@@ -100,6 +100,34 @@ show-derivations: ## Show derivation details
 deploy: build ## Deploy nix-darwin config
 	nix run nixpkgs#nh darwin switch .#darwinConfigurations.$(HOSTNAME)
 	@$(MAKE) linux-builder-down
+
+##@ Virtual Machines
+
+VM_OS ?= macos
+export VM_OS VM_COMMAND
+
+.PHONY: vm-create vm-start vm-status vm-ssh vm-apply vm-stop vm-remove
+
+vm-create: ## Create VM and apply dotfiles
+	@bash vm/run.sh "$${VM_OS}" create
+
+vm-start: ## Start VM and wait for SSH
+	@bash vm/run.sh "$${VM_OS}" start
+
+vm-status: ## Show VM status and paths
+	@bash vm/run.sh "$${VM_OS}" status
+
+vm-ssh: ## Connect to VM (optional VM_COMMAND)
+	@bash vm/run.sh "$${VM_OS}" ssh
+
+vm-apply: ## Apply current dotfiles to VM
+	@bash vm/run.sh "$${VM_OS}" apply
+
+vm-stop: ## Shut down VM
+	@bash vm/run.sh "$${VM_OS}" stop
+
+vm-remove: ## Remove stopped VM, retaining image cache
+	@bash vm/run.sh "$${VM_OS}" remove
 endif
 # ==================================================================================
 

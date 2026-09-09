@@ -1,7 +1,6 @@
 {
   programs.ai-agents.toolGuard.system-temp-paths = {
     matcher = ".";
-    approvalToken = "ALLOW_SYSTEM_TEMP";
     onBlock = "revise-input";
     inputFields = [
       "command"
@@ -23,7 +22,7 @@
       <git worktree root>/.tmp/<session>/ using absolute paths (managing-temp-files skill).
       The per-session scratchpad directory in the system prompt is not an exception.
       Correct actual temporary-file destinations before retrying; setting TMPDIR alone
-      does not change explicit destinations. Do not request ALLOW_SYSTEM_TEMP unless
+      does not change explicit destinations. Do not request an exception unless
       the user explicitly asks for a system temporary-path exception.
       If the match is an existing code or documentation string, report a possible
       false positive without claiming an actual write or changing that string merely

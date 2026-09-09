@@ -50,7 +50,8 @@ in
       (lib.mkIf config.programs.codex.enable {
         programs.codex = lib.mkMerge [
           {
-            inherit (cfg) skills extraPath;
+            inherit (cfg) extraPath;
+            skills = cfg.codexSkills;
           }
           (lib.mkIf (cfg.context != null) {
             inherit (cfg) context;

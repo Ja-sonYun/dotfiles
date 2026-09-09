@@ -12,7 +12,6 @@ from pathlib import Path
 class Guard:
     name: str
     matcher: re.Pattern[str]
-    approval_token: str
     on_block: str
     input_fields: tuple[str, ...]
     input_patterns: tuple[re.Pattern[str], ...]
@@ -22,11 +21,6 @@ class Guard:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, type=Path)
-    parser.add_argument(
-        "--event",
-        required=True,
-        choices=("UserPromptSubmit", "PreToolUse", "SessionEnd"),
-    )
     return parser.parse_args()
 
 
@@ -43,11 +37,6 @@ def string_field(hook_input: dict[str, object], name: str) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
-def matches_approval_token(line: str, approval_token: str) -> bool:
-    candidate = line.strip()
-    return candidate == approval_token or candidate.strip("`\\") == approval_token
-
-
 def load_guards(config_path: Path, client: str) -> list[Guard]:
     value = json.loads(config_path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -62,12 +51,11 @@ def load_guards(config_path: Path, client: str) -> list[Guard]:
         if not isinstance(name, str) or not isinstance(fields, dict):
             raise ValueError(f"Tool Guard configuration for {client} is invalid.")
         matcher = fields.get("matcher")
-        approval_token = fields.get("approvalToken")
         on_block = fields.get("onBlock", "request-approval")
         input_fields = fields.get("inputFields", [])
         input_patterns = fields.get("inputPatterns", [])
         reason = fields.get("reason", "")
-        if not isinstance(matcher, str) or not isinstance(approval_token, str):
+        if not isinstance(matcher, str):
             raise ValueError(f"Tool Guard {client}.{name} is invalid.")
         if (
             on_block not in ("request-approval", "revise-input")
@@ -86,7 +74,6 @@ def load_guards(config_path: Path, client: str) -> list[Guard]:
             Guard(
                 name=name,
                 matcher=re.compile(matcher),
-                approval_token=approval_token,
                 on_block=on_block,
                 input_fields=tuple(input_fields),
                 input_patterns=tuple(re.compile(pattern) for pattern in input_patterns),
@@ -139,24 +126,21 @@ def state_directory() -> Path:
     return Path.home() / ".local" / "state" / "ai-agents" / "tool-guard"
 
 
-def state_path(client: str, session_id: str) -> Path:
-    digest = hashlib.sha256(f"{client}\0{session_id}".encode()).hexdigest()
+def state_path(client: str, session_id: str, guard_name: str) -> Path:
+    digest = hashlib.sha256(
+        f"{client}\0{session_id}\0{guard_name}".encode()
+    ).hexdigest()
     return state_directory() / digest
 
 
-def read_authorization(path: Path) -> tuple[str, set[str]] | None:
+def mark_first_block(client: str, session_id: str, guard_name: str) -> bool:
+    path = state_path(client, session_id, guard_name)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
-    if not isinstance(value, dict):
-        return None
-
-    prompt_id = value.get("promptId")
-    approved = value.get("approvedGuards")
-    if not isinstance(prompt_id, str) or not isinstance(approved, list):
-        return None
-    return prompt_id, {item for item in approved if isinstance(item, str)}
+        path.touch(mode=0o600, exist_ok=False)
+    except FileExistsError:
+        return False
+    return True
 
 
 def emit_denial(reason: str) -> None:
@@ -172,68 +156,7 @@ def emit_denial(reason: str) -> None:
     )
 
 
-def emit_context(event: str, message: str) -> None:
-    json.dump(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": event,
-                "additionalContext": message,
-            }
-        },
-        sys.stdout,
-    )
-
-
-def update_authorization(
-    hook_input: dict[str, object], client: str, guards: list[Guard]
-) -> int:
-    if not guards:
-        return 0
-
-    session_id = string_field(hook_input, "session_id")
-    prompt_id = string_field(hook_input, "prompt_id")
-    prompt = string_field(hook_input, "prompt")
-    if session_id is None or prompt_id is None or prompt is None:
-        emit_context(
-            "UserPromptSubmit",
-            "Tool Guard could not read this prompt; guarded tools remain blocked.",
-        )
-        return 0
-
-    approved = {
-        guard.name
-        for guard in guards
-        if any(
-            matches_approval_token(line, guard.approval_token)
-            for line in prompt.splitlines()
-        )
-    }
-    path = state_path(client, session_id)
-    try:
-        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        path.write_text(
-            json.dumps(
-                {
-                    "promptId": prompt_id,
-                    "approvedGuards": sorted(approved),
-                }
-            ),
-            encoding="utf-8",
-        )
-        if approved:
-            emit_context(
-                "UserPromptSubmit",
-                "Tool Guard authorization applies only to this user turn.",
-            )
-    except OSError:
-        emit_context(
-            "UserPromptSubmit",
-            "Tool Guard could not store authorization; guarded tools remain blocked.",
-        )
-    return 0
-
-
-def check_authorization(
+def check_first_use(
     hook_input: dict[str, object], client: str, guards: list[Guard]
 ) -> int:
     tool_name = string_field(hook_input, "tool_name")
@@ -250,89 +173,66 @@ def check_authorization(
         return 0
 
     session_id = string_field(hook_input, "session_id")
-    prompt_id = string_field(hook_input, "prompt_id")
-    if session_id is None or prompt_id is None:
-        emit_denial("Tool Guard could not identify the current user turn.")
+    if session_id is None:
+        emit_denial("Tool Guard could not identify the current conversation.")
         return 0
 
-    authorization = read_authorization(state_path(client, session_id))
-    approved = (
-        authorization[1]
-        if authorization is not None and authorization[0] == prompt_id
-        else set()
-    )
-    missing = [guard for guard in matching_guards if guard.name not in approved]
-    if not missing:
+    try:
+        first_guards = [
+            guard
+            for guard in matching_guards
+            if mark_first_block(client, session_id, guard.name)
+        ]
+    except OSError as error:
+        emit_denial(f"Tool Guard could not record the first block: {error}")
+        return 0
+    if not first_guards:
         return 0
 
     approval_required = [
-        guard for guard in missing if guard.on_block == "request-approval"
+        guard for guard in first_guards if guard.on_block == "request-approval"
     ]
     reasons = "".join(
         f"{reason} "
-        for reason in dict.fromkeys(guard.reason for guard in missing)
+        for reason in dict.fromkeys(guard.reason for guard in first_guards)
         if reason
     )
     if approval_required:
-        tokens = ", ".join(guard.approval_token for guard in approval_required)
         emit_denial(
-            f"{reasons}{tool_name} requires explicit user authorization. Do not retry "
-            "in this turn. End the turn and ask the user to send a new message "
-            f"containing each required approval token as its own line: {tokens}."
+            f"{reasons}{tool_name} was blocked before execution. "
+            "If the intended use is not already authorized, you must explain it "
+            "and ask the user for permission. You must not retry until approval "
+            "is given. "
+            "Stay within the approved scope."
         )
     else:
         emit_denial(
-            f"{reasons}{tool_name} was blocked before execution by Tool Guard. "
-            "Correct the input to comply with the stated rules, then retry in this "
-            "turn. Do not repeat the unchanged call or hide matching input to evade "
-            "the guard. Every retry is checked again."
+            f"{reasons}{tool_name} was blocked before execution. "
+            "You must correct any actual violation before retrying. "
+            "You must not change valid input merely to avoid the guard."
         )
-    return 0
-
-
-def clear_authorization(hook_input: dict[str, object], client: str) -> int:
-    session_id = string_field(hook_input, "session_id")
-    if session_id is not None:
-        try:
-            state_path(client, session_id).unlink(missing_ok=True)
-        except OSError:
-            pass
     return 0
 
 
 def main() -> int:
     args = parse_args()
-    event: str = args.event
     client = os.environ.get("AI_AGENT_CLIENT", "")
     if not client:
-        if event == "PreToolUse":
-            emit_denial("Tool Guard could not identify the active AI agent.")
-        elif event == "UserPromptSubmit":
-            emit_context(event, "Tool Guard could not identify the active AI agent.")
+        emit_denial("Tool Guard could not identify the active AI agent.")
         return 0
 
     hook_input = read_hook_input()
     if hook_input is None:
-        if event == "PreToolUse":
-            emit_denial("Tool Guard could not validate authorization.")
-        elif event == "UserPromptSubmit":
-            emit_context(event, "Tool Guard received invalid hook input.")
+        emit_denial("Tool Guard received invalid hook input.")
         return 0
 
     try:
         guards = load_guards(args.config, client)
     except (json.JSONDecodeError, OSError, re.error, ValueError) as error:
-        if event == "PreToolUse":
-            emit_denial(f"Tool Guard configuration is invalid: {error}")
-        elif event == "UserPromptSubmit":
-            emit_context(event, f"Tool Guard configuration is invalid: {error}")
+        emit_denial(f"Tool Guard configuration is invalid: {error}")
         return 0
 
-    if event == "UserPromptSubmit":
-        return update_authorization(hook_input, client, guards)
-    if event == "PreToolUse":
-        return check_authorization(hook_input, client, guards)
-    return clear_authorization(hook_input, client)
+    return check_first_use(hook_input, client, guards)
 
 
 if __name__ == "__main__":
