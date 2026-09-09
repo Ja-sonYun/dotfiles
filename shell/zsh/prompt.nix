@@ -53,7 +53,7 @@ in
             starship_git_prompt+=" %F{8}[''${git_status%,}%F{8}]%f"
           fi
         '';
-        hooks.precmd = [ "update-starship-git-prompt" ];
+        hooks.precmd = [ { function = "update-starship-git-prompt"; } ];
       }
     ];
 

@@ -51,7 +51,7 @@ in
 
         while true; do
             echo -n "$prompt (y/n): "
-            read -k1 answer
+            read -k1 answer || return 1
             echo
             if [[ $answer == "y" || $answer == "Y" ]]; then
                 return 0

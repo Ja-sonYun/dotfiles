@@ -36,7 +36,7 @@
         [[ -d "$dir" ]] && cd "$dir"
       '';
 
-      hooks.precmd = [ "_shell_apply_cd_request" ];
+      hooks.precmd = [ { function = "_shell_apply_cd_request"; } ];
     }
   ];
 

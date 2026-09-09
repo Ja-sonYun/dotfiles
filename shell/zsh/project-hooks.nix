@@ -70,8 +70,18 @@ _: {
       };
 
       hooks = {
-        chpwd = [ "_project_hooks_chpwd" ];
-        zshexit = [ "_project_hooks_zshexit" ];
+        chpwd = [
+          {
+            function = "_project_hooks_chpwd";
+            tmuxOnly = true;
+          }
+        ];
+        zshexit = [
+          {
+            function = "_project_hooks_zshexit";
+            tmuxOnly = true;
+          }
+        ];
       };
     }
   ];

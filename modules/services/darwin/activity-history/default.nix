@@ -170,15 +170,15 @@ in
             order = 900;
             raw = "source ${shell}";
             hooks = {
-              zshaddhistory = [ "_activity_history_filter" ];
-              preexec = [ "_activity_history_start" ];
-              precmd = [ "_activity_history_capture_end" ];
-              zshexit = [ "_activity_history_session_end" ];
+              zshaddhistory = [ { function = "_activity_history_filter"; } ];
+              preexec = [ { function = "_activity_history_start"; } ];
+              precmd = [ { function = "_activity_history_capture_end"; } ];
+              zshexit = [ { function = "_activity_history_session_end"; } ];
             };
           }
           {
             order = 1200;
-            hooks.precmd = [ "_activity_history_finish" ];
+            hooks.precmd = [ { function = "_activity_history_finish"; } ];
           }
         ];
       };

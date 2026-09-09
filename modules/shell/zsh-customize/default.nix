@@ -60,6 +60,19 @@ let
     };
   };
 
+  hookType = lib.types.submodule {
+    options = {
+      function = lib.mkOption {
+        type = lib.types.str;
+      };
+      tmuxOnly = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Register this hook only when the shell starts inside tmux.";
+      };
+    };
+  };
+
   blockType = lib.types.submodule {
     options = {
       order = lib.mkOption {
@@ -91,7 +104,7 @@ let
         default = "";
       };
       hooks = lib.mkOption {
-        type = lib.types.attrsOf (lib.types.listOf lib.types.str);
+        type = lib.types.attrsOf (lib.types.listOf hookType);
         default = { };
       };
     };
@@ -153,14 +166,26 @@ let
 
   renderZleWidgets = widgets: lib.concatStringsSep "\n\n" (lib.mapAttrsToList renderZle widgets);
 
+  renderHook =
+    event: hook:
+    let
+      registration = "add-zsh-hook ${event} ${hook.function}";
+    in
+    if hook.tmuxOnly then
+      ''
+        if [[ -n "$TMUX" ]]; then
+          ${registration}
+        fi
+      ''
+    else
+      registration;
+
   renderHooks =
     hooks:
     lib.optionalString (hooks != { }) ''
       autoload -Uz add-zsh-hook
       ${lib.concatStringsSep "\n" (
-        lib.flatten (
-          lib.mapAttrsToList (hook: functions: map (fn: "add-zsh-hook ${hook} ${fn}") functions) hooks
-        )
+        lib.flatten (lib.mapAttrsToList (event: entries: map (renderHook event) entries) hooks)
       )}
     '';
 

@@ -78,8 +78,18 @@ in
       };
 
       hooks = {
-        preexec = [ "_tmux_set_pane_command" ];
-        precmd = [ "_tmux_clear_pane_command" ];
+        preexec = [
+          {
+            function = "_tmux_set_pane_command";
+            tmuxOnly = true;
+          }
+        ];
+        precmd = [
+          {
+            function = "_tmux_clear_pane_command";
+            tmuxOnly = true;
+          }
+        ];
       };
     }
   ];
