@@ -2,7 +2,7 @@
   services.hammerspoon = {
     enable = true;
     features = {
-      systemMonitor.enable = true;
+      desktopNumber.enable = true;
 
       onLock = {
         enable = true;

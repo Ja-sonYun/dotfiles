@@ -52,8 +52,8 @@
           ];
         };
         window = {
-          format = "#I:#{?#{@panes},#{@panes},#W}#[push-default]#{@agent_counts_display}#[pop-default]";
-          currentFormat = "#[fg=white]#[bg=green]▌#[default]#[bg=green]#I:#{?#{@panes},#{@panes},#W}#[push-default]#{@agent_counts_display}#[pop-default]#[default]#[fg=white]#[bg=green]▐#[default]";
+          format = "#{?#{@panes},#{@panes},#W}#[push-default]#{@agent_counts_display}#[pop-default]";
+          currentFormat = "#[fg=white]#[bg=green]▌#[default]#[bg=green]#{?#{@panes},#{@panes},#W}#[push-default]#{@agent_counts_display}#[pop-default]#[default]#[fg=white]#[bg=green]▐#[default]";
         };
       };
 

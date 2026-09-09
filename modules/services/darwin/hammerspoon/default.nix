@@ -30,8 +30,8 @@ in
     ./scripts/shared-actions/module.nix
     ./scripts/on-lock/module.nix
     ./scripts/application-input-sources/module.nix
+    ./scripts/desktop-number/module.nix
     ./scripts/on-battery/module.nix
-    ./scripts/system-monitor/module.nix
   ];
 
   options.services.hammerspoon = {

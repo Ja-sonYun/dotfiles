@@ -1,15 +1,20 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 let
   tmuxRoot = ../..;
   scripts = "${tmuxRoot}/extensions/agent/scripts";
   popupScripts = "${tmuxRoot}/extensions/popup/scripts";
+  stateNotify = pkgs.writeShellScript "tmux-agent-notify" ''
+    [[ -n "''${TMUX_PANE:-}" ]] || exit 0
+    exec ${scripts}/status init
+  '';
   sharedRootBindings = import ../../shared-root.nix;
-  agentFg = "#{?#{@agent_fg},#{@agent_fg},#[fg=color244]}";
-  agentBg = "#{?#{@agent_bg},#{@agent_bg},#[bg=color244]}";
+  agentInactiveColor = "#{?#{==:#{@agent_state},running},#9e8c56,#{?#{==:#{@agent_state},waiting},#b0777d,#{?#{==:#{@agent_state},error},#b0777d,#7a8088}}}";
+  agentActiveColor = "#{?#{==:#{@agent_state},running},#ffd000,#{?#{==:#{@agent_state},waiting},#ff4040,#{?#{==:#{@agent_state},error},#ff4040,#e4e7ec}}}";
   agents = [
     {
       command = "agent";
@@ -100,6 +105,7 @@ in
           environment = {
             CTRL_C_AS_CLOSE = "1";
             TMUX_AGENT_STATUS = "1";
+            STATE_COMMAND_NOTIFY = "${stateNotify}";
             TMUX_REMAP_CTRL_D = "C-n";
           };
           position = {
@@ -268,12 +274,8 @@ in
           right = [ ];
         };
         window = {
-          format = "#[bg=default]${agentFg}▐${agentBg}#[fg=black]#I:#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#W${agentFg}#[bg=default]▌#[default]";
-          currentFormat =
-            let
-              highlightColor = "magenta";
-            in
-            "${agentBg}#[fg=${highlightColor}]▌#[fg=black]#I:#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#{@agent_display_name}:#{@agent_state}${agentFg}#[fg=${highlightColor}]▐#[default]";
+          format = "#[bg=default,fg=${agentInactiveColor}]▐#[bg=${agentInactiveColor},fg=black]#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#W#[bg=default,fg=${agentInactiveColor}]▌#[default]";
+          currentFormat = "#[bg=${agentActiveColor},fg=magenta,nobold]▌#[fg=black,bold]#{?#{==:#{session_name},_popup_all_agents},#{b:@agent_project} · ,}#{@agent_display_name}:#{@agent_state}#[fg=magenta,nobold]▐#[default]";
         };
       };
     };

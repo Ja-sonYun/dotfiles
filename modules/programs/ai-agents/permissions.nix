@@ -25,6 +25,7 @@ let
           deny = explicitKeysWith data.path "deny";
         };
         readonlyMcpTools = data.mcp_readonly_tools or { };
+        unixSockets = data.network.unix_sockets or { };
       in
       {
         codex =
@@ -96,7 +97,7 @@ let
               extends = ":workspace";
               filesystem =
                 builtins.listToAttrs (
-                  map (path: lib.nameValuePair path "write") (absolutePaths "allow")
+                  map (path: lib.nameValuePair path "write") (absolutePaths "allow" ++ keysWith unixSockets "allow")
                   ++ map (path: lib.nameValuePair path "read") (absolutePaths "read")
                   ++ map (path: lib.nameValuePair path "deny") (absolutePaths "deny")
                 )
@@ -112,9 +113,12 @@ let
                   );
                 };
               network.enabled = true;
+              network.unix_sockets = unixSockets;
             };
             inherit mcpServers;
           };
+
+        claudeUnixSockets = keysWith unixSockets "allow";
 
         claude =
           let
@@ -181,6 +185,7 @@ in
 
       (lib.mkIf config.programs.claude-code.enable {
         programs.claude-code.settings.permissions = permissions.claude;
+        programs.claude-code.settings.sandbox.network.allowUnixSockets = permissions.claudeUnixSockets;
       })
     ]
   );

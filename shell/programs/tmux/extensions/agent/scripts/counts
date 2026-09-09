@@ -2,20 +2,20 @@
 
 format_counts() {
 	local idle="$1" running="$2" waiting="$3" display=""
-	((idle > 0)) && display="#[bg=color244,fg=black]$idle#[default]"
-	((running > 0)) && display+="${display:+:}#[bg=yellow,fg=black]$running#[default]"
-	((waiting > 0)) && display+="${display:+:}#[bg=red,fg=white]$waiting#[default]"
+	((idle > 0)) && display="#[bg=#c7ccd4,fg=black]$idle#[default]"
+	((running > 0)) && display+="${display:+:}#[bg=#ffd866,fg=black]$running#[default]"
+	((waiting > 0)) && display+="${display:+:}#[bg=#ff6b6b,fg=black]$waiting#[default]"
 	[[ -z "$display" ]] || printf ' %s' "$display"
 }
 
 if [[ "${1:-}" == "--self-test" ]]; then
 	set -e
 	[[ "$(format_counts 0 0 0)" == "" ]]
-	[[ "$(format_counts 1 0 0)" == " #[bg=color244,fg=black]1#[default]" ]]
-	[[ "$(format_counts 0 1 0)" == " #[bg=yellow,fg=black]1#[default]" ]]
-	[[ "$(format_counts 0 0 1)" == " #[bg=red,fg=white]1#[default]" ]]
-	[[ "$(format_counts 2 2 2)" == " #[bg=color244,fg=black]2#[default]:#[bg=yellow,fg=black]2#[default]:#[bg=red,fg=white]2#[default]" ]]
-	[[ "$(format_counts 2 0 2)" == " #[bg=color244,fg=black]2#[default]:#[bg=red,fg=white]2#[default]" ]]
+	[[ "$(format_counts 1 0 0)" == " #[bg=#c7ccd4,fg=black]1#[default]" ]]
+	[[ "$(format_counts 0 1 0)" == " #[bg=#ffd866,fg=black]1#[default]" ]]
+	[[ "$(format_counts 0 0 1)" == " #[bg=#ff6b6b,fg=black]1#[default]" ]]
+	[[ "$(format_counts 2 2 2)" == " #[bg=#c7ccd4,fg=black]2#[default]:#[bg=#ffd866,fg=black]2#[default]:#[bg=#ff6b6b,fg=black]2#[default]" ]]
+	[[ "$(format_counts 2 0 2)" == " #[bg=#c7ccd4,fg=black]2#[default]:#[bg=#ff6b6b,fg=black]2#[default]" ]]
 	exit 0
 fi
 

@@ -123,8 +123,8 @@ in
         right = [ ];
       };
       window = {
-        format = "#I:#{?#{@panes},#{@panes},#{pane_current_command}}";
-        currentFormat = "#[fg=white]#[bg=green]▌#[default]#[bg=green]#I:#{?#{@panes},#{@panes},#{pane_current_command}}#[default]#[fg=white]#[bg=green]▐#[default]";
+        format = "#{?#{@panes},#{@panes},#{pane_current_command}}";
+        currentFormat = "#[fg=white]#[bg=green]▌#[default]#[bg=green]#{?#{@panes},#{@panes},#{pane_current_command}}#[default]#[fg=white]#[bg=green]▐#[default]";
       };
     };
   };

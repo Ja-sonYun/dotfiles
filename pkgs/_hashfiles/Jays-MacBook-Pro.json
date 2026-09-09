@@ -8,8 +8,8 @@
     "hash": "sha256-c9wZgJVxiUxDgRzQTSWiqxSNkCDj6dM/rJwQx7PtRj4="
   },
   "open-code-review": {
-    "version": "1.11.6",
-    "hash": "sha256-bp8J+T9ZJe7RdLeeYNm5M6WIqy7NTqSqZjed9g1493U="
+    "version": "1.11.7",
+    "hash": "sha256-Uu0x3os8HmEbbcI66K/bEahETcdQXe3c0Xk8JJRkkk4="
   },
   "pi": {
     "version": "0.85.1",
@@ -52,8 +52,8 @@
     "hash": "sha256-lwi9RJvGHatl8xtTSpnMkH8t498YLc1C7xk9tjZlFEA="
   },
   "knip": {
-    "version": "6.35.0",
-    "hash": "sha256-Emcz3WXpcnLgDnNJLNmOE368khyJUpTRvXwy9nWtZNs="
+    "version": "6.35.1",
+    "hash": "sha256-43WtqhM3cPAwVRdzmB1vH2r0qT5XEkDWmxOcBeE2h2c="
   },
   "mcp-remote": {
     "version": "0.8.5",

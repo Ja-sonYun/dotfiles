@@ -48,6 +48,7 @@ let
       "bitwarden"
       "sf-symbols"
       "wallspace"
+      "stats"
       "google-chrome"
       "drawio"
       "iina"

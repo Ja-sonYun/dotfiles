@@ -19,6 +19,23 @@ let
     exec ${pkgs.yq-go}/bin/yq --input-format=toml --output-format=yaml --unwrapScalar ".$1" "$state_file"
   '';
 
+  run = pkgs.writeShellScriptBin "state-run" ''
+    set -euo pipefail
+
+    if [[ $# -lt 2 ]]; then
+      echo "Usage: state-run <name> <executable> [args...]" >&2
+      exit 1
+    fi
+
+    export STATE_COMMAND_NAME="$1"
+    command="$2"
+    shift 2
+    if [[ -n "''${STATE_COMMAND_NOTIFY:-}" ]]; then
+      "$STATE_COMMAND_NOTIFY" || :
+    fi
+    exec "$command" "$@"
+  '';
+
   execute = pkgs.writeShellScriptBin "state-exec" ''
     set -euo pipefail
 
@@ -37,14 +54,16 @@ let
       echo "state-exec: no executable for '$key' value '$STATE_VALUE'" >&2
       exit 1
     fi
+    selection="$STATE_VALUE"
     unset STATE_VALUE
-    exec "$command" "$@"
+    exec ${run}/bin/state-run "$selection" "$command" "$@"
   '';
 in
 pkgs.symlinkJoin {
   name = "state-utils";
   paths = [
     get
+    run
     execute
   ];
 }

@@ -16,10 +16,7 @@ let
   };
   focusedDisplaySpace =
     number:
-    ''focused_display="$(${yabai} -m query --spaces --space | ${jq} -er '.display')" && target_space="$(${yabai} -m query --spaces --display "$focused_display" | ${jq} -er 'map(select(."is-native-fullscreen" == false))[${toString (number - 1)}].index')" &&'';
-  displaySpace =
-    number:
-    ''target_space="$(${yabai} -m query --spaces --display ${toString number} | ${jq} -er 'map(select(."is-native-fullscreen" == false)) | (map(select(."is-visible" == true))[0] // .[0]) | .index')" &&'';
+    ''target_space="$(${yabai} -m query --spaces --display | ${jq} -er 'map(select(."is-native-fullscreen" == false))[${toString (number - 1)}].index')" &&'';
 in
 {
   services.skhd = {
@@ -48,10 +45,8 @@ in
       "shift + lalt - 4" =
         "${focusedDisplaySpace 4} ${yabai} -m window --space \"$target_space\" --focus";
 
-      "rcmd - a" =
-        "${yabai} -m query --spaces --display | ${jq} -e '.[0].\"has-focus\" == false' >/dev/null && ${yabai} -m space --focus prev";
-      "rcmd - d" =
-        "${yabai} -m query --spaces --display | ${jq} -e '.[-1].\"has-focus\" == false' >/dev/null && ${yabai} -m space --focus next";
+      "rcmd - a" = "${yabai} -m display --space prev";
+      "rcmd - d" = "${yabai} -m display --space next";
 
       "rcmd - 1" = "${focusedDisplaySpace 1} ${yabai} -m space --focus \"$target_space\"";
       "rcmd - 2" = "${focusedDisplaySpace 2} ${yabai} -m space --focus \"$target_space\"";
@@ -66,10 +61,10 @@ in
       "ctrl + lalt - k" = "${yabai} -m window --resize top:0:-50 --resize bottom:0:-50";
       "ctrl + lalt - l" = "${yabai} -m window --resize right:50:0 --resize left:50:0";
 
-      "ctrl + lalt - 1" = "${displaySpace 1} ${yabai} -m window --space \"$target_space\" --focus";
-      "ctrl + lalt - 2" = "${displaySpace 2} ${yabai} -m window --space \"$target_space\" --focus";
-      "ctrl + lalt - 3" = "${displaySpace 3} ${yabai} -m window --space \"$target_space\" --focus";
-      "ctrl + lalt - 4" = "${displaySpace 4} ${yabai} -m window --space \"$target_space\" --focus";
+      "ctrl + lalt - 1" = "${yabai} -m window --display 1 --focus";
+      "ctrl + lalt - 2" = "${yabai} -m window --display 2 --focus";
+      "ctrl + lalt - 3" = "${yabai} -m window --display 3 --focus";
+      "ctrl + lalt - 4" = "${yabai} -m window --display 4 --focus";
 
       "ctrl + rcmd - e" = "${yabai} -m space --balance";
       "ctrl + rcmd - g" = "${yabai} -m space --toggle padding --toggle gap";
@@ -84,7 +79,7 @@ in
       "shift + ctrl + lalt - s" = "${yabai} -m window --insert stack";
 
       "rcmd - f" =
-        ''focused_window="$(${yabai} -m query --windows | ${jq} -er 'map(select(."has-focus" == true))[0].id')" && layer="$(${yabai} -m query --windows --window "$focused_window" | ${jq} -er 'if ."is-floating" then "below" else "above" end')" && ${yabai} -m window "$focused_window" --toggle float --sub-layer "$layer"'';
+        ''${yabai} -m query --windows | ${jq} -er 'map(select(."has-focus" == true))[0] | select(. != null) | [.id, (if ."is-floating" then "below" else "above" end)] | @tsv' | { read -r focused_window layer && ${yabai} -m window "$focused_window" --toggle float --sub-layer "$layer"; }'';
 
       "shift + ctrl + rcmd - r" =
         "/usr/bin/osascript -e 'display notification \"Restarting yabai\" with title \"yabai\"'; /bin/launchctl kickstart -k \"gui/\${UID}/org.nixos.yabai\"";

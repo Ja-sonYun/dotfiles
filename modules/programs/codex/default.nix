@@ -120,7 +120,8 @@ let
 
   primaryPackage = pkgs.writeShellScriptBin cfg.defaultProfileName ''
     export CODEX_HOME=${lib.escapeShellArg "${config.home.homeDirectory}/.codex"}
-    exec ${wrappedPackage}/bin/codex "$@"
+    exec ${pkgs.state-get}/bin/state-run ${lib.escapeShellArg cfg.defaultProfileName} \
+      ${wrappedPackage}/bin/codex "$@"
   '';
 
   instancePackages = lib.mapAttrs (
@@ -148,7 +149,7 @@ let
           fi
         done
       ''}
-      exec ${package}/bin/codex \
+      exec ${pkgs.state-get}/bin/state-run ${lib.escapeShellArg name} ${package}/bin/codex \
         --config 'cli_auth_credentials_store="file"' \
         "$@"
     ''
