@@ -3,10 +3,6 @@
   "C-j".command = "if-shell -F '#{==:#{pane_current_command},vim}' 'send-keys C-j' 'select-pane -D'";
   "C-k".command = "if-shell -F '#{==:#{pane_current_command},vim}' 'send-keys C-k' 'select-pane -U'";
   "C-l".command = "if-shell -F '#{==:#{pane_current_command},vim}' 'send-keys C-l' 'select-pane -R'";
-  "S-left".command = "select-pane -L";
-  "S-down".command = "select-pane -D";
-  "S-up".command = "select-pane -U";
-  "S-right".command = "select-pane -R";
   F7.command = "if-shell -F '#{==:#{pane_current_command},node}' 'send-keys -H 1b 5b 31 33 3b 32 75' 'send-keys Enter'";
   F8.command = "if-shell -F '#{==:#{pane_current_command},node}' 'send-keys -H 1b 5b 31 33 3b 35 75' 'send-keys Enter'";
   F1.command = "set -gq @nop 1";

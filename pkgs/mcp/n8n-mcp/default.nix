@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "n8n-mcp";
   packageManager = "npm";
   packageName = "n8n-mcp";
-  packageVersion = "2.82.1";
+  packageVersion = "2.84.4";
   name = "n8n-mcp";
   exposedBinaries = [
     "n8n-mcp"

@@ -48,6 +48,23 @@ autocmd QuickFixCmdPost grep,grepadd,make copen
 if executable('rg')
   set grepprg=rg\ --vimgrep\ --no-heading\ --color=never\ --fixed-strings\ --smart-case\ --glob\ '!**/.git/*'\ --
   set grepformat=%f:%l:%c:%m
+
+  function! s:CompleteGrep(arglead, cmdline, cursorpos) abort
+    if a:arglead !~# '^[A-Za-z0-9_]\+$'
+      return []
+    endif
+
+    let l:pattern = '\b' .. a:arglead .. '\w*'
+    let l:command = 'rg --only-matching --no-filename --no-line-number --no-heading --color=never --smart-case --glob ''!**/.git/*'' -- '
+          \ .. shellescape(l:pattern) .. ' ' .. shellescape(s:GetSearchRoot())
+    let l:words = systemlist(l:command)
+    if v:shell_error != 0
+      return []
+    endif
+    return uniq(sort(l:words))
+  endfunction
+
+  command! -nargs=+ -complete=customlist,<SID>CompleteGrep Grep execute 'grep ' .. shellescape(<q-args>, 1)
 endif
 
 if executable('rg') && executable('fzf')
@@ -65,7 +82,8 @@ if executable('rg') && executable('fzf')
 endif
 
 nnoremap <space>f :find 
-nnoremap <space>r :grep 
+nnoremap <expr> <space>r getqflist({'winid': 0}).winid > 0 ? ':Cfilter ' : ':Grep '
+nnoremap <expr> <space>R getqflist({'winid': 0}).winid > 0 ? ':Cfilter! ' : ''
 nnoremap <space>l :lgrep  %<left><left>
 nnoremap <space>c :compiler 
 nnoremap <space>m :make! 

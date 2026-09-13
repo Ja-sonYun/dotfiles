@@ -35,7 +35,12 @@ let
         recorderStopNotification
         ;
       recorderAppPath = "${helpersDirectory}/Meeting Recorder.app";
+      iconDirectory = "${./misc/status-icons}";
+      logPath = "/tmp/meeting-recorder";
       transcriberPath = if cfg.transcription.enable then "${pkgs.whisper-local}/bin/whisper" else null;
+      transcription = {
+        inherit (cfg.transcription) model language;
+      };
     };
     inherit refreshNotification stateNotification;
   };
@@ -104,6 +109,18 @@ in
     };
 
     transcription.enable = lib.mkEnableOption "local meeting transcription";
+
+    transcription.model = lib.mkOption {
+      type = lib.types.nullOr lib.types.nonEmptyStr;
+      default = null;
+      description = "Whisper model file path, or null to use the bundled large-v3 model.";
+    };
+
+    transcription.language = lib.mkOption {
+      type = lib.types.nonEmptyStr;
+      default = "auto";
+      description = "Whisper language code, or auto for language detection.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -145,11 +162,34 @@ in
     home-manager.users.${username}.home.packages = [ pkgs.whisper-local ];
 
     launchd.user.agents.hammerspoon-audio-process-watcher.serviceConfig = {
-      ProgramArguments = [ "${audioProcessWatcher}/bin/audio-process-watcher" ];
+      ProgramArguments = [
+        (toString (
+          pkgs.writeShellScript "audio-process-watcher" ''
+            set -e
+            umask 077
+            for log in /tmp/meeting-recorder.out.log /tmp/meeting-recorder.err.log; do
+              if [[ ! -e "$log" && ! -L "$log" ]]; then
+                log_tmp=$(/usr/bin/mktemp "$log.XXXXXX")
+                log_status=0
+                /bin/link "$log_tmp" "$log" || log_status=$?
+                /bin/rm -f "$log_tmp"
+                if [[ "$log_status" != 0 && ! -e "$log" ]]; then exit 1; fi
+              fi
+              if [[ -L "$log" || ! -f "$log" || ! -O "$log" ]] || [[ "$(/usr/bin/stat -f %l "$log")" != 1 ]]; then
+                printf 'Unsafe log file rejected: %s\n' "$log" >&2
+                exit 1
+              fi
+              /bin/chmod 600 "$log"
+            done
+            exec ${audioProcessWatcher}/bin/audio-process-watcher \
+              >> /tmp/meeting-recorder.out.log 2>> /tmp/meeting-recorder.err.log
+          ''
+        ))
+      ];
       RunAtLoad = true;
       KeepAlive.SuccessfulExit = false;
       ProcessType = "Background";
-      StandardErrorPath = "${userhome}/Library/Logs/audio-process-watcher.log";
+      Umask = 63;
       ThrottleInterval = 30;
     };
   };

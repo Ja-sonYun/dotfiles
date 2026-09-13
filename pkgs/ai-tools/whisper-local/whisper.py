@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import time
+import traceback
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -34,6 +35,8 @@ ARCHIVE_TAG = "aac-mono-32k-v1"
 _active_process: subprocess.Popen[str] | None = None
 _process_starting = False
 _pending_termination_signal: int | None = None
+_diagnostics_enabled = False
+_diagnostic_stage = "initializing"
 
 
 class TranscriptionError(RuntimeError):
@@ -142,15 +145,38 @@ def stop_process(process: subprocess.Popen[str]) -> None:
         process.wait()
 
 
+def parse_track(value: str) -> tuple[int, str]:
+    index, separator, label = value.partition(":")
+    if (
+        not separator
+        or not index.isdecimal()
+        or not label.strip()
+        or any(character in label for character in "\r\n")
+    ):
+        raise argparse.ArgumentTypeError(
+            "Expected a nonnegative audio index and label: INDEX:LABEL"
+        )
+    return int(index), label.strip()
+
+
+def parse_echo(value: str) -> tuple[int, int]:
+    target, separator, reference = value.partition(":")
+    if not separator or not target.isdecimal() or not reference.isdecimal():
+        raise argparse.ArgumentTypeError("Expected audio indices: TARGET:REFERENCE")
+    return int(target), int(reference)
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Transcribe audio locally with whisper.cpp large-v3."
+        description="Transcribe audio and video locally with whisper.cpp."
     )
     parser.add_argument("input", type=Path, help="Audio or video file to transcribe")
     parser.add_argument(
-        "--meeting",
-        action="store_true",
-        help="Treat audio stream 1 as Remote and stream 2 as You",
+        "--track",
+        action="append",
+        type=parse_track,
+        metavar="INDEX:LABEL",
+        help="Select a zero-based audio track and speaker label; repeat for multiple tracks",
     )
     parser.add_argument(
         "-o",
@@ -160,18 +186,41 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("--language", default="auto", help="Whisper language code")
     parser.add_argument(
+        "--model",
+        type=Path,
+        default=Path(WHISPER_MODEL),
+        help="Whisper model file (default: bundled large-v3)",
+    )
+    parser.add_argument(
+        "--format",
+        choices=("md", "json", "both"),
+        default="both",
+        help="Output format (default: both)",
+    )
+    parser.add_argument(
+        "--suppress-echo",
+        type=parse_echo,
+        metavar="TARGET:REFERENCE",
+        help="Remove overlapping duplicate speech from the target audio track",
+    )
+    parser.add_argument(
         "--archive-audio",
         action="store_true",
-        help="After meeting transcription, replace input with two mono 32 kbps AAC tracks",
+        help="After transcription, replace a two-track QuickTime MOV with mono 32 kbps AAC tracks",
     )
     parser.add_argument("--progress-json", action="store_true", help=argparse.SUPPRESS)
     arguments = parser.parse_args()
-    if arguments.archive_audio and (
-        not arguments.meeting or arguments.output is not None
-    ):
-        parser.error(
-            "--archive-audio requires --meeting and the default output location"
-        )
+    if arguments.track is None:
+        arguments.track = [(0, "Audio")]
+    indices = [index for index, _ in arguments.track]
+    if len(set(indices)) != len(indices):
+        parser.error("Each audio track may only be selected once")
+    if arguments.suppress_echo is not None:
+        target, reference = arguments.suppress_echo
+        if target == reference or target not in indices or reference not in indices:
+            parser.error("--suppress-echo requires two distinct selected audio tracks")
+    if arguments.archive_audio and arguments.output is not None:
+        parser.error("--archive-audio requires the default output location")
     return arguments
 
 
@@ -188,6 +237,37 @@ def emit_event(enabled: bool, status: str, **values: object) -> None:
     )
 
 
+def diagnostic(event: str, level: str = "info", **values: object) -> None:
+    emit_event(
+        _diagnostics_enabled,
+        "diagnostic",
+        event=event,
+        level=level,
+        stage=_diagnostic_stage,
+        pid=os.getpid(),
+        **values,
+    )
+
+
+@contextmanager
+def log_stage(name: str, **values: object) -> Iterator[None]:
+    global _diagnostic_stage
+
+    previous = _diagnostic_stage
+    _diagnostic_stage = name
+    started = time.monotonic()
+    diagnostic("stage_started", **values)
+    try:
+        yield
+    except (OSError, ValueError, TranscriptionError):
+        diagnostic("stage_failed", "error", elapsed_seconds=time.monotonic() - started)
+        raise
+    else:
+        diagnostic("stage_finished", elapsed_seconds=time.monotonic() - started)
+    finally:
+        _diagnostic_stage = previous
+
+
 def parse_start_ms(value: object) -> int:
     if not isinstance(value, (int, float, str)) or isinstance(value, bool):
         return 0
@@ -198,6 +278,8 @@ def parse_start_ms(value: object) -> int:
 
 
 def probe_audio_streams(source: Path) -> list[AudioStream]:
+    started = time.monotonic()
+    diagnostic("probe_started", executable=FFPROBE)
     result = subprocess.run(
         [
             FFPROBE,
@@ -206,7 +288,7 @@ def probe_audio_streams(source: Path) -> list[AudioStream]:
             "-select_streams",
             "a",
             "-show_entries",
-            "stream=index,start_time",
+            "stream=index,start_time,duration",
             "-of",
             "json",
             str(source),
@@ -214,6 +296,13 @@ def probe_audio_streams(source: Path) -> list[AudioStream]:
         check=False,
         capture_output=True,
         text=True,
+    )
+    diagnostic(
+        "probe_exited",
+        "error" if result.returncode else "info",
+        exit_code=result.returncode,
+        elapsed_seconds=time.monotonic() - started,
+        stderr=result.stderr[-8192:],
     )
     if result.returncode != 0:
         message = result.stderr.strip().splitlines()
@@ -242,10 +331,21 @@ def probe_audio_streams(source: Path) -> list[AudioStream]:
         )
     if not streams:
         raise TranscriptionError("No audio streams found")
+    diagnostic(
+        "streams_detected",
+        count=len(streams),
+        streams=[
+            {key: stream.get(key) for key in ("index", "start_time", "duration")}
+            for stream in raw_streams
+            if isinstance(stream, dict)
+        ],
+    )
     return streams
 
 
 def extract_audio(source: Path, stream: AudioStream, destination: Path) -> None:
+    started = time.monotonic()
+    diagnostic("extraction_started", executable=FFMPEG, stream_index=stream.index)
     result = subprocess.run(
         [
             FFMPEG,
@@ -271,6 +371,13 @@ def extract_audio(source: Path, stream: AudioStream, destination: Path) -> None:
         capture_output=True,
         text=True,
     )
+    diagnostic(
+        "extraction_exited",
+        "error" if result.returncode else "info",
+        exit_code=result.returncode,
+        elapsed_seconds=time.monotonic() - started,
+        stderr=result.stderr[-8192:],
+    )
     if result.returncode != 0:
         message = result.stderr.strip().splitlines()
         raise TranscriptionError(message[-1] if message else "Could not extract audio")
@@ -287,6 +394,7 @@ def run_whisper(
     audio_path: Path,
     output_base: Path,
     language: str,
+    model: Path,
     phase: str,
     progress_start: int,
     progress_end: int,
@@ -295,6 +403,16 @@ def run_whisper(
     global _active_process, _pending_termination_signal, _process_starting
 
     process: subprocess.Popen[str] | None = None
+    started = time.monotonic()
+    diagnostic(
+        "whisper_starting",
+        executable=WHISPER_CLI,
+        model=str(model),
+        vad_model=VAD_MODEL,
+        language=language,
+        track=phase,
+        input_bytes=audio_path.stat().st_size,
+    )
     try:
         _process_starting = True
         try:
@@ -302,7 +420,7 @@ def run_whisper(
                 [
                     WHISPER_CLI,
                     "-m",
-                    WHISPER_MODEL,
+                    str(model),
                     "-f",
                     str(audio_path),
                     "-l",
@@ -321,6 +439,7 @@ def run_whisper(
                 text=True,
             )
             _active_process = process
+            diagnostic("whisper_started", child_pid=process.pid)
         finally:
             _process_starting = False
 
@@ -336,6 +455,8 @@ def run_whisper(
         last_progress = -1
         for line in process.stderr:
             stderr_lines.append(line)
+            if "progress =" not in line:
+                diagnostic("whisper_stderr", detail=line.rstrip()[:8192])
             for match in re.finditer(r"progress\s*=\s*(\d+)%", line):
                 track_progress = min(100, max(0, int(match.group(1))))
                 progress = round(
@@ -351,6 +472,15 @@ def run_whisper(
                     )
                     last_progress = progress
         return_code = process.wait()
+        diagnostic(
+            "whisper_exited",
+            "error" if return_code else "info",
+            child_pid=process.pid,
+            exit_code=return_code,
+            elapsed_seconds=time.monotonic() - started,
+            last_progress=last_progress,
+            stderr="".join(stderr_lines[-50:])[-8192:] if return_code else None,
+        )
     finally:
         _process_starting = False
         _pending_termination_signal = None
@@ -368,6 +498,7 @@ def run_whisper(
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise TranscriptionError("whisper-cli returned invalid JSON")
+    diagnostic("whisper_output_loaded", bytes=json_path.stat().st_size)
     return payload
 
 
@@ -441,27 +572,29 @@ def normalized_text(text: str) -> str:
     return re.sub(r"[\W_]+", "", text.casefold(), flags=re.UNICODE)
 
 
-def is_microphone_echo(microphone: dict[str, Any], system: dict[str, Any]) -> bool:
-    microphone_text = normalized_text(microphone["text"])
-    system_text = normalized_text(system["text"])
-    if min(len(microphone_text), len(system_text)) < 20:
+def is_echo(target: dict[str, Any], reference: dict[str, Any]) -> bool:
+    target_text = normalized_text(target["text"])
+    reference_text = normalized_text(reference["text"])
+    if min(len(target_text), len(reference_text)) < 20:
         return False
-    if abs(microphone["start_ms"] - system["start_ms"]) > 1500:
+    if abs(target["start_ms"] - reference["start_ms"]) > 1500:
         return False
 
-    overlap = min(microphone["end_ms"], system["end_ms"]) - max(
-        microphone["start_ms"], system["start_ms"]
+    overlap = min(target["end_ms"], reference["end_ms"]) - max(
+        target["start_ms"], reference["start_ms"]
     )
     shortest = min(
-        microphone["end_ms"] - microphone["start_ms"],
-        system["end_ms"] - system["start_ms"],
+        target["end_ms"] - target["start_ms"],
+        reference["end_ms"] - reference["start_ms"],
     )
     if shortest <= 0 or overlap / shortest < 0.65:
         return False
-    return SequenceMatcher(None, microphone_text, system_text).ratio() >= 0.92
+    return SequenceMatcher(None, target_text, reference_text).ratio() >= 0.92
 
 
-def merged_segments(results: list[TrackResult]) -> list[dict[str, Any]]:
+def merged_segments(
+    results: list[TrackResult], suppress_echo: tuple[int, int] | None
+) -> list[dict[str, Any]]:
     segments = sorted(
         (segment for result in results for segment in result.segments),
         key=lambda segment: (
@@ -470,23 +603,26 @@ def merged_segments(results: list[TrackResult]) -> list[dict[str, Any]]:
             segment["channel"],
         ),
     )
-    system_segments = [
-        segment for segment in segments if segment["channel"] == "system"
+    target_channel = f"audio-{suppress_echo[0]}" if suppress_echo else None
+    reference_channel = f"audio-{suppress_echo[1]}" if suppress_echo else None
+    reference_segments = [
+        segment for segment in segments if segment["channel"] == reference_channel
     ]
     merged: list[dict[str, Any]] = []
-    system_start = 0
+    reference_start = 0
     for segment in segments:
-        if segment["channel"] == "microphone":
+        if segment["channel"] == target_channel:
             while (
-                system_start < len(system_segments)
-                and system_segments[system_start]["end_ms"] < segment["start_ms"] - 1500
+                reference_start < len(reference_segments)
+                and reference_segments[reference_start]["end_ms"]
+                < segment["start_ms"] - 1500
             ):
-                system_start += 1
+                reference_start += 1
             duplicate = False
-            for candidate in system_segments[system_start:]:
+            for candidate in reference_segments[reference_start:]:
                 if candidate["start_ms"] > segment["end_ms"] + 1500:
                     break
-                if is_microphone_echo(segment, candidate):
+                if is_echo(segment, candidate):
                     duplicate = True
                     break
             if duplicate:
@@ -507,13 +643,14 @@ def render_markdown(
     source: Path,
     results: list[TrackResult],
     segments: list[dict[str, Any]],
+    model_name: str,
 ) -> str:
     speakers = ", ".join(f"{result.speaker} = {result.channel}" for result in results)
     lines = [
         "# Transcript",
         "",
         f"- Source: {source.name}",
-        "- Model: Whisper large-v3",
+        f"- Model: Whisper {model_name}",
         f"- Speakers: {speakers}",
         "",
     ]
@@ -579,6 +716,8 @@ def write_outputs(
     json_path: Path,
     markdown_path: Path,
     work_directory: Path,
+    model_name: str,
+    output_format: str,
 ) -> None:
     payload = {
         "schema_version": 1,
@@ -588,7 +727,7 @@ def write_outputs(
         .replace("+00:00", "Z"),
         "engine": {
             "name": "whisper.cpp",
-            "model": "large-v3",
+            "model": model_name,
             "vad": "silero-v6.2.0",
         },
         "tracks": [
@@ -605,21 +744,20 @@ def write_outputs(
     }
     temporary_json = work_directory / "transcript.json"
     temporary_markdown = work_directory / "transcript.md"
-    temporary_json.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    temporary_markdown.write_text(
-        render_markdown(source, results, segments),
-        encoding="utf-8",
-    )
-    replace_output_pair(
-        [
-            (temporary_json, json_path),
-            (temporary_markdown, markdown_path),
-        ],
-        work_directory,
-    )
+    replacements: list[tuple[Path, Path]] = []
+    if output_format in ("json", "both"):
+        temporary_json.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        replacements.append((temporary_json, json_path))
+    if output_format in ("md", "both"):
+        temporary_markdown.write_text(
+            render_markdown(source, results, segments, model_name),
+            encoding="utf-8",
+        )
+        replacements.append((temporary_markdown, markdown_path))
+    replace_output_pair(replacements, work_directory)
 
 
 def transcribe_track(
@@ -629,6 +767,7 @@ def transcribe_track(
     channel: str,
     speaker: str,
     language: str,
+    model: Path,
     phase: str,
     progress_start: int,
     progress_end: int,
@@ -637,18 +776,21 @@ def transcribe_track(
 ) -> TrackResult:
     audio_path = work_directory / f"{channel}.wav"
     whisper_output = work_directory / f"{channel}-whisper"
-    extract_audio(source, stream, audio_path)
-    payload = run_whisper(
-        audio_path,
-        whisper_output,
-        language,
-        phase,
-        progress_start,
-        progress_end,
-        progress_json,
-    )
+    with log_stage("extracting", track=channel, stream_index=stream.index):
+        extract_audio(source, stream, audio_path)
+    with log_stage("whisper", track=channel):
+        payload = run_whisper(
+            audio_path,
+            whisper_output,
+            language,
+            model,
+            phase,
+            progress_start,
+            progress_end,
+            progress_json,
+        )
     start_offset_ms = max(0, stream.start_ms - common_start_ms)
-    return TrackResult(
+    result = TrackResult(
         channel=channel,
         speaker=speaker,
         stream_index=stream.index,
@@ -656,72 +798,58 @@ def transcribe_track(
         language=detected_language(payload),
         segments=parse_segments(payload, channel, speaker, start_offset_ms),
     )
+    diagnostic(
+        "track_finished",
+        track=channel,
+        segment_count=len(result.segments),
+        language=result.language,
+        start_offset_ms=start_offset_ms,
+    )
+    return result
 
 
 def transcribe(
     source: Path,
-    meeting: bool,
+    tracks: list[tuple[int, str]],
     language: str,
+    model: Path,
     progress_json: bool,
     work_directory: Path,
 ) -> list[TrackResult]:
-    streams = probe_audio_streams(source)
-    common_start_ms = min(stream.start_ms for stream in streams)
-    if not meeting:
-        return [
-            transcribe_track(
-                source,
-                streams[0],
-                common_start_ms,
-                "audio",
-                "Audio",
-                language,
-                "audio",
-                0,
-                100,
-                progress_json,
-                work_directory,
+    with log_stage("probing"):
+        streams = probe_audio_streams(source)
+    diagnostic("tracks_selected", indices=[index for index, _ in tracks])
+    for index, _ in tracks:
+        if index >= len(streams):
+            raise TranscriptionError(
+                f"Audio track {index} does not exist; input has {len(streams)} audio tracks"
             )
-        ]
-    if len(streams) < 2:
-        raise TranscriptionError(
-            "Meeting recording must contain system and microphone audio"
+    common_start_ms = min(stream.start_ms for stream in streams)
+    return [
+        transcribe_track(
+            source,
+            streams[index],
+            common_start_ms,
+            f"audio-{index}",
+            speaker,
+            language,
+            model,
+            speaker,
+            position * 100 // len(tracks),
+            (position + 1) * 100 // len(tracks),
+            progress_json,
+            work_directory,
         )
-
-    system_stream, microphone_stream = streams[:2]
-    microphone = transcribe_track(
-        source,
-        microphone_stream,
-        common_start_ms,
-        "microphone",
-        "You",
-        language,
-        "You",
-        0,
-        50,
-        progress_json,
-        work_directory,
-    )
-    system = transcribe_track(
-        source,
-        system_stream,
-        common_start_ms,
-        "system",
-        "Remote",
-        language,
-        "Remote",
-        50,
-        100,
-        progress_json,
-        work_directory,
-    )
-    return [microphone, system]
+        for position, (index, speaker) in enumerate(tracks)
+    ]
 
 
 def run_archive_command(command: list[str]) -> str:
     global _active_process, _pending_termination_signal, _process_starting
 
     process: subprocess.Popen[str] | None = None
+    started = time.monotonic()
+    diagnostic("archive_command_starting", executable=command[0])
     try:
         _process_starting = True
         try:
@@ -729,6 +857,7 @@ def run_archive_command(command: list[str]) -> str:
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
             )
             _active_process = process
+            diagnostic("archive_command_started", child_pid=process.pid)
         finally:
             _process_starting = False
         pending_signal = _pending_termination_signal
@@ -736,6 +865,14 @@ def run_archive_command(command: list[str]) -> str:
         if pending_signal is not None:
             handle_termination(pending_signal, None)
         stdout, stderr = process.communicate()
+        diagnostic(
+            "archive_command_exited",
+            "error" if process.returncode else "info",
+            child_pid=process.pid,
+            exit_code=process.returncode,
+            elapsed_seconds=time.monotonic() - started,
+            stderr=stderr[-8192:],
+        )
         if process.returncode != 0:
             raise TranscriptionError(stderr.strip() or "Audio archive command failed")
         return stdout
@@ -807,6 +944,7 @@ def archive_audio(source: Path, work_directory: Path) -> None:
     original, archived = inspect_archive_audio(source)
     if archived:
         require_archive_format(original)
+        diagnostic("archive_skipped", reason="already_archived")
         return
     temporary = work_directory / "archive.mov"
     run_archive_command(
@@ -838,6 +976,9 @@ def archive_audio(source: Path, work_directory: Path) -> None:
             "1",
             "-movflags",
             "+use_metadata_tags",
+            # Avoid appending copied metadata to the container's ftyp brand.
+            "-metadata",
+            "major_brand=",
             "-metadata",
             f"meeting_recorder_archive={ARCHIVE_TAG}",
             "-f",
@@ -874,67 +1015,38 @@ def archive_audio(source: Path, work_directory: Path) -> None:
             "-",
         ]
     )
+    diagnostic(
+        "archive_size_compared",
+        original_bytes=source.stat().st_size,
+        compressed_bytes=temporary.stat().st_size,
+    )
     if temporary.stat().st_size < source.stat().st_size:
         temporary.chmod(source.stat().st_mode & 0o777)
         os.replace(temporary, source)
-
-
-def reusable_meeting_outputs(
-    source: Path, json_path: Path, markdown_path: Path
-) -> bool:
-    try:
-        payload = json.loads(json_path.read_text(encoding="utf-8"))
-        markdown = markdown_path.read_text(encoding="utf-8")
-    except (OSError, ValueError):
-        return False
-    if not isinstance(payload, dict):
-        return False
-    tracks = payload.get("tracks")
-    segments = payload.get("segments")
-    if (
-        payload.get("schema_version") != 1
-        or payload.get("source_file") != source.name
-        or not isinstance(tracks, list)
-        or len(tracks) != 2
-        or not all(isinstance(track, dict) for track in tracks)
-        or not isinstance(segments, list)
-        or not all(isinstance(segment, dict) for segment in segments)
-        or not markdown.strip()
-    ):
-        return False
-    streams = probe_audio_streams(source)
-    if len(streams) != 2:
-        return False
-    expected = {
-        "system": ("Remote", streams[0].index),
-        "microphone": ("You", streams[1].index),
-    }
-    if any(not isinstance(track.get("channel"), str) for track in tracks):
-        return False
-    for segment in segments:
-        if (
-            not isinstance(segment.get("text"), str)
-            or not isinstance(segment.get("start_ms"), int)
-            or not isinstance(segment.get("end_ms"), int)
-            or segment["start_ms"] < 0
-            or segment["end_ms"] < segment["start_ms"]
-            or not isinstance(segment.get("channel"), str)
-            or segment["channel"] not in expected
-            or segment.get("speaker") != expected[segment["channel"]][0]
-        ):
-            return False
-    return {track.get("channel") for track in tracks} == set(expected) and all(
-        (track.get("speaker"), track.get("stream_index")) == expected[track["channel"]]
-        for track in tracks
-    )
+        diagnostic("archive_installed")
+    else:
+        diagnostic("archive_skipped", reason="not_smaller")
 
 
 def main() -> int:
+    global _diagnostics_enabled
+
     install_signal_handlers()
     arguments = parse_arguments()
+    _diagnostics_enabled = arguments.progress_json
+    started = time.monotonic()
+    diagnostic(
+        "job_started", language=arguments.language, archive=arguments.archive_audio
+    )
     source = arguments.input.expanduser().resolve()
     if not source.is_file():
+        diagnostic("input_missing", "error")
         print(f"whisper: input file not found: {source}", file=sys.stderr)
+        return 1
+    model = arguments.model.expanduser().absolute()
+    if not model.is_file():
+        diagnostic("model_missing", "error", model=str(model))
+        print(f"whisper: model file not found: {model}", file=sys.stderr)
         return 1
 
     json_path, markdown_path = output_paths(source, arguments.output)
@@ -944,22 +1056,30 @@ def main() -> int:
     work_directory = work_root / f"whisper-{os.getpid()}-{time.time_ns()}"
     outputs_written = False
     try:
+        diagnostic(
+            "input_ready",
+            input_bytes=source.stat().st_size,
+            model=str(model),
+            model_bytes=model.stat().st_size,
+            existing_json=json_path.is_file(),
+            existing_markdown=markdown_path.is_file(),
+        )
         work_directory.mkdir(parents=True)
         emit_event(arguments.progress_json, "progress", phase="preparing", progress=0)
         if arguments.archive_audio:
-            inspect_archive_audio(source)
-        if not (
-            arguments.archive_audio
-            and reusable_meeting_outputs(source, json_path, markdown_path)
-        ):
+            with log_stage("archive_inspection"):
+                inspect_archive_audio(source)
+        with log_stage("transcribing"):
             results = transcribe(
                 source,
-                arguments.meeting,
+                arguments.track,
                 arguments.language,
+                model,
                 arguments.progress_json,
                 work_directory,
             )
-            segments = merged_segments(results)
+        segments = merged_segments(results, arguments.suppress_echo)
+        with log_stage("saving", segment_count=len(segments)):
             write_outputs(
                 source,
                 results,
@@ -967,25 +1087,52 @@ def main() -> int:
                 json_path,
                 markdown_path,
                 work_directory,
+                model.stem.removeprefix("ggml-"),
+                arguments.format,
+            )
+            diagnostic(
+                "outputs_saved",
+                json_bytes=(
+                    json_path.stat().st_size
+                    if arguments.format in ("json", "both")
+                    else None
+                ),
+                markdown_bytes=(
+                    markdown_path.stat().st_size
+                    if arguments.format in ("md", "both")
+                    else None
+                ),
             )
         outputs_written = True
         if arguments.archive_audio:
             emit_event(
                 arguments.progress_json, "progress", phase="archiving", progress=0
             )
-            archive_audio(source, work_directory)
+            with log_stage("archiving"):
+                archive_audio(source, work_directory)
+        diagnostic("job_finished", elapsed_seconds=time.monotonic() - started)
         emit_event(
             arguments.progress_json,
             "finished",
             progress=100,
-            json_path=str(json_path),
-            markdown_path=str(markdown_path),
+            json_path=str(json_path) if arguments.format in ("json", "both") else None,
+            markdown_path=(
+                str(markdown_path) if arguments.format in ("md", "both") else None
+            ),
         )
         if not arguments.progress_json:
-            print(json_path)
-            print(markdown_path)
+            if arguments.format in ("json", "both"):
+                print(json_path)
+            if arguments.format in ("md", "both"):
+                print(markdown_path)
         return 0
     except (OSError, ValueError, TranscriptionError) as error:
+        diagnostic(
+            "job_failed",
+            "error",
+            elapsed_seconds=time.monotonic() - started,
+            traceback=traceback.format_exc(),
+        )
         print(f"whisper: {error}", file=sys.stderr)
         return 1
     finally:

@@ -13,12 +13,18 @@ let
   }) cfg.scripts;
   scripts = cfg.preparedScripts ++ customScripts;
   scriptsDir = pkgs.linkFarm "hammerspoon-scripts" (
-    map (script: {
+    [
+      {
+        name = "logging.lua";
+        path = ./logging.lua;
+      }
+    ]
+    ++ map (script: {
       inherit (script) name path;
     }) scripts
   );
   scriptRequires = lib.concatMapStringsSep "\n" (
-    script: ''require("${lib.removeSuffix ".lua" script.name}")''
+    script: ''loadModule("${lib.removeSuffix ".lua" script.name}")''
   ) scripts;
   initLua = pkgs.replaceVars ./init.lua {
     autoLaunch = lib.boolToString cfg.autoLaunch;

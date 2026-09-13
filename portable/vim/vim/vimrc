@@ -172,6 +172,8 @@ inoremap <C-e> <Esc>$a
 nnoremap <silent> qn <Cmd>cnext<CR>
 nnoremap <silent> qp <Cmd>cprev<CR>
 nnoremap <silent> qo <Cmd>copen<CR>
+nnoremap <silent> [Q <Cmd>colder<CR>
+nnoremap <silent> ]Q <Cmd>cnewer<CR>
 
 " Marks (use only `, and swap ' and m)
 noremap <silent> ' <Nop>

@@ -42,7 +42,7 @@ stdenvNoCC.mkDerivation {
   '';
 
   meta = {
-    description = "Local Whisper large-v3 transcription with meeting track separation";
+    description = "Local audio and video transcription with configurable audio tracks";
     homepage = "https://github.com/ggml-org/whisper.cpp";
     license = lib.licenses.mit;
     mainProgram = "whisper";

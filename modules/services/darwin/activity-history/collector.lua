@@ -1,4 +1,5 @@
 local cfg = assert(hs.json.read("@configFile@"))
+local logger = require("logging").new("activity-history")
 local helper = "@helper@"
 local ax = require("hs.axuielement")
 local axType = hs.getObjectMetatable("hs.axuielement")
@@ -18,6 +19,10 @@ local recorder = {
 }
 local activityPath, activityDay, context, lastLocation, lastState, state
 local schedule, syncContext, restoreAccessibility
+logger.context.run_id = recorder.runID
+logger:i("collector_starting", { paused = recorder.paused, locked = recorder.locked })
+local emittedCount = 0
+local lastCountLog = hs.timer.secondsSinceEpoch()
 
 local function cancelLocation()
 	if recorder.cancelLocation then
@@ -66,6 +71,7 @@ local function prepare()
 		local prepared = assert(hs.json.decode(output))
 		activityPath = assert(prepared.activityPath)
 		activityDay = assert(prepared.activityDay)
+		logger:i("storage_prepared")
 	end
 	if recorder.archiveDay == activityDay or not recorder.running then
 		return
@@ -75,15 +81,18 @@ local function prepare()
 			return
 		end
 		recorder.archiveDay = activityDay
+		logger:i("archive_started")
 		recorder.archiveTask = hs.task.new(helper, function(code, _, stderr)
 			if code ~= 0 then
-				print("activity-history: archive failed: " .. stderr)
+				logger:e("archive_failed", { exit_code = code, stderr = stderr })
+			else
+				logger:i("archive_finished", { exit_code = code })
 			end
 		end, { "_archive", "--before", activityDay })
 		assert(recorder.archiveTask and recorder.archiveTask:start(), "Cannot start activity history archive")
 	end)
 	if not ok then
-		print("activity-history: archive failed: " .. tostring(err))
+		logger:e("archive_start_failed", { message = tostring(err) })
 	end
 end
 
@@ -96,12 +105,20 @@ local function emit(kind, fields)
 	fields.source = "hammerspoon"
 	fields.collector_run_id = recorder.runID
 	write(activityPath, hs.json.encode(fields) .. "\n", "a")
+	emittedCount = emittedCount + 1
+	local now = hs.timer.secondsSinceEpoch()
+	if now - lastCountLog >= 30 then
+		logger:i("activity_saved", { count = emittedCount, elapsed_seconds = now - lastCountLog })
+		emittedCount = 0
+		lastCountLog = now
+	end
 end
 
 local function safe(fn)
 	return function(...)
-		local ok, err = pcall(fn, ...)
+		local ok, err = xpcall(fn, debug.traceback, ...)
 		if not ok then
+			logger:e("collector_failed", { traceback = tostring(err) })
 			recorder.paused = true
 			recorder.error = tostring(err)
 			cancelLocation()
@@ -202,6 +219,7 @@ local function saveState(reason, force)
 		prepare()
 		writeState(hs.json.encode(state))
 		if identity ~= lastState then
+			logger:i("recording_state_changed", { reason = blocked or reason, allowed = allowed })
 			emit("recording_state", { reason = blocked or reason, recording = allowed })
 		end
 		lastState = identity
@@ -757,10 +775,12 @@ safe(function()
 	syncContext("startup", true)
 	schedule("startup")
 	recorder.initialized = true
+	logger:i("collector_started", { interval_seconds = cfg.capture.intervalSeconds })
 end)()
 
 local previousShutdown = hs.shutdownCallback
 hs.shutdownCallback = function()
+	logger:i("collector_stopping", { unsummarized_saved_count = emittedCount })
 	recorder.running = false
 	cancelLocation()
 	if recorder.pending then
@@ -789,6 +809,7 @@ hs.shutdownCallback = function()
 		os.remove(stateFile)
 	end
 	pcall(restoreAccessibility)
+	logger:i("collector_stopped", { state_saved = ok })
 	if previousShutdown then
 		previousShutdown()
 	end

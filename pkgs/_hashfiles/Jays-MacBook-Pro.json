@@ -1,27 +1,27 @@
 {
   "n8n-mcp": {
-    "version": "2.82.1",
-    "hash": "sha256-i9EBpCDdAgAslPmfDB0srEtuQmzXR1C3KNg0iQWMgTU="
+    "version": "2.84.4",
+    "hash": "sha256-ZkoCG7jeVEIfOMMXLmomi/gBvpVTjirPhQGoaWO4kHg="
   },
   "macnotesapp": {
     "version": "0.8.2",
     "hash": "sha256-c9wZgJVxiUxDgRzQTSWiqxSNkCDj6dM/rJwQx7PtRj4="
   },
   "open-code-review": {
-    "version": "1.11.7",
-    "hash": "sha256-Uu0x3os8HmEbbcI66K/bEahETcdQXe3c0Xk8JJRkkk4="
+    "version": "1.12.0",
+    "hash": "sha256-6IA2TCb8rf+9Ttilk/ik9KbOX0FP4vBMojacA9q4ZUs="
   },
   "pi": {
     "version": "0.85.1",
-    "hash": "sha256-HWH14clIk8greGbqAg7QC9jU4pdJe7k5gAfl8B7zZho="
+    "hash": "sha256-bFtmiu7mE8ZyNrvD230OGiQwcsATGMXrqX6ePxzSaZ0="
   },
   "pi-mcp-adapter": {
-    "version": "2.32.1",
-    "hash": "sha256-qNsm8Iu3gVBb4lNswTRGtI2NzwCHKhEaW3Y1QZIUQFY="
+    "version": "2.33.0",
+    "hash": "sha256-ifVrzgHCGg1nDrASiMG4xaRj49Ik3x9ijoJwqhFh07M="
   },
   "freecad-mcp": {
-    "version": "0.1.22",
-    "hash": "sha256-PkAjTkoWoyEwtj5M5TIUx/h0tTIjZHMFolDoe3EXjt0="
+    "version": "0.1.23",
+    "hash": "sha256-C4wT9kSR67javKsq+WH4il1ICbBgvRzw6d4/0PO1s8M="
   },
   "firecrawl-mcp": {
     "version": "3.24.0",
@@ -36,28 +36,28 @@
     "hash": "sha256-k47iugE5rDv4DFlm8DPnLlyHyKuPUPOZKsOsXgHMglY="
   },
   "codex": {
-    "version": "0.153.4",
-    "hash": "sha256-+vtugz/cl3yttyx6U6iE/aCrTl1Xmi47qoIEyIEsoJw="
+    "version": "0.154.0",
+    "hash": "sha256-hT/D7t7YBc3Ndg6kA8PoQuuRtVpw4KxVXL87sM2VvM4="
   },
   "context7-mcp": {
-    "version": "4.0.6",
-    "hash": "sha256-PccR0TJC7Q6OV/DG9wnlrCssHbst29ELs1Yd9behLfk="
+    "version": "4.1.0",
+    "hash": "sha256-qqu3+ZL8SRrGJmechNXJw2zEyzK1Y03Jp/kbEBS4L3U="
   },
   "exa-mcp-server": {
     "version": "3.4.1",
     "hash": "sha256-pYUmJYvjQWwywNPQPZ5dfO+4xdXY9lmznf/3UQfBDIw="
   },
   "claude-code": {
-    "version": "2.1.266",
-    "hash": "sha256-lwi9RJvGHatl8xtTSpnMkH8t498YLc1C7xk9tjZlFEA="
+    "version": "2.1.270",
+    "hash": "sha256-BrYAkrdPBzKZv7fHD46BpfRJtBc+5kk+B5D/jwbZ3aA="
   },
   "knip": {
     "version": "6.35.1",
     "hash": "sha256-43WtqhM3cPAwVRdzmB1vH2r0qT5XEkDWmxOcBeE2h2c="
   },
   "mcp-remote": {
-    "version": "0.8.5",
-    "hash": "sha256-JGkRHwQhHhZjMedXB2UKFuGmIX6zMSY5lEe1WEXg9BA="
+    "version": "0.13.5",
+    "hash": "sha256-ChTEtuQ4mLv6cLhUEUSo0j+tGdnZfh99e6pI+yQ64w8="
   },
   "aws-documentation-mcp-server": {
     "version": "1.2.1",

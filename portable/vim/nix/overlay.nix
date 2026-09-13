@@ -96,6 +96,7 @@ let
   ];
 
   localPlugins = [
+    (mkVimPlugin ../dev/codeflow "codeflow")
     (mkVimPlugin ../dev/dock "dock")
     (mkVimPlugin ../dev/gitdiff "gitdiff")
     (mkVimPlugin ../dev/ghreview "ghreview")
@@ -142,7 +143,7 @@ let
   nodePackagesOpt = pkgs.lib.optionals config.useNode (
     with pkgs;
     [
-      prettier
+      unstable.prettier
       typescript-language-server
     ]
   );
@@ -211,7 +212,7 @@ let
     with pkgs;
     [
       # marksman
-      prettier
+      unstable.prettier
     ]
   );
 
