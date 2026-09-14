@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+branch="$1"
+repository="$(git rev-parse --show-toplevel)"
+remotes="$(git remote -v)"
+key="$(printf '%s\0' "$repository" "$remotes" "$branch" | sha256sum)"
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/git-pr/${key%% *}"
+mkdir -p "$cache"
+
+if [ -f "$cache/result" ]; then
+  cat "$cache/result"
+fi
+
+now="$(date +%s)"
+updated="$(stat -c %Y "$cache/result" 2>/dev/null || printf '0')"
+attempted="$(stat -c %Y "$cache/last-attempt" 2>/dev/null || printf '0')"
+if (( now - updated < 300 || now - attempted < 60 )); then
+  exit 0
+fi
+
+(
+  flock -n 9 || exit 0
+
+  now="$(date +%s)"
+  updated="$(stat -c %Y "$cache/result" 2>/dev/null || printf '0')"
+  attempted="$(stat -c %Y "$cache/last-attempt" 2>/dev/null || printf '0')"
+  if (( now - updated < 300 || now - attempted < 60 )); then
+    exit 0
+  fi
+
+  touch "$cache/last-attempt"
+  if pr="$(timeout 30s gh pr list \
+    --head "$branch" \
+    --state all \
+    --limit 1 \
+    --json number \
+    --jq '.[0].number // empty')"; then
+    printf '%s' "$pr" > "$cache/result.tmp"
+    mv -f "$cache/result.tmp" "$cache/result"
+  fi
+) </dev/null >/dev/null 2>&1 9>"$cache/lock" &

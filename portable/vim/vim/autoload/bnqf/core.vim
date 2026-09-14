@@ -194,6 +194,39 @@ export def RefreshAllQfWindows(): void
   endfor
 enddef
 
+export def History(): void
+  const total = getqflist({nr: '$'}).nr
+  if total == 0
+    echo 'No quickfix history'
+    return
+  endif
+
+  const current = getqflist({nr: 0}).nr
+  var entries: list<string> = ['Quickfix history (0 to cancel):']
+  for nr in range(1, total)
+    const info = getqflist({
+      nr: nr,
+      title: 1,
+      size: 1,
+    })
+    add(entries, printf('%s %d: %s (%d items)',
+      nr == current ? '>' : ' ', nr, info.title, info.size))
+  endfor
+
+  const selected = inputlist(entries)
+  if selected < 1 || selected > total
+    return
+  endif
+
+  const offset = selected - current
+  if offset < 0
+    execute 'colder ' .. -offset
+  elseif offset > 0
+    execute 'cnewer ' .. offset
+  endif
+  copen
+enddef
+
 export def Setup(): void
   &quickfixtextfunc = 'bnqf#core#Text'
 

@@ -1,3 +1,16 @@
+{ pkgs, ... }:
+let
+  gitPr = pkgs.writeShellApplication {
+    name = "tmux-git-pr";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.flock
+      pkgs.gh
+      pkgs.git
+    ];
+    text = builtins.readFile ./scripts/git-pr;
+  };
+in
 {
   programs.tmux-customize = {
     enable = true;
@@ -18,7 +31,11 @@
         }
         branch="$(git symbolic-ref --short HEAD 2>/dev/null)"
         if [ -n "$branch" ]; then
+          pr="$(${gitPr}/bin/tmux-git-pr "$branch" 2>/dev/null)"
           branch="$(shorten_string 20 "$branch")"
+          if [ -n "$pr" ]; then
+            branch="#$pr:$branch"
+          fi
           printf '#[fg=red]Git#[fg=default](#[fg=red]%s#[fg=default]):' "$branch"
         fi
       '';

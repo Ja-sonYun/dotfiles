@@ -132,8 +132,8 @@ nnoremap <silent> <leader>r <Cmd>edit<CR>
 nnoremap <silent> <leader>R <Cmd>LspServer restart<CR>
 
 " Navigate
-nnoremap <silent> ]q <Cmd>cnext<CR>
-nnoremap <silent> [q <Cmd>cprev<CR>
+nnoremap <silent> ]q <Cmd>cnext <Bar> normal! zz<CR>
+nnoremap <silent> [q <Cmd>cprev <Bar> normal! zz<CR>
 nnoremap <silent> ]l <Cmd>lnext<CR>
 nnoremap <silent> [l <Cmd>lprev<CR>
 
@@ -172,6 +172,7 @@ inoremap <C-e> <Esc>$a
 nnoremap <silent> qn <Cmd>cnext<CR>
 nnoremap <silent> qp <Cmd>cprev<CR>
 nnoremap <silent> qo <Cmd>copen<CR>
+nnoremap <silent> qL <Cmd>call bnqf#core#History()<CR>
 nnoremap <silent> [Q <Cmd>colder<CR>
 nnoremap <silent> ]Q <Cmd>cnewer<CR>
 
