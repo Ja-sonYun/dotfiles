@@ -34,7 +34,7 @@ in
           pr="$(${gitPr}/bin/tmux-git-pr "$branch" 2>/dev/null)"
           branch="$(shorten_string 20 "$branch")"
           if [ -n "$pr" ]; then
-            branch="#$pr:$branch"
+            branch="#[fg=black]#$pr#[fg=red]:$branch"
           fi
           printf '#[fg=red]Git#[fg=default](#[fg=red]%s#[fg=default]):' "$branch"
         fi

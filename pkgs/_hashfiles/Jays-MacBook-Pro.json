@@ -8,12 +8,12 @@
     "hash": "sha256-zDc+6DI0x55p086QorJMfHC3GQKrw4sTSn9XanNWQIQ="
   },
   "open-code-review": {
-    "version": "1.12.0",
-    "hash": "sha256-wDk6LTiaVrANa67lct6mi/3QnbhyU2MISw1+OyehxcA="
+    "version": "1.12.1",
+    "hash": "sha256-4SkyeBTG/5QhP7WqOy5qK+BT8InmvH9So5L01HUWnuc="
   },
   "n8n-mcp": {
-    "version": "2.84.4",
-    "hash": "sha256-Zl5MgVy9hw4FSy9ny3azFt07XHYvubhc4ta/+yF4m9E="
+    "version": "2.85.0",
+    "hash": "sha256-tZsijKQWWJosRO5i6UcpI9VZ6KY4/dwERTW8PSmWgLE="
   },
   "aws-documentation-mcp-server": {
     "version": "1.2.1",
@@ -28,16 +28,16 @@
     "hash": "sha256-AJxrvw/8VQzbgJKeuSWKv47V+BzZ6i5xZI3KKAjMWQA="
   },
   "context7-mcp": {
-    "version": "4.1.0",
-    "hash": "sha256-rGTpfc5q58YKb+xp4N5OOOB+izFw/J4qkRBmHr5XsZw="
+    "version": "4.1.1",
+    "hash": "sha256-qQa7+qu8v77+67K3PY30O++CX5tFLTf98l1l/3Nyw0Q="
   },
   "codex": {
     "version": "0.154.0",
     "hash": "sha256-cIyPF9bdtA2AW4Xmqkpr2u6HGFnKoOPv+g5WV7Nb3zQ="
   },
   "claude-code": {
-    "version": "2.1.270",
-    "hash": "sha256-uGTD7n6bGdRfelP8AIY+Bzj81Qx/d7Sti6U26+qAeeQ="
+    "version": "2.1.272",
+    "hash": "sha256-7/Ftzd3obEGt/Mdz6cbyqG3k1yoJ0aHCjfZusIlZaOc="
   },
   "knip": {
     "version": "6.35.1",
@@ -48,8 +48,8 @@
     "hash": "sha256-3vXDE1mhof3Pwh69rLDco3/s3BWXYC09EEZFXIqYMn8="
   },
   "pi-mcp-adapter": {
-    "version": "2.33.0",
-    "hash": "sha256-5MCqlrsxLJJ4g4o9fo5kOxX/ON+YTjxUHXu6vE8zf/k="
+    "version": "2.34.0",
+    "hash": "sha256-8tFkaqcAj0l+PPRD23wcP/esBPgwWt2H+0b7+gcCN6A="
   },
   "awscli-local": {
     "version": "0.22.2",
