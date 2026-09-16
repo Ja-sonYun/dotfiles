@@ -103,6 +103,7 @@ in
 
       dock = {
         autohide = true;
+        mru-spaces = false;
         tilesize = 48;
 
         persistent-apps = [

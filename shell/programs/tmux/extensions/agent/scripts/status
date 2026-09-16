@@ -91,6 +91,12 @@ esac
 
 [[ -z "$pane_id" ]] && exit 0
 
+if [[ "$state" == "init" && -z "${2:-}" && -n "${STATE_COMMAND_NAME:-}" ]]; then
+	if [[ -z "$(detect_agent "$STATE_COMMAND_NAME")" ]]; then
+		exit 0
+	fi
+fi
+
 tmux_lock "__agent_status_$pane_id" || exit 1
 
 if [[ "$state" == "delete" ]]; then

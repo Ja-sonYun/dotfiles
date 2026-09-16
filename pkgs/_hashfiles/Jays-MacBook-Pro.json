@@ -8,8 +8,8 @@
     "hash": "sha256-zDc+6DI0x55p086QorJMfHC3GQKrw4sTSn9XanNWQIQ="
   },
   "open-code-review": {
-    "version": "1.12.1",
-    "hash": "sha256-4SkyeBTG/5QhP7WqOy5qK+BT8InmvH9So5L01HUWnuc="
+    "version": "1.12.3",
+    "hash": "sha256-Tn+6sO5ePqrEYz0IuKHlUPhnX4lvF+EZfYifvqsV4/A="
   },
   "n8n-mcp": {
     "version": "2.85.0",
@@ -36,8 +36,8 @@
     "hash": "sha256-cIyPF9bdtA2AW4Xmqkpr2u6HGFnKoOPv+g5WV7Nb3zQ="
   },
   "claude-code": {
-    "version": "2.1.272",
-    "hash": "sha256-7/Ftzd3obEGt/Mdz6cbyqG3k1yoJ0aHCjfZusIlZaOc="
+    "version": "2.1.273",
+    "hash": "sha256-OzWhY1gkBQCE+030kZnguSlYLsbo6mxWxtoFxfoc4C8="
   },
   "knip": {
     "version": "6.35.1",
