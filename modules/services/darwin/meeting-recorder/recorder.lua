@@ -2,7 +2,10 @@ local config = hs.json.decode([==[@configJson@]==])
 local module = {
 	calendarRequests = {},
 	meetingActive = false,
-	meetingURLs = {},
+	calendarEvents = {},
+	calendarWaiters = {},
+	meetingEvents = {},
+	notifiedEvents = {},
 	pendingRecordings = {},
 	recorderRequests = {},
 	restoredStopTimers = {},
@@ -26,46 +29,14 @@ local transcriptionQueueSetting = "meeting-recorder.transcription-queue"
 local browsers = {
 	["com.apple.Safari"] = {
 		name = "safari",
-		appName = "Safari",
 		ownerBundlePrefixes = {
 			"com.apple.Safari",
 			"com.apple.WebKit.",
 		},
-		script = [[
-	tell application "Safari"
-		set tabURLs to {}
-		repeat with browserWindow in windows
-			repeat with browserTab in tabs of browserWindow
-				try
-					set tabURL to URL of browserTab
-					if tabURL is not missing value then set end of tabURLs to tabURL
-				end try
-			end repeat
-		end repeat
-	end tell
-	set AppleScript's text item delimiters to linefeed
-	return tabURLs as text
-		]],
 	},
 	["com.google.Chrome"] = {
 		name = "chrome",
-		appName = "Google Chrome",
 		ownerBundlePrefixes = { "com.google.Chrome" },
-		script = [[
-	tell application "Google Chrome"
-		set tabURLs to {}
-		repeat with browserWindow in windows
-			repeat with browserTab in tabs of browserWindow
-				try
-					set tabURL to URL of browserTab
-					if tabURL is not missing value then set end of tabURLs to tabURL
-				end try
-			end repeat
-		end repeat
-	end tell
-	set AppleScript's text item delimiters to linefeed
-	return tabURLs as text
-		]],
 	},
 }
 local browsersByName = {}
@@ -75,10 +46,9 @@ for bundleID, browser in pairs(browsers) do
 end
 
 local activeOwners = {}
-local reportedDetectionErrors = {}
 local handleMeetingState
 local refreshMeetingSource
-local updateBrowserPolling
+local refreshCalendar
 local cancelStopDelay
 local startRecording
 local stopRecording
@@ -88,100 +58,30 @@ local requestMeetingPrompt
 local refreshMissingTranscripts
 local scheduleMissingRefresh
 
-local function reportDetectionError(key, message)
-	if reportedDetectionErrors[key] then
-		return
-	end
-
-	reportedDetectionErrors[key] = true
-	detectionLogger:w(message)
+local function eventKey(event)
+	return event.id .. "@" .. tostring(event.startTimestamp)
 end
 
-local function clearDetectionError(key)
-	reportedDetectionErrors[key] = nil
-end
-
-local function matchesBrowserRule(host, path, rule)
-	local configuredHost = rule.host:lower()
-	if host ~= configuredHost then
-		local suffix = "." .. configuredHost
-		if not rule.includeSubdomains or host:sub(-#suffix) ~= suffix then
-			return false
-		end
-	end
-
-	for _, pattern in ipairs(rule.pathPatterns) do
-		if path:match(pattern) then
-			return true
-		end
-	end
-
-	return false
-end
-
-local function normalizeMeetingURL(url)
-	if type(url) ~= "string" then
-		return nil
-	end
-
-	local host, path = url:match("^[%a][%w+.-]*://([^/:?#]+)([^?#]*)")
-	if not host then
-		return nil
-	end
-
-	host = host:lower()
-	for _, rule in ipairs(config.browserRules) do
-		if matchesBrowserRule(host, path, rule) then
-			path = path:gsub("/+$", "")
-			if path == "" then
-				path = "/"
+local function currentCalendarEvents()
+	local now = hs.timer.secondsSinceEpoch()
+	local events = {}
+	local seen = {}
+	for _, event in ipairs(module.calendarEvents) do
+		if event.startTimestamp <= now and now < event.endTimestamp then
+			local key = eventKey(event)
+			if not seen[key] then
+				seen[key] = true
+				table.insert(events, event)
 			end
-			return host .. path
 		end
 	end
-
-	return nil
-end
-
-local function collectMeetingURLs(value, result)
-	if type(value) == "string" then
-		local normalized = normalizeMeetingURL(value)
-		if normalized then
-			result[normalized] = true
+	table.sort(events, function(left, right)
+		if left.startTimestamp ~= right.startTimestamp then
+			return left.startTimestamp < right.startTimestamp
 		end
-		return
-	end
-	if type(value) ~= "table" then
-		return
-	end
-
-	for _, item in pairs(value) do
-		collectMeetingURLs(item, result)
-	end
-end
-
-local function meetingURLs(value)
-	local result = {}
-	collectMeetingURLs(value, result)
-
-	local urls = {}
-	for url in pairs(result) do
-		table.insert(urls, url)
-	end
-	table.sort(urls)
-	return urls
-end
-
-local function sessionMatchesMeeting()
-	if #module.meetingURLs > 1 and module.sessionMeetingGeneration ~= module.meetingGeneration then
-		return false
-	end
-	for _, currentURL in ipairs(module.meetingURLs) do
-		if module.sessionMeetingURL == currentURL then
-			return true
-		end
-	end
-	return false
+		return eventKey(left) < eventKey(right)
+	end)
+	return events
 end
 
 local function bundleMatchesBrowser(bundleID, browser)
@@ -193,221 +93,63 @@ local function bundleMatchesBrowser(bundleID, browser)
 	return false
 end
 
-local function browserOwnerIDs(browser)
-	local result = {}
-	if not browser then
-		return result
-	end
-	for objectID, bundleID in pairs(activeOwners) do
-		if bundleMatchesBrowser(bundleID, browser) then
-			result[objectID] = true
-		end
-	end
-	return result
-end
-
 local function browserOwnsInput(browser)
-	return next(browserOwnerIDs(browser)) ~= nil
-end
-
-local function browserOwnerKey(browser)
-	local objectIDs = {}
-	for objectID in pairs(browserOwnerIDs(browser)) do
-		table.insert(objectIDs, objectID)
+	if not browser then
+		return false
 	end
-	table.sort(objectIDs)
-	return table.concat(objectIDs, "\0")
-end
-
-local function candidateKey(source, urls)
-	if not source or #urls == 0 then
-		return nil
-	end
-
-	local ownerKey = browserOwnerKey(browsersByName[source])
-	if ownerKey == "" then
-		return nil
-	end
-	return source .. "\0" .. ownerKey .. "\0" .. table.concat(urls, "\0")
-end
-
-local function setMeetingSource(source, urls)
-	urls = urls or {}
-	local key = candidateKey(source, urls)
-	local active = key ~= nil
-	if module.meetingCandidateKey == key then
-		return
-	end
-	detectionLogger:i("meeting_state_changed", {
-		previous_active = module.meetingActive,
-		active = active,
-		source = source,
-		url_count = #urls,
-	})
-
-	module.meetingActive = active
-	module.meetingSource = active and source or nil
-	module.meetingURLs = active and urls or {}
-	module.meetingCandidateKey = key
-	module.meetingGeneration = (module.meetingGeneration or 0) + 1
-	handleMeetingState(active, module.meetingSource, key, module.meetingGeneration)
-end
-
-local function hasActiveOwner()
-	return next(activeOwners) ~= nil
-end
-
-local function hasActiveBrowserOwner()
-	for _, browser in pairs(browsers) do
-		if browserOwnsInput(browser) then
+	for _, bundleID in pairs(activeOwners) do
+		if bundleMatchesBrowser(bundleID, browser) then
 			return true
 		end
 	end
 	return false
 end
 
-local function parseBrowserURLs(output)
-	local urls = {}
-	for url in (output or ""):gmatch("[^\r\n]+") do
-		table.insert(urls, url)
+local function setMeetingSource(source, events)
+	local keys = {}
+	for _, event in ipairs(events) do
+		table.insert(keys, eventKey(event))
 	end
-	return meetingURLs(urls)
-end
-
-local function browserMeetingURLs(browser, callback)
-	if not hs.application.get(browser.bundleID) then
-		callback({})
-		return
-	end
-
-	local completed = false
-	local timeoutTimer
-	local task
-	local function finish(urls)
-		if completed then
-			return
-		end
-		completed = true
-		if timeoutTimer then
-			timeoutTimer:stop()
-			timeoutTimer = nil
-		end
-		if module.browserURLTask == task then
-			module.browserURLTask = nil
-		end
-		callback(urls)
+	local key = source and #keys > 0 and (source .. "\0" .. table.concat(keys, "\0")) or nil
+	local active = key ~= nil
+	if module.meetingCandidateKey ~= key then
+		detectionLogger:i("meeting_state_changed", {
+			previous_active = module.meetingActive,
+			active = active,
+			source = source,
+			event_count = #events,
+		})
+		module.meetingGeneration = (module.meetingGeneration or 0) + 1
 	end
 
-	task = hs.task.new("/usr/bin/osascript", function(exitCode, stdout)
-		if completed then
-			return
-		end
-		if exitCode ~= 0 then
-			reportDetectionError(browser.name, "Could not read " .. browser.appName .. " tabs")
-			finish(nil)
-			return
-		end
-		clearDetectionError(browser.name)
-		finish(parseBrowserURLs(stdout))
-	end, { "-e", browser.script })
-	if not task then
-		reportDetectionError(browser.name, "Could not read " .. browser.appName .. " tabs")
-		finish(nil)
-		return
-	end
-
-	module.browserURLTask = task
-	timeoutTimer = hs.timer.doAfter(config.browserQueryTimeoutSeconds, function()
-		reportDetectionError(browser.name, "Timed out reading " .. browser.appName .. " tabs")
-		if task:isRunning() then
-			task:terminate()
-		end
-		finish(nil)
-	end)
-	if not task:start() then
-		reportDetectionError(browser.name, "Could not read " .. browser.appName .. " tabs")
-		finish(nil)
-	end
+	module.meetingActive = active
+	module.meetingSource = active and source or nil
+	module.meetingEvents = active and events or {}
+	module.meetingCandidateKey = key
+	handleMeetingState(active, module.meetingSource, key, module.meetingGeneration)
 end
 
 refreshMeetingSource = function()
-	if module.browserRefreshRunning then
-		module.browserRefreshPending = true
+	local events = currentCalendarEvents()
+	if not next(activeOwners) then
+		setMeetingSource(nil, {})
 		return
 	end
-
-	module.browserRefreshRunning = true
-	local generation = module.browserRefreshGeneration or 0
-	local function finishRefresh()
-		module.browserRefreshRunning = false
-		if module.browserRefreshPending then
-			module.browserRefreshPending = false
-			refreshMeetingSource()
+	local browser = browsers[module.recordingBundleID] or browsersByName[module.meetingSource]
+	if not browserOwnsInput(browser) then
+		local app = hs.application.frontmostApplication()
+		browser = app and browsers[app:bundleID()]
+	end
+	if not browserOwnsInput(browser) then
+		browser = nil
+		for _, bundleID in ipairs({ "com.apple.Safari", "com.google.Chrome" }) do
+			if browserOwnsInput(browsers[bundleID]) then
+				browser = browsers[bundleID]
+				break
+			end
 		end
 	end
-	local activeBrowser = browsersByName[module.meetingSource]
-	if activeBrowser and not browserOwnsInput(activeBrowser) then
-		setMeetingSource(nil, {})
-		activeBrowser = nil
-	end
-
-	local candidates = {}
-	local seen = {}
-	local function addCandidate(browser)
-		if browser and not seen[browser.name] and browserOwnsInput(browser) then
-			seen[browser.name] = true
-			table.insert(candidates, browser)
-		end
-	end
-
-	addCandidate(activeBrowser)
-	local app = hs.application.frontmostApplication()
-	local frontmostBrowser = app and browsers[app:bundleID()]
-	addCandidate(frontmostBrowser)
-	for _, browser in pairs(browsers) do
-		addCandidate(browser)
-	end
-
-	local function checkCandidate(index)
-		if module.browserRefreshGeneration ~= generation then
-			finishRefresh()
-			return
-		end
-
-		local browser = candidates[index]
-		if not browser then
-			setMeetingSource(nil, {})
-			finishRefresh()
-			return
-		end
-
-		browserMeetingURLs(browser, function(urls)
-			if module.browserRefreshGeneration ~= generation then
-				finishRefresh()
-				return
-			end
-			if not browserOwnsInput(browser) then
-				checkCandidate(index + 1)
-				return
-			end
-			if urls == nil then
-				if module.meetingSource == browser.name then
-					finishRefresh()
-					return
-				end
-				checkCandidate(index + 1)
-				return
-			end
-			if #urls > 0 then
-				setMeetingSource(browser.name, urls)
-				finishRefresh()
-				return
-			end
-			checkCandidate(index + 1)
-		end)
-	end
-
-	checkCandidate(1)
+	setMeetingSource(browser and browser.name, events)
 end
 
 local function updateActiveOwners(owners)
@@ -434,43 +176,7 @@ local function updateActiveOwners(owners)
 		detectionLogger:i("audio_owners_changed", { owners = nextOwners })
 	end
 	activeOwners = nextOwners
-	module.browserRefreshGeneration = (module.browserRefreshGeneration or 0) + 1
-	updateBrowserPolling()
-
-	if hasActiveOwner() then
-		refreshMeetingSource()
-	elseif module.meetingActive then
-		setMeetingSource(nil, {})
-	end
-end
-
-local function scheduleBrowserCheck()
-	if not hasActiveOwner() then
-		return
-	end
-	module.browserRefreshGeneration = (module.browserRefreshGeneration or 0) + 1
-
-	if module.browserTimer then
-		module.browserTimer:stop()
-	end
-
-	module.browserTimer = hs.timer.doAfter(0.3, function()
-		module.browserTimer = nil
-		refreshMeetingSource()
-	end)
-end
-
-updateBrowserPolling = function()
-	if hasActiveBrowserOwner() then
-		if not module.browserPollTimer then
-			detectionLogger:i("browser_polling_started", { interval_seconds = 1 })
-			module.browserPollTimer = hs.timer.doEvery(1, refreshMeetingSource)
-		end
-	elseif module.browserPollTimer then
-		detectionLogger:i("browser_polling_stopped", { reason = "no_browser_audio_owner" })
-		module.browserPollTimer:stop()
-		module.browserPollTimer = nil
-	end
+	refreshMeetingSource()
 end
 
 local function elapsedTime()
@@ -533,8 +239,13 @@ local function recordingPanel(options, callback)
 	local panel = { id = panelUI.sequence, options = options, callback = callback }
 	local screen = (options.screen or hs.screen.mainScreen()):frame()
 	options.screen = nil
-	local height = options.mode == "selection" and 400 or 330
+	local height = 330
 	panel.frame = { x = screen.x + (screen.w - 420) / 2, y = screen.y + 34, w = 420, h = height + 8 }
+	if options.events then
+		local height = #options.events > 1 and 238 or 190
+		panel.frame =
+			{ x = screen.x + (screen.w - 360) / 2, y = screen.y + (screen.h - height) / 2, w = 360, h = height }
+	end
 	function panel:delete(nativeClosing)
 		if panelUI.current ~= self then
 			return
@@ -560,15 +271,6 @@ local function recordingPanel(options, callback)
 			end)
 		end
 	end
-	function panel:updateCountdown(remaining, maximum)
-		self.options.remaining = remaining
-		self.options.maximum = maximum
-		if panelUI.current == self and panelUI.displayed == self then
-			panelUI.view:evaluateJavaScript(
-				string.format("window.updateCountdown(%d, %d, %d)", self.id, remaining, maximum)
-			)
-		end
-	end
 	panelUI.current = panel
 	preparePanelUI()
 	presentPanel()
@@ -579,9 +281,6 @@ presentPanel = function()
 	local panel = panelUI.current
 	if not panel or not panelUI.ready or panelUI.closing or panelUI.rendering or panelUI.displayed == panel then
 		return
-	end
-	if panel.options.mode == "ended" then
-		panel.options.remaining = stopDelayRemaining()
 	end
 	panelUI.rendering = panel
 	local view = panelUI.view
@@ -600,12 +299,9 @@ presentPanel = function()
 			return
 		end
 		panelUI.displayed = panel
-		panelUI.view:frame(panel.frame):show():bringToFront(true)
+		panelUI.view:allowTextEntry(panel.options.focus == true):frame(panel.frame):show():bringToFront(true)
 		if panel.options.focus then
 			hs.application.launchOrFocusByBundleID("org.hammerspoon.Hammerspoon")
-		end
-		if panel.options.mode == "ended" then
-			panel:updateCountdown(stopDelayRemaining(), panel.options.maximum)
 		end
 		panelUI.view:evaluateJavaScript(string.format("window.openPanel(%d)", panel.id))
 	end)
@@ -681,28 +377,27 @@ input[type="text"] { width: 100%; height: 43px; padding: 0 12px; border: 1px sol
 input[type="text"]::placeholder { color: #818181; }
 input[type="text"]:hover { border-color: #707070; }
 input[type="text"]:focus { border-color: #d6a0a3; background: #292627; box-shadow: 0 0 0 3px #d96a731a; }
-.event, .option { padding: 13px; border: 1px solid #434343; border-radius: 10px; background: #ffffff04; overflow-wrap: anywhere; }
-.event strong { font-weight: 500; }
-.url { color: #bb9397; font-size: 11px; line-height: 1.5; margin-top: 7px; }
-.option { display: flex; gap: 10px; align-items: center; cursor: pointer; transition: background 150ms ease, border-color 150ms ease; }
-.option:hover { background: #ffffff09; border-color: #777; }
-.option:has(input:checked) { background: #ce42490d; border-color: #a36267; }
-.option:focus-within { outline: 2px solid #edc2c5; outline-offset: 1px; }
-input[type="radio"] { margin: 0; accent-color: #dd6770; flex-shrink: 0; }
-.countdown { margin-top: 15px; color: #e99a9f; font-size: 12px; font-variant-numeric: tabular-nums; }
-progress { width: 100%; height: 4px; border: none; margin-top: 10px; accent-color: #ce4249; }
-progress::-webkit-progress-bar { background: #3e3334; border-radius: 3px; }
-progress::-webkit-progress-value { background: #ce4249; border-radius: 3px; }
 footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: auto; padding-top: 20px; }
 button { height: 35px; padding: 0 15px; border: 1px solid #4b4b4b; border-radius: 8px; color: #eee; background: #343434; font: inherit; font-weight: 500; cursor: pointer; box-shadow: 0 2px 4px #00000020, inset 0 1px 0 #ffffff06; transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease; }
-button:hover { background: #454545; border-color: #666; transform: translateY(-1px); box-shadow: 0 4px 8px #00000035; }
+body:not(.compact) button:hover { background: #454545; border-color: #666; transform: translateY(-1px); box-shadow: 0 4px 8px #00000035; }
 button:focus-visible { outline: 2px solid #edc2c5; outline-offset: 3px; }
 button.primary { border-color: #dd5961; background: #ce4249; color: #fff; box-shadow: 0 2px 6px #9b202530, inset 0 1px 0 #ffffff15; }
-button.primary:hover { background: #e0525a; border-color: #ef737a; box-shadow: 0 4px 12px #c82e3b35; }
+body:not(.compact) button.primary:hover { background: #e0525a; border-color: #ef737a; box-shadow: 0 4px 12px #c82e3b35; }
 button:active { transform: translateY(0) scale(.98); box-shadow: inset 0 2px 4px #00000025; }
-@media (prefers-reduced-motion: reduce) { input, button, .option { transition: none; } button:hover, button:active { transform: none; } }
+body.compact { padding: 10px; user-select: none; }
+.compact main { height: 100%; padding: 20px; background: linear-gradient(145deg, #303033, #212123); border-color: #ffffff20; box-shadow: 0 5px 12px #00000035, inset 0 1px #ffffff08; }
+.heading { display: none; }
+.compact .heading { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #b5b5bb; font-size: 11px; font-weight: 600; letter-spacing: .5px; }
+.heading::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #f17b83; }
+.compact h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; }
+.compact .description { margin: 5px 0 0; font-size: 12px; }
+.compact footer { gap: 8px; padding-top: 14px; }
+.compact button { height: 34px; padding: 0 16px; border-radius: 9px; cursor: default; }
+.compact button.primary { background: #bd424b; border-color: #ee717955; }
+.compact select { width: 100%; margin-top: 12px; padding: 6px; color: #f4f4f5; background: #303033; border: 1px solid #ffffff35; border-radius: 6px; font: inherit; }
+@media (prefers-reduced-motion: reduce) { input, button { transition: none; } body:not(.compact) button:hover, button:active { transform: none; } }
 </style>
-<main><h1></h1><p class="description"></p><form><div class="content"></div><footer><button type="button" id="secondary"></button><button type="submit" class="primary"></button></footer></form></main>
+<main><div class="heading">MEETING DETECTED</div><h1></h1><p class="description"></p><form><div class="content"></div><footer><button type="button" id="secondary"></button><button type="submit" class="primary"></button></footer></form></main>
 <script>
 let options;
 let presentationID;
@@ -729,30 +424,25 @@ window.renderPanel = (id, data) => {
     content.removeAttribute('role');
     content.removeAttribute('aria-label');
     panel.querySelectorAll('button').forEach(element => element.disabled = false);
+    document.body.classList.toggle('compact', Boolean(options.events));
     document.querySelector('h1').textContent = options.title;
+    document.querySelector('h1').title = options.title;
     document.querySelector('.description').textContent = options.description;
     document.querySelector('#secondary').textContent = options.secondary;
     primary.textContent = options.primary;
-    if (options.mode === 'title') {
+    if (options.events) {
+        if (options.events.length > 1) {
+            const select = add('select');
+            select.id = 'meeting';
+            select.setAttribute('aria-label', 'Meeting to record');
+            options.events.forEach(event => add('option', event.text, null, select).value = event.key);
+        }
+    } else {
         add('label', 'Title').htmlFor = 'title';
         const input = add('input');
         input.type = 'text'; input.id = 'title'; input.required = true;
         input.placeholder = 'e.g. Design sync'; input.autocomplete = 'off';
-    } else if (options.mode === 'selection') {
-        content.setAttribute('role', 'radiogroup');
-        content.setAttribute('aria-label', 'Meetings');
-        options.urls.forEach((url, index) => {
-            const label = add('label', '', 'option');
-            const input = add('input', '', '', label);
-            input.type = 'radio'; input.name = 'meeting'; input.value = index + 1; input.checked = index === 0;
-            add('span', url, '', label);
-        });
-    } else {
-        const event = add('div', '', 'event');
-        add('strong', options.eventText, '', event);
-        if (options.url) add('div', options.url, 'url', event);
     }
-    if (options.mode === 'ended') window.updateCountdown(id, options.remaining, options.maximum);
     panel.style.opacity = '1';
     if (!reducedMotion.matches) {
         openingAnimation = panel.animate([
@@ -762,41 +452,32 @@ window.renderPanel = (id, data) => {
         openingAnimation.pause();
     }
 };
-window.updateCountdown = (id, remaining, maximum) => {
-    if (id !== presentationID || options.mode !== 'ended') return;
-    let label = document.querySelector('.countdown');
-    let progress = document.querySelector('progress');
-    if (!label) { label = add('div', '', 'countdown'); progress = add('progress'); progress.setAttribute('aria-label', 'Seconds until automatic stop'); }
-    label.textContent = `Automatic stop in ${remaining}s unless you reconnect.`;
-    progress.max = Math.max(1, maximum); progress.value = remaining;
-};
 function send(action, value) {
     if (sent) return;
     sent = true;
-    panel.querySelectorAll('button, input').forEach(element => element.disabled = true);
+    panel.querySelectorAll('button, input, select').forEach(element => element.disabled = true);
     window.webkit.messageHandlers.meetingRecorderPanel.postMessage({ id: presentationID, action, value, reducedMotion: reducedMotion.matches });
 }
 document.querySelector('#secondary').addEventListener('click', () => send('secondary'));
 document.addEventListener('keydown', event => {
     if (event.key === 'Escape') { event.preventDefault(); send('secondary'); }
-    if (event.key === 'Enter' && event.target.matches('input[type="radio"]')) {
-        event.preventDefault(); document.querySelector('form').requestSubmit();
-    }
 });
 document.querySelector('form').addEventListener('submit', event => {
     event.preventDefault();
-    let value;
-    if (options.mode === 'title') {
-        const input = document.querySelector('#title'); value = input.value.trim();
-        if (!value) { input.value = ''; input.reportValidity(); return; }
+    if (options.events) {
+        const select = document.querySelector('#meeting');
+        send('primary', select ? select.value : options.events[0].key);
+        return;
     }
-    if (options.mode === 'selection') value = Number(document.querySelector('input:checked').value);
+    const input = document.querySelector('#title');
+    const value = input.value.trim();
+    if (!value) { input.value = ''; input.reportValidity(); return; }
     send('primary', value);
 });
 window.openPanel = id => {
     if (id !== presentationID || sent) return;
     if (openingAnimation && !reducedMotion.matches) openingAnimation.play();
-    (content.querySelector('input') || primary).focus();
+    if (options.focus) (content.querySelector('input') || primary).focus();
 };
 function updateMotion() {
     if (reducedMotion.matches && openingAnimation) openingAnimation.cancel();
@@ -808,56 +489,135 @@ updateMotion();
 ]=])
 end
 
+local function notificationActivated(notification)
+	local activation = notification:activationType()
+	return activation == hs.notify.activationTypes.contentsClicked
+		or activation == hs.notify.activationTypes.actionButtonClicked
+end
+
 local function dismissStopPrompt()
 	if module.stopPrompt then
-		module.stopPrompt:delete()
+		module.stopPrompt:withdraw()
 		module.stopPrompt = nil
 	end
 end
 
-local function dismissMeetingPrompt()
+local function dismissMeetingPrompt(releaseNotifiedEvents)
+	if releaseNotifiedEvents and module.pendingPrompt and module.pendingPrompt.notifiedEventKeys then
+		for _, key in ipairs(module.pendingPrompt.notifiedEventKeys) do
+			module.notifiedEvents[key] = nil
+		end
+	end
+
+	module.pendingPrompt = nil
+	module.manualStartPending = nil
 	if module.meetingPrompt then
 		module.meetingPrompt:delete()
 		module.meetingPrompt = nil
 	end
-	if module.pendingPrompt and module.pendingPrompt.manual then
-		module.manualStartPending = nil
-	end
-	module.pendingPrompt = nil
 end
 
-local function updateStopPrompt()
-	if module.stopPrompt and module.stopDeadline then
-		module.stopPrompt:updateCountdown(stopDelayRemaining(), config.stopDelaySeconds)
+local function dismissCalendarEndPrompt()
+	if module.calendarEndNotification then
+		module.calendarEndNotification:withdraw()
+		module.calendarEndNotification = nil
+	end
+	if module.calendarEndChooser then
+		local chooser = module.calendarEndChooser
+		module.calendarEndChooser = nil
+		chooser:hide()
 	end
 end
 
 local function showStopPrompt()
-	if module.stopPrompt or module.state ~= "recording" or not module.stopDeadline or not module.menuBar then
+	if module.stopPrompt or module.state ~= "recording" or not module.stopDeadline then
 		return
 	end
 
-	module.stopPrompt = recordingPanel({
-		mode = "ended",
-		title = "Meeting ended",
-		description = "The meeting is no longer using your microphone.",
-		eventText = module.sessionEvent and module.sessionEvent.title or "Meeting recording",
-		url = module.sessionMeetingURL,
-		remaining = stopDelayRemaining(),
-		maximum = config.stopDelaySeconds,
-		primary = "Stop Now",
-		secondary = "Keep Recording",
-	}, function(action)
-		if action == "error" then
-			return
+	local requestID = module.recorderRequestID
+	module.stopPrompt = hs.notify
+		.new(function(notification)
+			if
+				notificationActivated(notification)
+				and module.recorderRequestID == requestID
+				and module.stopDeadline
+				and module.state == "recording"
+			then
+				stopRecording("manual")
+			end
+		end, {
+			title = "Microphone no longer in use",
+			subTitle = module.sessionEvent and module.sessionEvent.title or "Meeting recording",
+			informativeText = "Recording stops after "
+				.. tostring(config.stopDelaySeconds)
+				.. " seconds unless you reconnect. Click to stop now.",
+			hasActionButton = true,
+			actionButtonTitle = "Stop Now",
+			withdrawAfter = 0,
+		})
+		:send()
+end
+
+local function checkCalendarEnd()
+	if module.sessionType ~= "meeting" or not module.task or module.state ~= "recording" then
+		return
+	end
+	local event = module.sessionEvent
+	for _, candidate in ipairs(module.calendarEvents) do
+		if eventKey(candidate) == eventKey(event) then
+			event = candidate
+			module.sessionEvent = candidate
+			break
 		end
-		module.stopPrompt = nil
-		if action == "primary" then
-			stopRecording("manual")
-		elseif action == "secondary" then
-			cancelStopDelay()
-		end
-	end)
+	end
+	if module.calendarEndPrompted or hs.timer.secondsSinceEpoch() < event.endTimestamp then
+		return
+	end
+	module.calendarEndPrompted = true
+
+	local requestID = module.recorderRequestID
+	module.calendarEndNotification = hs.notify
+		.new(function(notification)
+			if
+				not notificationActivated(notification)
+				or module.recorderRequestID ~= requestID
+				or module.state ~= "recording"
+				or module.calendarEndChooser
+			then
+				return
+			end
+			local chooser
+			chooser = hs.chooser.new(function(choice)
+				if module.calendarEndChooser ~= chooser then
+					return
+				end
+				module.calendarEndChooser = nil
+				if choice and choice.action == "stop" and module.recorderRequestID == requestID then
+					stopRecording("manual")
+				end
+			end)
+			module.calendarEndChooser = chooser
+			chooser
+				:choices({
+					{
+						text = "Stop recording",
+						subText = event.title,
+						action = "stop",
+					},
+					{
+						text = "Continue recording",
+						subText = event.title,
+						action = "continue",
+					},
+				})
+				:show()
+		end, {
+			title = "Meeting scheduled to end",
+			subTitle = event.title,
+			informativeText = "Click to stop or continue recording. Recording continues until you decide.",
+			withdrawAfter = 0,
+		})
+		:send()
 end
 
 local statusIcons = {}
@@ -907,11 +667,7 @@ local function updateMenuBar()
 			tooltips,
 			"Recorded " .. elapsedTime() .. "; waiting for reconnect; automatic stop in " .. stopDelayText()
 		)
-		if module.stopPrompt then
-			updateStopPrompt()
-		else
-			showStopPrompt()
-		end
+		showStopPrompt()
 	elseif module.state == "recording" then
 		table.insert(tooltips, "Meeting recording: " .. elapsedTime())
 	end
@@ -1683,73 +1439,25 @@ local function eventOutputPath(event)
 	return path
 end
 
-local function eventFingerprint(event, urls)
-	return table.concat({
-		tostring(event.title or ""),
-		tostring(event.startTimestamp or ""),
-		tostring(event.endTimestamp or ""),
-		table.concat(urls, "\0"),
-	}, "\0")
-end
-
-local function singleValue(values)
-	local result = nil
-	for _, value in pairs(values) do
-		if result then
-			return nil, false
-		end
-		result = value
-	end
-	return result, result ~= nil
-end
-
-local function selectCalendarEvent(events, browserURLs)
-	local browserURLSet = {}
-	for _, url in ipairs(browserURLs or {}) do
-		browserURLSet[url] = true
-	end
-
-	local exactMatches = {}
-	local calendarEvents = {}
+local function selectCalendarEvent(events)
+	local selected
+	local seen = {}
 	for _, event in ipairs(events or {}) do
-		if type(event) == "table" and type(event.title) == "string" then
-			local urls = meetingURLs(event.urls)
-			local fingerprint = eventFingerprint(event, urls)
-			if #urls == 0 or next(browserURLSet) == nil then
-				calendarEvents[fingerprint] = event
+		local key = eventKey(event)
+		if not seen[key] then
+			if selected then
+				return nil, "Multiple Calendar events overlap this time."
 			end
-			for _, url in ipairs(urls) do
-				if browserURLSet[url] then
-					exactMatches[fingerprint] = event
-					break
-				end
-			end
+			seen[key] = true
+			selected = event
 		end
 	end
-
-	local exactEvent, hasExactEvent = singleValue(exactMatches)
-	if hasExactEvent then
-		return exactEvent, nil
-	end
-	if next(exactMatches) then
-		return nil, "Multiple matching Calendar events were found."
-	end
-
-	local calendarEvent, hasCalendarEvent = singleValue(calendarEvents)
-	if hasCalendarEvent then
-		return calendarEvent, nil
-	end
-	if next(calendarEvents) then
-		return nil, "Multiple Calendar events overlap this time."
-	end
-	return nil, "No matching Calendar event was found."
+	return selected, selected == nil and "No matching Calendar event was found." or nil
 end
 
 local function promptForRecordingEvent(detectedAt, reason, pending, callback)
 	module.pendingPrompt = pending
 	module.meetingPrompt = recordingPanel({
-		mode = "title",
-		screen = pending.screen,
 		title = "Recording title",
 		description = (reason or "Calendar lookup failed.") .. " Enter a title for this recording.",
 		primary = "Start Recording",
@@ -1766,38 +1474,6 @@ local function promptForRecordingEvent(detectedAt, reason, pending, callback)
 	end)
 end
 
-local function selectMeetingURL(generation, callback)
-	local candidates = module.meetingURLs
-	if #candidates == 1 then
-		callback(candidates[1])
-		return
-	end
-
-	dismissMeetingPrompt()
-	local pending = { generation = generation }
-	module.pendingPrompt = pending
-	module.meetingPrompt = recordingPanel({
-		mode = "selection",
-		title = "Choose a meeting",
-		description = "More than one meeting is open. Choose the meeting to record.",
-		urls = candidates,
-		primary = "Continue",
-		secondary = "Cancel",
-		focus = true,
-	}, function(action, value)
-		if module.pendingPrompt ~= pending then
-			return
-		end
-		module.meetingPrompt = nil
-		module.pendingPrompt = nil
-		if action == "primary" and type(value) == "number" and candidates[value] then
-			callback(candidates[value])
-		else
-			module.handledGeneration = generation
-		end
-	end)
-end
-
 local function nextCalendarRequestID()
 	module.calendarRequestSequence = (module.calendarRequestSequence or 0) + 1
 	return string.format("%.0f-%d", hs.timer.secondsSinceEpoch() * 1000, module.calendarRequestSequence)
@@ -1809,6 +1485,11 @@ local function nextRecorderRequestID()
 end
 
 local function queryCalendar(detectedAt, callback)
+	table.insert(module.calendarWaiters, callback)
+	if module.calendarQueryRunning then
+		return
+	end
+	module.calendarQueryRunning = true
 	local requestID = nextCalendarRequestID()
 	local bufferSeconds = config.calendarEventBufferMinutes * 60
 	local arguments = {
@@ -1845,7 +1526,24 @@ local function queryCalendar(detectedAt, callback)
 			responseGraceTimer:stop()
 			responseGraceTimer = nil
 		end
-		callback(events, errorMessage)
+		module.calendarQueryRunning = false
+		module.calendarEvents = not errorMessage and events or {}
+		for _, event in ipairs(module.calendarEvents) do
+			local key = eventKey(event)
+			if module.notifiedEvents[key] then
+				module.notifiedEvents[key] = event.endTimestamp
+			end
+		end
+		local waiters = module.calendarWaiters
+		module.calendarWaiters = {}
+		for _, waiter in ipairs(waiters) do
+			waiter(events, errorMessage)
+		end
+		refreshMeetingSource()
+		if module.calendarRefreshPending then
+			module.calendarRefreshPending = nil
+			refreshCalendar()
+		end
 	end
 	local function finishFromPayload(payload)
 		if type(payload) ~= "table" then
@@ -1855,7 +1553,20 @@ local function queryCalendar(detectedAt, callback)
 			return
 		end
 		if payload.status == "ok" then
-			finish(type(payload.events) == "table" and payload.events or {}, nil)
+			local events = {}
+			for _, event in ipairs(type(payload.events) == "table" and payload.events or {}) do
+				if
+					type(event) == "table"
+					and type(event.id) == "string"
+					and event.id ~= ""
+					and type(event.title) == "string"
+					and type(event.startTimestamp) == "number"
+					and type(event.endTimestamp) == "number"
+				then
+					table.insert(events, event)
+				end
+			end
+			finish(events, nil)
 			return
 		end
 
@@ -1912,6 +1623,14 @@ local function queryCalendar(detectedAt, callback)
 	end
 end
 
+refreshCalendar = function()
+	if module.calendarQueryRunning then
+		module.calendarRefreshPending = true
+		return
+	end
+	queryCalendar(hs.timer.secondsSinceEpoch(), function() end)
+end
+
 local function openRecordingsDirectory()
 	if module.openTask and module.openTask:isRunning() then
 		return
@@ -1948,19 +1667,16 @@ local function recorderArguments(requestID, bundleID, outputPath, statePath)
 		table.insert(arguments, "--parent-pid")
 		table.insert(arguments, tostring(hammerspoon:pid()))
 	end
-	local application = bundleID and hs.application.get(bundleID)
-	local window = hs.window.focusedWindow()
-	if application then
-		window = application:focusedWindow() or application:mainWindow()
-	end
-	local screen = window and window:screen() or hs.screen.mainScreen()
-	if screen then
-		table.insert(arguments, "--display-id")
-		table.insert(arguments, tostring(screen:id()))
-	end
 	if bundleID then
 		table.insert(arguments, "--bundle-id")
 		table.insert(arguments, bundleID)
+	else
+		local window = hs.window.focusedWindow()
+		local screen = window and window:screen() or hs.screen.mainScreen()
+		if screen then
+			table.insert(arguments, "--display-id")
+			table.insert(arguments, tostring(screen:id()))
+		end
 	end
 	table.insert(arguments, outputPath)
 	return arguments
@@ -2042,7 +1758,7 @@ local function beginStopDelay()
 		module.stopDelayTimer = nil
 		module.stopDeadline = nil
 		dismissStopPrompt()
-		if not module.meetingActive and module.sessionType == "meeting" then
+		if module.sessionType == "meeting" and not browserOwnsInput(browsers[module.recordingBundleID]) then
 			stopRecording("grace-timeout")
 		end
 	end)
@@ -2050,7 +1766,7 @@ local function beginStopDelay()
 	showStopPrompt()
 end
 
-startRecording = function(sessionType, event, meetingURL)
+startRecording = function(sessionType, event)
 	if module.task then
 		logger:i("recording_start_skipped", { reason = "already_running", job_id = module.recorderRequestID })
 		return
@@ -2092,20 +1808,8 @@ startRecording = function(sessionType, event, meetingURL)
 			return
 		end
 
-		local previousSessionType = module.sessionType
 		local completedPath = module.currentPath
 		local stopReason = module.stopReason
-		local restartEvent = module.sessionEvent
-		local restartMeetingURL = module.sessionMeetingURL
-		local sameMeeting = sessionMatchesMeeting()
-		local restartMeeting = previousSessionType == "meeting"
-			and module.state == "stopping"
-			and module.meetingActive
-			and sameMeeting
-			and (stopReason == "browser-switch" or stopReason == "grace-timeout")
-		local promptNextMeeting = previousSessionType == "meeting"
-			and module.meetingActive
-			and (stopReason == "meeting-switch" or not sameMeeting)
 		local pendingFailure = module.pendingFailure
 		logger:i("recording_completed", {
 			job_id = requestID,
@@ -2120,16 +1824,13 @@ startRecording = function(sessionType, event, meetingURL)
 				and not pendingFailure
 				and config.transcriberPath ~= nil,
 		})
-		local retryMeeting = not module.captureStarted
-			and stopReason ~= "manual"
-			and (finalPayload.status == "error" or pendingFailure ~= nil)
 		cancelStopDelay()
 		stopStartTimeout()
 		module.task = nil
 		module.sessionType = nil
 		module.sessionEvent = nil
-		module.sessionMeetingURL = nil
-		module.sessionMeetingGeneration = nil
+		module.calendarEndPrompted = nil
+		dismissCalendarEndPrompt()
 		module.startedAt = nil
 		module.captureStarted = false
 		module.currentPath = nil
@@ -2152,16 +1853,7 @@ startRecording = function(sessionType, event, meetingURL)
 		end
 		setPendingRecording(requestID, nil)
 		updateMenuBar()
-		if retryMeeting then
-			module.handledGeneration = nil
-			if module.meetingActive then
-				requestMeetingPrompt(module.meetingSource, module.meetingCandidateKey, module.meetingGeneration)
-			end
-		elseif restartMeeting then
-			startRecording("meeting", restartEvent, restartMeetingURL)
-		elseif promptNextMeeting then
-			requestMeetingPrompt(module.meetingSource, module.meetingCandidateKey, module.meetingGeneration)
-		end
+		refreshMeetingSource()
 	end
 	local function handleRecorderState(payload)
 		if type(payload) ~= "table" then
@@ -2234,8 +1926,7 @@ startRecording = function(sessionType, event, meetingURL)
 	setPendingRecording(requestID, { path = outputPath, statePath = statePath, status = "pending" })
 	module.sessionType = sessionType
 	module.sessionEvent = event
-	module.sessionMeetingURL = meetingURL
-	module.sessionMeetingGeneration = module.meetingGeneration
+	module.calendarEndPrompted = nil
 	module.state = "starting"
 	module.currentPath = outputPath
 	module.lastError = nil
@@ -2276,106 +1967,77 @@ local function eventTimeText(event)
 	)
 end
 
-local function meetingPromptScreen(source)
-	local browser = source and browsersByName[source]
-	local application = browser and hs.application.get(browser.bundleID)
-	local window = application and (application:focusedWindow() or application:mainWindow())
-	return window and window:screen() or hs.screen.mainScreen()
-end
-
-local function showMeetingPrompt(source, key, generation, event, fallbackReason, detectedAt, meetingURL)
-	if
-		not module.meetingActive
-		or module.meetingSource ~= source
-		or module.meetingCandidateKey ~= key
-		or module.meetingGeneration ~= generation
-		or module.task
-	then
+requestMeetingPrompt = function(source, key, generation)
+	if module.task or module.manualStartPending or module.pendingPrompt then
 		return
 	end
-	dismissMeetingPrompt()
+	local candidates = {}
+	for _, event in ipairs(module.meetingEvents) do
+		if not module.notifiedEvents[eventKey(event)] then
+			table.insert(candidates, event)
+		end
+	end
+	if #candidates == 0 then
+		return
+	end
 
-	local pending = { generation = generation, screen = meetingPromptScreen(source) }
+	local pending = {
+		generation = generation,
+		notifiedEventKeys = {},
+	}
+	module.pendingPrompt = pending
 	local function isCurrentMeeting()
-		return module.meetingActive
+		return module.pendingPrompt == pending
+			and module.meetingActive
 			and module.meetingSource == source
 			and module.meetingCandidateKey == key
 			and module.meetingGeneration == generation
+			and browserOwnsInput(browsersByName[source])
 			and not module.task
 			and not module.manualStartPending
 	end
-	local function record(eventToRecord)
+	local function record(selectedKey)
 		if not isCurrentMeeting() then
 			return
 		end
-		module.handledGeneration = generation
-		if eventToRecord then
-			startRecording("meeting", eventToRecord, meetingURL)
+		for _, event in ipairs(currentCalendarEvents()) do
+			if eventKey(event) == selectedKey then
+				startRecording("meeting", event)
+				return
+			end
 		end
+		dismissMeetingPrompt(true)
 	end
-	module.pendingPrompt = pending
+	local choices = {}
+	for _, event in ipairs(candidates) do
+		local key = eventKey(event)
+		table.insert(choices, {
+			text = eventTimeText(event),
+			key = key,
+		})
+		module.notifiedEvents[key] = event.endTimestamp
+		table.insert(pending.notifiedEventKeys, key)
+	end
 	module.meetingPrompt = recordingPanel({
-		mode = "detected",
-		screen = pending.screen,
-		title = "Meeting detected",
-		description = "Record this meeting?",
-		eventText = eventTimeText(event),
-		url = meetingURL,
+		title = #candidates == 1 and candidates[1].title or "Choose a meeting",
+		description = #candidates == 1 and string.format(
+			"%s–%s · Ready to record",
+			os.date("%H:%M", math.floor(candidates[1].startTimestamp)),
+			os.date("%H:%M", math.floor(candidates[1].endTimestamp))
+		) or "Multiple Calendar events",
 		primary = "Start Recording",
-		secondary = "Not Now",
-	}, function(action)
+		secondary = "Dismiss",
+		events = choices,
+	}, function(action, selectedKey)
 		if module.pendingPrompt ~= pending then
 			return
 		end
 		module.meetingPrompt = nil
-		module.pendingPrompt = nil
-		if action ~= "primary" then
-			module.handledGeneration = generation
-			return
-		end
-		if not isCurrentMeeting() then
-			return
-		end
-		if event then
-			record(event)
+		if action == "primary" then
+			record(selectedKey)
 		else
-			promptForRecordingEvent(detectedAt, fallbackReason, pending, record)
+			dismissMeetingPrompt()
 		end
-	end)
-end
-
-requestMeetingPrompt = function(source, key, generation)
-	if
-		module.task
-		or module.manualStartPending
-		or module.handledGeneration == generation
-		or (module.pendingPrompt and module.pendingPrompt.generation == generation)
-	then
-		return
-	end
-
-	local detectedAt = hs.timer.secondsSinceEpoch()
-	local function isCurrentMeeting()
-		return module.meetingActive
-			and module.meetingSource == source
-			and module.meetingCandidateKey == key
-			and module.meetingGeneration == generation
-			and not module.task
-			and not module.manualStartPending
-			and module.handledGeneration ~= generation
-	end
-	selectMeetingURL(generation, function(meetingURL)
-		if not isCurrentMeeting() then
-			return
-		end
-
-		queryCalendar(detectedAt, function(events, calendarError)
-			if not isCurrentMeeting() then
-				return
-			end
-			local event, selectionError = selectCalendarEvent(events, { meetingURL })
-			showMeetingPrompt(source, key, generation, event, calendarError or selectionError, detectedAt, meetingURL)
-		end)
 	end)
 end
 
@@ -2389,7 +2051,6 @@ local function requestManualStart()
 	local pending = { manual = true }
 	module.pendingPrompt = pending
 	module.manualStartPending = true
-	module.handledGeneration = module.meetingGeneration
 	local detectedAt = hs.timer.secondsSinceEpoch()
 	queryCalendar(detectedAt, function(events, calendarError)
 		if module.pendingPrompt ~= pending or not module.manualStartPending or module.task then
@@ -2403,7 +2064,7 @@ local function requestManualStart()
 				startRecording("manual", eventToRecord)
 			end
 		end
-		local event, selectionError = selectCalendarEvent(events, {})
+		local event, selectionError = selectCalendarEvent(events)
 		if event then
 			record(event)
 		else
@@ -2421,6 +2082,7 @@ stopRecording = function(reason)
 	end
 
 	cancelStopDelay()
+	dismissCalendarEndPrompt()
 	stopStartTimeout()
 	module.stopReason = reason
 	module.state = "stopping"
@@ -2575,49 +2237,27 @@ updateMenuBar()
 
 handleMeetingState = function(active, source, key, generation)
 	local browser = source and browsersByName[source]
-	local browserBundleID = browser and browser.bundleID or nil
-	module.browserBundleID = browserBundleID
-	if active then
-		if module.sessionType == "meeting" and module.task then
-			if module.state == "stopping" then
-				return
+	module.browserBundleID = browser and browser.bundleID or nil
+	if module.sessionType == "meeting" and module.task then
+		if browserOwnsInput(browsers[module.recordingBundleID]) then
+			if module.stopDeadline then
+				cancelStopDelay()
 			end
-			if not sessionMatchesMeeting() then
-				stopRecording("meeting-switch")
-				return
-			end
-			module.sessionMeetingGeneration = generation
-			cancelStopDelay()
-		end
-		if
-			module.sessionType == "meeting"
-			and module.task
-			and module.recordingBundleID
-			and browserBundleID
-			and module.recordingBundleID ~= browserBundleID
-		then
-			stopRecording("browser-switch")
-			return
-		end
-		if
-			module.pendingPrompt
-			and not module.pendingPrompt.manual
-			and module.pendingPrompt.generation ~= generation
-		then
-			dismissMeetingPrompt()
-		end
-		if not module.task then
-			requestMeetingPrompt(source, key, generation)
+		else
+			beginStopDelay()
 		end
 		return
 	end
-
-	if not (module.pendingPrompt and module.pendingPrompt.manual) then
-		dismissMeetingPrompt()
+	if module.pendingPrompt and module.pendingPrompt.manual then
+		return
 	end
-	module.handledGeneration = nil
-	if module.sessionType == "meeting" then
-		beginStopDelay()
+	if module.pendingPrompt and module.pendingPrompt.generation ~= generation then
+		dismissMeetingPrompt(true)
+	end
+	if active then
+		requestMeetingPrompt(source, key, generation)
+	else
+		dismissMeetingPrompt(true)
 	end
 end
 
@@ -2678,6 +2318,14 @@ if hammerspoon then
 end
 
 local function pollRecorderStates()
+	local now = hs.timer.secondsSinceEpoch()
+	for key, endedAt in pairs(module.notifiedEvents) do
+		if endedAt <= now then
+			module.notifiedEvents[key] = nil
+		end
+	end
+	refreshMeetingSource()
+	checkCalendarEnd()
 	local requestIDs = {}
 	for requestID in pairs(module.pendingRecordings) do
 		table.insert(requestIDs, requestID)
@@ -2751,17 +2399,19 @@ module.audioProcessWatcher = hs.distributednotifications.new(
 )
 module.audioProcessWatcher:start()
 
-module.applicationWatcher =
-	hs.application.watcher.new(detectionLogger:wrap("application_event_failed", function(_, event)
-		if event == hs.application.watcher.activated then
-			scheduleBrowserCheck()
-		end
-	end))
-module.applicationWatcher:start()
-
+module.calendarRefreshTimer = hs.timer.doEvery(60, logger:wrap("calendar_refresh_failed", refreshCalendar))
+module.wakeWatcher = hs.caffeinate.watcher.new(logger:wrap("wake_refresh_failed", function(event)
+	if event == hs.caffeinate.watcher.systemDidWake then
+		module.calendarEvents = {}
+		refreshMeetingSource()
+		refreshCalendar()
+		hs.distributednotifications.post("@refreshNotification@", "org.hammerspoon.Hammerspoon")
+	end
+end))
+module.wakeWatcher:start()
+refreshCalendar()
 hs.distributednotifications.post("@refreshNotification@", "org.hammerspoon.Hammerspoon")
 
-module.panelWarmupTimer = hs.timer.doAfter(0, logger:wrap("panel_warmup_failed", preparePanelUI))
 logger:i("module_started", { recorder_poll_seconds = 1, queue_length = #module.transcriptionQueue })
 
 return module

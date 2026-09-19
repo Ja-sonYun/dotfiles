@@ -56,6 +56,10 @@ in
     enable = true;
     chromeNativeHost.enable = true;
 
+    instances.claude-work = {
+      home = ".claude-work";
+    };
+
     settings = {
       alwaysThinkingEnabled = true;
       attribution = {

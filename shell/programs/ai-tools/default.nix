@@ -20,9 +20,13 @@
     mypy
     pyright
 
+    cargo
+    rustc
+    clippy
     rustfmt
     rust-analyzer
     clang-tools
+    go
     golangci-lint
 
     shellcheck

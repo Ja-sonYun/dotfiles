@@ -20,8 +20,6 @@ let
   script = pkgs.replaceVars ./recorder.lua {
     configJson = builtins.toJSON {
       inherit (cfg)
-        browserRules
-        browserQueryTimeoutSeconds
         calendarEventBufferMinutes
         calendarQueryTimeoutSeconds
         outputDirectory
@@ -48,35 +46,6 @@ in
 {
   options.services.meetingRecorder = {
     enable = lib.mkEnableOption "meeting audio recording";
-
-    browserRules = lib.mkOption {
-      type = lib.types.listOf (
-        lib.types.submodule {
-          options = {
-            host = lib.mkOption {
-              type = lib.types.nonEmptyStr;
-            };
-
-            includeSubdomains = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-            };
-
-            pathPatterns = lib.mkOption {
-              type = lib.types.listOf lib.types.nonEmptyStr;
-            };
-          };
-        }
-      );
-      default = [ ];
-      description = "Host and Lua path patterns for meeting URLs.";
-    };
-
-    browserQueryTimeoutSeconds = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 3;
-      description = "Seconds to wait for a browser URL query.";
-    };
 
     calendarEventBufferMinutes = lib.mkOption {
       type = lib.types.ints.positive;
@@ -108,18 +77,20 @@ in
       description = "Seconds to keep recording while waiting for a meeting reconnect.";
     };
 
-    transcription.enable = lib.mkEnableOption "local meeting transcription";
+    transcription = {
+      enable = lib.mkEnableOption "local meeting transcription";
 
-    transcription.model = lib.mkOption {
-      type = lib.types.nullOr lib.types.nonEmptyStr;
-      default = null;
-      description = "Whisper model file path, or null to use the bundled large-v3 model.";
-    };
+      model = lib.mkOption {
+        type = lib.types.nullOr lib.types.nonEmptyStr;
+        default = null;
+        description = "Whisper model file path, or null to use the bundled large-v3 model.";
+      };
 
-    transcription.language = lib.mkOption {
-      type = lib.types.nonEmptyStr;
-      default = "auto";
-      description = "Whisper language code, or auto for language detection.";
+      language = lib.mkOption {
+        type = lib.types.nonEmptyStr;
+        default = "auto";
+        description = "Whisper language code, or auto for language detection.";
+      };
     };
   };
 

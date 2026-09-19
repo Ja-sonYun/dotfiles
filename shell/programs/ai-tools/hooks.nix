@@ -8,6 +8,7 @@ let
   hooksDir = ./hooks;
   statusCommand = "${pkgs.python3}/bin/python ${hooksDir}/status.py ${lib.escapeShellArg config.programs.tmux.agentStatusScript} ${pkgs.tmux}/bin/tmux";
   notificationCommand = "${pkgs.python3}/bin/python ${hooksDir}/notification.py ${pkgs.notifycmd}/bin/notifycmd";
+  qualityCommand = "${pkgs.python3}/bin/python ${hooksDir}/quality.py";
 
   hook = command: {
     type = "command";
@@ -34,7 +35,18 @@ let
     SessionStart = [ statusHookBlock ];
     UserPromptSubmit = [ statusHookBlock ];
     PreToolUse = [ statusHookBlock ];
-    PostToolUse = [ statusHookBlock ];
+    PostToolUse = [
+      statusHookBlock
+      {
+        hooks = [
+          {
+            type = "command";
+            command = qualityCommand;
+            timeout = 130;
+          }
+        ];
+      }
+    ];
     Notification = [
       (matchedHookBlock "permission_prompt" [
         statusCommand

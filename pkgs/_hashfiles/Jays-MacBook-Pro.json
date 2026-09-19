@@ -8,12 +8,12 @@
     "hash": "sha256-zDc+6DI0x55p086QorJMfHC3GQKrw4sTSn9XanNWQIQ="
   },
   "open-code-review": {
-    "version": "1.12.3",
-    "hash": "sha256-Tn+6sO5ePqrEYz0IuKHlUPhnX4lvF+EZfYifvqsV4/A="
+    "version": "1.12.6",
+    "hash": "sha256-bHYof5L5b7MPPNY4ii4sITi1RV/pSMfjxBYfRUNnp+Y="
   },
   "n8n-mcp": {
-    "version": "2.85.0",
-    "hash": "sha256-tZsijKQWWJosRO5i6UcpI9VZ6KY4/dwERTW8PSmWgLE="
+    "version": "2.87.0",
+    "hash": "sha256-3PAie27POxkPsm/vznFnhDhOcmidGVwywGl4zRScJCk="
   },
   "aws-documentation-mcp-server": {
     "version": "1.2.1",
@@ -32,16 +32,16 @@
     "hash": "sha256-qQa7+qu8v77+67K3PY30O++CX5tFLTf98l1l/3Nyw0Q="
   },
   "codex": {
-    "version": "0.154.0",
-    "hash": "sha256-cIyPF9bdtA2AW4Xmqkpr2u6HGFnKoOPv+g5WV7Nb3zQ="
+    "version": "0.155.1",
+    "hash": "sha256-xsgW5LtSo85hXTH9xvMAhjPOqTVzGRFbmRZgFVtDDKc="
   },
   "claude-code": {
-    "version": "2.1.273",
-    "hash": "sha256-OzWhY1gkBQCE+030kZnguSlYLsbo6mxWxtoFxfoc4C8="
+    "version": "2.1.278",
+    "hash": "sha256-5QvMl5GV3UH0l4+jH/Uh3vHrl+kkcKgdcAK70wiBlUw="
   },
   "knip": {
-    "version": "6.35.1",
-    "hash": "sha256-9H1UgcswE3z5ZhbIjrdG3IVem2TJSKS1CWt9RZ0D6D0="
+    "version": "6.37.0",
+    "hash": "sha256-BKeYRE1aAWKZOOGDvWIykM41aE40LjgS12fmmlJtt7c="
   },
   "mcp-remote": {
     "version": "0.14.2",
@@ -60,7 +60,7 @@
     "hash": "sha256-bB5V/ZzTVDdmZX9LKGYoWGSkpg/h7Ox8aq7c+qdNyjo="
   },
   "freecad-mcp": {
-    "version": "0.1.23",
-    "hash": "sha256-7K7gpZJzDh7Gys1G/9OSfomuGwqXb7iv75iMUmMIT5k="
+    "version": "0.1.24",
+    "hash": "sha256-m0LPRPQ/syEXFzDNtMDnE4u1CaExpJF3KAlVfydZ7y4="
   }
 }

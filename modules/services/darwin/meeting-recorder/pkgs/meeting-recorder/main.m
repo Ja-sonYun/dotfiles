@@ -215,25 +215,8 @@ static BOOL SendState(NSString *requestID, NSString *statePath, NSString *status
           return;
         }
 
-        SCDisplay *display = nil;
-        if (recorder.displayID != 0) {
-          for (SCDisplay *candidate in content.displays) {
-            if (candidate.displayID == recorder.displayID) {
-              display = candidate;
-              break;
-            }
-          }
-        } else {
-          display = content.displays.firstObject;
-        }
-        if (!display) {
-          [recorder failWithMessage:@"The requested display is not available"];
-          return;
-        }
-
-        SCContentFilter *filter = nil;
+        SCRunningApplication *application = nil;
         if (recorder.bundleIdentifier) {
-          SCRunningApplication *application = nil;
           for (SCRunningApplication *candidate in content.applications) {
             if ([candidate.bundleIdentifier isEqualToString:recorder.bundleIdentifier]) {
               application = candidate;
@@ -244,6 +227,52 @@ static BOOL SendState(NSString *requestID, NSString *statePath, NSString *status
             [recorder failWithMessage:@"The meeting browser is not available for capture"];
             return;
           }
+        }
+
+        SCDisplay *display = nil;
+        if (recorder.displayID != 0) {
+          for (SCDisplay *candidate in content.displays) {
+            if (candidate.displayID == recorder.displayID) {
+              display = candidate;
+              break;
+            }
+          }
+        } else {
+          display = content.displays.firstObject;
+          if (application) {
+            SCWindow *largestWindow = nil;
+            CGFloat largestArea = 0;
+            for (SCWindow *window in content.windows) {
+              if (!window.onScreen || window.windowLayer != 0 ||
+                  window.owningApplication.processID != application.processID) {
+                continue;
+              }
+              CGFloat area = window.frame.size.width * window.frame.size.height;
+              if (area > largestArea) {
+                largestWindow = window;
+                largestArea = area;
+              }
+            }
+            CGFloat largestOverlap = 0;
+            if (largestWindow) {
+              for (SCDisplay *candidate in content.displays) {
+                NSRect overlap = NSIntersectionRect(largestWindow.frame, candidate.frame);
+                CGFloat area = overlap.size.width * overlap.size.height;
+                if (area > largestOverlap) {
+                  display = candidate;
+                  largestOverlap = area;
+                }
+              }
+            }
+          }
+        }
+        if (!display) {
+          [recorder failWithMessage:@"The requested display is not available"];
+          return;
+        }
+
+        SCContentFilter *filter = nil;
+        if (application) {
           filter = [[SCContentFilter alloc]
             initWithDisplay:display
             includingApplications:@[application]

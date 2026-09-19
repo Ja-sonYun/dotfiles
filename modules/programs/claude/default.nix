@@ -36,6 +36,20 @@ let
     // lib.optionalAttrs (cfg.package ? version) { inherit (cfg.package) version; }
   );
 
+  instancePackages = lib.mapAttrs (
+    name: instance:
+    pkgs.writeShellScriptBin name ''
+      set -euo pipefail
+      umask 077
+
+      export CLAUDE_CONFIG_DIR=${lib.escapeShellArg "${config.home.homeDirectory}/${instance.home}"}
+      ${pkgs.coreutils}/bin/mkdir -p "$CLAUDE_CONFIG_DIR"
+
+      exec ${pkgs.state-get}/bin/state-run ${lib.escapeShellArg name} \
+        ${cfg.package}/bin/claude "$@"
+    ''
+  ) cfg.instances;
+
   settingsFile = jsonFormat.generate "claude-code-settings.json" (
     cfg.settings
     // lib.optionalAttrs (cfg.customInstructions != "") {
@@ -75,6 +89,19 @@ in
       type = lib.types.listOf lib.types.package;
       default = [ ];
       description = "Packages added to Claude Code's PATH.";
+    };
+
+    instances = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options.home = lib.mkOption {
+            type = lib.types.str;
+            description = "Instance config directory relative to the user's home.";
+          };
+        }
+      );
+      default = { };
+      description = "Additional Claude Code commands with independent user profiles.";
     };
 
     settings = lib.mkOption {
@@ -132,7 +159,14 @@ in
     { programs.claude-code.finalPackage = wrappedPackage; }
 
     (lib.mkIf cfg.enable {
-      home.packages = [ wrappedPackage ];
+      home.packages = [ wrappedPackage ] ++ lib.attrValues instancePackages;
+
+      assertions = [
+        {
+          assertion = !(builtins.hasAttr "claude" cfg.instances);
+          message = "programs.claude-code.instances must not use the reserved command name claude.";
+        }
+      ];
 
       home.file = {
         ".claude/settings.json".source = settingsFile;

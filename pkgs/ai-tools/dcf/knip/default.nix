@@ -5,7 +5,7 @@ pkgs.lib.mkPackageDerivation {
   hashKey = "knip";
   packageManager = "npm";
   packageName = "knip";
-  packageVersion = "6.35.1";
+  packageVersion = "6.37.0";
   name = "knip";
   exposedBinaries = [
     "knip"
