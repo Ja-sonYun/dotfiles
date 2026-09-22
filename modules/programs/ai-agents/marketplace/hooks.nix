@@ -3,7 +3,7 @@
   lib,
 }:
 let
-  eventNames = import ../hooks/common-events.nix;
+  eventNames = import ../hooks/contract/marketplace-events.nix;
   inherit (helpers) fail pluginRelativePath readJson;
 
   normalizeHookHandler =

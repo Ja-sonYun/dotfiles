@@ -1,15 +1,8 @@
-{ pkgs, ... }:
+{ config, lib, ... }:
 let
-  gitPr = pkgs.writeShellApplication {
-    name = "tmux-git-pr";
-    runtimeInputs = [
-      pkgs.coreutils
-      pkgs.flock
-      pkgs.gh
-      pkgs.git
-    ];
-    text = builtins.readFile ./scripts/git-pr;
-  };
+  gitPr = config.programs.tmux.extensions.gitPr.package;
+  agent = config.programs.tmux.extensions.agent;
+  countFormat = lib.optionalString agent.enable agent.countFormat;
 in
 {
   programs.tmux-customize = {
@@ -31,7 +24,10 @@ in
         }
         branch="$(git symbolic-ref --short HEAD 2>/dev/null)"
         if [ -n "$branch" ]; then
-          pr="$(${gitPr}/bin/tmux-git-pr "$branch" 2>/dev/null)"
+          pr=""
+          ${lib.optionalString config.programs.tmux.extensions.gitPr.enable ''
+            pr="$(${gitPr}/bin/tmux-git-pr "$branch" 2>/dev/null)"
+          ''}
           branch="$(shorten_string 20 "$branch")"
           if [ -n "$pr" ]; then
             branch="#[fg=black]#$pr#[fg=red]:$branch"
@@ -69,8 +65,8 @@ in
           ];
         };
         window = {
-          format = "#{?#{@panes},#{@panes},#W}#[push-default]#{@agent_counts_display}#[pop-default]";
-          currentFormat = "#[fg=white]#[bg=green]▌#[default]#[bg=green]#{?#{@panes},#{@panes},#W}#[push-default]#{@agent_counts_display}#[pop-default]#[default]#[fg=white]#[bg=green]▐#[default]";
+          format = "#{?#{@panes},#{@panes},#W}${countFormat}";
+          currentFormat = "#[fg=white]#[bg=green]▌#[default]#[bg=green]#{?#{@panes},#{@panes},#W}${countFormat}#[default]#[fg=white]#[bg=green]▐#[default]";
         };
       };
 

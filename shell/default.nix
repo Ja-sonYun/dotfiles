@@ -7,9 +7,9 @@
   imports = [
     ./zsh
     ./core
+    ./fonts.nix
 
-    ./analysis
-
+    ./programs/analysis-tools
     ./programs/git
     ./programs/jujutsu
     ./programs/tmux
@@ -18,6 +18,7 @@
     ./programs/visidata
     ./programs/radare2
   ]
+  ++ lib.optionals (hasTag "task") [ ./programs/taskwarrior ]
   ++ lib.optionals (hasTag "gui") [
     ./programs/ghostty
     ./programs/weechat

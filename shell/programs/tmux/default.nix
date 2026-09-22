@@ -1,7 +1,4 @@
-{
-  pkgs,
-  ...
-}:
+{ ... }:
 {
   imports = [
     ./keybindings.nix
@@ -9,13 +6,6 @@
     ./status.nix
     ./tmuxmenu.nix
     ./extensions
-  ];
-
-  home.packages = [
-    pkgs.bash
-    pkgs.coreutils
-    pkgs.flock
-    pkgs.pstree
   ];
 
   programs.tmux = {

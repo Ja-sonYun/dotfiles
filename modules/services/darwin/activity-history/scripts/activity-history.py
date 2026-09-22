@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date, datetime, time as wall_time, timedelta, timezone
 from pathlib import Path
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Self, TextIO
 from uuid import uuid4
 
 from pydantic import (
@@ -353,19 +353,31 @@ class ApplicationCache(Model):
 
 
 @contextmanager
-def application_cache(config: Settings) -> Iterator[ApplicationCache]:
-    path = config.state_directory / "applications.json"
+def locked_cache[Cache: Model](
+    path: Path, model: type[Cache]
+) -> Iterator[tuple[Cache, TextIO]]:
     with path.open("a+", encoding="utf-8") as stream:
         fcntl.flock(stream, fcntl.LOCK_EX)
         stream.seek(0)
         try:
-            cache = ApplicationCache.model_validate_json(stream.read() or "{}")
+            cache = model.model_validate_json(stream.read() or "{}")
         except ValidationError:
-            cache = ApplicationCache()
+            cache = model()
+        yield cache, stream
+
+
+def write_cache(cache: Model, stream: TextIO) -> None:
+    stream.seek(0)
+    stream.truncate()
+    stream.write(cache.model_dump_json())
+
+
+@contextmanager
+def application_cache(config: Settings) -> Iterator[ApplicationCache]:
+    path = config.state_directory / "applications.json"
+    with locked_cache(path, ApplicationCache) as (cache, stream):
         yield cache
-        stream.seek(0)
-        stream.truncate()
-        stream.write(cache.model_dump_json())
+        write_cache(cache, stream)
 
 
 def timestamp(epoch: float) -> str:
@@ -770,13 +782,7 @@ def record_tmux_lifecycle(config: Settings, args: argparse.Namespace) -> None:
     if received_state is None or args.at < received_state.accept_since:
         return
     cache_path = config.state_directory / "tmux-clients.json"
-    with cache_path.open("a+", encoding="utf-8") as stream:
-        fcntl.flock(stream, fcntl.LOCK_EX)
-        stream.seek(0)
-        try:
-            cache = TmuxClientCache.model_validate_json(stream.read() or "{}")
-        except ValidationError:
-            cache = TmuxClientCache()
+    with locked_cache(cache_path, TmuxClientCache) as (cache, stream):
         state = recording_state(config)
         if (
             state is None
@@ -830,9 +836,7 @@ def record_tmux_lifecycle(config: Settings, args: argparse.Namespace) -> None:
                 return
         if args.reason == "client-detached":
             cache.clients.pop(key, None)
-        stream.seek(0)
-        stream.truncate()
-        stream.write(cache.model_dump_json())
+        write_cache(cache, stream)
 
 
 def record_tmux(config: Settings, args: argparse.Namespace) -> None:
@@ -840,13 +844,7 @@ def record_tmux(config: Settings, args: argparse.Namespace) -> None:
         return
     config.state_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     cache_path = config.state_directory / "tmux.json"
-    with cache_path.open("a+", encoding="utf-8") as stream:
-        fcntl.flock(stream, fcntl.LOCK_EX)
-        stream.seek(0)
-        try:
-            cache = TmuxCache.model_validate_json(stream.read() or "{}")
-        except ValidationError:
-            cache = TmuxCache()
+    with locked_cache(cache_path, TmuxCache) as (cache, stream):
         state = recording_state(config)
         if args.action == "_tmux-event":
             if not args.socket:
@@ -943,9 +941,7 @@ def record_tmux(config: Settings, args: argparse.Namespace) -> None:
                         cache.servers[socket][tty] = identity
             except (subprocess.SubprocessError, OSError):
                 continue
-        stream.seek(0)
-        stream.truncate()
-        stream.write(cache.model_dump_json())
+        write_cache(cache, stream)
 
 
 def visible(value: str) -> str:

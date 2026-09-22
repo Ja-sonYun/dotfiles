@@ -6,32 +6,28 @@ import argparse
 import json
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tempfile
+from collections.abc import Iterator
 from configparser import ConfigParser
 from contextlib import contextmanager
 from pathlib import Path
 from sqlite3 import OperationalError
-from typing import TYPE_CHECKING, Literal, assert_never
-
-if TYPE_CHECKING:
-    from _typeshed import StrPath
+from typing import Literal, assert_never
 
 
 class AESCipher:
-    def __init__(self, key):
+    def __init__(self, key: bytes) -> None:
         self.key = key
 
-    def decrypt(self, text):
+    def decrypt(self, text: bytes) -> bytes:
         cipher = AES.new(self.key, AES.MODE_CBC, IV=(b" " * 16))
-        return self._unpad(cipher.decrypt(text))
-
-    def _unpad(self, s):
-        return s[: -ord(s[len(s) - 1 :])]
+        return unpad(cipher.decrypt(text), AES.block_size)
 
 
 @contextmanager
-def sqlite3_connect(path: StrPath):
+def sqlite3_connect(path: Path) -> Iterator[sqlite3.Connection]:
     con = sqlite3.connect(f"file:{path}?immutable=1", uri=True)
     try:
         yield con
@@ -40,8 +36,8 @@ def sqlite3_connect(path: StrPath):
 
 
 def get_cookies(
-    cookies_path: StrPath, cookie_query: str, params: tuple
-) -> tuple[str, str | None]:
+    cookies_path: Path, cookie_query: str, params: tuple[str, ...]
+) -> tuple[str | bytes, str | bytes | None]:
     with sqlite3_connect(cookies_path) as con:
         cookie_d_value = con.execute(cookie_query.format("d"), params).fetchone()
         cookie_ds_value = con.execute(cookie_query.format("ds"), params).fetchone()
@@ -109,15 +105,16 @@ elif sys.platform.startswith("darwin"):
     chrome_key_iterations = 1003
     if args.browser in ["firefox", "firefox-snap"]:
         browser = "firefox"
-        browser_data = Path.home().joinpath(
-            "Library/Application Support/Firefox/Profiles"
-        )
+        browser_data = Path.home().joinpath("Library/Application Support/Firefox")
     elif args.browser == "chromium":
         browser = "chrome"
         browser_data = Path.home().joinpath("Library/Application Support/Chromium")
     elif args.browser in ["chrome", "chrome-beta"]:
         browser = "chrome"
-        browser_data = Path.home().joinpath("Library/Application Support/Google/Chrome")
+        chrome_directory = "Chrome Beta" if args.browser == "chrome-beta" else "Chrome"
+        browser_data = Path.home().joinpath(
+            "Library/Application Support/Google", chrome_directory
+        )
     else:
         print(
             f'Unsupported browser "{args.browser}" on platform macOS.', file=sys.stderr
@@ -133,7 +130,7 @@ if browser == "firefox":
     default_profile_path = None
     if profile is not None:
         rel = browser_data.joinpath(profile)
-        for p in [Path(profile), rel]:
+        for p in [Path(profile), rel, browser_data / "Profiles" / profile]:
             if p.exists():
                 default_profile_path = p
                 break
@@ -154,6 +151,20 @@ if browser == "firefox":
             if "Default" in value:
                 default_profile_path = browser_data.joinpath(value["Default"])
                 break
+
+        if default_profile_path is None:
+            for key in profile_data.sections():
+                if not key.startswith("Profile"):
+                    continue
+                value = profile_data[key]
+                if value.get("Default") == "1" and value.get("Path"):
+                    profile_path = Path(value["Path"])
+                    default_profile_path = (
+                        browser_data / profile_path
+                        if value.get("IsRelative", "1") == "1"
+                        else profile_path
+                    )
+                    break
 
         if default_profile_path is None or not default_profile_path.exists():
             print(
@@ -221,12 +232,11 @@ if browser == "firefox":
         pass
 
 elif browser == "chrome":
-    import secretstorage
     from Crypto.Cipher import AES
     from Crypto.Protocol.KDF import PBKDF2
+    from Crypto.Util.Padding import unpad
     from plyvel import DB
     from plyvel._plyvel import IOError as pIOErr
-    from secretstorage.exceptions import SecretStorageException
 
     if not profile:
         profile = "Default"
@@ -234,54 +244,119 @@ elif browser == "chrome":
     default_profile_path = browser_data.joinpath(profile)
 
     cookies_path = default_profile_path.joinpath("Cookies")
+    if not cookies_path.exists():
+        cookies_path = default_profile_path.joinpath("Network/Cookies")
     cookie_query = (
         "SELECT encrypted_value FROM cookies WHERE "
         "host_key = '.slack.com' AND name = '{}'"
     )
     cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query, ())
 
-    if args.no_secretstorage:
-        passwd = "peanuts"
-    else:
-        bus = secretstorage.dbus_init()
+    storage_name = "Chromium" if args.browser == "chromium" else "Chrome"
+    if sys.platform == "darwin":
         try:
-            collection = secretstorage.get_default_collection(bus)
-            for item in collection.get_all_items():
-                if item.get_label() == "Chrome Safe Storage":
-                    passwd = item.get_secret()
-                    break
-            else:
-                raise Exception("Chrome password not found!")
-        except SecretStorageException:
+            result = subprocess.run(
+                [
+                    "/usr/bin/security",
+                    "find-generic-password",
+                    "-s",
+                    f"{storage_name} Safe Storage",
+                    "-a",
+                    storage_name,
+                    "-w",
+                ],
+                check=True,
+                capture_output=True,
+            )
+        except (OSError, subprocess.CalledProcessError):
             print(
-                "Error communicating org.freedesktop.secrets, trying 'peanuts' "
-                "as a password",
+                "Could not read the browser password from macOS Keychain.",
                 file=sys.stderr,
             )
-            passwd = "peanuts"
+            sys.exit(1)
+        passwd = result.stdout.rstrip(b"\r\n")
+    elif args.no_secretstorage:
+        passwd = b"peanuts"
+    else:
+        try:
+            import secretstorage
+            from secretstorage.exceptions import SecretStorageException
+        except ImportError:
+            print(
+                "Install secretstorage to read the Linux browser password.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        try:
+            bus = secretstorage.dbus_init()
+            try:
+                collection = secretstorage.get_default_collection(bus)
+                for item in collection.get_all_items():
+                    if item.get_label() == f"{storage_name} Safe Storage":
+                        passwd = item.get_secret()
+                        break
+                else:
+                    raise RuntimeError("Browser password not found.")
+            finally:
+                bus.close()
+        except (SecretStorageException, OSError, RuntimeError):
+            print(
+                "Could not read the Linux browser password. Use --no-secretstorage "
+                "only if the browser uses the default password.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     salt = b"saltysalt"
     length = 16
     key = PBKDF2(passwd, salt, length, chrome_key_iterations)
     cipher = AESCipher(key)
 
-    cookie_d_value = cipher.decrypt(cookie_d_value[3:]).decode("utf8")
-    if cookie_ds_value:
-        cookie_ds_value = cipher.decrypt(cookie_ds_value[3:]).decode("utf8")
+    with sqlite3_connect(cookies_path) as con:
+        version_row = con.execute(
+            "SELECT value FROM meta WHERE key = 'version'"
+        ).fetchone()
+    cookie_version = int(version_row[0]) if version_row else 0
+
+    def decrypt_cookie(value: str | bytes) -> str:
+        if not isinstance(value, bytes) or value[:3] not in {b"v10", b"v11"}:
+            raise ValueError("Unsupported browser cookie encryption.")
+        decrypted = cipher.decrypt(value[3:])
+        if cookie_version >= 24:
+            decrypted = decrypted[32:]
+        return decrypted.decode("utf8")
+
+    try:
+        cookie_d_value = decrypt_cookie(cookie_d_value)
+        if cookie_ds_value:
+            cookie_ds_value = decrypt_cookie(cookie_ds_value)
+    except ValueError:
+        print(
+            "Could not decrypt browser cookies with the stored password.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     local_storage_path = default_profile_path.joinpath("Local Storage")
     leveldb_path = local_storage_path.joinpath("leveldb")
     leveldb_key = b"_https://app.slack.com\x00\x01localConfig_v2"
     try:
         db = DB(str(leveldb_path))
-        local_storage_value = db.get(leveldb_key)
+        try:
+            local_storage_value = db.get(leveldb_key)
+        finally:
+            db.close()
     except pIOErr:
         with tempfile.TemporaryDirectory(
             dir=local_storage_path, prefix="leveldb-", suffix=".tmp"
         ) as tmp_dir:
             shutil.copytree(leveldb_path, tmp_dir, dirs_exist_ok=True)
             db = DB(tmp_dir)
-            local_storage_value = db.get(leveldb_key)
+            try:
+                local_storage_value = db.get(leveldb_key)
+            finally:
+                db.close()
 
     local_config = json.loads(local_storage_value[1:]) if local_storage_value else None
 

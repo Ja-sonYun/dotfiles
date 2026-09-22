@@ -24,7 +24,7 @@ def IsAsciiAlnum(ch: string): bool
   return ch =~# '^[A-Za-z0-9]$'
 enddef
 
-def DoMove(forward: bool, isVisual: bool): void
+def DoMove(forward: bool): void
   var pat = g:last_pat
   var lnum = line('.')
   var pos = col('.')
@@ -50,7 +50,8 @@ def DoMove(forward: bool, isVisual: bool): void
       var txt = getline(lnum)
       var stopcol = (lnum == line('.')) ? pos - 2 : strlen(txt) - 1
       if stopcol < 0
-        stopcol = strlen(txt) - 1
+        lnum -= 1
+        continue
       endif
       var slice = (stopcol >= 0) ? txt[0 : stopcol] : ''
       idx = strridx(slice, pat)
@@ -67,17 +68,7 @@ def DoMove(forward: bool, isVisual: bool): void
     return
   endif
 
-  if isVisual
-    const vpos = getpos('v')
-    const vline = vpos[1]
-    const vcol = vpos[2]
-    const movline = vline .. 'G0'
-    const movcol = (vcol - 1) == 0 ? '' : (vcol - 1) .. 'l'
-    const seq = '' .. movline .. movcol .. 'v' .. lnum .. 'G0' .. idx .. 'l'
-    feedkeys(seq, 'nx')
-  else
-    cursor(lnum, idx + 1)
-  endif
+  cursor(lnum, idx + 1)
 enddef
 
 def BuildPattern(initial: string): string
@@ -91,7 +82,7 @@ def BuildPattern(initial: string): string
   return initial
 enddef
 
-def StartMove(forward: bool, isVisual: bool): void
+def StartMove(forward: bool): void
   var c = nr2char(getchar())
   if c ==# "\<Esc>"
     return
@@ -102,28 +93,28 @@ def StartMove(forward: bool, isVisual: bool): void
   endif
   g:last_pat = pat
   g:last_dir = forward ? 1 : -1
-  DoMove(forward, isVisual)
+  DoMove(forward)
 enddef
 
-def RepeatMove(reverse: bool, isVisual: bool): void
+def RepeatMove(reverse: bool): void
   if g:last_pat ==# ''
     echom 'no previous f/F search'
     return
   endif
   var dir = reverse ? -g:last_dir : g:last_dir
-  DoMove(dir == 1, isVisual)
+  DoMove(dir == 1)
 enddef
 
 export def Setup(): void
-  nnoremap <silent> f <ScriptCmd>StartMove(1, 0)<CR>
-  nnoremap <silent> F <ScriptCmd>StartMove(0, 0)<CR>
-  nnoremap <silent> ; <ScriptCmd>RepeatMove(0, 0)<CR>
-  nnoremap <silent> <leader>, <ScriptCmd>RepeatMove(1, 0)<CR>
+  nnoremap <silent> f <ScriptCmd>StartMove(1)<CR>
+  nnoremap <silent> F <ScriptCmd>StartMove(0)<CR>
+  nnoremap <silent> ; <ScriptCmd>RepeatMove(0)<CR>
+  nnoremap <silent> <leader>, <ScriptCmd>RepeatMove(1)<CR>
 
-  xnoremap <silent> f <ScriptCmd>StartMove(1, 1)<CR>
-  xnoremap <silent> F <ScriptCmd>StartMove(0, 1)<CR>
-  xnoremap <silent> ; <ScriptCmd>RepeatMove(0, 1)<CR>
-  xnoremap <silent> <leader>, <ScriptCmd>RepeatMove(1, 1)<CR>
+  xnoremap <silent> f <ScriptCmd>StartMove(1)<CR>
+  xnoremap <silent> F <ScriptCmd>StartMove(0)<CR>
+  xnoremap <silent> ; <ScriptCmd>RepeatMove(0)<CR>
+  xnoremap <silent> <leader>, <ScriptCmd>RepeatMove(1)<CR>
 enddef
 
 defcompile

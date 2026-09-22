@@ -18,6 +18,7 @@ export type HookEventName =
   | "PreCompact"
   | "PostCompact"
   | "SessionEnd"
+  | "SessionInfoChanged"
   | "Notification";
 
 export type HookResult = {
@@ -161,41 +162,6 @@ export const contentText = (content: unknown): string => {
     }
   }
   return text.join("\n");
-};
-
-export const lastAssistantResult = (
-  context: ExtensionContext,
-): AssistantResult | undefined => {
-  const entries = context.sessionManager.getBranch();
-  for (let index = entries.length - 1; index >= 0; index -= 1) {
-    const entry = entries[index];
-    if (
-      !isRecord(entry) ||
-      entry["type"] !== "message" ||
-      !isRecord(entry["message"])
-    ) {
-      continue;
-    }
-    const message = entry["message"];
-    if (
-      message["role"] !== "assistant" ||
-      typeof message["stopReason"] !== "string"
-    ) {
-      continue;
-    }
-    const errorMessage = message["errorMessage"];
-    return typeof errorMessage === "string"
-      ? {
-          errorMessage,
-          stopReason: message["stopReason"],
-          text: contentText(message["content"]),
-        }
-      : {
-          stopReason: message["stopReason"],
-          text: contentText(message["content"]),
-        };
-  }
-  return undefined;
 };
 
 export const commonInput = (

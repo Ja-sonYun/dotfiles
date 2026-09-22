@@ -4,19 +4,19 @@ endif
 
 let venv_pytest = getcwd() . '/.venv/bin/pytest'
 if executable(venv_pytest)
-  let pytest = venv_pytest
+  let pytest = shellescape(venv_pytest)
 else
   let pytest = 'pytest'
 endif
 
+let &l:makeprg = pytest . ' '
+      \ . get(b:, 'pytest_makeprg_params', get(g:, 'pytest_makeprg_params', '--tb=short --quiet'))
 if has('unix')
-  execute $'CompilerSet makeprg=/usr/bin/env\ PYTHONWARNINGS=ignore\ '. pytest . $'\ {escape(get(b:, 'pytest_makeprg_params', get(g:, 'pytest_makeprg_params', '--tb=short --quiet')), ' \|"')}'
+  let &l:makeprg = '/usr/bin/env PYTHONWARNINGS=ignore ' . &l:makeprg
 elseif has('win32')
-  execute $'CompilerSet makeprg=set\ PYTHONWARNINGS=ignore\ &&\ ' . pytest . $'\ {escape(get(b:, 'pytest_makeprg_params', get(g:, 'pytest_makeprg_params', '--tb=short --quiet')), ' \|"')}'
-else
-  CompilerSet makeprg=pytest\ --tb=short\ --quiet
-  execute 'CompilerSet makeprg=' . pytest . $'\ {escape(get(b:, 'pytest_makeprg_params', get(g:, 'pytest_makeprg_params', '--tb=short --quiet')), ' \|"')}'
+  let &l:makeprg = 'set PYTHONWARNINGS=ignore && ' . &l:makeprg
 endif
+execute 'CompilerSet makeprg=' . escape(&l:makeprg, ' \|"')
 
 " Pytest syntax errors                                          {{{2
 

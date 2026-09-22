@@ -30,7 +30,8 @@ let
           makeWrapper ${cfg.package}/bin/$b $out/bin/$b \
             ${lib.concatStringsSep " \\\n          " (
               lib.mapAttrsToList (
-                name: file: "--run ${lib.escapeShellArg ''export ${name}="$(cat ${file} 2>/dev/null)"''}"
+                name: file:
+                "--run ${lib.escapeShellArg ''export ${name}="$(cat -- ${lib.escapeShellArg file} 2>/dev/null)"''}"
               ) cfg.envFiles
             )}
         done

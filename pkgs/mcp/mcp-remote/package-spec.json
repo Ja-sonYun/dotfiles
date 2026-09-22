@@ -1,0 +1,8 @@
+{
+  "registry": "npm",
+  "name": "mcp-remote",
+  "versions": {
+    "aarch64-darwin": "0.14.3",
+    "x86_64-linux": "0.14.3"
+  }
+}

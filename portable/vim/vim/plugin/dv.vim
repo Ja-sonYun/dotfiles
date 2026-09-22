@@ -64,5 +64,5 @@ endfunction
 
 augroup LoadGlobalVars
   autocmd!
-  autocmd BufEnter,VimEnter * call s:MaybeReloadVars()
+  autocmd BufEnter,VimEnter,DirChanged * call s:MaybeReloadVars()
 augroup END

@@ -7,7 +7,7 @@ let current_compiler = 'typescript'
 let local_tsc = getcwd() . '/node_modules/.bin/tsc'
 
 if executable(local_tsc)
-  let tsc = local_tsc
+  let tsc = shellescape(local_tsc)
 elseif executable('pnpx')
   let tsc = 'pnpm tsc'
 elseif executable('yarn')
@@ -27,4 +27,3 @@ CompilerSet errorformat=
       \%W%f(%l\\,%c):\ warning\ %m,
       \%C%\s%#%m,
       \%-G%.%#
-

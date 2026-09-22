@@ -58,13 +58,15 @@
       body = ''
         local input_file="$1"
         local output_dir="''${2:-''${input_file%.*}}" # Default output dir is input filename without extension
+        local output_file="''${input_file##*/}"
+        output_file="''${output_file%.*}"
 
         if [[ ! -f "$input_file" ]]; then
           echo "Error: File '$input_file' not found!"
           return 1
         fi
 
-        mkdir -p "$output_dir"
+        mkdir -p "$output_dir" || return $?
 
         case "$input_file" in
           *.tar.gz|*.tgz) ${pkgs.gnutar}/bin/tar -xzf "$input_file" -C "$output_dir" ;;
@@ -74,11 +76,11 @@
           *.zip) ${pkgs.unzip}/bin/unzip -d "$output_dir" "$input_file" ;;
           *.rar) ${pkgs.unrar-wrapper}/bin/unrar x "$input_file" "$output_dir" ;;
           *.7z) ${pkgs.p7zip}/bin/7z x "$input_file" -o"$output_dir" ;;
-          *.gz) ${pkgs.gzip}/bin/gunzip -c "$input_file" > "$output_dir/''${input_file%.*}" ;;
-          *.bz2) ${pkgs.bzip2}/bin/bunzip2 -c "$input_file" > "$output_dir/''${input_file%.*}" ;;
-          *.xz) ${pkgs.xz}/bin/unxz -c "$input_file" > "$output_dir/''${input_file%.*}" ;;
+          *.gz) ${pkgs.gzip}/bin/gunzip -c "$input_file" > "$output_dir/$output_file" ;;
+          *.bz2) ${pkgs.bzip2}/bin/bunzip2 -c "$input_file" > "$output_dir/$output_file" ;;
+          *.xz) ${pkgs.xz}/bin/unxz -c "$input_file" > "$output_dir/$output_file" ;;
           *) echo "Error: Unsupported file format!" && return 1 ;;
-        esac
+        esac || return $?
 
         echo "Extraction completed: $output_dir"
       '';

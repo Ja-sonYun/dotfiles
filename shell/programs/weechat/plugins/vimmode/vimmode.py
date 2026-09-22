@@ -1162,16 +1162,21 @@ def cb_key_pressed(data, signal, signal_data):
     return weechat.WEECHAT_RC_OK
 
 
-def cb_check_esc(data, remaining_calls):
+def cb_check_esc(data: str, remaining_calls: int) -> int:
     """Check if the Esc key was pressed and change the mode accordingly."""
     global esc_pressed, vi_buffer, catching_keys_data
     # Not perfect, would be better to use direct comparison (==) but that only
     # works for py2 and not for py3.
     if abs(last_signal_time - float(data)) <= 0.000001:
         esc_pressed += 1
+        buf = weechat.current_buffer()
+        backup = input_line_backup.pop(buf, None) if mode == "COMMAND" else None
         if mode == "SEARCH":
             weechat.command("", "/input search_stop_here")
         set_mode("NORMAL")
+        if backup is not None:
+            weechat.buffer_set(buf, "input", backup["input_line"])
+            set_cur(buf, backup["input_line"], backup["cur"], False)
         # Cancel any current partial commands.
         vi_buffer = ""
         catching_keys_data = {"amount": 0}

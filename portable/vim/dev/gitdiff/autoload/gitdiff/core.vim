@@ -80,8 +80,8 @@ def WorktreePath(cwd: string): string
 enddef
 
 def KeepCwd(): void
-  if session_cwd != '' && getcwd() !=# session_cwd
-    execute 'noautocmd cd ' .. fnameescape(session_cwd)
+  if get(t:, 'gitdiff_session', false) && session_cwd != '' && getcwd() !=# session_cwd
+    execute 'noautocmd tcd ' .. fnameescape(session_cwd)
   endif
 enddef
 

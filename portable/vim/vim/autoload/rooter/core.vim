@@ -65,7 +65,7 @@ export def Setup(opt: dict<any> = {}): void
   Config = d.DeepMerge(copy(DEFAULT), opt)
   augroup Rooter
     autocmd!
-    autocmd VimEnter,BufEnter,BufWritePost,DirChanged * Rooter()
+    autocmd VimEnter,BufEnter,BufWritePost,DirChanged * ++nested Rooter()
   augroup END
 enddef
 

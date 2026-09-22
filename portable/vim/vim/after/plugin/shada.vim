@@ -35,8 +35,8 @@ function! s:apply_per_root() abort
   let file = s:per_root_path()
   let &viminfofile = file
 
+  call s:clear_histories()
   if filereadable(file)
-    call s:clear_histories()
     silent! rviminfo!
   endif
 

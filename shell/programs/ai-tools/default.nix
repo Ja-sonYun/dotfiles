@@ -1,18 +1,17 @@
 { pkgs, ... }:
 {
-  imports = [
-    ./hooks.nix
-    ./tool-guard.nix
-  ];
-
   home.packages = with pkgs; [
     aws-ro
     gh-ro
+    jev
+    redact
   ];
 
   programs.ai-agents.extraPath = with pkgs; [
     aws-ro
     gh-ro
+    jev
+    redact
     dcf
 
     uv
@@ -34,6 +33,13 @@
     prettier
     typescript
     eslint
+
+    taplo
+    stylua
+    sqlfluff
+    google-java-format
+    ktfmt
+    rubyfmt
 
     nixfmt
     statix

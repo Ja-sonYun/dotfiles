@@ -74,7 +74,11 @@ def GenerateReplacer(prompt: string, system_prompt: string): func<void>
 
     def OnSuccess(result: string): void
       const lines = split(result, "\n")
-      ctx.Replace(lines)
+      if !ctx.Replace(lines)
+        ctx.Unlock()
+        EchoWith('WarningMsg', 'AI result discarded because its source range changed.')
+        return
+      endif
       ApplyIndent(ctx)
       ctx.Unlock()
       EchoWith('MoreMsg', MSG_REPLACE_DONE)
@@ -144,7 +148,11 @@ def AskAction(start: number, end: number, instruction: string): void
       return
     endif
     const new_lines = split(result, "\n", 1)
-    ctx.Replace(new_lines)
+    if !ctx.Replace(new_lines)
+      ctx.Unlock()
+      EchoWith('WarningMsg', 'AI result discarded because its source range changed.')
+      return
+    endif
     ApplyIndent(ctx)
     ctx.Unlock()
     EchoWith('MoreMsg', MSG_ASK_DONE)

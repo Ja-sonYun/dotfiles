@@ -396,6 +396,7 @@ test("loads adjacent config and passes truthful SessionStart input", async () =>
     hook_event_name: "SessionStart",
     model: "provider-id/model-id",
     session_id: "session-id",
+    session_title: "",
     source: "resume",
     transcript_path: "/sessions/session.jsonl",
   });
@@ -1235,23 +1236,24 @@ test("separates Stop, StopFailure, and aborted runs with an eight-continuation c
     ],
     StopFailure: [
       {
-        matcher: "unknown",
+        matcher: "unknown|cancelled",
         hooks: [{ type: "command", command: captureCommand(failurePath) }],
       },
     ],
   });
-  context.branch = [
-    {
-      message: {
-        content: [{ text: "done", type: "text" }],
-        role: "assistant",
-        stopReason: "stop",
-      },
-      type: "message",
-    },
-  ];
+  const completedMessage = {
+    content: [{ text: "done", type: "text" }],
+    role: "assistant",
+    stopReason: "stop",
+  };
 
   for (let attempt = 0; attempt < 9; attempt += 1) {
+    await api.emit("agent_start", { type: "agent_start" }, context);
+    await api.emit(
+      "message_end",
+      { message: completedMessage, type: "message_end" },
+      context,
+    );
     await api.emit("agent_settled", { type: "agent_settled" }, context);
   }
   assert.equal(api.sentMessages.length, 8);
@@ -1260,7 +1262,9 @@ test("separates Stop, StopFailure, and aborted runs with an eight-continuation c
     triggerTurn: true,
   });
 
-  context.branch = [
+  await api.emit("agent_start", { type: "agent_start" }, context);
+  await api.emit(
+    "message_end",
     {
       message: {
         content: [{ text: "partial", type: "text" }],
@@ -1268,9 +1272,10 @@ test("separates Stop, StopFailure, and aborted runs with an eight-continuation c
         role: "assistant",
         stopReason: "error",
       },
-      type: "message",
+      type: "message_end",
     },
-  ];
+    context,
+  );
   await api.emit("agent_settled", { type: "agent_settled" }, context);
   assert.match(
     readFileSync(failurePath, "utf8"),
@@ -1278,18 +1283,21 @@ test("separates Stop, StopFailure, and aborted runs with an eight-continuation c
   );
 
   rmSync(failurePath);
-  context.branch = [
+  await api.emit("agent_start", { type: "agent_start" }, context);
+  await api.emit(
+    "message_end",
     {
       message: {
         content: [],
         role: "assistant",
         stopReason: "aborted",
       },
-      type: "message",
+      type: "message_end",
     },
-  ];
+    context,
+  );
   await api.emit("agent_settled", { type: "agent_settled" }, context);
-  assert.equal(existsSync(failurePath), false);
+  assert.match(readFileSync(failurePath, "utf8"), /"error":"cancelled"/);
 });
 
 test("classifies StopFailure errors and passes the rendered error message", async () => {
@@ -1318,7 +1326,9 @@ test("classifies StopFailure errors and passes the rendered error message", asyn
         },
       ],
     });
-    context.branch = [
+    await api.emit("agent_start", { type: "agent_start" }, context);
+    await api.emit(
+      "message_end",
       {
         message: {
           content: [{ text: "partial response", type: "text" }],
@@ -1326,9 +1336,10 @@ test("classifies StopFailure errors and passes the rendered error message", asyn
           role: "assistant",
           stopReason: "error",
         },
-        type: "message",
+        type: "message_end",
       },
-    ];
+      context,
+    );
 
     await api.emit("agent_settled", { type: "agent_settled" }, context);
 
@@ -1382,17 +1393,18 @@ test("fires idle_prompt after 60 seconds and cancels it on user input", async (t
       },
     ],
   });
-  context.branch = [
-    {
-      message: {
-        content: [{ text: "done", type: "text" }],
-        role: "assistant",
-        stopReason: "stop",
-      },
-      type: "message",
-    },
-  ];
+  const completedMessage = {
+    content: [{ text: "done", type: "text" }],
+    role: "assistant",
+    stopReason: "stop",
+  };
 
+  await api.emit("agent_start", { type: "agent_start" }, context);
+  await api.emit(
+    "message_end",
+    { message: completedMessage, type: "message_end" },
+    context,
+  );
   await api.emit("agent_settled", { type: "agent_settled" }, context);
   testContext.mock.timers.tick(60_000);
   await new Promise<void>((resolve, reject) => {
@@ -1417,6 +1429,12 @@ test("fires idle_prompt after 60 seconds and cancels it on user input", async (t
   );
 
   rmSync(capturePath);
+  await api.emit("agent_start", { type: "agent_start" }, context);
+  await api.emit(
+    "message_end",
+    { message: completedMessage, type: "message_end" },
+    context,
+  );
   await api.emit("agent_settled", { type: "agent_settled" }, context);
   await api.emit(
     "input",
@@ -1446,11 +1464,11 @@ test("fires permission_prompt when the permission UI opens", async () => {
     { reason: "startup", type: "session_start" },
     context,
   );
-  api.events.emit("permissions:ui_prompt", {
-    message: "Allow docs:read?",
-    surface: "mcp",
-    value: "docs:read",
-  });
+  await api.emit(
+    "ui_prompt_start",
+    { kind: "confirm", type: "ui_prompt_start" },
+    context,
+  );
   await new Promise<void>((resolve, reject) => {
     let attempts = 0;
     const interval = setInterval(() => {
@@ -1489,7 +1507,7 @@ test("reports timeout, malformed JSON, and oversized output without blocking", a
           {
             type: "command",
             command:
-              "cat >/dev/null; node -e \"process.stdout.write('x'.repeat(10001))\"",
+              "cat >/dev/null; node -e \"process.stdout.write('x'.repeat(65537))\"",
           },
         ],
       },
@@ -1514,7 +1532,7 @@ test("reports timeout, malformed JSON, and oversized output without blocking", a
     [
       "PreToolUse hook timed out.",
       "PreToolUse hook returned invalid JSON.",
-      "PreToolUse hook output exceeded 10000 characters.",
+      "PreToolUse hook output exceeded 65536 UTF-8 bytes.",
     ],
   );
   assert.deepEqual(api.entries, [
@@ -1537,7 +1555,7 @@ test("reports timeout, malformed JSON, and oversized output without blocking", a
     {
       customType: "pi-hook-call",
       data: {
-        detail: "output exceeded 10000 characters",
+        detail: "output exceeded 65536 UTF-8 bytes",
         eventName: "PreToolUse",
         status: "failed",
       },

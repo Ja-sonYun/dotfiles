@@ -5,7 +5,10 @@ export type HookState = {
   stopContinuations: number;
   readonly toolRecords: Map<
     string,
-    { readonly input: Readonly<Record<string, unknown>> }
+    {
+      readonly input: Readonly<Record<string, unknown>>;
+      postHandled: boolean;
+    }
   >;
 };
 

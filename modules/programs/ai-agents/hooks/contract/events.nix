@@ -1,0 +1,13 @@
+[
+  "Notification"
+  "PostCompact"
+  "PostToolUse"
+  "PreCompact"
+  "PreToolUse"
+  "SessionEnd"
+  "SessionInfoChanged"
+  "SessionStart"
+  "Stop"
+  "StopFailure"
+  "UserPromptSubmit"
+]

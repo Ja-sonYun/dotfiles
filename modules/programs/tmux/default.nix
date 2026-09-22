@@ -334,6 +334,8 @@ let
   );
 in
 {
+  imports = [ ./extensions ];
+
   disabledModules = [ "programs/tmux.nix" ];
 
   options.programs.tmux = {
@@ -343,13 +345,6 @@ in
       type = lib.types.package;
       default = pkgs.tmux;
       description = "tmux package to install.";
-    };
-
-    agentStatusScript = lib.mkOption {
-      type = lib.types.str;
-      readOnly = true;
-      internal = true;
-      description = "Agent status script path.";
     };
 
     setGlobalOptions = lib.mkOption {

@@ -58,14 +58,13 @@ let
             entry = "${pkgs.beautysh}/bin/beautysh --tab";
             types = [ "shell" ];
             excludes = [
-              "^scripts/update-versions$"
-              "^scripts/build-pkgs$"
+              "^scripts/update-pkgs$"
             ];
           };
           prettier.enable = true;
           stylua = {
             enable = true;
-            excludes = [ "^modules/services/darwin/hammerspoon/init\\.lua$" ];
+            excludes = [ "^modules/services/darwin/core/hammerspoon/init\\.lua$" ];
           };
           ruff-format.enable = true;
           taplo.enable = true;

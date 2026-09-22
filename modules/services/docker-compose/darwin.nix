@@ -3,6 +3,7 @@
   enabledProjects,
   lib,
   mkRunScript,
+  username,
 }:
 let
   inherit (lib) mapAttrsToList nameValuePair;
@@ -25,5 +26,10 @@ let
     };
 in
 {
+  system.activationScripts.userLaunchd.text = lib.mkIf (enabledProjects != { }) (
+    lib.mkBefore ''
+      /usr/bin/sudo --user=${lib.escapeShellArg username} -- /bin/mkdir -p ${lib.escapeShellArg "${cacheDir}/logs"}
+    ''
+  );
   launchd.user.agents = builtins.listToAttrs (mapAttrsToList mkAgent enabledProjects);
 }

@@ -13,26 +13,19 @@ let
     ++ lib.optional (extraPythonPath != "") ''--prefix PYTHONPATH : "${extraPythonPath}"''
   );
 
-  piRoot = "$NODE_PATH/lib/node_modules/@earendil-works/pi-coding-agent";
 in
-pkgs.lib.mkPackageDerivation {
-  inherit pkgs;
-  hashKey = "pi";
-  packageManager = "npm";
-  packageName = "@earendil-works/pi-coding-agent";
-  packageVersion = "0.85.1";
-  nodeVersion = "22.23.2";
-  name = "pi";
-  exposedBinaries = [
-    "pi"
-  ];
-  postInstall = ''
-    for patchFile in ${./patches}/*.patch; do
-      ${pkgs.patch}/bin/patch --batch --fuzz=0 -p1 -d "${piRoot}" < "$patchFile"
-    done
+(pkgs.nodejs_22.asPackage {
+  root = ./.;
+}).overrideAttrs
+  (old: {
+    postInstall = old.postInstall + ''
+      chmod -R u+w "$appRoot"
+      for patchFile in ${./patches}/*.patch; do
+        ${pkgs.patch}/bin/patch --batch --fuzz=0 -p1 -d "$appRoot" < "$patchFile"
+      done
 
-    rm -f $out/bin/pi
-    makeWrapper "${piRoot}/dist/cli.js" "$out/bin/pi" \
-      ${wrapperArgs}
-  '';
-}
+      rm -f "$out/bin/pi"
+      makeWrapper "${pkgs.nodejs_22}/bin/node" "$out/bin/pi" \
+        --add-flags "$appRoot/dist/cli.js" ${wrapperArgs}
+    '';
+  })

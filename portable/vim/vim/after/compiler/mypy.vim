@@ -5,7 +5,7 @@ endif
 let venv_mypy = getcwd() . '/.venv/bin/mypy'
 
 if executable(venv_mypy)
-  let mypy = venv_mypy . ' %:S'
+  let mypy = shellescape(venv_mypy) . ' %:S'
 else
   let mypy = 'mypy %:S'
 endif

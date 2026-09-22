@@ -26,6 +26,9 @@ export class Job
   var exit_code: number = -1
 
   var _is_started: bool = false
+  var _exited: bool = false
+  var _closed: bool = false
+  var _finished: bool = false
   var _stream_cb: any = v:none
   var _done_cb: any = v:none
 
@@ -42,12 +45,13 @@ export class Job
     var OutCb = (ch: channel, msg: any) => this._OnStream(ch, msg, false)
     var ErrCb = (ch: channel, msg: any) => this._OnStream(ch, msg, true)
     var opt: dict<any> = {
-      in_io: 'pipe',
+      in_io: get(opts, 'in_io', 'pipe'),
       err_io: 'pipe',
       err_mode: out_mode,
       err_cb: ErrCb,
       exit_cb: this._OnExit,
-      noblock: 1,
+      close_cb: this._OnClose,
+      noblock: get(opts, 'noblock', 1),
       env: env,
     }
     if cwd !=# ''
@@ -187,8 +191,22 @@ export class Job
 
   def _OnExit(jb: job, code: number): void
     this.exit_code = code
+    this._exited = true
+    this._Finish()
+  enddef
+
+  def _OnClose(ch: channel): void
+    this._closed = true
+    this._Finish()
+  enddef
+
+  def _Finish(): void
+    if !this._exited || !this._closed || this._finished
+      return
+    endif
+    this._finished = true
     if type(this._done_cb) != v:t_none
-      timer_start(0, (_) => call(this._done_cb, [this.stdout, this.stderr, code]))
+      call(this._done_cb, [this.stdout, this.stderr, this.exit_code])
     endif
   enddef
 

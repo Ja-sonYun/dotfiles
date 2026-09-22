@@ -212,7 +212,6 @@ in
 
     showScript = lib.mkOption {
       type = lib.types.package;
-      readOnly = true;
       internal = true;
       description = "Launcher that shows the @menu (or 'menu') group.";
     };
@@ -221,43 +220,27 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [ cfg.package ];
 
-    programs.tmux-menu.showScript = pkgs.writeShellScript "tmux-menu-show" ''
-      pane_id="$1"
-      window_id="$2"
-      client_name="$3"
-      pane_current_path="$4"
-      if [ -z "$pane_id" ] || [ -z "$window_id" ] || [ -z "$client_name" ]; then
-        exit 0
-      fi
-      if [ -z "$pane_current_path" ]; then
-        pane_current_path=$(tmux display-message -pt "$pane_id" '#{pane_current_path}' 2>/dev/null) || exit 0
-        [ -n "$pane_current_path" ] || exit 0
-      fi
-      export TMUX_MENU_ORIGIN_PANE="$pane_id"
-      export TMUX_MENU_ORIGIN_WINDOW="$window_id"
-      export TMUX_MENU_CLIENT="$client_name"
-      menu=$(tmux show-options -qv @menu)
-      menu=''${menu:-menu}
-      if [ -n "$(tmux display-message -pt "$pane_id" '#{E:DEFAULT}')" ]; then
+    programs.tmux-menu.showScript = lib.mkDefault (
+      pkgs.writeShellScript "tmux-menu-show" ''
+        pane_id="$1"
+        window_id="$2"
+        client_name="$3"
+        pane_current_path="$4"
+        if [ -z "$pane_id" ] || [ -z "$window_id" ] || [ -z "$client_name" ]; then
+          exit 0
+        fi
+        if [ -z "$pane_current_path" ]; then
+          pane_current_path=$(tmux display-message -pt "$pane_id" '#{pane_current_path}' 2>/dev/null) || exit 0
+          [ -n "$pane_current_path" ] || exit 0
+        fi
+        export TMUX_MENU_ORIGIN_PANE="$pane_id"
+        export TMUX_MENU_ORIGIN_WINDOW="$window_id"
+        export TMUX_MENU_CLIENT="$client_name"
+        menu=$(tmux show-options -qv @menu)
+        menu=''${menu:-menu}
         exec ${cfg.package}/bin/tmux-menu show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
-      fi
-
-      session=$(tmux display-message -pt "$pane_id" '#{session_name}' 2>/dev/null)
-      key="''${session//[^A-Za-z0-9]/_}"
-      outer=$(tmux show-options -gqv "@popup_client_$key" 2>/dev/null)
-      W="" H=""
-      if [ -n "$outer" ] && [ "$outer" != "$client_name" ]; then
-        read -r W H < <(tmux list-clients -F $'#{client_name}\t#{client_width} #{client_height}' 2>/dev/null |
-          awk -F '\t' -v c="$outer" '$1 == c { print $2; exit }')
-      fi
-      tmux detach-client -t "$client_name" 2>/dev/null
-      if [ -n "$W" ] && [ -n "$H" ]; then
-        export TMUX_MENU_CLIENT="$outer"
-        exec ${cfg.package}/bin/tmux-menu show -x "$((W - 1))" -y "$H" --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
-      fi
-      unset TMUX_MENU_CLIENT
-      exec ${cfg.package}/bin/tmux-menu show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
-    '';
+      ''
+    );
 
     programs.tmux-menu.configDir = pkgs.runCommand "tmux-config" { } (
       ''

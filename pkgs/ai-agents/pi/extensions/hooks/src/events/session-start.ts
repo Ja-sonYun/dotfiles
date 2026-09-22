@@ -30,11 +30,25 @@ const sessionSource = (reason: SessionStartReason): string | undefined => {
   return reason;
 };
 
+export const sessionStartInput = (
+  pi: ExtensionAPI,
+  context: ExtensionContext,
+): Record<string, unknown> => {
+  const input = commonInput("SessionStart", context);
+  input["session_title"] =
+    pi.getSessionName() ?? context.sessionManager.getSessionName() ?? "";
+  if (context.model !== undefined) {
+    input["model"] = `${context.model.provider}/${context.model.id}`;
+  }
+  return input;
+};
+
 export const runSessionStart = async (
   pi: ExtensionAPI,
   state: HookState,
   reason: SessionStartReason,
   context: ExtensionContext,
+  input: Record<string, unknown> = sessionStartInput(pi, context),
 ): Promise<void> => {
   const source = sessionSource(reason);
   if (source === undefined) {
@@ -42,16 +56,7 @@ export const runSessionStart = async (
   }
   clearNotificationTimer(state);
   state.pendingPromptContext = undefined;
-  const input = commonInput("SessionStart", context);
   input["source"] = source;
-  const currentTitle =
-    pi.getSessionName() ?? context.sessionManager.getSessionName();
-  if (currentTitle !== undefined) {
-    input["session_title"] = currentTitle;
-  }
-  if (context.model !== undefined) {
-    input["model"] = `${context.model.provider}/${context.model.id}`;
-  }
   const results = await runHooks(pi, "SessionStart", source, input, context);
   const blockReason = firstBlockReason(results);
   if (blockReason !== undefined) {

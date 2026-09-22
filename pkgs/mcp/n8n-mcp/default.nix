@@ -1,13 +1,5 @@
 { pkgs, ... }:
 
-pkgs.lib.mkPackageDerivation {
-  inherit pkgs;
-  hashKey = "n8n-mcp";
-  packageManager = "npm";
-  packageName = "n8n-mcp";
-  packageVersion = "2.87.0";
-  name = "n8n-mcp";
-  exposedBinaries = [
-    "n8n-mcp"
-  ];
+pkgs.nodejs_22.asPackage {
+  root = ./.;
 }

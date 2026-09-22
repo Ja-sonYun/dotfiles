@@ -4,9 +4,6 @@
 [submodule "hosts/aarch64-darwin/server"]
 	path = infra
 	url = git@github.com:Ja-sonYun/server.git
-[submodule "portable/vim/dev/lsp"]
-	path = portable/vim/dev/lsp
-	url = git@github.com:Ja-sonYun/lsp.git
 [submodule "libs/nixlib"]
 	path = libs/nixlib
 	url = git@github.com:Ja-sonYun/nixlib.git

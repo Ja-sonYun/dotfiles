@@ -12,18 +12,10 @@ import {
 } from "../hook-contract.ts";
 import { clearNotificationTimer, type HookState } from "../state.ts";
 
-export const runSessionEnd = async (
-  pi: ExtensionAPI,
-  state: HookState,
+export const sessionEndInput = (
   event: SessionShutdownEvent,
   context: ExtensionContext,
-): Promise<void> => {
-  clearNotificationTimer(state);
-  state.pendingPromptContext = undefined;
-  state.promptId = undefined;
-  if (event.reason === "reload") {
-    return;
-  }
+): Record<string, unknown> => {
   let reason: string;
   if (event.reason === "new") {
     reason = "clear";
@@ -36,6 +28,23 @@ export const runSessionEnd = async (
   }
   const input = commonInput("SessionEnd", context);
   input["reason"] = reason;
+  return input;
+};
+
+export const runSessionEnd = async (
+  pi: ExtensionAPI,
+  state: HookState,
+  event: SessionShutdownEvent,
+  context: ExtensionContext,
+  input: Record<string, unknown> = sessionEndInput(event, context),
+): Promise<void> => {
+  clearNotificationTimer(state);
+  state.pendingPromptContext = undefined;
+  state.promptId = undefined;
+  if (event.reason === "reload") {
+    return;
+  }
+  const reason = String(input["reason"]);
   const results = await runHooks(pi, "SessionEnd", reason, input, context);
   const blockReason = firstBlockReason(results);
   if (blockReason !== undefined) {

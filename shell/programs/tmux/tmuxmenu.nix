@@ -1,4 +1,8 @@
-{ lib, ... }:
+{
+  config,
+  lib,
+  ...
+}:
 {
   programs.tmux-menu = {
     enable = true;
@@ -21,7 +25,7 @@
               name = "Navi";
               shortcut = "n";
               command = "navi --path=$CONFIG/navi --print | tmux load-buffer -w -";
-              keyTable = "popup-root";
+              keyTable = if config.programs.tmux.extensions.popup.enable then "popup-root" else "common-root";
               position = {
                 w = "40%";
                 h = "55%";
@@ -42,10 +46,13 @@
           menu = {
             name = "tig";
             shortcut = "g";
-            command = "_gen-close-hook tig && tig";
+            command =
+              lib.optionalString config.programs.tmux.extensions.sessionCleanup.enable "_tmux-session-cleanup-register tig && "
+              + "tig";
             session = true;
             sessionName = "tig";
-            keyTable = "popup-locked-root";
+            keyTable =
+              if config.programs.tmux.extensions.popup.enable then "popup-locked-root" else "common-root";
             sessionOnDir = true;
             runOnRoot = ".root";
             runOnGitRoot = true;
@@ -59,10 +66,13 @@
           menu = {
             name = "gitui";
             shortcut = "u";
-            command = "_gen-close-hook gitui && gitui";
+            command =
+              lib.optionalString config.programs.tmux.extensions.sessionCleanup.enable "_tmux-session-cleanup-register gitui && "
+              + "gitui";
             session = true;
             sessionName = "gitui";
-            keyTable = "popup-locked-root";
+            keyTable =
+              if config.programs.tmux.extensions.popup.enable then "popup-locked-root" else "common-root";
             sessionOnDir = true;
             runOnRoot = ".root";
             runOnGitRoot = true;
@@ -76,10 +86,13 @@
           menu = {
             name = "gh dash";
             shortcut = "d";
-            command = "_gen-close-hook gh-dash && gh dash";
+            command =
+              lib.optionalString config.programs.tmux.extensions.sessionCleanup.enable "_tmux-session-cleanup-register gh-dash && "
+              + "gh dash";
             session = true;
             sessionName = "gh-dash";
-            keyTable = "popup-locked-root";
+            keyTable =
+              if config.programs.tmux.extensions.popup.enable then "popup-locked-root" else "common-root";
             sessionOnDir = true;
             runOnRoot = ".root";
             runOnGitRoot = true;
@@ -95,7 +108,7 @@
             name = "dump gitignore";
             shortcut = "i";
             command = "gibo dump %%LANGUAGE%% | less && gibo dump %%LANGUAGE%% | tmux load-buffer -w -";
-            keyTable = "popup-root";
+            keyTable = if config.programs.tmux.extensions.popup.enable then "popup-root" else "common-root";
             inputs = [ "LANGUAGE" ];
             position = {
               w = "150";

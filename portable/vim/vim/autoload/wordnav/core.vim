@@ -249,53 +249,29 @@ def NextSubwordStartImpl(count: number, trim_delim: bool): void
   var fr = row0
   var fc = col0
   while n > 0
-    if row0 >= total | break | endif
-    var line = GetLine0(row0)
-    var len = strlen(line)
-    if len == 0 || col0 >= len
+    col0 += 1
+    var found = false
+    while row0 < total
+      const text = GetLine0(row0)
+      while col0 < strlen(text)
+        if IsStart(text, col0)
+          found = true
+          break
+        endif
+        col0 += 1
+      endwhile
+      if found
+        break
+      endif
       row0 += 1
       col0 = 0
-    else
-      if !IsWord(Classify(line, col0))
-        var s = SkipDelims(total, row0, col0)
-        if empty(s) | break | endif
-        row0 = s[0]
-        col0 = s[1]
-        line = s[2]
-        len = s[3]
-        fr = row0
-        fc = col0
-        n -= 1
-        col0 += 1
-        if col0 >= len
-          row0 += 1
-          col0 = 0
-        endif
-      else
-        var target = col0 + 1
-        var found = -1
-        while target < len
-          if IsStart(line, target)
-            found = target
-            break
-          endif
-          target += 1
-        endwhile
-        if found >= 0
-          fr = row0
-          fc = found
-          n -= 1
-          col0 = found + 1
-          if col0 >= len
-            row0 += 1
-            col0 = 0
-          endif
-        else
-          row0 += 1
-          col0 = 0
-        endif
-      endif
+    endwhile
+    if !found
+      break
     endif
+    fr = row0
+    fc = col0
+    n -= 1
   endwhile
   if trim_delim
     var scan_line = GetLine0(fr)

@@ -39,8 +39,10 @@ in
 inputs.darwin.lib.darwinSystem {
   inherit system pkgs specialArgs;
   modules = [
-    ../../hosts/aarch64-darwin/shell.nix
-    ../../hosts/aarch64-darwin/core/host-users.nix
+    ../../hosts/aarch64-darwin/system/shell.nix
+    ../../hosts/aarch64-darwin/system/users.nix
+    ../../modules/system/darwin
+    ../../modules/desktop/darwin
     ../../modules/services
     ../../modules/services/darwin
     inputs.home-manager.darwinModules.home-manager
@@ -84,12 +86,12 @@ inputs.darwin.lib.darwinSystem {
         extraSpecialArgs = specialArgs;
         users.${username} = {
           imports = [
+            ../../modules/desktop/darwin/home-manager.nix
             ../../modules/services/darwin/home-manager.nix
             ../../modules/shell
             ../../modules/programs
             ../../shell
-            ../../misc/fonts
-            ../../hosts/aarch64-darwin/homemanager.nix
+            ../../hosts/aarch64-darwin/home-manager.nix
           ];
 
           programs.radare2 = {

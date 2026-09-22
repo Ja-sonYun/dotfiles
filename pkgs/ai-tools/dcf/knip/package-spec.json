@@ -1,0 +1,8 @@
+{
+  "registry": "npm",
+  "name": "knip",
+  "versions": {
+    "aarch64-darwin": "6.37.0",
+    "x86_64-linux": "6.37.0"
+  }
+}

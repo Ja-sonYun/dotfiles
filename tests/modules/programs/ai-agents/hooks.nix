@@ -10,7 +10,7 @@ let
   inherit (testPkgs) lib;
   configuration = mkConfiguration {
     featureModules = [
-      aiAgentModules.core
+      aiAgentModules.enable
       aiAgentModules.hooks
     ];
     module.programs.ai-agents = {
@@ -42,7 +42,7 @@ let
   };
   idleNotificationConfiguration = mkConfiguration {
     featureModules = [
-      aiAgentModules.core
+      aiAgentModules.enable
       aiAgentModules.hooks
     ];
     module.programs.ai-agents = {
@@ -62,7 +62,7 @@ let
         builtins.deepSeq
           (mkConfiguration {
             featureModules = [
-              aiAgentModules.core
+              aiAgentModules.enable
               aiAgentModules.hooks
             ];
             module.programs.ai-agents = {
@@ -86,7 +86,7 @@ let
     let
       arguments = [
         "${testPkgs.python3}/bin/python"
-        "${../../../../modules/programs/ai-agents/hooks/codex_adapter.py}"
+        "${../../../../modules/programs/ai-agents/hooks/adapters/codex_adapter.py}"
         "--timeout"
         (toString timeout)
         "--"
@@ -107,7 +107,7 @@ let
                 commonCommand client "test-common-hook";
             type = "command";
           }
-          // lib.optionalAttrs (client == "Codex") { timeout = 602; }
+          // lib.optionalAttrs (client == "Codex") { timeout = 604; }
           # the Pi module keeps its nullable timeout option in hooks.json
           // lib.optionalAttrs (client == "Pi") { timeout = null; }
         )
@@ -121,10 +121,10 @@ let
         {
           command =
             if client == "Codex" then
-              codexCommand 1 "test-session-end-hook"
+              codexCommand 5 "test-session-end-hook"
             else
               commonCommand client "test-session-end-hook";
-          timeout = if client == "Codex" then 3 else 5;
+          timeout = if client == "Codex" then 9 else 5;
           type = "command";
         }
       ];

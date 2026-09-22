@@ -8,7 +8,10 @@
 let
   cfg = config.services.activityHistory;
   hm = config.home-manager.users.${username};
-  aiAgents = import ./extensions/ai-agents.nix { inherit lib pkgs helper; };
+  aiAgents = import ./extensions/ai-agents.nix {
+    inherit lib pkgs helper;
+    enable = cfg.integrations.aiAgents.enable;
+  };
   settings = pkgs.writeText "activity-history.json" (
     builtins.toJSON {
       inherit (cfg)
@@ -16,11 +19,11 @@ let
         stateDirectory
         startPaused
         capture
-        integrations
         excludedApps
         ;
+      integrations = removeAttrs cfg.integrations [ "aiAgents" ];
       tmux = "${pkgs.tmux}/bin/tmux";
-      eventObservers = [ aiAgents.observerCommand ];
+      eventObservers = lib.optional cfg.integrations.aiAgents.enable aiAgents.observerCommand;
     }
   );
   cli = pkgs.uv.asPackage {
@@ -117,6 +120,7 @@ in
       };
     };
     integrations = {
+      aiAgents.enable = lib.mkEnableOption "AI agent activity recording";
       tmux.enable = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -141,6 +145,10 @@ in
         message = "Activity history directories must be absolute paths.";
       }
       {
+        assertion = !cfg.integrations.aiAgents.enable || hm.programs.ai-agents.enable;
+        message = "Activity history AI agent integration requires programs.ai-agents.enable.";
+      }
+      {
         assertion = !cfg.integrations.tmux.enable || hm.programs.tmux.enable;
         message = "Activity history tmux integration requires programs.tmux.enable.";
       }
@@ -151,7 +159,7 @@ in
     ];
     services.hammerspoon = {
       enable = lib.mkDefault true;
-      preparedScripts = [
+      scripts = [
         {
           name = "activity-history.lua";
           path = collector;

@@ -14,22 +14,14 @@ HookInput = dict[str, object]
 NotificationForEvent = Callable[[HookInput, str], dict[str, str] | None]
 Main = Callable[[], int]
 
-hooks_dir = os.environ.get("AI_AGENTS_HOOKS_DIR")
-HOOKS_DIR = (
-    Path(hooks_dir)
-    if hooks_dir
-    else (
-        Path(__file__).parents[4]
-        / "shell"
-        / "secrets"
-        / "modules"
-        / "home-manager"
-        / "ai-agents"
-        / "hooks"
-    )
+hook_path = os.environ.get("AI_AGENTS_NOTIFICATION_HOOK")
+HOOK_PATH = (
+    Path(hook_path)
+    if hook_path
+    else Path(__file__).parents[4]
+    / "modules/programs/ai-agents/extensions/notification/pkgs/notification.py"
 )
-sys.path.insert(0, str(HOOKS_DIR))
-NOTIFICATION = runpy.run_path(str(HOOKS_DIR / "notification.py"))
+NOTIFICATION = runpy.run_path(str(HOOK_PATH))
 NOTIFICATION_FOR_EVENT = cast(
     NotificationForEvent,
     NOTIFICATION["notification_for_event"],

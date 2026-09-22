@@ -2,6 +2,7 @@
   lib,
   pkgs,
   commands ? [ ],
+  restrictLinkedWorktreeBranchSwitching ? false,
   ...
 }:
 let
@@ -124,18 +125,79 @@ let
 
     real_git=${quote "${pkgs.git}/bin/git"}
 
-    if { [ "''${1-}" = "checkout" ] || [ "''${1-}" = "co" ] || [ "''${1-}" = "switch" ]; } &&
-       git_dir="$("$real_git" rev-parse --absolute-git-dir 2>/dev/null)" &&
-       common_dir="$("$real_git" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" &&
-       [ "$git_dir" != "$common_dir" ]; then
-        case "''${1-}:''${2-}" in
-            checkout: | co: | checkout:-h | checkout:--help | co:-h | co:--help | switch:-h | switch:--help | checkout:-- | co:--) ;;
-            *)
-                printf "error: branch switching is disabled in linked worktrees; use 'git worktree checkout <branch>' or 'git checkout -- <path>'\n" >&2
-                exit 1
-                ;;
-        esac
-    fi
+    ${lib.optionalString restrictLinkedWorktreeBranchSwitching ''
+      git_args=("$@")
+      global_args=()
+      command_index=0
+      while [ "$command_index" -lt "''${#git_args[@]}" ]; do
+          arg="''${git_args[$command_index]}"
+          case "$arg" in
+              -C | -c | --git-dir | --work-tree | --namespace | --config-env | --super-prefix)
+                  global_args+=("$arg")
+                  command_index=$((command_index + 1))
+                  [ "$command_index" -lt "''${#git_args[@]}" ] || break
+                  global_args+=("''${git_args[$command_index]}")
+                  ;;
+              --)
+                  command_index=$((command_index + 1))
+                  break
+                  ;;
+              -*) global_args+=("$arg") ;;
+              *) break ;;
+          esac
+          command_index=$((command_index + 1))
+      done
+      git_command="''${git_args[$command_index]-}"
+      first_argument="''${git_args[$((command_index + 1))]-}"
+      if { [ "$git_command" = "checkout" ] || [ "$git_command" = "co" ] || [ "$git_command" = "switch" ]; } &&
+         git_dir="$("$real_git" "''${global_args[@]}" rev-parse --absolute-git-dir 2>/dev/null)" &&
+         common_dir="$("$real_git" "''${global_args[@]}" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" &&
+         [ "$git_dir" != "$common_dir" ]; then
+          allow_checkout=false
+          case "$git_command:$first_argument" in
+              checkout: | co: | checkout:-h | checkout:--help | co:-h | co:--help | switch:-h | switch:--help)
+                  allow_checkout=true
+                  ;;
+              checkout:* | co:*)
+                  argument_index=$((command_index + 1))
+                  safe_options=true
+                  patch_restore=false
+                  while [ "$argument_index" -lt "''${#git_args[@]}" ]; do
+                      arg="''${git_args[$argument_index]}"
+                      case "$arg" in
+                          --)
+                              if [ "$((argument_index + 1))" -lt "''${#git_args[@]}" ]; then
+                                  allow_checkout=true
+                              fi
+                              break
+                              ;;
+                          -p | --patch) patch_restore=true ;;
+                          -q | --quiet | -f | --force | -m | --merge | --ours | --theirs | --overlay | --no-overlay | --ignore-skip-worktree-bits | --conflict=*) ;;
+                          --conflict)
+                              argument_index=$((argument_index + 1))
+                              if [ "$argument_index" -ge "''${#git_args[@]}" ]; then
+                                  safe_options=false
+                                  break
+                              fi
+                              ;;
+                          -*)
+                              safe_options=false
+                              break
+                              ;;
+                      esac
+                      argument_index=$((argument_index + 1))
+                  done
+                  if [ "$safe_options" = true ] && [ "$patch_restore" = true ]; then
+                      allow_checkout=true
+                  fi
+                  ;;
+          esac
+          if [ "$allow_checkout" != true ]; then
+              printf "error: branch switching is disabled in linked worktrees; use 'git worktree checkout <branch>' or 'git checkout -- <path>'\n" >&2
+              exit 1
+          fi
+      fi
+    ''}
 
     if [ "''${1-}" = "help" ] && [ "''${2-}" = "custom" ] && [ "$#" -eq 2 ]; then
         printf 'git-extend commands:\n'
@@ -154,8 +216,8 @@ let
     fi
 
     if [ "''${1-}" = "help" ]; then
+        :
     ${exactHelpDispatch}
-    ${parentHelpDispatch}
     fi
 
     ${parentHelpDispatch}

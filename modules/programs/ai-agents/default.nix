@@ -1,12 +1,14 @@
 {
   imports = [
-    ./agents.nix
-    ./core.nix
+    ./agents
+    ./enable.nix
+    ./environment
+    ./extensions
     ./hooks
+    ./instructions
     ./marketplace
-    ./mcp.nix
-    ./permissions.nix
-    ./skills.nix
-    ./tool-guard
+    ./mcp
+    ./permissions
+    ./skills
   ];
 }

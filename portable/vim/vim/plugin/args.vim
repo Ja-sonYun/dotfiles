@@ -31,7 +31,7 @@ function! ArgFuzzyMatch(target, pattern)
     return 1
 endfunction
 function! ArgOpen(arg)
-    execute 'edit' a:arg
+    execute 'edit' fnameescape(a:arg)
 endfunction
 
 command! -nargs=1 -complete=customlist,ArgOpenFuzzyComplete ArgOpen call ArgOpen(<f-args>)

@@ -4,7 +4,7 @@ endif
 
 let venv_ruff = getcwd() . '/.venv/bin/ruff'
 if executable(venv_ruff)
-  let ruff = venv_ruff
+  let ruff = shellescape(venv_ruff)
 else
   let ruff = 'ruff'
 endif

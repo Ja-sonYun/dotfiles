@@ -133,35 +133,15 @@ _: {
         "submodule"
         "fix"
       ];
-      help = "Fix broken submodules by removing stale worktrees and git metadata, then reinitializing them.";
+      help = "Sync and initialize the specified submodule paths without deleting local data or forcing checkout.";
       command = ''
-        git submodule deinit --all -f || true
+        if [ "$#" -eq 0 ]; then
+          echo "usage: git submodule fix <path>..." >&2
+          exit 2
+        fi
 
-        git config --file .gitmodules --name-only --get-regexp '^submodule\..*\.path$' |
-          while IFS= read -r key; do
-            name="''${key#submodule.}"
-            name="''${name%.path}"
-            path="$(git config --file .gitmodules --get "$key")"
-
-            case "$name" in
-              "" | /* | ../* | */../* | */..)
-                echo "error: unsafe submodule name: $name" >&2
-                exit 1
-                ;;
-            esac
-
-            case "$path" in
-              "" | /* | ../* | */../* | */..)
-                echo "error: unsafe submodule path: $path" >&2
-                exit 1
-                ;;
-            esac
-
-            rm -rf -- "$path" ".git/modules/$name"
-          done
-
-        git submodule sync --recursive
-        git submodule update --init --recursive --force
+        git submodule sync --recursive -- "$@" || exit $?
+        git submodule update --init --recursive --checkout -- "$@"
       '';
     }
   ];

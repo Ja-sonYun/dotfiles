@@ -1,0 +1,8 @@
+{
+  "registry": "npm",
+  "name": "@upstash/context7-mcp",
+  "versions": {
+    "aarch64-darwin": "4.1.1",
+    "x86_64-linux": "4.1.1"
+  }
+}

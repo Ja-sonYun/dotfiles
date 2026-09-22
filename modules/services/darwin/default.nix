@@ -1,14 +1,11 @@
 {
   imports = [
     ./activity-history
-    ./code-signing
-    ./darwin-nixos-vm
-    ./hammerspoon
-    ./launchd
+    ./core
     ./meeting-recorder
-    ./nixhm-container
+    ./nixos-container
+    ./sharing
     ./skhd
-    ./spotlight-scripts
     ./yabai
   ];
 }

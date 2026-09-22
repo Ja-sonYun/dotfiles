@@ -3,23 +3,13 @@ if exists("g:loaded_after_netrw")
 endif
 let g:loaded_after_netrw = 1
 
-if exists('*netrw#BrowseX')
-  delfunction netrw#BrowseX
-endif
-
-function! netrw#BrowseX(url, ...) abort
-  if has('mac')
-    execute 'silent !open ' . shellescape(a:url)
-  elseif has('win32') || has('win64')
-    execute 'silent !start "" ' . shellescape(a:url)
-  elseif executable('xdg-open')
-    execute 'silent !xdg-open ' . shellescape(a:url)
+if !has('mac') && !has('win32') && !has('win64')
+  if executable('xdg-open')
+    let g:Openprg = 'xdg-open'
   elseif executable('gio')
-    execute 'silent !gio open ' . shellescape(a:url)
+    let g:Openprg = 'gio open'
   endif
-  redraw!
-  return 1
-endfunction
+endif
 
 let s:header_lines = 8
 

@@ -1,31 +1,4 @@
-{ hostname, ... }:
 {
-  custom-packages-hashfile =
-    final: _prev:
-    let
-      rawhashfile = builtins.readFile (../pkgs/_hashfiles + "/${hostname}.json");
-      currentHostHashfile = builtins.fromJSON rawhashfile;
-      fakeHash = final.lib.fakeSha256;
-    in
-    {
-      hashfile = {
-        raw = currentHostHashfile;
-        get =
-          { hashKey, packageVersion }:
-          let
-            entry = currentHostHashfile.${hashKey} or null;
-          in
-          if entry == null || !(builtins.isAttrs entry) || !(entry ? version) || !(entry ? hash) then
-            fakeHash
-          else if entry.version == null || entry.hash == null || entry.version == "" || entry.hash == "" then
-            fakeHash
-          else if entry.version != packageVersion then
-            fakeHash
-          else
-            entry.hash;
-      };
-    };
-
   custom-packages = final: _prev: {
     agenix-utils = final.callPackage ../libs/nixlib/pkg/agenix-utils { };
 
@@ -37,24 +10,31 @@
     aws-ro = final.callPackage ../pkgs/ai-tools/aws-ro { };
     dcf = final.callPackage ../pkgs/ai-tools/dcf { };
     gh-ro = final.callPackage ../pkgs/ai-tools/gh-ro { };
+    jev = final.callPackage ../pkgs/ai-tools/jev { };
     open-code-review = final.callPackage ../pkgs/ai-tools/open-code-review { };
+    redact = final.callPackage ../pkgs/ai-tools/redact { };
+    shell-assistant = final.callPackage ../pkgs/ai-tools/shell-assistant { };
     whisper-local = final.callPackage ../pkgs/ai-tools/whisper-local { };
 
     git-extend = final.callPackage ../pkgs/cli-tools/git-extend { };
     mermaid-ascii = final.callPackage ../pkgs/cli-tools/mermaid-ascii { };
-    state-get = final.callPackage ../pkgs/state-get { };
+    state-get = final.callPackage ../pkgs/cli-tools/state-get { };
+    templates-cli = final.callPackage ../pkgs/cli-tools/templates-cli { };
     tmux-menu = final.callPackage ../pkgs/cli-tools/tmux-menu { };
 
     awsdac = final.callPackage ../pkgs/cloud/awsdac { };
-    awscli-local = final.callPackage ../pkgs/cloud/awscli-local { };
     cf-tunnel = final.callPackage ../pkgs/cloud/cf-tunnel { };
 
+    dismiss-notifications = final.callPackage ../pkgs/darwin/dismiss-notifications { };
     icalPal = final.callPackage ../pkgs/darwin/icalPal { };
     macism = final.callPackage ../pkgs/darwin/macism { };
     macnotesapp = final.callPackage ../pkgs/darwin/macnotesapp { };
     notifycmd = final.callPackage ../pkgs/darwin/notifycmd { };
+    rotate-input-source = final.callPackage ../pkgs/darwin/rotate-input-source { };
     select-input-source = final.callPackage ../pkgs/darwin/select-input-source { };
     yabai = final.callPackage ../pkgs/darwin/yabai { };
+
+    local-fonts = final.callPackage ../pkgs/fonts/local-fonts { };
 
     aws-documentation-mcp-server = final.callPackage ../pkgs/mcp/aws-documentation-mcp-server { };
     chrome-devtools-mcp = final.callPackage ../pkgs/mcp/chrome-devtools-mcp { };

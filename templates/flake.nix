@@ -79,8 +79,6 @@
         import ./shells.nix {
           inherit
             pkgs
-            pkgs-terraform
-            system
             tlib
             ;
         }

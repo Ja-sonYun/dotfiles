@@ -1,6 +1,5 @@
 {
   imports = [
-    ./autostart-apps/home-manager.nix
-    ./code-signing/home-manager.nix
+    ./core/code-signing/home-manager.nix
   ];
 }

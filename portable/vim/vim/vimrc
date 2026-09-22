@@ -175,6 +175,7 @@ nnoremap <silent> qo <Cmd>copen<CR>
 nnoremap <silent> qL <Cmd>call bnqf#core#History()<CR>
 nnoremap <silent> [Q <Cmd>colder<CR>
 nnoremap <silent> ]Q <Cmd>cnewer<CR>
+xmap <silent> <Space>t <Plug>(JevSearch)
 
 " Marks (use only `, and swap ' and m)
 noremap <silent> ' <Nop>

@@ -9,21 +9,15 @@ HookInput = dict[str, object]
 LoadHookInput = Callable[[str], HookInput]
 HookPredicate = Callable[[HookInput], bool]
 
-hooks_dir = os.environ.get("AI_AGENTS_HOOKS_DIR")
-HOOKS_DIR = (
-    Path(hooks_dir)
-    if hooks_dir
+hook_path = os.environ.get("AI_AGENTS_HOOK_INPUT")
+HOOK_INPUT_PATH = (
+    Path(hook_path)
+    if hook_path
     else (
         Path(__file__).parents[4]
-        / "shell"
-        / "secrets"
-        / "modules"
-        / "home-manager"
-        / "ai-agents"
-        / "hooks"
+        / "modules/programs/ai-agents/hooks/runtime/hook_input.py"
     )
 )
-HOOK_INPUT_PATH = HOOKS_DIR / "hook_input.py"
 HOOK_INPUT = runpy.run_path(str(HOOK_INPUT_PATH))
 LOAD_HOOK_INPUT = cast(LoadHookInput, HOOK_INPUT["load_hook_input"])
 IS_PROPOSED_PLAN = cast(HookPredicate, HOOK_INPUT["is_proposed_plan"])

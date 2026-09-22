@@ -35,47 +35,45 @@ let
     version = "2.1.200";
   });
   aiAgentModules = {
-    agents = ../../../../modules/programs/ai-agents/agents.nix;
-    core = ../../../../modules/programs/ai-agents/core.nix;
+    agents = ../../../../modules/programs/ai-agents/agents;
+    enable = ../../../../modules/programs/ai-agents/enable.nix;
+    environment = ../../../../modules/programs/ai-agents/environment;
+    extensions = ../../../../modules/programs/ai-agents/extensions;
     hooks = ../../../../modules/programs/ai-agents/hooks;
+    instructions = ../../../../modules/programs/ai-agents/instructions;
     marketplace = ../../../../modules/programs/ai-agents/marketplace;
-    mcp = ../../../../modules/programs/ai-agents/mcp.nix;
-    permissions = ../../../../modules/programs/ai-agents/permissions.nix;
+    mcp = ../../../../modules/programs/ai-agents/mcp;
+    permissions = ../../../../modules/programs/ai-agents/permissions;
+    skills = ../../../../modules/programs/ai-agents/skills;
   };
   clientModules = [
     ../../../../modules/programs/claude
+    ../../../../modules/programs/claude-desktop
     ../../../../modules/programs/codex
     ../../../../modules/programs/pi
   ];
-  baseModule =
-    { lib, pkgs, ... }:
-    {
-      options.programs.tmux.agentStatusScript = lib.mkOption { type = lib.types.str; };
+  baseModule = {
+    home = {
+      username = "test-user";
+      homeDirectory = "/home/test-user";
+      stateVersion = "26.05";
+    };
 
-      config = {
-        home = {
-          username = "test-user";
-          homeDirectory = "/home/test-user";
-          stateVersion = "26.05";
-        };
-
-        programs = {
-          claude-code = {
-            enable = true;
-            package = claudePackage;
-          };
-          codex = {
-            enable = true;
-            package = testPackage "codex";
-          };
-          pi = {
-            enable = true;
-            package = testPackage "pi";
-          };
-          tmux.agentStatusScript = toString (pkgs.writeShellScript "test-agent-status" "exit 0");
-        };
+    programs = {
+      claude-code = {
+        enable = true;
+        package = claudePackage;
+      };
+      codex = {
+        enable = true;
+        package = testPackage "codex";
+      };
+      pi = {
+        enable = true;
+        package = testPackage "pi";
       };
     };
+  };
   mkConfiguration =
     { featureModules, module }:
     home-manager.lib.homeManagerConfiguration {
@@ -129,10 +127,16 @@ let
       }
     );
   manifests = map manifest scenarios;
-  testPython = testPkgs.python3.withPackages (python: [ python.tomlkit ]);
+  hookLibrary = testPkgs.callPackage ../../../../modules/programs/ai-agents/hooks/runtime { };
+  testPython = testPkgs.python3.withPackages (python: [
+    python.tomlkit
+    hookLibrary
+  ]);
   codexModule = ../../../../modules/programs/codex;
-  codexHookAdapter = ../../../../modules/programs/ai-agents/hooks/codex_adapter.py;
-  hookHandlers = ../../../../shell/programs/ai-tools/hooks;
+  codexHookAdapter = ../../../../modules/programs/ai-agents/hooks/adapters/codex_adapter.py;
+  hookInput = ../../../../modules/programs/ai-agents/hooks/runtime/hook_input.py;
+  statusHook = ../../../../modules/programs/tmux/extensions/agent/pkgs/status.py;
+  notificationHook = ../../../../modules/programs/ai-agents/extensions/notification/pkgs/notification.py;
   disabledConfiguration = home-manager.lib.homeManagerConfiguration {
     pkgs = testPkgs;
     modules = [
@@ -162,7 +166,9 @@ testPkgs.runCommand "ai-tools-tests"
 
     test_python=${testPython}/bin/python3
     export AI_AGENTS_CODEX_HOOK_ADAPTER=${lib.escapeShellArg (toString codexHookAdapter)}
-    export AI_AGENTS_HOOKS_DIR=${lib.escapeShellArg (toString hookHandlers)}
+    export AI_AGENTS_HOOK_INPUT=${lib.escapeShellArg (toString hookInput)}
+    export AI_AGENTS_STATUS_HOOK=${lib.escapeShellArg (toString statusHook)}
+    export AI_AGENTS_NOTIFICATION_HOOK=${lib.escapeShellArg (toString notificationHook)}
 
     "$test_python" ${codexModule}/test_merge_config_toml.py
     node --test ${../../../../pkgs/ai-agents/pi/extensions/hooks}/src/index.test.ts

@@ -6,11 +6,8 @@ g:_shell_current_wid = -1
 g:_term_wids = {}
 
 def ExpandFileMods(s: string): string
-  var r = s
-  r = substitute(r, '%:S', expand('%:S'), 'g')
-  r = substitute(r, '%:p', expand('%:p'), 'g')
-  r = substitute(r, '%',   expand('%:S'), 'g')
-  return r
+  return substitute(s, '%\%(:[pS]\)\?',
+    (match) => expand(match[0] == '%' ? '%:S' : match[0]), 'g')
 enddef
 
 def CloseBuffer(buf: number, prev_status: number): void
@@ -27,12 +24,14 @@ enddef
 def ShellPrompt(cmd: string): string
   return 'trap : INT;' .. cmd
     .. "\n"
-    .. "printf '\\n[exit_code:%s] %s' $? 'Press enter to continue...' && read ans"
+    .. "_vim_status=$?\n"
+    .. "printf '\\n[exit_code:%s] %s' \"$_vim_status\" 'Press enter to continue...'\n"
+    .. "read ans\nexit \"$_vim_status\""
 enddef
 
 def StripAnsi(text: string): string
   var result = substitute(text, '\%x1b].\{-}\x07', '', 'g')
-  result = substitute(result, '\%(\%x1b\)\?\[[0-9;?]*[ -/]*[@-~]', '', 'g')
+  result = substitute(result, '\%x1b\[[0-9;?]*[ -/]*[@-~]', '', 'g')
   result = substitute(result, '\r', '', 'g')
   return result
 enddef
@@ -69,6 +68,8 @@ def ShTerm(cmd: string, height: number, qf: bool = false): bool
     return false
   endif
 
+  const errorformat = &errorformat
+  const workingDirectory = getcwd()
   botright new
   execute 'resize ' .. height
   const buf = bufnr()
@@ -86,24 +87,39 @@ def ShTerm(cmd: string, height: number, qf: bool = false): bool
   var teetemp = ''
   if qf
     teetemp = tempname()
-    wrapped_cmd = printf(
-          \ "echo '$ %s\n---------'; %s | tee %s && sed -i -r 's/\\x1B\\[[0-9;]*[mK]//g' %s",
-          \ shellescape(cmd, 1),
-          \ cmd,
-          \ fnameescape(teetemp),
-          \ fnameescape(teetemp))
+    wrapped_cmd = "printf '%s\\n' " .. shellescape('$ ' .. cmd)
+      .. " '---------'\n{ " .. cmd .. "\n} 2>&1 | tee " .. shellescape(teetemp)
+      .. "\n_vim_status=${PIPESTATUS[0]}\n(exit \"$_vim_status\")"
   endif
   const safe_cmd = ShellPrompt(wrapped_cmd)
 
   try
-    term_start(['sh', '-c', safe_cmd], {
+    term_start([qf ? 'bash' : 'sh', '-c', safe_cmd], {
       curwin: true,
+      cwd: workingDirectory,
       exit_cb: (job: job, status: number) => {
         CloseBuffer(buf, prev_ls)
         if qf
           def LoadQuickfix(_: number): void
-            execute 'cgetfile ' .. fnameescape(teetemp)
-            call delete(teetemp)
+            const previousWindow = win_getid()
+            var parsingWindow = 0
+            try
+              execute 'noautocmd keepalt botright 1new'
+              parsingWindow = win_getid()
+              setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile
+              execute 'noautocmd lcd ' .. fnameescape(workingDirectory)
+              setqflist([], ' ', {
+                title: cmd,
+                lines: readfile(teetemp)->map((_, text) => StripAnsi(text)),
+                efm: errorformat})
+            finally
+              if parsingWindow != 0 && win_id2win(parsingWindow) != 0
+                noautocmd call win_gotoid(parsingWindow)
+                noautocmd close!
+              endif
+              noautocmd call win_gotoid(previousWindow)
+              delete(teetemp)
+            endtry
             execute 'copen'
           enddef
 
@@ -116,6 +132,9 @@ def ShTerm(cmd: string, height: number, qf: bool = false): bool
     echomsg 'Failed to start terminal job: ' .. v:exception .. ' at ' .. v:throwpoint
     echohl None
     CloseBuffer(buf, prev_ls)
+    if teetemp != ''
+      delete(teetemp)
+    endif
     return false
   endtry
 
@@ -131,6 +150,7 @@ def ShTerm(cmd: string, height: number, qf: bool = false): bool
 enddef
 
 export def Term(cmd: string = ''): bool
+  const resolved = ExpandFileMods(cmd)
   new
   const wid = win_getid()
   const buf = bufnr()
@@ -153,7 +173,6 @@ export def Term(cmd: string = ''): bool
         exit_cb: ExitCb,
       })
     else
-      const resolved = ExpandFileMods(cmd)
       const safecmd = ShellPrompt(resolved)
       term_start(['sh', '-c', safecmd], {
         curwin: true,
@@ -224,4 +243,3 @@ export def Setup(): void
 enddef
 
 defcompile
-

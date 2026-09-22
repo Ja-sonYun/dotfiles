@@ -35,7 +35,7 @@ endif
 ##@ Update
 
 push-secrets: ## Push secrets to git
-	(cd ./shell/secrets && make push) || true
+	$(MAKE) -C ./shell/secrets push
 
 update-vim: ## Update vim flake
 	cd ./portable/vim && nix flake update
@@ -43,10 +43,8 @@ update-vim: ## Update vim flake
 update-raw: update-vim ## Update all flakes
 	nix flake update
 
-update-versions: ## Update package versions
-	./scripts/update-versions
-
-update-pkgs: update-versions ## Update package versions
+update-pkgs: ## Update package versions and locks for this system
+	./scripts/update-pkgs
 
 update: push-secrets ## Full update with ulimit fix
 	@sh -c 'set -eu; \
@@ -56,17 +54,18 @@ update: push-secrets ## Full update with ulimit fix
 		$(MAKE) update-raw update-pkgs'
 # ==================================================================================
 
-build-pkgs: ## Build packages that need hash updates
-	./scripts/build-pkgs
-
 # ==================================================================================
 ifeq ($(SYSTEM),Linux)
 ##@ Linux
 
 install: ## Install nix daemon
-	sh <(curl -L https://nixos.org/nix/install) --daemon
+	@set -eu; \
+	installer=$$(mktemp); \
+	trap 'rm -f "$$installer"' EXIT; \
+	curl -fL https://nixos.org/nix/install -o "$$installer"; \
+	sh "$$installer" --daemon
 
-deploy: build-pkgs add lock ## Deploy home-manager config
+deploy: add lock ## Deploy home-manager config
 	$(NIX) build .#homeConfigurations.$(HOSTNAME).activationPackage $(NIX_TRACE_ARGS)
 	./result/activate
 endif
@@ -90,7 +89,7 @@ linux-builder-up: ## Start linux-builder VM and wait until SSH-ready
 linux-builder-down: ## Stop the linux-builder VM
 	@sudo launchctl kill TERM $(LINUX_BUILDER) 2>/dev/null || true
 
-build: build-pkgs add lock ## Build nix-darwin config
+build: add lock ## Build nix-darwin config
 	@$(MAKE) linux-builder-up
 	$(NIX) build .#darwinConfigurations.$(HOSTNAME).system $(NIX_TRACE_ARGS)
 
@@ -151,9 +150,14 @@ clean: ## Clean nix store
 init-submodules: ## Initialize all submodules
 	git submodule update --init --recursive
 
-fix-submodules: ## Fix broken submodules (deinit + reinit)
-	git submodule deinit --all -f
-	git submodule update --init --recursive
+export SUBMODULE
+
+fix-submodules: ## Sync and initialize a submodule (SUBMODULE=path)
+	@if [ -z "$$SUBMODULE" ]; then \
+		echo 'usage: make fix-submodules SUBMODULE=path' >&2; exit 2; \
+	fi
+	git submodule sync --recursive -- "$$SUBMODULE"
+	git submodule update --init --recursive --checkout -- "$$SUBMODULE"
 
 update-submodules: ## Update all submodules to latest
 	git submodule update --remote --recursive

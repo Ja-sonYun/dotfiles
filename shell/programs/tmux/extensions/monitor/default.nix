@@ -1,13 +1,12 @@
 {
+  config,
   lib,
-  pkgs,
   ...
 }:
 let
-  tmuxRoot = ../..;
-  scripts = "${tmuxRoot}/extensions/monitor/scripts";
+  scripts = config.programs.tmux.extensions.monitor.scripts;
 in
-lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
+lib.mkIf config.programs.tmux.extensions.monitor.enable {
   programs.tmux-menu.menus = {
     menu.items = lib.mkOrder 500 [
       { separator = true; }
@@ -85,22 +84,4 @@ lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     };
   };
 
-  programs.tmux.hooks = {
-    paneMonitorClientSessionChanged = {
-      event = "client-session-changed";
-      command = ''run-shell -b "${scripts}/pane-monitor follow"'';
-    };
-    paneMonitorWindowResized = {
-      event = "window-resized";
-      command = ''run-shell -b "${scripts}/pane-monitor resize #{hook_window}"'';
-    };
-    paneMonitorSessionWindowChanged = {
-      event = "session-window-changed";
-      command = ''run-shell -b -d 0.1 "${scripts}/pane-monitor follow #{hook_window}"'';
-    };
-    paneMonitorPaneExited = {
-      event = "pane-exited";
-      command = ''run-shell -b "${scripts}/pane-monitor cleanup #{hook_pane}"'';
-    };
-  };
 }

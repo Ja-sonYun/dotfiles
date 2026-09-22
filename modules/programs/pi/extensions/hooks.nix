@@ -17,6 +17,7 @@ let
     "PreCompact"
     "PreToolUse"
     "SessionEnd"
+    "SessionInfoChanged"
     "SessionStart"
     "Stop"
     "StopFailure"

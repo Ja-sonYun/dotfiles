@@ -1,0 +1,131 @@
+--- a/agents.ts
++++ b/agents.ts
+@@ -13,6 +13,7 @@
+ 	description: string;
+ 	tools?: string[];
+ 	model?: string;
++	permissionMode?: string;
+ 	systemPrompt: string;
+ 	source: "user" | "project";
+ 	filePath: string;
+@@ -36,6 +37,7 @@
+ 	description?: unknown;
+ 	tools?: unknown;
+ 	model?: unknown;
++	permissionMode?: unknown;
+ };
+ 
+ /**
+@@ -96,6 +98,7 @@
+ 			description: frontmatter.description,
+ 			tools: parseToolList(frontmatter.tools),
+ 			model: typeof frontmatter.model === "string" ? frontmatter.model : undefined,
++			permissionMode: typeof frontmatter.permissionMode === "string" ? frontmatter.permissionMode : undefined,
+ 			systemPrompt: body,
+ 			source,
+ 			filePath,
+--- a/index.ts
++++ b/index.ts
+@@ -297,6 +297,19 @@
+ 		};
+ 	}
+ 
++	if (agent.permissionMode === "plan") {
++		return {
++			agent: agentName,
++			agentSource: agent.source,
++			task,
++			exitCode: 1,
++			messages: [],
++			stderr: `Agent "${agentName}" requires plan permissions, which Pi subagents cannot enforce.`,
++			usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
++			step,
++		};
++	}
++
+ 	const args: string[] = ["--mode", "json", "-p", "--no-session"];
+ 	const inheritsDispatchConfig = !agent.model;
+ 	const model = agent.model ?? dispatchDefaults.model;
+@@ -346,9 +359,41 @@
+ 			const proc = spawn(invocation.command, invocation.args, {
+ 				cwd: cwd ?? defaultCwd,
+ 				shell: false,
++				detached: true,
++				env: {
++					...process.env,
++					AI_AGENT_SUBAGENT: "1",
++				},
+ 				stdio: ["ignore", "pipe", "pipe"],
+ 			});
+ 			let buffer = "";
++			let closed = false;
++			let spawnFailed = false;
++			let killTimer: ReturnType<typeof setTimeout> | undefined;
++			const signalGroup = (signum: NodeJS.Signals) => {
++				if (proc.pid === undefined) {
++					return;
++				}
++				try {
++					process.kill(-proc.pid, signum);
++				} catch (error) {
++					if ((error as NodeJS.ErrnoException).code !== "ESRCH") {
++						throw error;
++					}
++				}
++			};
++			const killProc = () => {
++				if (closed || wasAborted) {
++					return;
++				}
++				wasAborted = true;
++				signalGroup("SIGTERM");
++				killTimer = setTimeout(() => {
++					if (!closed) {
++						signalGroup("SIGKILL");
++					}
++				}, 5000);
++			};
+ 
+ 			const processLine = (line: string) => {
+ 				if (!line.trim()) return;
+@@ -399,24 +444,27 @@
+ 			});
+ 
+ 			proc.on("close", (code) => {
++				closed = true;
++				if (killTimer !== undefined) {
++					clearTimeout(killTimer);
++				}
++				if (wasAborted) {
++					signalGroup("SIGKILL");
++				}
++				signal?.removeEventListener("abort", killProc);
+ 				if (buffer.trim()) processLine(buffer);
+-				resolve(code ?? 0);
++				resolve(spawnFailed ? 1 : (code ?? 1));
+ 			});
+ 
+-			proc.on("error", () => {
+-				resolve(1);
++			proc.on("error", (error) => {
++				spawnFailed = true;
++				currentResult.stderr += error.message;
+ 			});
+ 
+-			if (signal) {
+-				const killProc = () => {
+-					wasAborted = true;
+-					proc.kill("SIGTERM");
+-					setTimeout(() => {
+-						if (!proc.killed) proc.kill("SIGKILL");
+-					}, 5000);
+-				};
+-				if (signal.aborted) killProc();
+-				else signal.addEventListener("abort", killProc, { once: true });
++			if (signal?.aborted) {
++				killProc();
++			} else {
++				signal?.addEventListener("abort", killProc, { once: true });
+ 			}
+ 		});
+ 

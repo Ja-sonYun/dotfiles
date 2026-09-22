@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import json
 import os
+import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from graphql import OperationType, parse
@@ -94,9 +95,13 @@ class ApiRequest:
     has_fields: bool
     input_path: str | None
     headers: tuple[str, ...]
+    arguments: tuple[tuple[str, ...], ...]
 
 
-def run_gh(arguments: list[str]) -> int:
+def run_gh(arguments: list[str], input_data: bytes | None = None) -> int:
+    if input_data is not None:
+        result = subprocess.run([GH_PATH, *arguments], input=input_data, check=False)
+        return result.returncode if result.returncode >= 0 else 128 - result.returncode
     os.execvp(GH_PATH, [GH_PATH, *arguments])
     return 0
 
@@ -121,6 +126,7 @@ def parse_api(arguments: list[str]) -> ApiRequest | None:
     has_fields = False
     input_path: str | None = None
     headers: list[str] = []
+    parsed_arguments: list[tuple[str, ...]] = []
     index = 0
 
     while index < len(arguments):
@@ -135,6 +141,7 @@ def parse_api(arguments: list[str]) -> ApiRequest | None:
                 return None
             option, value = argument, arguments[index]
         elif argument in API_FLAG_OPTIONS:
+            parsed_arguments.append((argument,))
             index += 1
             continue
         elif argument == "--":
@@ -142,6 +149,7 @@ def parse_api(arguments: list[str]) -> ApiRequest | None:
             if index >= len(arguments) or endpoint is not None:
                 return None
             endpoint = arguments[index]
+            parsed_arguments.extend((("--",), (endpoint,)))
             index += 1
             if index != len(arguments):
                 return None
@@ -150,6 +158,7 @@ def parse_api(arguments: list[str]) -> ApiRequest | None:
             return None
         elif endpoint is None:
             endpoint = argument
+            parsed_arguments.append((argument,))
             index += 1
             continue
         else:
@@ -172,11 +181,20 @@ def parse_api(arguments: list[str]) -> ApiRequest | None:
         elif option in {"--header", "-H"}:
             headers.append(value)
 
+        parsed_arguments.append((option, value))
         index += 1
 
     if endpoint is None:
         return None
-    return ApiRequest(endpoint, method, fields, has_fields, input_path, tuple(headers))
+    return ApiRequest(
+        endpoint,
+        method,
+        fields,
+        has_fields,
+        input_path,
+        tuple(headers),
+        tuple(parsed_arguments),
+    )
 
 
 def resolve_field(field: FieldValue) -> str | None:
@@ -191,13 +209,59 @@ def resolve_field(field: FieldValue) -> str | None:
         return None
 
 
-def load_graphql_request(request: ApiRequest) -> tuple[str, str | None] | None:
+def snapshot_graphql_files(request: ApiRequest) -> tuple[ApiRequest, bytes | None]:
+    if request.endpoint != "graphql":
+        return request, None
+
+    input_data = None
     if request.input_path is not None:
         if request.has_fields or request.input_path == "-":
+            raise ValueError("GraphQL input requires a file without field options")
+        input_data = Path(request.input_path).read_bytes()
+
+    fields = dict(request.fields)
+    prepared: list[tuple[str, ...]] = []
+    for argument in request.arguments:
+        if len(argument) == 1:
+            prepared.append(argument)
+            continue
+
+        option, value = argument
+        if option == "--input":
+            value = "-"
+        elif option in API_FIELD_OPTIONS:
+            name, _, field_value = value.partition("=")
+            if name in {"query", "operationName"}:
+                resolved = resolve_field(
+                    FieldValue(field_value, option in API_TYPED_FIELD_OPTIONS)
+                )
+                if resolved is None:
+                    raise ValueError(f"Could not read GraphQL {name} field")
+                option, value = "-f", f"{name}={resolved}"
+                fields[name] = FieldValue(resolved, False)
+        prepared.append((option, value))
+
+    return replace(
+        request,
+        fields=fields,
+        input_path="-" if input_data is not None else None,
+        arguments=tuple(prepared),
+    ), input_data
+
+
+def load_graphql_request(
+    request: ApiRequest, input_data: bytes | None = None
+) -> tuple[str, str | None] | None:
+    if request.input_path is not None:
+        if request.has_fields or (request.input_path == "-" and input_data is None):
             return None
         try:
-            payload = json.loads(Path(request.input_path).read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            payload = json.loads(
+                input_data
+                if input_data is not None
+                else Path(request.input_path).read_bytes()
+            )
+        except (OSError, UnicodeError, json.JSONDecodeError):
             return None
         if not isinstance(payload, dict) or not isinstance(payload.get("query"), str):
             return None
@@ -260,18 +324,17 @@ def has_method_override(headers: tuple[str, ...]) -> bool:
     )
 
 
-def is_read_only_api(arguments: list[str]) -> bool:
-    request = parse_api(arguments)
-    if request is None or has_method_override(request.headers):
+def is_read_only_api(request: ApiRequest, input_data: bytes | None = None) -> bool:
+    if has_method_override(request.headers):
         return False
     if request.endpoint == "graphql":
         if request.method not in {None, "GET", "POST"}:
             return False
-        graphql_request = load_graphql_request(request)
+        graphql_request = load_graphql_request(request, input_data)
         return graphql_request is not None and is_read_only_graphql(*graphql_request)
     if request.method == "GET":
         return True
-    return arguments == ["rate_limit"]
+    return request.arguments == (("rate_limit",),)
 
 
 def is_help_or_version(arguments: list[str]) -> bool:
@@ -289,17 +352,47 @@ def is_help_or_version(arguments: list[str]) -> bool:
     )
 
 
+def is_read_only_auth_status(arguments: list[str]) -> bool:
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument == "--":
+            return index == len(arguments) - 1
+        if argument.startswith("--"):
+            option, separator, _ = argument.partition("=")
+            if option in {"--hostname", "--json", "--jq", "--template"}:
+                if not separator:
+                    index += 1
+                    if index >= len(arguments):
+                        return False
+            elif option not in {"--active", "--help"}:
+                return False
+        elif argument.startswith("-") and len(argument) > 1:
+            position = 1
+            while position < len(argument):
+                option = argument[position]
+                position += 1
+                if option == "h":
+                    if position == len(argument):
+                        index += 1
+                        if index >= len(arguments):
+                            return False
+                    break
+                if option != "a":
+                    return False
+                if argument[position:].startswith("="):
+                    break
+        else:
+            return False
+        index += 1
+    return True
+
+
 def is_read_only(arguments: list[str]) -> bool:
     if is_help_or_version(arguments):
         return True
-    if arguments[0] == "api":
-        return is_read_only_api(arguments[1:])
     if arguments[0] == "auth" and len(arguments) >= 2 and arguments[1] == "status":
-        return not any(
-            argument in {"-t", "--show-token"}
-            or argument.startswith(("-t=", "--show-token="))
-            for argument in arguments[2:]
-        )
+        return is_read_only_auth_status(arguments[2:])
     if arguments[0] in READ_ONLY_ROOT_COMMANDS:
         return True
     return len(arguments) >= 2 and tuple(arguments[:2]) in READ_ONLY_COMMANDS
@@ -307,8 +400,24 @@ def is_read_only(arguments: list[str]) -> bool:
 
 def main() -> int:
     arguments = sys.argv[1:]
-    if is_read_only(arguments):
-        return run_gh(arguments)
+    input_data = None
+    if arguments and arguments[0] == "api":
+        request = parse_api(arguments[1:])
+        try:
+            if request is not None:
+                request, input_data = snapshot_graphql_files(request)
+                if request.endpoint == "graphql":
+                    arguments = ["api"] + [
+                        value for argument in request.arguments for value in argument
+                    ]
+        except (OSError, UnicodeError, ValueError) as error:
+            print(f"gh-ro: {error}", file=sys.stderr)
+            return 2
+        allowed = request is not None and is_read_only_api(request, input_data)
+    else:
+        allowed = is_read_only(arguments)
+    if allowed:
+        return run_gh(arguments, input_data)
     print("gh-ro: command is not classified as read-only", file=sys.stderr)
     return 2
 

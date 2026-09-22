@@ -38,7 +38,10 @@ let
     else
       hostSystem;
 
-  projectAttrs = removeAttrs cfg [ "dockerBin" ];
+  projectAttrs = removeAttrs cfg [
+    "dockerBin"
+    "extraPath"
+  ];
   enabledProjects = filterAttrs (_: project: project.enable) projectAttrs;
 
   mkShellArrayItems = args: concatMapStrings (arg: "          ${escapeShellArg arg}\n") args;
@@ -47,7 +50,7 @@ let
     name: project:
     pkgs.writeText "docker-compose-${name}.yaml" (lib.generators.toYAML { } (composeConfig project));
 
-  defaultDockerBin = if isDarwin then "/usr/local/bin/docker" else "${pkgs.docker}/bin/docker";
+  defaultDockerBin = "${pkgs.docker}/bin/docker";
 
   dockerBin = if cfg.dockerBin == null then defaultDockerBin else cfg.dockerBin;
 
@@ -81,6 +84,20 @@ let
       ) (enabledImages project)
     );
 
+  mkFileWriteScript = file: contents: ''
+    (
+      umask 077
+      mkdir -p "$(dirname ${escapeShellArg file.path})"
+      file_tmp="$(mktemp ${escapeShellArg "${file.path}.XXXXXX"})"
+      trap 'rm -f "$file_tmp"' EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+      ${contents}
+      chmod ${escapeShellArg file.mode} "$file_tmp"
+      mv -f "$file_tmp" ${escapeShellArg file.path}
+    )
+  '';
+
   mkEnvFileScript =
     _: envFile:
     let
@@ -92,12 +109,11 @@ let
         printf '%s=%s\n' ${escapeShellArg key} "$value"
       '') envFile.secrets;
     in
-    ''
-      mkdir -p "$(dirname ${escapeShellArg envFile.path})"
+    mkFileWriteScript envFile ''
       {
+        :
       ${concatStringsSep "\n" (valueLines ++ secretLines)}
-      } > ${escapeShellArg envFile.path}
-      chmod ${escapeShellArg envFile.mode} ${escapeShellArg envFile.path}
+      } > "$file_tmp"
     '';
 
   mkFileScript =
@@ -107,13 +123,12 @@ let
       replaceScript = concatStringsSep "\n" (
         mapAttrsToList (placeholder: path: ''
           value="$(read_secret_file ${escapeShellArg path})"
-          PLACEHOLDER=${escapeShellArg placeholder} VALUE="$value" ${pkgs.perl}/bin/perl -0pi -e 's/\Q$ENV{PLACEHOLDER}\E/$ENV{VALUE}/g' ${escapeShellArg file.path}
+          PLACEHOLDER=${escapeShellArg placeholder} VALUE="$value" ${pkgs.perl}/bin/perl -0pi -e 's/\Q$ENV{PLACEHOLDER}\E/$ENV{VALUE}/g' "$file_tmp"
         '') file.replace
       );
     in
-    ''
-      mkdir -p "$(dirname ${escapeShellArg file.path})"
-      install -m ${escapeShellArg file.mode} ${escapeShellArg "${source}"} ${escapeShellArg file.path}
+    mkFileWriteScript file ''
+      cat ${escapeShellArg "${source}"} > "$file_tmp"
       ${replaceScript}
     '';
 
@@ -123,35 +138,6 @@ let
       (mapAttrsToList mkEnvFileScript (enabledEnvFiles project))
       ++ (mapAttrsToList mkFileScript (enabledFiles project))
     );
-
-  hostPortOf =
-    spec:
-    if !builtins.isString spec then
-      null
-    else
-      let
-        parts = splitString ":" spec;
-        len = builtins.length parts;
-      in
-      if len >= 2 then builtins.elemAt parts (len - 2) else null;
-
-  projectHostPorts =
-    project:
-    let
-      services = project.services or { };
-      ports = flatten (mapAttrsToList (_: svc: svc.ports or [ ]) services);
-    in
-    filter (p: p != null) (map hostPortOf ports);
-
-  portUsage = flatten (
-    mapAttrsToList (
-      name: project: map (port: { inherit name port; }) (projectHostPorts project)
-    ) enabledProjects
-  );
-
-  duplicatePorts = filter (port: builtins.length (filter (u: u.port == port) portUsage) > 1) (
-    lib.unique (map (u: u.port) portUsage)
-  );
 
   isAnonymousVolume =
     volume:
@@ -188,7 +174,9 @@ let
       docker=${escapeShellArg dockerBin}
       compose_file=${escapeShellArg "${composeFile}"}
       name=${escapeShellArg name}
-      export PATH="$(dirname "$docker"):/usr/local/bin:/opt/homebrew/bin:/Applications/OrbStack.app/Contents/MacOS/xbin:$PATH"
+      export PATH="$(dirname "$docker")":${escapeShellArg (concatStringsSep ":" cfg.extraPath)}${
+        lib.optionalString (cfg.extraPath != [ ]) ":"
+      }"$PATH"
 
       read_secret_file() {
         for _ in $(seq 1 60); do
@@ -363,6 +351,11 @@ in
         }
       );
       options = {
+        extraPath = mkOption {
+          type = types.listOf types.str;
+          default = [ ];
+          description = "Additional directories in Docker Compose service PATH.";
+        };
         dockerBin = mkOption {
           type = types.nullOr types.str;
           default = null;
@@ -376,13 +369,6 @@ in
     {
       assertions = [
         {
-          assertion = duplicatePorts == [ ];
-          message =
-            "services.dockerCompose: host port(s) ${concatStringsSep ", " duplicatePorts} "
-            + "are published by more than one project. "
-            + "(only short \"HOST:CONTAINER\" syntax is checked)";
-        }
-        {
           assertion = anonymousVolumeUsage == [ ];
           message =
             "services.dockerCompose: anonymous volumes are not allowed in "
@@ -393,6 +379,7 @@ in
     }
     (optionalAttrs isDarwin (
       import ./darwin.nix {
+        username = config.system.primaryUser;
         inherit
           cacheDir
           enabledProjects

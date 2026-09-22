@@ -100,6 +100,7 @@ let
     (mkVimPlugin ../dev/dock "dock")
     (mkVimPlugin ../dev/gitdiff "gitdiff")
     (mkVimPlugin ../dev/ghreview "ghreview")
+    (mkVimPlugin ../dev/jev-search "jev-search")
   ];
 
   # Aggregate plugin set for packaged Vim
@@ -116,6 +117,7 @@ let
       universal-ctags
       gnumake
       gawk
+      bash
     ]
     ++ pkgs.lib.optionals config.useCopilot [ nodejs_22 ];
 
@@ -154,7 +156,9 @@ let
       python312
       python312Packages.black
       # isort tests pull in flaky SciPy tests through pylama.
-      (python312Packages.isort.overridePythonAttrs (_: { doCheck = false; }))
+      (python312Packages.isort.overridePythonAttrs (_: {
+        doCheck = false;
+      }))
       pyright
     ]
   );
@@ -362,7 +366,7 @@ let
 
   vimPkg = mkVim {
     name = "vim-pkg";
-    cfgDir = toString ../vim;
+    cfgDir = ../vim;
     plugins = packagedPlugins;
     paths = extraPackages;
     dev = false;

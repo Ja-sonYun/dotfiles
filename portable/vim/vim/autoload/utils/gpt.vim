@@ -175,6 +175,7 @@ export def Call(
   const use_responses = response_type ==# 'responses'
   const use_chat = response_type ==# 'chat'
   const req = CreateCall(model, prompt, use_responses, use_chat, opts)
+  req.Start()
   const res = req.Join()
   return ParseCallResponse(res, response_type)
 enddef
@@ -286,6 +287,7 @@ export def CallTool(
   opts: dict<any> = {}
 ): dict<any>
   const req = CreateCallTool(model, name, prompt, parameters, opts)
+  req.Start()
   const res = req.Join()
   return ParseCallToolResponse(res)
 enddef

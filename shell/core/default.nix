@@ -1,7 +1,6 @@
 {
   hasTag,
   lib,
-  paths,
   pkgs,
   ...
 }:
@@ -76,7 +75,6 @@
       hyperfine
 
       awscli2
-      awscli-local
 
       (ledger.override { usePython = true; })
 
@@ -101,7 +99,6 @@
   home.sessionVariables = {
     EDITOR = "${pkgs.vim-pkg}/bin/vim";
     # PAGER = "${pkgs.moor}/bin/moor";
-    FLAKE_TEMPLATES_DIR = "${paths.dotfiles}/templates";
   };
 
   home.shellAliases = {

@@ -6,7 +6,7 @@ endif
 let local_eslint = getcwd() . '/node_modules/.bin/eslint'
 
 if executable(local_eslint)
-  let eslint = local_eslint
+  let eslint = shellescape(local_eslint)
 elseif executable('pnpx')
   let eslint = 'pnpm eslint'
 elseif executable('yarn')

@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
-import math
 import os
 import re
 import shutil
@@ -21,7 +21,6 @@ from pathlib import Path
 from types import FrameType
 from typing import Any
 
-
 FFMPEG = "@FFMPEG@"
 FFPROBE = "@FFPROBE@"
 WHISPER_CLI = "@WHISPER_CLI@"
@@ -30,7 +29,6 @@ VAD_MODEL = "@VAD_MODEL@"
 STALE_WORK_DIRECTORY_SECONDS = 24 * 60 * 60
 WORK_DIRECTORY_PATTERN = re.compile(r"^whisper-(\d+)-\d+$")
 TERMINATION_SIGNALS = {signal.SIGINT, signal.SIGTERM}
-ARCHIVE_TAG = "aac-mono-32k-v1"
 
 _active_process: subprocess.Popen[str] | None = None
 _process_starting = False
@@ -78,6 +76,158 @@ def has_output_backups(work_directory: Path) -> bool:
         return True
 
 
+def has_saved_work(work_directory: Path) -> bool:
+    try:
+        return any(
+            entry.name in {"ready.json", "replacing"}
+            or entry.name.startswith("previous-")
+            or entry.name.endswith("-whisper.json")
+            for entry in work_directory.iterdir()
+        )
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+
+
+def file_identity(path: Path) -> dict[str, str | int]:
+    resolved = path.resolve()
+    status = resolved.stat()
+    return {
+        "path": str(resolved),
+        "device": status.st_dev,
+        "inode": status.st_ino,
+        "size": status.st_size,
+        "mtime_ns": status.st_mtime_ns,
+        "ctime_ns": status.st_ctime_ns,
+    }
+
+
+def recovery_identity(
+    source: Path,
+    model: Path,
+    arguments: argparse.Namespace,
+    json_path: Path,
+    markdown_path: Path,
+) -> dict[str, Any]:
+    return {
+        "source": file_identity(source),
+        "model": file_identity(model),
+        "engine": WHISPER_CLI,
+        "vad": VAD_MODEL,
+        "language": arguments.language,
+        "tracks": [list(track) for track in arguments.track],
+        "suppress_echo": (
+            None if arguments.suppress_echo is None else list(arguments.suppress_echo)
+        ),
+        "json_path": str(json_path),
+        "markdown_path": str(markdown_path),
+        "format": arguments.format,
+    }
+
+
+def find_recovery(
+    work_root: Path,
+    identity: dict[str, Any],
+    tracks: list[tuple[int, str]],
+) -> tuple[Path, int, list[TrackResult]] | None:
+    if not work_root.is_dir():
+        return None
+    for directory in sorted(work_root.iterdir(), reverse=True):
+        if (
+            not WORK_DIRECTORY_PATTERN.fullmatch(directory.name)
+            or directory.is_symlink()
+        ):
+            continue
+        manifest_path = directory / "ready.json"
+        if not manifest_path.is_file():
+            manifest_path = directory / "pending.json"
+        if not manifest_path.is_file():
+            continue
+        try:
+            descriptor = os.open(directory / "lock", os.O_CREAT | os.O_RDWR, 0o600)
+        except FileNotFoundError:
+            continue
+        selected = False
+        try:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                continue
+            try:
+                manifest = json.loads(manifest_path.read_text())
+                if (
+                    not isinstance(manifest, dict)
+                    or manifest.get("identity") != identity
+                ):
+                    continue
+                if has_output_backups(directory) or (directory / "replacing").exists():
+                    raise TranscriptionError(
+                        f"Resolve the interrupted output replacement in {directory} before retrying"
+                    )
+                streams = manifest.get("streams")
+                if not isinstance(streams, list) or not streams:
+                    continue
+                if not all(
+                    isinstance(stream, dict)
+                    and type(stream.get("index")) is int
+                    and type(stream.get("start_ms")) is int
+                    for stream in streams
+                ):
+                    continue
+                if any(index >= len(streams) for index, _ in tracks):
+                    continue
+                completed = (
+                    [f"audio-{index}" for index, _ in tracks]
+                    if manifest_path.name == "ready.json"
+                    else manifest.get("completed_tracks", [])
+                )
+                if not isinstance(completed, list):
+                    continue
+                common_start_ms = min(stream["start_ms"] for stream in streams)
+                results: list[TrackResult] = []
+                for index, speaker in tracks:
+                    channel = f"audio-{index}"
+                    if channel not in completed:
+                        continue
+                    payload = json.loads(
+                        (directory / f"{channel}-whisper.json").read_text()
+                    )
+                    if not isinstance(payload, dict):
+                        results.clear()
+                        break
+                    start_offset_ms = max(
+                        0, streams[index]["start_ms"] - common_start_ms
+                    )
+                    try:
+                        segments = parse_segments(
+                            payload, channel, speaker, start_offset_ms
+                        )
+                    except TranscriptionError:
+                        results.clear()
+                        break
+                    results.append(
+                        TrackResult(
+                            channel=channel,
+                            speaker=speaker,
+                            stream_index=streams[index]["index"],
+                            start_offset_ms=start_offset_ms,
+                            language=detected_language(payload),
+                            segments=segments,
+                        )
+                    )
+            except (OSError, ValueError):
+                continue
+            if not results:
+                continue
+            selected = True
+            return directory, descriptor, results
+        finally:
+            if not selected:
+                os.close(descriptor)
+    return None
+
+
 def cleanup_stale_work_directories(work_root: Path) -> None:
     if not work_root.is_dir():
         return
@@ -98,7 +248,7 @@ def cleanup_stale_work_directories(work_root: Path) -> None:
         if (
             is_stale
             and not process_is_running(int(match.group(1)))
-            and not has_output_backups(entry)
+            and not has_saved_work(entry)
         ):
             shutil.rmtree(entry, ignore_errors=True)
 
@@ -203,11 +353,6 @@ def parse_arguments() -> argparse.Namespace:
         metavar="TARGET:REFERENCE",
         help="Remove overlapping duplicate speech from the target audio track",
     )
-    parser.add_argument(
-        "--archive-audio",
-        action="store_true",
-        help="After transcription, replace a two-track QuickTime MOV with mono 32 kbps AAC tracks",
-    )
     parser.add_argument("--progress-json", action="store_true", help=argparse.SUPPRESS)
     arguments = parser.parse_args()
     if arguments.track is None:
@@ -219,8 +364,6 @@ def parse_arguments() -> argparse.Namespace:
         target, reference = arguments.suppress_echo
         if target == reference or target not in indices or reference not in indices:
             parser.error("--suppress-echo requires two distinct selected audio tracks")
-    if arguments.archive_audio and arguments.output is not None:
-        parser.error("--archive-audio requires the default output location")
     return arguments
 
 
@@ -679,7 +822,13 @@ def replace_output_pair(
 ) -> None:
     backups: list[tuple[Path, Path]] = []
     installed: list[Path] = []
+    marker = work_directory / "replacing"
     with blocked_termination_signals():
+        if has_output_backups(work_directory) or marker.exists():
+            raise TranscriptionError(
+                f"Resolve the interrupted output replacement in {work_directory} before retrying"
+            )
+        marker.touch(exist_ok=False)
         try:
             for _, destination in replacements:
                 if destination.exists():
@@ -706,7 +855,9 @@ def replace_output_pair(
                     "Output replacement failed and rollback was incomplete; "
                     f"any remaining backups are in {work_directory}"
                 ) from write_error
+            marker.unlink()
             raise
+        marker.unlink()
 
 
 def write_outputs(
@@ -776,6 +927,7 @@ def transcribe_track(
 ) -> TrackResult:
     audio_path = work_directory / f"{channel}.wav"
     whisper_output = work_directory / f"{channel}-whisper"
+    Path(f"{whisper_output}.json").unlink(missing_ok=True)
     with log_stage("extracting", track=channel, stream_index=stream.index):
         extract_audio(source, stream, audio_path)
     with log_stage("whisper", track=channel):
@@ -808,6 +960,12 @@ def transcribe_track(
     return result
 
 
+def write_pending_manifest(work_directory: Path, manifest: dict[str, Any]) -> None:
+    temporary = work_directory / "pending.json.new"
+    temporary.write_text(json.dumps(manifest), encoding="utf-8")
+    os.replace(temporary, work_directory / "pending.json")
+
+
 def transcribe(
     source: Path,
     tracks: list[tuple[int, str]],
@@ -815,6 +973,8 @@ def transcribe(
     model: Path,
     progress_json: bool,
     work_directory: Path,
+    identity: dict[str, Any],
+    recovered_results: list[TrackResult] | None = None,
 ) -> list[TrackResult]:
     with log_stage("probing"):
         streams = probe_audio_streams(source)
@@ -825,207 +985,43 @@ def transcribe(
                 f"Audio track {index} does not exist; input has {len(streams)} audio tracks"
             )
     common_start_ms = min(stream.start_ms for stream in streams)
-    return [
-        transcribe_track(
-            source,
-            streams[index],
-            common_start_ms,
-            f"audio-{index}",
-            speaker,
-            language,
-            model,
-            speaker,
-            position * 100 // len(tracks),
-            (position + 1) * 100 // len(tracks),
-            progress_json,
-            work_directory,
-        )
-        for position, (index, speaker) in enumerate(tracks)
-    ]
-
-
-def run_archive_command(command: list[str]) -> str:
-    global _active_process, _pending_termination_signal, _process_starting
-
-    process: subprocess.Popen[str] | None = None
-    started = time.monotonic()
-    diagnostic("archive_command_starting", executable=command[0])
-    try:
-        _process_starting = True
-        try:
-            process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    completed = {result.channel: result for result in recovered_results or []}
+    manifest = {
+        "identity": identity,
+        "streams": [
+            {"index": stream.index, "start_ms": stream.start_ms} for stream in streams
+        ],
+        "completed_tracks": list(completed),
+    }
+    write_pending_manifest(work_directory, manifest)
+    results: list[TrackResult] = []
+    for position, (index, speaker) in enumerate(tracks):
+        channel = f"audio-{index}"
+        result = completed.get(channel)
+        if result is None:
+            result = transcribe_track(
+                source,
+                streams[index],
+                common_start_ms,
+                channel,
+                speaker,
+                language,
+                model,
+                speaker,
+                position * 100 // len(tracks),
+                (position + 1) * 100 // len(tracks),
+                progress_json,
+                work_directory,
             )
-            _active_process = process
-            diagnostic("archive_command_started", child_pid=process.pid)
-        finally:
-            _process_starting = False
-        pending_signal = _pending_termination_signal
-        _pending_termination_signal = None
-        if pending_signal is not None:
-            handle_termination(pending_signal, None)
-        stdout, stderr = process.communicate()
-        diagnostic(
-            "archive_command_exited",
-            "error" if process.returncode else "info",
-            child_pid=process.pid,
-            exit_code=process.returncode,
-            elapsed_seconds=time.monotonic() - started,
-            stderr=stderr[-8192:],
-        )
-        if process.returncode != 0:
-            raise TranscriptionError(stderr.strip() or "Audio archive command failed")
-        return stdout
-    finally:
-        _process_starting = False
-        _pending_termination_signal = None
-        if process is not None:
-            stop_process(process)
-            if _active_process is process:
-                _active_process = None
-
-
-def inspect_archive_audio(source: Path) -> tuple[list[dict[str, Any]], bool]:
-    if source.suffix.lower() != ".mov":
-        raise TranscriptionError("Audio archive requires a MOV recording")
-    payload = json.loads(
-        run_archive_command(
-            [
-                FFPROBE,
-                "-v",
-                "error",
-                "-show_entries",
-                "stream=index,codec_type,codec_name,channels,sample_rate,start_time,duration:"
-                "format=format_name:format_tags=major_brand,meeting_recorder_archive",
-                "-of",
-                "json",
-                str(source),
-            ]
-        )
-    )
-    container = payload.get("format", {})
-    if (
-        "mov" not in container.get("format_name", "").split(",")
-        or container.get("tags", {}).get("major_brand", "").strip() != "qt"
-    ):
-        raise TranscriptionError("Audio archive requires a QuickTime MOV container")
-    streams = payload.get("streams", [])
-    if len(streams) != 2 or any(
-        stream.get("codec_type") != "audio" for stream in streams
-    ):
-        raise TranscriptionError("Audio archive requires exactly two audio tracks")
-    for stream in streams:
-        for field in ("start_time", "duration"):
-            try:
-                value = float(stream[field])
-            except (KeyError, TypeError, ValueError) as error:
-                raise TranscriptionError(f"Missing audio {field}") from error
-            if not math.isfinite(value) or (field == "duration" and value <= 0):
-                raise TranscriptionError(f"Invalid audio {field}")
-            stream[field] = value
-    archived = (
-        payload.get("format", {}).get("tags", {}).get("meeting_recorder_archive")
-        == ARCHIVE_TAG
-    )
-    return streams, archived
-
-
-def require_archive_format(streams: list[dict[str, Any]]) -> None:
-    if any(
-        stream.get("codec_name") != "aac"
-        or stream.get("channels") != 1
-        or stream.get("sample_rate") != "48000"
-        for stream in streams
-    ):
-        raise TranscriptionError("Archive must contain two mono 48 kHz AAC tracks")
-
-
-def archive_audio(source: Path, work_directory: Path) -> None:
-    original, archived = inspect_archive_audio(source)
-    if archived:
-        require_archive_format(original)
-        diagnostic("archive_skipped", reason="already_archived")
-        return
-    temporary = work_directory / "archive.mov"
-    run_archive_command(
-        [
-            FFMPEG,
-            "-nostdin",
-            "-v",
-            "error",
-            "-n",
-            "-copyts",
-            "-start_at_zero",
-            "-i",
-            str(source),
-            "-map",
-            "0:a:0",
-            "-map",
-            "0:a:1",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "32k",
-            "-ac:a",
-            "1",
-            "-ar:a",
-            "48000",
-            "-avoid_negative_ts",
-            "disabled",
-            "-use_editlist",
-            "1",
-            "-movflags",
-            "+use_metadata_tags",
-            # Avoid appending copied metadata to the container's ftyp brand.
-            "-metadata",
-            "major_brand=",
-            "-metadata",
-            f"meeting_recorder_archive={ARCHIVE_TAG}",
-            "-f",
-            "mov",
-            str(temporary),
-        ]
-    )
-    compressed, tagged = inspect_archive_audio(temporary)
-    require_archive_format(compressed)
-    if not tagged:
-        raise TranscriptionError("Archive completion tag was not preserved")
-    for before, after in zip(original, compressed, strict=True):
-        if abs(before["duration"] - after["duration"]) > 0.05:
-            raise TranscriptionError("Archive changed an audio track duration")
-    original_offset = original[1]["start_time"] - original[0]["start_time"]
-    compressed_offset = compressed[1]["start_time"] - compressed[0]["start_time"]
-    if abs(original_offset - compressed_offset) > 0.05:
-        raise TranscriptionError("Archive changed the relative audio track timing")
-    run_archive_command(
-        [
-            FFMPEG,
-            "-nostdin",
-            "-v",
-            "error",
-            "-xerror",
-            "-i",
-            str(temporary),
-            "-map",
-            "0:a:0",
-            "-map",
-            "0:a:1",
-            "-f",
-            "null",
-            "-",
-        ]
-    )
-    diagnostic(
-        "archive_size_compared",
-        original_bytes=source.stat().st_size,
-        compressed_bytes=temporary.stat().st_size,
-    )
-    if temporary.stat().st_size < source.stat().st_size:
-        temporary.chmod(source.stat().st_mode & 0o777)
-        os.replace(temporary, source)
-        diagnostic("archive_installed")
-    else:
-        diagnostic("archive_skipped", reason="not_smaller")
+            if identity["source"] != file_identity(source) or identity[
+                "model"
+            ] != file_identity(model):
+                raise TranscriptionError("Input or model changed during transcription")
+            completed[channel] = result
+            manifest["completed_tracks"] = list(completed)
+            write_pending_manifest(work_directory, manifest)
+        results.append(result)
+    return results
 
 
 def main() -> int:
@@ -1035,9 +1031,7 @@ def main() -> int:
     arguments = parse_arguments()
     _diagnostics_enabled = arguments.progress_json
     started = time.monotonic()
-    diagnostic(
-        "job_started", language=arguments.language, archive=arguments.archive_audio
-    )
+    diagnostic("job_started", language=arguments.language)
     source = arguments.input.expanduser().resolve()
     if not source.is_file():
         diagnostic("input_missing", "error")
@@ -1054,6 +1048,7 @@ def main() -> int:
     work_root = json_path.parent / ".tmp"
     cleanup_stale_work_directories(work_root)
     work_directory = work_root / f"whisper-{os.getpid()}-{time.time_ns()}"
+    work_lock: int | None = None
     outputs_written = False
     try:
         diagnostic(
@@ -1064,20 +1059,36 @@ def main() -> int:
             existing_json=json_path.is_file(),
             existing_markdown=markdown_path.is_file(),
         )
-        work_directory.mkdir(parents=True)
+        identity = recovery_identity(source, model, arguments, json_path, markdown_path)
+        recovered = find_recovery(work_root, identity, arguments.track)
+        if recovered is None:
+            results = []
+            work_directory.mkdir(parents=True)
+            work_lock = os.open(work_directory / "lock", os.O_CREAT | os.O_RDWR, 0o600)
+            fcntl.flock(work_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        else:
+            work_directory, work_lock, results = recovered
+            diagnostic("transcription_recovered", directory=str(work_directory))
         emit_event(arguments.progress_json, "progress", phase="preparing", progress=0)
-        if arguments.archive_audio:
-            with log_stage("archive_inspection"):
-                inspect_archive_audio(source)
-        with log_stage("transcribing"):
-            results = transcribe(
-                source,
-                arguments.track,
-                arguments.language,
-                model,
-                arguments.progress_json,
-                work_directory,
-            )
+        if len(results) < len(arguments.track):
+            with log_stage("transcribing"):
+                results = transcribe(
+                    source,
+                    arguments.track,
+                    arguments.language,
+                    model,
+                    arguments.progress_json,
+                    work_directory,
+                    identity,
+                    results,
+                )
+        if identity != recovery_identity(
+            source, model, arguments, json_path, markdown_path
+        ):
+            raise TranscriptionError("Input or model changed during transcription")
+        if (work_directory / "pending.json").is_file():
+            # Publish recovery only after every track has completed successfully.
+            os.replace(work_directory / "pending.json", work_directory / "ready.json")
         segments = merged_segments(results, arguments.suppress_echo)
         with log_stage("saving", segment_count=len(segments)):
             write_outputs(
@@ -1104,12 +1115,6 @@ def main() -> int:
                 ),
             )
         outputs_written = True
-        if arguments.archive_audio:
-            emit_event(
-                arguments.progress_json, "progress", phase="archiving", progress=0
-            )
-            with log_stage("archiving"):
-                archive_audio(source, work_directory)
         diagnostic("job_finished", elapsed_seconds=time.monotonic() - started)
         emit_event(
             arguments.progress_json,
@@ -1136,8 +1141,17 @@ def main() -> int:
         print(f"whisper: {error}", file=sys.stderr)
         return 1
     finally:
-        if outputs_written or not has_output_backups(work_directory):
-            shutil.rmtree(work_directory, ignore_errors=True)
+        try:
+            if outputs_written or not has_saved_work(work_directory):
+                shutil.rmtree(work_directory, ignore_errors=True)
+            elif work_directory.is_dir():
+                print(
+                    f"whisper: recovery files preserved in {work_directory}",
+                    file=sys.stderr,
+                )
+        finally:
+            if work_lock is not None:
+                os.close(work_lock)
 
 
 if __name__ == "__main__":

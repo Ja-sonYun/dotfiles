@@ -14,22 +14,14 @@ HookInput = dict[str, object]
 StateForEvent = Callable[[HookInput, str], str | None]
 Main = Callable[[], int]
 
-hooks_dir = os.environ.get("AI_AGENTS_HOOKS_DIR")
-HOOKS_DIR = (
-    Path(hooks_dir)
-    if hooks_dir
-    else (
-        Path(__file__).parents[4]
-        / "shell"
-        / "secrets"
-        / "modules"
-        / "home-manager"
-        / "ai-agents"
-        / "hooks"
-    )
+hook_path = os.environ.get("AI_AGENTS_STATUS_HOOK")
+HOOK_PATH = (
+    Path(hook_path)
+    if hook_path
+    else Path(__file__).parents[4]
+    / "modules/programs/tmux/extensions/agent/pkgs/status.py"
 )
-sys.path.insert(0, str(HOOKS_DIR))
-STATUS = runpy.run_path(str(HOOKS_DIR / "status.py"))
+STATUS = runpy.run_path(str(HOOK_PATH))
 STATE_FOR_EVENT = cast(StateForEvent, STATUS["state_for_event"])
 MAIN = cast(Main, STATUS["main"])
 
@@ -124,8 +116,9 @@ class StateForEventTest(unittest.TestCase):
             "Unknown",
         ):
             with self.subTest(event_name=event_name):
-                self.assertIsNone(
-                    STATE_FOR_EVENT({"hook_event_name": event_name}, "Claude")
+                self.assertEqual(
+                    STATE_FOR_EVENT({"hook_event_name": event_name}, "Claude"),
+                    "idle" if event_name == "StopFailure" else None,
                 )
 
 
@@ -139,7 +132,7 @@ class MainTest(unittest.TestCase):
         )
         with (
             patch.dict(os.environ, {"AI_AGENT_CLIENT": "Codex"}),
-            patch.object(sys, "argv", ["status.py", "status-command"]),
+            patch.object(sys, "argv", ["status.py", "status-command", "tmux"]),
             patch.object(sys, "stdin", io.StringIO(hook_input)),
             patch.object(subprocess, "run") as run,
         ):
@@ -157,7 +150,7 @@ class MainTest(unittest.TestCase):
         hook_input = json.dumps({"hook_event_name": "Stop"})
         with (
             patch.dict(os.environ, {"AI_AGENT_CLIENT": "Claude"}),
-            patch.object(sys, "argv", ["status.py", "status-command"]),
+            patch.object(sys, "argv", ["status.py", "status-command", "tmux"]),
             patch.object(sys, "stdin", io.StringIO(hook_input)),
             patch.object(
                 subprocess,
@@ -176,7 +169,7 @@ class MainTest(unittest.TestCase):
         )
         with (
             patch.dict(os.environ, {"AI_AGENT_CLIENT": "Codex"}),
-            patch.object(sys, "argv", ["status.py", "status-command"]),
+            patch.object(sys, "argv", ["status.py", "status-command", "tmux"]),
             patch.object(sys, "stdin", io.StringIO(hook_input)),
             patch.object(subprocess, "run") as run,
         ):
@@ -192,7 +185,7 @@ class MainTest(unittest.TestCase):
             self.assertEqual(MAIN(), 2)
         with (
             patch.dict(os.environ, {}, clear=True),
-            patch.object(sys, "argv", ["status.py", "status-command"]),
+            patch.object(sys, "argv", ["status.py", "status-command", "tmux"]),
         ):
             self.assertEqual(MAIN(), 2)
 

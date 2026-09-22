@@ -60,7 +60,6 @@ let
       ../modules/shell
       ../modules/programs
       ../shell
-      ../misc/fonts
     ]
     ++ nixpkgs.lib.optionals (hostConfig.hasTag hostname "ai") [
       agenix-secrets.homeManagerModules.ai-agents
@@ -68,11 +67,12 @@ let
     ++ (
       if hosts.${hostname}.system == "aarch64-darwin" then
         [
-          ../hosts/aarch64-darwin/homemanager.nix
+          ../hosts/aarch64-darwin/home-manager.nix
         ]
       else if hosts.${hostname}.system == "x86_64-linux" then
         [
-          ../hosts/x86_64-linux/homemanager.nix
+          ../modules/services/linux
+          ../hosts/x86_64-linux/home-manager.nix
         ]
       else
         [ ]
@@ -83,10 +83,7 @@ let
     home-manager.lib.homeManagerConfiguration {
       pkgs = mkPkgsProvider hostname;
       extraSpecialArgs = mkSpecialArgs hostname;
-      modules = [
-        ../hosts/x86_64-linux/core/nix-core.nix
-      ]
-      ++ (mkHomeManagerConfig hostname);
+      modules = mkHomeManagerConfig hostname;
     };
 
   mkAarch64DarwinHomeConfiguration =
@@ -102,21 +99,12 @@ let
         agenix.darwinModules.default
         agenix-secrets.darwinModules.secrets
 
-        ../hosts/aarch64-darwin/shell.nix
-
-        ../hosts/aarch64-darwin/core/nix-core.nix
-        ../hosts/aarch64-darwin/core/system.nix
-        ../hosts/aarch64-darwin/core/host-users.nix
-        ../hosts/aarch64-darwin/core/spotlight
-        ../hosts/aarch64-darwin/core/menubar
-
-        ../hosts/aarch64-darwin/homebrew.nix
-        ../hosts/aarch64-darwin/core/display
-
+        ../modules/system/darwin
+        ../modules/desktop/darwin
         ../modules/services
         ../modules/services/darwin
 
-        ../hosts/aarch64-darwin/services.nix
+        ../hosts/aarch64-darwin/darwin.nix
 
         home-manager.darwinModules.home-manager
         {
@@ -125,6 +113,7 @@ let
             useUserPackages = false;
             extraSpecialArgs = specialArgs;
             users.${specialArgs.username}.imports = [
+              ../modules/desktop/darwin/home-manager.nix
               ../modules/services/darwin/home-manager.nix
             ]
             ++ mkHomeManagerConfig hostname;

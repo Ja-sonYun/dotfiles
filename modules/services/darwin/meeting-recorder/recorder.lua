@@ -25,6 +25,7 @@ logger:i("module_starting", { transcription_enabled = config.transcriberPath ~= 
 local outputDirectory = config.outputDirectory:gsub("/+$", "")
 local pendingRecordingsSetting = "meeting-recorder.pending-recordings"
 local transcriptionQueueSetting = "meeting-recorder.transcription-queue"
+local forcedTranscriptionsSetting = "meeting-recorder.forced-transcriptions"
 
 local browsers = {
 	["com.apple.Safari"] = {
@@ -845,6 +846,13 @@ local function persistTranscriptionQueue()
 		table.insert(pending, path)
 	end
 	hs.settings.set(transcriptionQueueSetting, pending)
+	local forced = {}
+	for _, path in ipairs(pending) do
+		if module.forcedTranscriptions[path] then
+			forced[path] = true
+		end
+	end
+	hs.settings.set(forcedTranscriptionsSetting, forced)
 	scheduleMissingRefresh()
 end
 
@@ -856,11 +864,11 @@ local function restoreTranscriptionQueue()
 	end
 
 	local seen = {}
+	local forced = hs.settings.get(forcedTranscriptionsSetting)
 	for _, path in ipairs(saved) do
-		if type(path) == "string" and transcriptExists(path) then
-			logger:i("queue_restore_item_skipped", { source = path, reason = "transcript_exists" })
-		elseif type(path) == "string" and not seen[path] and hs.fs.attributes(path, "mode") == "file" then
+		if type(path) == "string" and not seen[path] and hs.fs.attributes(path, "mode") == "file" then
 			seen[path] = true
+			module.forcedTranscriptions[path] = type(forced) == "table" and forced[path] == true or nil
 			table.insert(module.transcriptionQueue, path)
 			logger:i("queue_item_restored", { source = path })
 		else
@@ -875,7 +883,8 @@ local function restoreTranscriptionQueue()
 end
 
 local function transcriptionError(stderr)
-	return stderr:match("whisper:%s*([^\n]+)")
+	return stderr:match("archive%-audio:%s*([^\n]+)")
+		or stderr:match("whisper:%s*([^\n]+)")
 		or stderr:match("([^\n]+)\n*$")
 		or "Local transcription exited with an error"
 end
@@ -953,9 +962,6 @@ startNextTranscription = function()
 		elseif module.failedTranscriptions[candidate] then
 			logger:i("queue_item_skipped", { source = candidate, reason = "failed_this_session" })
 			index = index + 1
-		elseif not module.forcedTranscriptions[candidate] and transcriptExists(candidate) then
-			logger:i("queue_item_removed", { source = candidate, reason = "transcript_exists" })
-			table.remove(module.transcriptionQueue, index)
 		else
 			table.remove(module.transcriptionQueue, index)
 			sourcePath = candidate
@@ -967,143 +973,162 @@ startNextTranscription = function()
 		updateMenuBar()
 		return
 	end
+	local archiveOnly = not module.forcedTranscriptions[sourcePath] and transcriptExists(sourcePath)
 	module.transcriptionPath = sourcePath
-	module.forcedTranscriptions[sourcePath] = nil
 	module.queueWaitReason = nil
-	module.transcriptionStartedAt = hs.timer.secondsSinceEpoch()
-	module.transcriptionLastOutputAt = module.transcriptionStartedAt
-	module.transcriptionStage = "launching"
-	module.transcriptionProgressBucket = nil
 	transcriptionLogger.context = { job_id = hs.host.uuid(), source = sourcePath }
 	transcriptionLogger:i("queue_item_selected", {
 		queue_length = #module.transcriptionQueue,
 		input_bytes = hs.fs.attributes(sourcePath, "size"),
 	})
-	module.transcriptionProgress = 0
-	module.transcriptionPhase = "preparing"
-	module.transcriptionOutputBuffer = ""
 	module.transcriptionOutputPath = nil
-	module.transcriptionStderr = ""
 	persistTranscriptionQueue()
-	local arguments = {
-		"--track",
-		"0:Remote",
-		"--track",
-		"1:You",
-		"--suppress-echo",
-		"1:0",
-		"--format",
-		"both",
-		"--language",
-		config.transcription.language,
-		"--archive-audio",
-		"--progress-json",
-	}
-	if config.transcription.model then
-		table.insert(arguments, "--model")
-		table.insert(arguments, config.transcription.model)
-	end
-	table.insert(arguments, sourcePath)
-	transcriptionLogger:i("process_start_requested", { executable = config.transcriberPath, arguments = arguments })
-	local task
-	task = hs.task.new(
-		config.transcriberPath,
-		transcriptionLogger:wrap("completion_callback_failed", function(exitCode, stdout, stderr)
-			if module.transcriptionTask ~= task then
-				return
+
+	local startPhase
+	startPhase = function(archiving)
+		module.transcriptionStartedAt = hs.timer.secondsSinceEpoch()
+		module.transcriptionLastOutputAt = module.transcriptionStartedAt
+		module.transcriptionStage = "launching"
+		module.transcriptionProgressBucket = nil
+		module.transcriptionProgress = 0
+		module.transcriptionPhase = archiving and "archiving" or "preparing"
+		module.transcriptionOutputBuffer = ""
+		module.transcriptionStderr = ""
+		local executable = archiving and config.archivePath or config.transcriberPath
+		local arguments
+		if archiving then
+			arguments = { "--progress-json", sourcePath }
+		else
+			arguments = {
+				"--track",
+				"0:Remote",
+				"--track",
+				"1:You",
+				"--suppress-echo",
+				"1:0",
+				"--format",
+				"both",
+				"--language",
+				config.transcription.language,
+				"--progress-json",
+			}
+			if config.transcription.model then
+				table.insert(arguments, "--model")
+				table.insert(arguments, config.transcription.model)
 			end
-			handleTranscriptionOutput(stdout, stderr)
-			if module.transcriptionHeartbeat then
-				module.transcriptionHeartbeat:stop()
-				module.transcriptionHeartbeat = nil
-			end
-			if module.transcriptionOutputBuffer ~= "" then
-				transcriptionLogger:w("incomplete_event_at_exit", { bytes = #module.transcriptionOutputBuffer })
-			end
-			local outputPath = module.transcriptionOutputPath or transcriptOutputPath(sourcePath)
-			local outputBytes = hs.fs.attributes(outputPath, "size")
-			transcriptionLogger:write(exitCode == 0 and "info" or "error", "process_exited", {
-				exit_code = exitCode,
-				elapsed_seconds = hs.timer.secondsSinceEpoch() - module.transcriptionStartedAt,
-				stage = module.transcriptionStage,
-				phase = module.transcriptionPhase,
-				progress = module.transcriptionProgress,
-				output_exists = outputBytes ~= nil,
-				output_bytes = outputBytes,
-			})
-			if exitCode == 0 and not outputBytes then
-				transcriptionLogger:e("result_missing", { output = outputPath })
-			end
-			local taskStderr = module.transcriptionStderr
-			local failedPhase = module.transcriptionPhase
+			table.insert(arguments, sourcePath)
+		end
+		transcriptionLogger:i("process_start_requested", { executable = executable, arguments = arguments })
+		local task
+		task = hs.task.new(
+			executable,
+			transcriptionLogger:wrap("completion_callback_failed", function(exitCode, stdout, stderr)
+				if module.transcriptionTask ~= task then
+					return
+				end
+				handleTranscriptionOutput(stdout, stderr)
+				if module.transcriptionHeartbeat then
+					module.transcriptionHeartbeat:stop()
+					module.transcriptionHeartbeat = nil
+				end
+				if module.transcriptionOutputBuffer ~= "" then
+					transcriptionLogger:w("incomplete_event_at_exit", { bytes = #module.transcriptionOutputBuffer })
+				end
+				local outputPath = module.transcriptionOutputPath or transcriptOutputPath(sourcePath)
+				local outputBytes = hs.fs.attributes(outputPath, "size")
+				transcriptionLogger:write(exitCode == 0 and "info" or "error", "process_exited", {
+					exit_code = exitCode,
+					elapsed_seconds = hs.timer.secondsSinceEpoch() - module.transcriptionStartedAt,
+					stage = module.transcriptionStage,
+					phase = module.transcriptionPhase,
+					progress = module.transcriptionProgress,
+					output_exists = outputBytes ~= nil,
+					output_bytes = outputBytes,
+				})
+				if exitCode == 0 and not transcriptExists(sourcePath) then
+					transcriptionLogger:e("result_missing", { output = outputPath })
+					exitCode = 1
+					module.transcriptionStderr = "Transcript output is incomplete"
+				end
+				if exitCode == 0 and not archiving then
+					module.forcedTranscriptions[sourcePath] = nil
+					persistTranscriptionQueue()
+					startPhase(true)
+					return
+				end
+				local taskStderr = module.transcriptionStderr
+				module.transcriptionTask = nil
+				module.transcriptionPath = nil
+				module.transcriptionPhase = nil
+				module.transcriptionOutputBuffer = nil
+				module.transcriptionOutputPath = nil
+				module.transcriptionStderr = nil
+				if exitCode == 0 then
+					module.forcedTranscriptions[sourcePath] = nil
+					notifyStatus("Transcript saved: " .. fileName(outputPath))
+				else
+					local message = transcriptionError(taskStderr)
+					local prefix = archiving and "Audio compression failed: " or "Transcription failed: "
+					module.failedTranscriptions[sourcePath] = prefix .. message
+					table.insert(module.transcriptionQueue, sourcePath)
+					transcriptionLogger:w(
+						"requeued",
+						{ retry = "deferred_until_reload", queue_length = #module.transcriptionQueue }
+					)
+					logger:e(message)
+					notifyFailure(prefix .. message)
+				end
+				persistTranscriptionQueue()
+				updateMenuBar()
+				startNextTranscription()
+			end),
+			transcriptionLogger:wrap("stream_callback_failed", function(_, stdout, stderr)
+				if module.transcriptionTask ~= task then
+					return false
+				end
+				handleTranscriptionOutput(stdout, stderr)
+				return true
+			end),
+			arguments
+		)
+		module.transcriptionTask = task
+		updateMenuBar()
+		if not task or not task:start() then
+			transcriptionLogger:e("process_start_failed", { executable = executable, retry = "deferred_until_reload" })
+			local message = archiving and "Could not start audio compression" or "Could not start local transcription"
+			module.failedTranscriptions[sourcePath] = message
+			table.insert(module.transcriptionQueue, sourcePath)
 			module.transcriptionTask = nil
 			module.transcriptionPath = nil
 			module.transcriptionPhase = nil
 			module.transcriptionOutputBuffer = nil
 			module.transcriptionOutputPath = nil
 			module.transcriptionStderr = nil
-			if exitCode == 0 then
-				notifyStatus("Transcript saved: " .. fileName(outputPath))
-			else
-				local message = transcriptionError(taskStderr)
-				local prefix = failedPhase == "archiving" and "Audio compression failed: " or "Transcription failed: "
-				module.failedTranscriptions[sourcePath] = prefix .. message
-				table.insert(module.transcriptionQueue, sourcePath)
-				transcriptionLogger:w(
-					"requeued",
-					{ retry = "deferred_until_reload", queue_length = #module.transcriptionQueue }
-				)
-				logger:e(message)
-				notifyFailure(prefix .. message)
-			end
 			persistTranscriptionQueue()
+			logger:e(message)
+			notifyFailure(message)
 			updateMenuBar()
 			startNextTranscription()
-		end),
-		transcriptionLogger:wrap("stream_callback_failed", function(_, stdout, stderr)
-			if module.transcriptionTask ~= task then
-				return false
-			end
-			handleTranscriptionOutput(stdout, stderr)
-			return true
-		end),
-		arguments
-	)
-	module.transcriptionTask = task
-	updateMenuBar()
-	if not task or not task:start() then
-		transcriptionLogger:e(
-			"process_start_failed",
-			{ executable = config.transcriberPath, retry = "deferred_until_reload" }
-		)
-		module.failedTranscriptions[sourcePath] = "Could not start local transcription"
-		table.insert(module.transcriptionQueue, sourcePath)
-		module.transcriptionTask = nil
-		module.transcriptionPath = nil
-		module.transcriptionPhase = nil
-		persistTranscriptionQueue()
-		logger:e("Could not start local transcription")
-		notifyFailure("Could not start local transcription")
-		updateMenuBar()
-		startNextTranscription()
-	else
-		transcriptionLogger:i("process_started", { pid = task:pid() })
-		module.transcriptionHeartbeat = hs.timer.doEvery(
-			30,
-			transcriptionLogger:wrap("heartbeat_failed", function()
-				local now = hs.timer.secondsSinceEpoch()
-				transcriptionLogger:i("process_waiting", {
-					pid = task:pid(),
-					running = task:isRunning(),
-					stage = module.transcriptionStage,
-					phase = module.transcriptionPhase,
-					progress = module.transcriptionProgress,
-					elapsed_seconds = now - module.transcriptionStartedAt,
-					seconds_since_output = now - module.transcriptionLastOutputAt,
-				})
-			end)
-		)
+		else
+			transcriptionLogger:i("process_started", { pid = task:pid() })
+			module.transcriptionHeartbeat = hs.timer.doEvery(
+				30,
+				transcriptionLogger:wrap("heartbeat_failed", function()
+					local now = hs.timer.secondsSinceEpoch()
+					transcriptionLogger:i("process_waiting", {
+						pid = task:pid(),
+						running = task:isRunning(),
+						stage = module.transcriptionStage,
+						phase = module.transcriptionPhase,
+						progress = module.transcriptionProgress,
+						elapsed_seconds = now - module.transcriptionStartedAt,
+						seconds_since_output = now - module.transcriptionLastOutputAt,
+					})
+				end)
+			)
+		end
 	end
+	startPhase(archiveOnly)
 end
 
 local function enqueueTranscription(path, force, deferStart)
@@ -1157,14 +1182,26 @@ local function transcribeNext(path, force)
 		notifyFailure("Recording not found: " .. fileName(path))
 		return
 	end
-	removeQueuedTranscription(path)
-	if enqueueTranscription(path, force, true) then
-		table.remove(module.transcriptionQueue)
-		table.insert(module.transcriptionQueue, 1, path)
-		persistTranscriptionQueue()
-		updateMenuBar()
-		startNextTranscription()
+	local queuedIndex
+	for index, queuedPath in ipairs(module.transcriptionQueue) do
+		if queuedPath == path then
+			queuedIndex = index
+			break
+		end
 	end
+	if queuedIndex then
+		module.failedTranscriptions[path] = nil
+		module.forcedTranscriptions[path] = force or nil
+	elseif enqueueTranscription(path, force, true) then
+		queuedIndex = #module.transcriptionQueue
+	else
+		return
+	end
+	table.remove(module.transcriptionQueue, queuedIndex)
+	table.insert(module.transcriptionQueue, 1, path)
+	persistTranscriptionQueue()
+	updateMenuBar()
+	startNextTranscription()
 end
 
 local function startAllTranscriptions()
@@ -2165,9 +2202,9 @@ recordingMenu = function()
 					local complete = transcriptExists(path)
 					local actions = {
 						{
-							title = complete and "Transcribe Again" or failed and "Retry Next" or "Run Next",
+							title = complete and "Archive Next" or failed and "Retry Next" or "Run Next",
 							fn = function()
-								transcribeNext(path, complete)
+								transcribeNext(path, module.forcedTranscriptions[path] == true)
 							end,
 						},
 					}

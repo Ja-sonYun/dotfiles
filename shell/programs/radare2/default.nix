@@ -1,4 +1,7 @@
 { pkgs, config, ... }:
+let
+  extension = pkgs.stdenv.hostPlatform.extensions.sharedLibrary;
+in
 {
   programs.radare2 = {
     enable = true;
@@ -16,8 +19,8 @@
     '';
 
     plugins = {
-      "libcore_pdd.dylib" = "${pkgs.r2dec}/lib/radare2/last/libcore_pdd.dylib";
-      "libcore_r2ghidra.dylib" = "${pkgs.r2ghidra}/lib/radare2/last/libcore_r2ghidra.dylib";
+      "libcore_pdd${extension}" = "${pkgs.r2dec}/lib/radare2/last/libcore_pdd${extension}";
+      "libcore_r2ghidra${extension}" = "${pkgs.r2ghidra}/lib/radare2/last/libcore_r2ghidra${extension}";
     };
 
     envFiles = {

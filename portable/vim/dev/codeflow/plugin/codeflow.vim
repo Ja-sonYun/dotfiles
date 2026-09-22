@@ -15,8 +15,15 @@ nnoremap <silent> qp <Cmd>call codeflow#core#PrepareJump()<CR><Cmd>cprev<CR>
 def TabCC(): void
   codeflow.PrepareJump(true)
   const row = line('.')
+  const isLocation = getwininfo(win_getid())[0].loclist
+  const location = isLocation ? getloclist(0, {items: 1, title: 1, context: 1}) : {}
   tabnew
-  execute 'cc' row
+  if isLocation
+    setloclist(0, [], ' ', location)
+    execute 'll' row
+  else
+    execute 'cc' row
+  endif
 enddef
 
 def ConfigureQuickfix(): void

@@ -11,7 +11,10 @@ let
   configuration = mkConfiguration {
     featureModules = [
       aiAgentModules.agents
-      aiAgentModules.core
+      aiAgentModules.enable
+      aiAgentModules.environment
+      aiAgentModules.instructions
+      aiAgentModules.skills
       aiAgentModules.mcp
     ];
     module.programs.ai-agents = {
@@ -19,6 +22,12 @@ let
       context = "Shared AI tool instructions.";
       skills.review-code = ./fixtures/review-code;
       agentsDir = ./fixtures;
+      modelMap = lib.genAttrs [ "claude" "codex" "pi" ] (
+        client:
+        lib.genAttrs [ "xhigh" "high" "middle" "low" ] (tier: {
+          model = "test-${client}-${tier}";
+        })
+      );
       mcp.servers = {
         docs.command = "test-docs-mcp";
         other.command = "test-other-mcp";
@@ -28,7 +37,10 @@ let
   disabledConfiguration = mkConfiguration {
     featureModules = [
       aiAgentModules.agents
-      aiAgentModules.core
+      aiAgentModules.enable
+      aiAgentModules.environment
+      aiAgentModules.instructions
+      aiAgentModules.skills
       aiAgentModules.mcp
     ];
     module.programs.ai-agents = {
@@ -41,7 +53,10 @@ let
   directConfiguration = mkConfiguration {
     featureModules = [
       aiAgentModules.agents
-      aiAgentModules.core
+      aiAgentModules.enable
+      aiAgentModules.environment
+      aiAgentModules.instructions
+      aiAgentModules.skills
       aiAgentModules.mcp
     ];
     module.programs = {
@@ -113,7 +128,17 @@ let
     };
     files = {
       "~/.claude/CLAUDE.md".text = "Shared AI tool instructions.";
-      "~/.claude/agents/test-agent.md".sameAs = ./fixtures/test-agent.md;
+      "~/.claude/agents/test-agent.md".text = ''
+        ---
+        name: test-agent
+        description: Test agent fixture.
+        tools:
+        - mcp__plugin_hm_docs__*
+        permissionMode: plan
+        ---
+
+        Follow the test agent instructions.
+      '';
       "~/.claude/skills/review-code/SKILL.md".sameAs = ./fixtures/review-code/SKILL.md;
       "~/.codex/AGENTS.md".text = "Shared AI tool instructions.";
       "~/.codex/agents/test-agent.toml".toml.contains = {
@@ -138,6 +163,7 @@ let
         description: Test agent fixture.
         tools:
         - mcp__docs
+        permissionMode: plan
         ---
 
         Follow the test agent instructions.

@@ -8,9 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import tomlkit
-from tomlkit.container import Container
-from tomlkit.items import AoT, Null, Table, Whitespace
-
+from tomlkit.container import Container, OutOfOrderTableProxy
+from tomlkit.items import AoT, InlineTable, Null, Table, Whitespace
 
 GENERATED_COMMENT = "nix-generated"
 CONTAINER_COMMENT = "nix-generated-container"
@@ -59,16 +58,36 @@ def _clear_comment(value: Any) -> None:
 
 
 def _item(document: MutableMapping[str, Any], key: str) -> Any:
+    if isinstance(document, OutOfOrderTableProxy):
+        return document._internal_container.item(key)
     item = getattr(document, "item", None)
     return item(key) if item is not None else document[key]
 
 
+def _expand_inline_table(value: InlineTable) -> Table:
+    table = tomlkit.table()
+    if value.trivia.comment:
+        table.comment(value.trivia.comment)
+    for key in value:
+        child = _item(value, key)
+        if isinstance(child, InlineTable):
+            child = _expand_inline_table(child)
+        elif not isinstance(child, (Table, AoT)):
+            child.trivia.indent = ""
+            child.trivia.trail = "\n"
+        table.add(key, child)
+    return table
+
+
 def _mark_generated(value: Any) -> None:
-    if isinstance(value, Table):
+    if isinstance(value, MutableMapping):
         if value:
-            for key in value:
+            for key in list(value):
+                child = _item(value, key)
+                if isinstance(child, InlineTable):
+                    value[key] = _expand_inline_table(child)
                 _mark_generated(_item(value, key))
-        else:
+        elif isinstance(value, Table):
             value.comment(CONTAINER_COMMENT)
     elif isinstance(value, AoT):
         for table in value:
@@ -78,7 +97,7 @@ def _mark_generated(value: Any) -> None:
 
 
 def _is_generated(value: Any) -> bool:
-    if isinstance(value, Table):
+    if isinstance(value, (Table, OutOfOrderTableProxy)):
         return False
     if isinstance(value, AoT):
         return any(_has_comment(table, GENERATED_COMMENT) for table in value)
@@ -91,7 +110,7 @@ def _remove_generated(document: MutableMapping[str, Any]) -> None:
         if _is_generated(value):
             document.pop(key)
             continue
-        if not isinstance(value, Table):
+        if not isinstance(value, MutableMapping):
             continue
 
         _remove_generated(value)
@@ -109,9 +128,12 @@ def _merge_generated(
 ) -> None:
     for key in fragment:
         value = _item(fragment, key)
-        if isinstance(value, Table) and not _is_generated(value):
+        if isinstance(value, MutableMapping) and not _is_generated(value):
             current = document.get(key)
-            if not isinstance(current, Table):
+            if isinstance(current, InlineTable):
+                current = _expand_inline_table(current)
+                document[key] = current
+            elif not isinstance(current, MutableMapping):
                 document.pop(key, None)
                 current = tomlkit.table()
                 current.comment(CONTAINER_COMMENT)
@@ -151,20 +173,20 @@ def _add_hook_state(fragment: Any, target: Path) -> None:
     if hooks is None:
         return
     if not isinstance(hooks, MutableMapping):
-        raise ValueError("hooks must be a table")
+        raise TypeError("hooks must be a table")
 
     hooks.pop("state", None)
     state = {}
     for event, blocks in hooks.items():
         if not isinstance(blocks, MutableSequence):
-            raise ValueError(f"hooks.{event} must be an array")
+            raise TypeError(f"hooks.{event} must be an array")
         event_name = re.sub(r"(?<!^)(?=[A-Z])", "_", event).lower()
         for index, block in enumerate(blocks):
             if not isinstance(block, MutableMapping):
-                raise ValueError(f"hooks.{event}[{index}] must be a table")
+                raise TypeError(f"hooks.{event}[{index}] must be a table")
             commands = block.get("hooks")
             if not isinstance(commands, MutableSequence):
-                raise ValueError(f"hooks.{event}[{index}].hooks must be an array")
+                raise TypeError(f"hooks.{event}[{index}].hooks must be an array")
 
             normalized = []
             for command in commands:
@@ -211,8 +233,7 @@ def main() -> None:
     fragment = tomlkit.parse(fragment_text)
     _resolve_secrets(fragment)
     _add_hook_state(fragment, target)
-    for key in fragment:
-        _mark_generated(_item(fragment, key))
+    _mark_generated(fragment)
 
     _remove_generated(document)
     _merge_generated(document, fragment)

@@ -10,22 +10,17 @@ let
     pkgs.lib.optional (extraPath != [ ]) ''--prefix PATH : "${pkgs.lib.makeBinPath extraPath}"''
     ++ pkgs.lib.optional (extraPythonPath != "") ''--prefix PYTHONPATH : "${extraPythonPath}"''
   );
-  package = pkgs.lib.mkPackageDerivation {
-    inherit pkgs;
-    hashKey = "codex";
-    packageManager = "npm";
-    packageName = "@openai/codex";
-    packageVersion = "0.155.1";
-    name = "codex";
-    exposedBinaries = [
-      "codex"
-    ];
-    postInstall = pkgs.lib.optionalString (extraPath != [ ] || extraPythonPath != "") ''
-      rm -f $out/bin/codex
-      makeWrapper "$NODE_PATH/bin/codex" "$out/bin/codex" \
-        ${wrapperArgs}
-    '';
-  };
+  package =
+    (pkgs.nodejs_22.asPackage {
+      root = ./.;
+    }).overrideAttrs
+      (old: {
+        postInstall =
+          old.postInstall
+          + pkgs.lib.optionalString (extraPath != [ ] || extraPythonPath != "") ''
+            wrapProgram "$out/bin/codex" ${wrapperArgs}
+          '';
+      });
   blockConfigMutation =
     path:
     let

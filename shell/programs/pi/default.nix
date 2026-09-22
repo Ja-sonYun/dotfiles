@@ -1,5 +1,4 @@
 {
-  config,
   pkgs,
   ...
 }:
@@ -49,11 +48,6 @@
         "image"
       ];
       nonReasoningModelMarkers = [ "image" ];
-    };
-
-    envFiles = {
-      CAPI_KEY = config.age.secrets."capi-key".path;
-      LLM_DOMAIN = config.age.secrets."llm-domain".path;
     };
 
     extensions.subagent = "${pkgs.pi-extensions.subagent}/extension";

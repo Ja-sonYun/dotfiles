@@ -49,14 +49,21 @@ const drafts_query = join([
 const create_review_mutation = join([
   'mutation($input: AddPullRequestReviewInput!) {',
   '  addPullRequestReview(input: $input) {',
-  '    pullRequestReview { id }',
+  '    pullRequestReview { id comments(first: 1) { nodes { id } } }',
   '  }',
   '}',
 ], "\n")
 const add_thread_mutation = join([
   'mutation($input: AddPullRequestReviewThreadInput!) {',
   '  addPullRequestReviewThread(input: $input) {',
-  '    thread { id }',
+  '    thread { comments(first: 1) { nodes { id pullRequestReview { id } } } }',
+  '  }',
+  '}',
+], "\n")
+const update_comment_mutation = join([
+  'mutation($input: UpdatePullRequestReviewCommentInput!) {',
+  '  updatePullRequestReviewComment(input: $input) {',
+  '    pullRequestReviewComment { id }',
   '  }',
   '}',
 ], "\n")
@@ -305,6 +312,7 @@ enddef
 def FetchDrafts(expected_token: number, done: any): void
   GraphQL(repo_root, drafts_query, { id: get(pr, 'id', '') }, (data, error) => {
     if expected_token != session_token
+      Finish(done, false, 'GitHub review session changed')
       return
     endif
     if error !=# ''
@@ -356,6 +364,7 @@ def HandleFetch(request: number, root: string, info: dict<any>, error: string): 
     session_head = info.headRefOid
     pending_review_id = ''
     drafts = []
+    review_mutating = false
     FetchDrafts(session_token, v:none)
   catch
     Error(v:exception)
@@ -472,7 +481,7 @@ enddef
 def NewScratch(name: string, lines: list<string>, writable: bool): number
   const buf = bufadd(name)
   setbufvar(buf, '&buftype', writable ? 'acwrite' : 'nofile')
-  setbufvar(buf, '&bufhidden', 'wipe')
+  setbufvar(buf, '&bufhidden', writable ? 'hide' : 'wipe')
   setbufvar(buf, '&swapfile', false)
   setbufvar(buf, '&filetype', 'markdown')
   bufload(buf)
@@ -487,7 +496,9 @@ enddef
 
 def AddComment(): void
   try
-    const target = TargetAtCursor()
+    final target = TargetAtCursor()
+    target.session_token = session_token
+    target.pull_request_id = get(pr, 'id', '')
     panel_sequence += 1
     const name = $'ghreview://comment/{panel_sequence}/{target.path}:{target.line}'
     const buf = NewScratch(name, [''], true)
@@ -508,28 +519,51 @@ def CommentBody(buf: number): string
   return join(lines, "\n")
 enddef
 
-def SaveFailed(buf: number, message: string): void
-  review_mutating = false
-  if bufexists(buf)
+def SaveFailed(buf: number, expected_token: number, message: string): void
+  if expected_token == session_token
+    review_mutating = false
+  endif
+  final target = getbufvar(buf, 'ghreview_target', {})
+  if bufexists(buf) && get(target, 'session_token', -1) == expected_token
     setbufvar(buf, 'ghreview_saving', false)
   endif
   Error(message)
 enddef
 
-def SaveSucceeded(buf: number, expected_token: number): void
-  review_mutating = false
-  if bufexists(buf)
-    setbufvar(buf, '&modified', false)
-    execute $'silent! bwipeout! {buf}'
+def SaveSucceeded(
+  buf: number,
+  expected_token: number,
+  submitted_tick: number,
+  body: string,
+  review_id: string,
+  comment_id: string
+): void
+  if expected_token == session_token
+    review_mutating = false
+  endif
+  final target = getbufvar(buf, 'ghreview_target', {})
+  if bufexists(buf) && get(target, 'session_token', -1) == expected_token
+    target.review_id = review_id
+    target.comment_id = comment_id
+    setbufvar(buf, 'ghreview_target', target)
+    setbufvar(buf, 'ghreview_saving', false)
+    if expected_token != session_token
+      echom 'Draft saved for the previous review; comment buffer preserved.'
+    elseif getbufvar(buf, 'changedtick') == submitted_tick && CommentBody(buf) ==# body
+      setbufvar(buf, '&modified', false)
+      execute $'silent! bwipeout! {buf}'
+    else
+      echom 'Draft saved; newer edits remain in the comment buffer.'
+    endif
   endif
   if expected_token == session_token
     FetchDrafts(expected_token, v:none)
   endif
 enddef
 
-def AddThread(buf: number, expected_token: number, target: dict<any>, body: string): void
+def AddThread(buf: number, expected_token: number, target: dict<any>, body: string, submitted_tick: number): void
   const input = {
-    pullRequestId: get(pr, 'id', ''),
+    pullRequestId: target.pull_request_id,
     pullRequestReviewId: pending_review_id,
     path: target.path,
     line: target.line,
@@ -537,28 +571,50 @@ def AddThread(buf: number, expected_token: number, target: dict<any>, body: stri
     body: body,
   }
   GraphQL(repo_root, add_thread_mutation, { input: input }, (data, error) => {
-    if expected_token != session_token
-      return
-    endif
     if error !=# ''
-      SaveFailed(buf, error)
+      SaveFailed(buf, expected_token, error)
       return
     endif
-    if empty(get(get(data, 'addPullRequestReviewThread', {}), 'thread', {}))
-      SaveFailed(buf, 'GitHub did not create the draft thread')
+    const thread = get(get(data, 'addPullRequestReviewThread', {}), 'thread', {})
+    const comments = get(get(thread, 'comments', {}), 'nodes', [])
+    const comment = get(comments, 0, {})
+    const comment_id = get(comment, 'id', '')
+    const review_id = get(get(comment, 'pullRequestReview', {}), 'id', '')
+    if comment_id ==# '' || review_id !=# input.pullRequestReviewId
+      SaveFailed(buf, expected_token, 'GitHub did not return the created draft comment')
       return
     endif
-    SaveSucceeded(buf, expected_token)
+    SaveSucceeded(buf, expected_token, submitted_tick, body, review_id, comment_id)
   })
 enddef
 
-def EnsurePendingReview(buf: number, expected_token: number, target: dict<any>, body: string): void
+def UpdateComment(buf: number, expected_token: number, target: dict<any>, body: string, submitted_tick: number): void
+  const input = {
+    pullRequestReviewCommentId: target.comment_id,
+    body: body,
+  }
+  GraphQL(repo_root, update_comment_mutation, { input: input }, (data, error) => {
+    if error !=# ''
+      SaveFailed(buf, expected_token, error)
+      return
+    endif
+    const comment = get(get(data, 'updatePullRequestReviewComment', {}), 'pullRequestReviewComment', {})
+    const comment_id = get(comment, 'id', '')
+    if comment_id !=# input.pullRequestReviewCommentId
+      SaveFailed(buf, expected_token, 'GitHub did not update the draft comment')
+      return
+    endif
+    SaveSucceeded(buf, expected_token, submitted_tick, body, target.review_id, comment_id)
+  })
+enddef
+
+def EnsurePendingReview(buf: number, expected_token: number, target: dict<any>, body: string, submitted_tick: number): void
   if pending_review_id !=# ''
-    AddThread(buf, expected_token, target, body)
+    AddThread(buf, expected_token, target, body, submitted_tick)
     return
   endif
   const input = {
-    pullRequestId: get(pr, 'id', ''),
+    pullRequestId: target.pull_request_id,
     threads: [{
       path: target.path,
       line: target.line,
@@ -567,19 +623,22 @@ def EnsurePendingReview(buf: number, expected_token: number, target: dict<any>, 
     }],
   }
   GraphQL(repo_root, create_review_mutation, { input: input }, (data, error) => {
-    if expected_token != session_token
-      return
-    endif
     if error !=# ''
-      SaveFailed(buf, error)
+      SaveFailed(buf, expected_token, error)
       return
     endif
-    pending_review_id = get(get(get(data, 'addPullRequestReview', {}), 'pullRequestReview', {}), 'id', '')
-    if pending_review_id ==# ''
-      SaveFailed(buf, 'GitHub did not create a pending review')
+    const review = get(get(data, 'addPullRequestReview', {}), 'pullRequestReview', {})
+    const review_id = get(review, 'id', '')
+    const comments = get(get(review, 'comments', {}), 'nodes', [])
+    const comment_id = get(get(comments, 0, {}), 'id', '')
+    if review_id ==# '' || comment_id ==# ''
+      SaveFailed(buf, expected_token, 'GitHub did not return the created draft comment')
       return
     endif
-    SaveSucceeded(buf, expected_token)
+    if expected_token == session_token
+      pending_review_id = review_id
+    endif
+    SaveSucceeded(buf, expected_token, submitted_tick, body, review_id, comment_id)
   })
 enddef
 
@@ -591,14 +650,20 @@ export def SaveComment(buf: number): void
     Error('Another draft comment is being saved')
     return
   endif
+  const submitted_tick = getbufvar(buf, 'changedtick')
   const body = CommentBody(buf)
   if body !~# '\S'
     Error('Draft comment is empty')
     return
   endif
-  const target = getbufvar(buf, 'ghreview_target', {})
+  final target = getbufvar(buf, 'ghreview_target', {})
   if empty(pr) || type(target) != v:t_dict
     Error('No active GitHub review')
+    return
+  endif
+  if get(target, 'session_token', -1) != session_token
+      || get(target, 'pull_request_id', '') !=# get(pr, 'id', '')
+    Error('Comment belongs to a different GitHub review session')
     return
   endif
 
@@ -607,14 +672,24 @@ export def SaveComment(buf: number): void
   setbufvar(buf, 'ghreview_saving', true)
   FetchDrafts(expected_token, (ok, error) => {
     if !ok
-      SaveFailed(buf, error)
+      SaveFailed(buf, expected_token, error)
       return
     endif
     if get(target, 'head', '') !=# session_head
-      SaveFailed(buf, 'Pull request changed; run :GhReview again')
+      SaveFailed(buf, expected_token, 'Pull request changed; run :GhReview again')
       return
     endif
-    EnsurePendingReview(buf, expected_token, target, body)
+    const comment_id = get(target, 'comment_id', '')
+    if comment_id !=# ''
+      const matches = filter(copy(drafts), (_, draft) => draft.id ==# comment_id)
+      if get(target, 'review_id', '') !=# pending_review_id || empty(matches)
+        SaveFailed(buf, expected_token, 'Comment is no longer part of the pending review')
+        return
+      endif
+      UpdateComment(buf, expected_token, target, body, submitted_tick)
+      return
+    endif
+    EnsurePendingReview(buf, expected_token, target, body, submitted_tick)
   })
 enddef
 

@@ -1,0 +1,29 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    base64 (0.3.0)
+    bigdecimal (4.1.3)
+    csv (3.3.6)
+    icalPal (3.7.0)
+    mini_portile2 (2.8.9)
+    ostruct (0.6.3)
+    plist (3.7.2)
+    sqlite3 (2.9.6)
+      mini_portile2 (~> 2.8.0)
+    timezone (1.3.30)
+      base64 (~> 0.2)
+      ostruct (~> 0.6)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  bigdecimal
+  csv
+  icalPal (= 3.7.0)
+  plist
+  sqlite3
+  timezone
+
+BUNDLED WITH
+   2.6.9

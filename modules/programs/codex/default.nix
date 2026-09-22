@@ -112,22 +112,20 @@ let
 
   wrappedPackage = pkgs.writeShellScriptBin "codex" ''
     export PATH=${lib.makeBinPath ([ nodeOnly ] ++ cfg.extraPath)}:$PATH
+    ${lib.optionalString cfg.trustCurrentDirectory ''
+      project_key="$(${pkgs.jq}/bin/jq -cn --arg path "$PWD" '$path')"
+    ''}
     exec ${cfg.package}/bin/codex \
       ${wrappedArgs} \
-      --config "projects.\"$PWD\".trust_level=\"trusted\"" \
+      ${lib.optionalString cfg.trustCurrentDirectory ''--config "projects.$project_key.trust_level=\"trusted\""''} \
       "$@"
-  '';
-
-  primaryPackage = pkgs.writeShellScriptBin cfg.defaultProfileName ''
-    export CODEX_HOME=${lib.escapeShellArg "${config.home.homeDirectory}/.codex"}
-    exec ${pkgs.state-get}/bin/state-run ${lib.escapeShellArg cfg.defaultProfileName} \
-      ${wrappedPackage}/bin/codex "$@"
   '';
 
   instancePackages = lib.mapAttrs (
     name: instance:
     let
-      package = if instance.shareWith == null then cfg.package else wrappedPackage;
+      package =
+        if instance.home == ".codex" || instance.shareWith != null then wrappedPackage else cfg.package;
     in
     pkgs.writeShellScriptBin name ''
       set -euo pipefail
@@ -150,12 +148,16 @@ let
         done
       ''}
       exec ${pkgs.state-get}/bin/state-run ${lib.escapeShellArg name} ${package}/bin/codex \
-        --config 'cli_auth_credentials_store="file"' \
+        ${
+          lib.optionalString (instance.home != ".codex") "--config 'cli_auth_credentials_store=\"file\"'"
+        } \
         "$@"
     ''
   ) cfg.instances;
 in
 {
+  imports = [ ../state ];
+
   disabledModules = [ "programs/codex" ];
 
   options.programs.codex = {
@@ -173,9 +175,11 @@ in
       description = "Packages added to Codex's PATH.";
     };
 
+    trustCurrentDirectory = lib.mkEnableOption "trusting the current directory when starting Codex";
+
     defaultProfileName = lib.mkOption {
       type = lib.types.strMatching "[A-Za-z0-9_-]+";
-      description = "Command name for the primary Codex profile.";
+      description = "Declared instance selected when ~/.state.toml is first created.";
     };
 
     instances = lib.mkOption {
@@ -196,7 +200,7 @@ in
         }
       );
       default = { };
-      description = "Additional Codex commands with separate file-based authentication.";
+      description = "Codex commands with separate user profiles.";
     };
 
     settings = lib.mkOption {
@@ -253,22 +257,23 @@ in
       '';
     }
     (lib.mkIf cfg.enable {
-      programs.state.commands.codex = {
+      programs.state.commands.codex = lib.mkIf (cfg.instances != { }) {
         key = "defaults.codex";
         default = cfg.defaultProfileName;
-        choices = {
-          ${cfg.defaultProfileName} = "${primaryPackage}/bin/${cfg.defaultProfileName}";
-        }
-        // lib.mapAttrs (name: package: "${package}/bin/${name}") instancePackages;
+        choices = lib.mapAttrs (name: package: "${package}/bin/${name}") instancePackages;
       };
 
-      home.packages = [ primaryPackage ] ++ lib.attrValues instancePackages;
+      home.packages =
+        if cfg.instances == { } then [ wrappedPackage ] else lib.attrValues instancePackages;
 
       assertions = [
         {
-          assertion =
-            cfg.defaultProfileName != "codex" && !(builtins.hasAttr cfg.defaultProfileName cfg.instances);
-          message = "programs.codex.defaultProfileName must differ from codex and additional instance names.";
+          assertion = cfg.instances == { } || builtins.hasAttr cfg.defaultProfileName cfg.instances;
+          message = "programs.codex.defaultProfileName must name a declared instance.";
+        }
+        {
+          assertion = !(builtins.hasAttr "codex" cfg.instances);
+          message = "programs.codex.instances must not use the reserved command name codex.";
         }
         {
           assertion = settingsSecrets.invalidSecretPaths == [ ];

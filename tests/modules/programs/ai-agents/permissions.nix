@@ -9,36 +9,49 @@
 let
   inherit (testPkgs) lib;
   permissionPolicy = {
-    "*" = "ask";
-    bash = {
-      "*" = "ask";
-      "git status" = "allow";
-    };
-    external_directory."*" = "ask";
+    commands.rules = [
+      {
+        prefix = [
+          "git"
+          "status"
+        ];
+        decision = "allow";
+      }
+    ];
+    files.rules = [
+      {
+        path = "docs/**";
+        read = "allow";
+        write = "deny";
+      }
+      {
+        path = "**/.env";
+        read = "deny";
+        write = "deny";
+      }
+      {
+        path = "**/*.env.*";
+        excludes = [ "**/.env.example" ];
+        read = "deny";
+        write = "deny";
+      }
+      {
+        path = "**/.env.example";
+        read = "allow";
+        write = "allow";
+      }
+    ];
     mcp = {
-      "*" = "ask";
-      blocked = "deny";
-      local-docs = "allow";
-      remote-docs = "ask";
+      blocked.default = "deny";
+      local-docs.default = "allow";
+      remote-docs.default = "ask";
+      github.tools.get_file_contents = "allow";
     };
-    mcp_readonly_tools.github = [ "get_file_contents" ];
-    path = {
-      "*" = "ask";
-      "/private/tmp" = "allow";
-      "/private/tmp/**" = "allow";
-      "/tmp" = "allow";
-      "/tmp/**" = "allow";
-      docs = "read";
-    };
-    read = "allow";
-    skill."*" = "allow";
-    web_fetch = "deny";
-    web_search = "allow";
-    write = "deny";
   };
   configuration = mkConfiguration {
     featureModules = [
-      aiAgentModules.core
+      aiAgentModules.enable
+      aiAgentModules.hooks
       aiAgentModules.permissions
     ];
     module.programs.ai-agents = {
@@ -71,48 +84,39 @@ let
       ];
     };
     files = {
-      "~/.claude/settings.json".json.contains.permissions = {
-        allow = [
-          "Read(**)"
-          "WebSearch"
-          "Read(docs)"
-          "Edit(//private/tmp)"
-          "Edit(//private/tmp/**)"
-          "Edit(//tmp)"
-          "Edit(//tmp/**)"
-          "Skill"
-          "Bash(git status)"
-          "mcp__plugin_hm_local-docs__*"
-          "mcp__plugin_hm_github__get_file_contents"
-        ];
-        ask = [ ];
-        deny = [
-          "Edit(docs)"
-          "mcp__plugin_hm_blocked__*"
-          "Write"
-          "WebFetch(domain:*)"
-        ];
+      "~/.claude/settings.json".json.at = {
+        permissions.equals = {
+          allow = [
+            "Bash(git status)"
+            "Bash(git status *)"
+            "mcp__github__get_file_contents"
+            "mcp__plugin_hm_github__get_file_contents"
+            "mcp__local-docs__*"
+            "mcp__plugin_hm_local-docs__*"
+          ];
+          ask = [ ];
+          deny = [ "Read(./**/.env)" ];
+        };
+        hooks.keys = [ "PreToolUse" ];
       };
-      "~/.codex/config.toml".toml.contains = {
-        default_permissions = "managed";
-        permissions.managed = {
-          extends = ":workspace";
-          filesystem = {
-            "/private/tmp" = "write";
-            "/private/tmp/**" = "write";
-            "/tmp" = "write";
-            "/tmp/**" = "write";
-            ":workspace_roots".docs = "read";
+      "~/.codex/config.toml".toml = {
+        contains.mcp_servers = {
+          blocked = {
+            enabled = false;
+            enabled_tools = [ ];
+            default_tools_approval_mode = "prompt";
           };
-          network.enabled = true;
-        };
-        mcp_servers = {
-          github.default_tools_approval_mode = "writes";
+          github.tools.get_file_contents = {
+            enabled = true;
+            approval_mode = "approve";
+          };
           local-docs.default_tools_approval_mode = "approve";
+          remote-docs.default_tools_approval_mode = "prompt";
         };
+        at.hooks.keys = [ "PreToolUse" ];
       };
       "~/.codex/rules/managed.rules".text = ''
-        prefix_rule(pattern = ["git", "status"], decision = "allow")
+        prefix_rule(pattern = ["git","status"], decision = "allow")
       '';
     };
   };

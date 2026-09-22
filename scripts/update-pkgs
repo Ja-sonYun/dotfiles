@@ -1,0 +1,273 @@
+#!/usr/bin/env bash
+
+usage() {
+	printf 'Usage: %s [--path DIRECTORY] [--refresh-lock] [--debug]\n' "$0"
+}
+
+latest_version() {
+	local registry=$1 name=$2 stage=$3 url query
+	if [[ $registry == npm ]]; then
+		name=${name//@/%40}
+		name=${name//\//%2F}
+		url="https://registry.npmjs.org/$name/latest"
+		query='.version'
+	else
+		url="https://pypi.org/pypi/$name/json"
+		query='.info.version'
+	fi
+
+	curl -fsSL --proto '=https' --proto-redir '=https' "$url" -o "$stage/registry.json" || return $?
+	jq -er "$query | select(type == \"string\" and length > 0)" "$stage/registry.json"
+}
+
+validate_lock() {
+	local registry=$1 file=$2
+	local query='(.invalidationHash | length == 64 and test("^[0-9a-f]+$"))'
+	if [[ $registry == pypi ]]; then
+		query+=' and (.fetchPipMetadata.sources | length > 0 and all(.[];
+            .type == "url"
+            and (.url | startswith("https://") and endswith(".whl"))
+            and (.sha256 | length == 64 and test("^[0-9a-f]+$"))))'
+	else
+		query+=' and (."package-lock".packages | to_entries | length > 1 and all(.[];
+            if .key == "" then true
+            elif (try ((.value.resolved | startswith("https://"))
+                and (.value.integrity | test("^(sha256|sha512)-[A-Za-z0-9+/]+=*$"))
+                and (.value.link != true)) catch false) then true
+            else error("Invalid npm lock entry: " + .key) end))'
+	fi
+
+	jq -e "$query" "$file" >/dev/null
+}
+
+cleanup_package() {
+	local status=$? cleanup_status=0
+	trap - EXIT
+	rm -f -- "$final_spec" "$final_lock" || cleanup_status=$?
+	rm -rf -- "$stage" || cleanup_status=$?
+	if ((status == 0)); then
+		status=$cleanup_status
+	fi
+	exit "$status"
+}
+
+update_package() (
+	local file=$1 package_dir lock_file had_lock=false
+	local stage final_spec='' final_lock='' package_cancel_status=0
+	local name registry version previous_version generator generated_lock status
+
+	stage=$(mktemp -d) || exit $?
+	trap cleanup_package EXIT
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+	if [[ $debug == true ]]; then
+		printf '[DEBUG] Lock candidate directory: %s\n' "$stage" >&2
+	fi
+
+	package_dir=$(dirname "$file") || exit $?
+	lock_file="$package_dir/lock.$system.json"
+	cp -p "$file" "$stage/original-spec.json" || exit $?
+	cp -p "$file" "$stage/package-spec.json" || exit $?
+	if [[ -f $lock_file ]]; then
+		had_lock=true
+		cp -p "$lock_file" "$stage/original-lock.json" || exit $?
+	fi
+
+	name=$(jq -er '.name' "$stage/original-spec.json") || exit $?
+	registry=$(jq -er '.registry' "$stage/original-spec.json") || exit $?
+	if [[ $registry != npm && $registry != pypi ]]; then
+		printf 'Unsupported registry: %s\n' "$registry" >&2
+		exit 1
+	fi
+
+	version=$(jq -r --arg system "$system" '.versions[$system] // empty' "$stage/original-spec.json") || exit $?
+	if [[ -z $version ]]; then
+		printf 'Skipped %s: unsupported on %s\n' "$name" "$system"
+		exit 0
+	fi
+	previous_version=$version
+	if [[ $refresh_only == false ]]; then
+		version=$(latest_version "$registry" "$name" "$stage") || exit $?
+		if [[ $version == "$previous_version" && $had_lock == true ]] &&
+			validate_lock "$registry" "$stage/original-lock.json" 2>/dev/null; then
+			printf 'Unchanged %s (%s): %s\n' "$name" "$system" "$version"
+			exit 0
+		fi
+	fi
+
+	printf 'Locking %s on %s: %s -> %s\n' "$name" "$system" "$previous_version" "$version"
+	jq --arg system "$system" --arg version "$version" '.versions[$system] = $version' \
+		"$stage/original-spec.json" >"$stage/package-spec.json" || exit $?
+	touch "$stage/flake.nix" || exit $?
+
+	generator=$(nix-build "$root_dir/libs/dream2nix/lock.nix" --no-out-link \
+		--argstr root "$root_dir" --argstr package "$package_dir" \
+		--argstr candidate "$stage" --argstr system "$system") || exit $?
+	(
+		cd "$stage" || exit $?
+		exec "$generator/bin/refresh"
+	) || exit $?
+
+	generated_lock="$stage/lock.$system.json"
+	validate_lock "$registry" "$generated_lock" || exit $?
+	if ! cmp -s "$file" "$stage/original-spec.json"; then
+		printf 'Spec changed during update: %s\n' "$file" >&2
+		exit 1
+	fi
+	if [[ $had_lock == true ]]; then
+		if ! cmp -s "$lock_file" "$stage/original-lock.json"; then
+			printf 'Lock changed during update: %s\n' "$lock_file" >&2
+			exit 1
+		fi
+	elif [[ -f $lock_file ]]; then
+		printf 'Lock appeared during update: %s\n' "$lock_file" >&2
+		exit 1
+	fi
+
+	final_lock=$(mktemp "$package_dir/.update-pkgs-lock.XXXXXXXXXX") || exit $?
+	if [[ $had_lock == true ]]; then
+		cp -p "$stage/original-lock.json" "$final_lock" || exit $?
+		cat "$generated_lock" >"$final_lock" || exit $?
+	else
+		cp -p "$generated_lock" "$final_lock" || exit $?
+	fi
+	final_spec=$(mktemp "$package_dir/.update-pkgs-spec.XXXXXXXXXX") || exit $?
+	cp -p "$stage/package-spec.json" "$final_spec" || exit $?
+
+	trap 'package_cancel_status=130' INT
+	trap 'package_cancel_status=143' TERM
+	(
+		trap '' INT TERM
+		mv -- "$final_lock" "$lock_file" || exit $?
+		mv -- "$final_spec" "$file"
+		status=$?
+
+		if ((status != 0)); then
+			if [[ $had_lock == true ]]; then
+				cp -p "$stage/original-lock.json" "$final_lock" || exit $?
+				mv -- "$final_lock" "$lock_file" || exit $?
+			else
+				rm -- "$lock_file" || exit $?
+			fi
+		fi
+		exit "$status"
+	)
+	status=$?
+
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+	if ((package_cancel_status != 0)); then
+		exit "$package_cancel_status"
+	fi
+	if ((status != 0)); then
+		exit "$status"
+	fi
+
+	printf 'Updated %s (%s)\n' "$name" "$system"
+	exit 0
+)
+
+search_path=pkgs
+refresh_only=false
+debug=false
+while (($# > 0)); do
+	case $1 in
+	--help | -h)
+		usage
+		exit 0
+		;;
+	--debug)
+		debug=true
+		shift
+		;;
+	--refresh-lock)
+		refresh_only=true
+		shift
+		;;
+	--path)
+		if (($# < 2)); then
+			printf 'Missing value for --path\n' >&2
+			exit 2
+		fi
+		search_path=$2
+		shift 2
+		;;
+	*)
+		printf 'Unknown option: %s\n' "$1" >&2
+		usage
+		exit 2
+		;;
+	esac
+done
+
+for command_name in git nix nix-build curl jq rg realpath; do
+	if ! command -v "$command_name" >/dev/null 2>&1; then
+		printf 'Missing command: %s\n' "$command_name" >&2
+		exit 1
+	fi
+done
+
+if ! root_dir=$(git rev-parse --show-toplevel); then
+	printf 'Run update-pkgs inside the dotfiles checkout\n' >&2
+	exit 1
+fi
+if [[ $search_path != /* ]]; then
+	search_path="$root_dir/$search_path"
+fi
+if ! resolved_path=$(realpath "$search_path"); then
+	printf 'Package directory does not exist: %s\n' "$search_path" >&2
+	exit 1
+fi
+case "$resolved_path/" in
+"$root_dir/pkgs/"*) ;;
+*)
+	printf 'Package directory must be inside %s/pkgs\n' "$root_dir" >&2
+	exit 2
+	;;
+esac
+
+if ! system=$(nix eval --impure --raw --expr builtins.currentSystem); then
+	printf 'Could not determine the current Nix system\n' >&2
+	exit 1
+fi
+files_raw=$(rg --files --hidden -g package-spec.json -g '!node_modules' -g '!.git' "$resolved_path")
+status=$?
+if ((status != 0 && status != 1)); then
+	printf 'Could not discover package specs\n' >&2
+	exit "$status"
+fi
+
+failed_update=false
+cancel_status=0
+trap 'cancel_status=130' INT
+trap 'cancel_status=143' TERM
+while IFS= read -r -u 3 file; do
+	if ((cancel_status != 0)); then
+		exit "$cancel_status"
+	fi
+	[[ -n $file ]] || continue
+
+	update_package "$file"
+	status=$?
+	if ((cancel_status != 0)); then
+		exit "$cancel_status"
+	fi
+	if ((status == 130 || status == 143)); then
+		exit "$status"
+	fi
+	if ((status != 0)); then
+		printf 'Update failed: %s\n' "$file" >&2
+		failed_update=true
+	fi
+done 3<<<"$files_raw"
+
+trap 'exit 130' INT
+trap 'exit 143' TERM
+if ((cancel_status != 0)); then
+	exit "$cancel_status"
+fi
+if [[ $failed_update == true ]]; then
+	printf 'Some package updates failed.\n' >&2
+	exit 1
+fi
+printf 'Package update check completed for %s. Application builds were not run.\n' "$system"

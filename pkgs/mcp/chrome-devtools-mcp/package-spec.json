@@ -1,0 +1,8 @@
+{
+  "registry": "npm",
+  "name": "chrome-devtools-mcp",
+  "versions": {
+    "aarch64-darwin": "1.9.0",
+    "x86_64-linux": "1.9.0"
+  }
+}

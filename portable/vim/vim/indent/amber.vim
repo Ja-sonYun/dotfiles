@@ -412,7 +412,7 @@ function! s:CheckCloserBracket(ctx) abort
 endfunction
 
 function! s:CheckCloserParen(ctx) abort
-  return a:ctx.cur =~# '^\)'
+  return a:ctx.cur =~# '^)'
 endfunction
 
 function! s:CheckCmdEnd(ctx) abort

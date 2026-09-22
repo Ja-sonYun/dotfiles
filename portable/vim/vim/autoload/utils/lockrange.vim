@@ -7,8 +7,8 @@ export class LockRangeContext
   def new(this.id, this.manager)
   enddef
 
-  def Replace(lines: list<string>): void
-    this.manager.ReplaceRange(this.id, lines)
+  def Replace(lines: list<string>): bool
+    return this.manager.ReplaceRange(this.id, lines)
   enddef
 
   def Unlock(): void
@@ -38,7 +38,6 @@ class LockRangeManager
   var ranges: dict<dict<any>> = {}
   var suppress: bool = false
   var last_linecount: number = 0
-  var last_cursor: list<number> = []
 
   def new()
     this.buffer = bufnr('%')
@@ -203,7 +202,6 @@ class LockRangeManager
   def RegisterAutocmd(): void
     augroup GptSoftLock
       autocmd! * <buffer>
-      autocmd InsertCharPre <buffer> Manager().HandleInsertCharPre()
       autocmd TextChanged,TextChangedI <buffer> Manager().SoftLockCheck()
     augroup END
   enddef
@@ -218,37 +216,11 @@ class LockRangeManager
     this.ranges = {}
     this.suppress = false
     this.last_linecount = 0
-    this.last_cursor = []
     if bufloaded(this.buffer)
       this.ClearStatusAll(this.buffer)
       this.ClearStatusType(this.buffer)
     endif
     this.ClearAutocmd()
-  enddef
-
-  def HandleInsertCharPre(): void
-    if empty(this.ranges)
-      return
-    endif
-    const pos = getpos('.')
-    const lnum = pos[1]
-    for info in values(this.ranges)
-      var range_start = get(info, 'start', 0)
-      var range_end = get(info, 'end', 0)
-      if range_start <= 0 || range_end <= 0
-        continue
-      endif
-      if range_end < range_start
-        var tmp = range_start
-        range_start = range_end
-        range_end = tmp
-      endif
-      if lnum >= range_start && lnum <= range_end
-        this.last_cursor = pos
-        v:char = ''
-        return
-      endif
-    endfor
   enddef
 
   def SoftLockCheck(): void
@@ -263,7 +235,6 @@ class LockRangeManager
     const current_linecount = line('$')
     const last_linecount = this.last_linecount == 0 ? current_linecount : this.last_linecount
     const delta = current_linecount - last_linecount
-    var restored = false
     var lock_changed = false
     var next_ranges: dict<dict<any>> = {}
     for [lock_id, info] in items(this.ranges)
@@ -302,29 +273,17 @@ class LockRangeManager
       next_ranges[lock_id] = info
     endfor
     if lock_changed
-      if empty(this.last_cursor)
-        this.last_cursor = getpos('.')
-      endif
-      this.suppress = true
-      silent! undo
-      this.suppress = false
-      restored = true
-    else
-      for [lock_id, info] in items(next_ranges)
-        this.ranges[lock_id] = info
-      endfor
+      this.UnlockAll()
+      echohl WarningMsg
+      echom 'AI result discarded because its source range changed.'
+      echohl None
+      return
     endif
+    for [lock_id, info] in items(next_ranges)
+      this.ranges[lock_id] = info
+    endfor
     this.UpdateAllStatuses()
     this.last_linecount = line('$')
-    if restored
-      if !empty(this.last_cursor)
-        setpos('.', this.last_cursor)
-        this.last_cursor = []
-      endif
-      echohl WarningMsg
-      echom 'Locked range cannot be modified.'
-      echohl None
-    endif
   enddef
 
   def LockRange(start: number, end: number): any
@@ -412,18 +371,17 @@ class LockRangeManager
     return []
   enddef
 
-  def ReplaceRange(id: string, lines: list<string>): void
-    if !bufloaded(this.buffer)
-      throw 'GPT target buffer is no longer loaded.'
-    endif
-    if empty(this.ranges) || !has_key(this.ranges, id)
-      return
+  def ReplaceRange(id: string, lines: list<string>): bool
+    if !bufloaded(this.buffer) || !has_key(this.ranges, id)
+      return false
     endif
     var info = this.ranges[id]
     const start = get(info, 'start', 0)
     const end = get(info, 'end', 0)
     if start <= 0 || end < start
-      return
+        || getbufline(this.buffer, start, end) !=# get(info, 'lines', [])
+      this.UnlockRange(id)
+      return false
     endif
     const old_end = end
     this.suppress = true
@@ -460,6 +418,7 @@ class LockRangeManager
     endif
     this.UpdateAllStatuses()
     this.last_linecount = len(getbufline(this.buffer, 1, '$'))
+    return true
   enddef
 
   def SetStatus(id: string, text: string): void

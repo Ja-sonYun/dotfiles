@@ -36,7 +36,7 @@
                     overlay
                   ]
                 );
-            virtualenv = pythonSet.mkVirtualEnv "${name}-env" workspace.deps.default;
+            virtualenv = pythonSet.mkVirtualEnv "${baseNameOf root}-env" workspace.deps.default;
             launcher = final.writeText "${name}-entrypoint.py" ''
               import importlib
               import sys

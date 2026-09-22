@@ -50,6 +50,7 @@ const hookEventNames: ReadonlySet<string> = new Set([
   "PreCompact",
   "PostCompact",
   "SessionEnd",
+  "SessionInfoChanged",
   "Notification",
 ]);
 
@@ -57,6 +58,7 @@ const eventsWithoutMatchers: ReadonlySet<HookEventName> = new Set([
   "UserPromptSubmit",
   "PostToolBatch",
   "Stop",
+  "SessionInfoChanged",
 ]);
 
 const contextualEvents: ReadonlySet<HookEventName> = new Set([
@@ -73,13 +75,21 @@ const defaultTimeouts: Readonly<Record<HookEventName, number>> = {
   PreCompact: 600,
   PreToolUse: 600,
   SessionEnd: 1.5,
+  SessionInfoChanged: 5,
   SessionStart: 600,
   Stop: 600,
   StopFailure: 600,
   UserPromptSubmit: 30,
 };
 
-const outputLimit = 10_000;
+const outputLimit = 64 * 1024;
+const cleanupEvents: ReadonlySet<HookEventName> = new Set([
+  "PostToolUseFailure",
+  "SessionEnd",
+  "SessionInfoChanged",
+  "StopFailure",
+  "Notification",
+]);
 
 const isHookEventName = (value: string): value is HookEventName =>
   hookEventNames.has(value);
@@ -210,6 +220,11 @@ const runCommand = (
     let stdout = "";
     let timedOut = false;
     let timeout: ReturnType<typeof setTimeout> | undefined;
+    let killTimeout: ReturnType<typeof setTimeout> | undefined;
+    let terminating = false;
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let executionError: string | undefined;
 
     const finish = (result: CommandResult): void => {
       if (completed) {
@@ -218,6 +233,9 @@ const runCommand = (
       completed = true;
       if (timeout !== undefined) {
         clearTimeout(timeout);
+      }
+      if (killTimeout !== undefined) {
+        clearTimeout(killTimeout);
       }
       if (abortListener !== undefined) {
         signal?.removeEventListener("abort", abortListener);
@@ -237,37 +255,47 @@ const runCommand = (
       });
     };
 
-    const terminate = (): void => {
+    const signalGroup = (signum: NodeJS.Signals): void => {
       if (child.pid !== undefined) {
         try {
-          process.kill(-child.pid, "SIGKILL");
+          process.kill(-child.pid, signum);
         } catch {
-          child.kill("SIGKILL");
+          child.kill(signum);
         }
       } else {
-        child.kill("SIGKILL");
+        child.kill(signum);
       }
+    };
+
+    const terminate = (): void => {
+      if (completed || terminating) {
+        return;
+      }
+      terminating = true;
+      signalGroup("SIGTERM");
+      killTimeout = setTimeout(() => {
+        signalGroup("SIGKILL");
+      }, 4_000);
       child.stdin.destroy();
-      child.stdout.destroy();
-      child.stderr.destroy();
     };
 
     const append = (target: "stderr" | "stdout", chunk: string): void => {
       if (completed) {
         return;
       }
-      const current = target === "stdout" ? stdout : stderr;
-      const remaining = Math.max(0, outputLimit - current.length);
-      const next = current + chunk.slice(0, remaining);
-      if (target === "stdout") {
-        stdout = next;
-      } else {
-        stderr = next;
-      }
-      if (chunk.length > remaining) {
+      const chunkBytes = Buffer.byteLength(chunk, "utf8");
+      const bytes = target === "stdout" ? stdoutBytes : stderrBytes;
+      if (bytes + chunkBytes > outputLimit) {
         oversized = true;
         terminate();
-        finishCurrent(null);
+        return;
+      }
+      if (target === "stdout") {
+        stdout += chunk;
+        stdoutBytes += chunkBytes;
+      } else {
+        stderr += chunk;
+        stderrBytes += chunkBytes;
       }
     };
 
@@ -275,7 +303,6 @@ const runCommand = (
       () => {
         timedOut = true;
         terminate();
-        finishCurrent(null);
       },
       (hook.timeout ?? defaultTimeouts[eventName]) * 1_000,
     );
@@ -290,10 +317,13 @@ const runCommand = (
     });
     child.stdin.on("error", () => undefined);
     child.once("error", (error: Error) => {
-      finishCurrent(null, error.message);
+      executionError = error.message;
     });
     child.once("close", (code: number | null) => {
-      finishCurrent(code);
+      if (terminating) {
+        signalGroup("SIGKILL");
+      }
+      finishCurrent(code, executionError);
     });
     abortListener = (): void => {
       if (completed) {
@@ -301,13 +331,12 @@ const runCommand = (
       }
       aborted = true;
       terminate();
-      finishCurrent(null);
     };
     signal?.addEventListener("abort", abortListener, { once: true });
     if (signal?.aborted) {
       abortListener();
     }
-    if (!completed) {
+    if (!completed && !terminating) {
       child.stdin.end(JSON.stringify(input));
     }
   });
@@ -325,7 +354,10 @@ const parseCommandResult = (
     return undefined;
   }
   if (result.oversized) {
-    reportError(context, `${eventName} hook output exceeded 10000 characters.`);
+    reportError(
+      context,
+      `${eventName} hook output exceeded 65536 UTF-8 bytes.`,
+    );
     return undefined;
   }
   if (result.error !== undefined) {
@@ -379,7 +411,7 @@ const hookCallEntry = (
   }
   if (result.oversized) {
     return {
-      detail: "output exceeded 10000 characters",
+      detail: "output exceeded 65536 UTF-8 bytes",
       eventName,
       status: "failed",
     };
@@ -412,9 +444,22 @@ export const runHooks = async (
   const hooks = (config.get(eventName) ?? [])
     .filter((block) => matcherMatches(eventName, block.matcher, matcherValue))
     .flatMap((block) => block.hooks);
+  // Reserve four seconds for termination after cancelled cleanup times out.
+  const cancelledCleanup =
+    cleanupEvents.has(eventName) &&
+    (context.signal?.aborted ||
+      (eventName === "StopFailure" && input["error"] === "cancelled"));
   const commandResults = await Promise.all(
     hooks.map((hook) =>
-      runCommand(hook, eventName, input, context.cwd, context.signal),
+      runCommand(
+        cancelledCleanup
+          ? { ...hook, timeout: Math.min(hook.timeout ?? 1, 1) }
+          : hook,
+        eventName,
+        input,
+        getString(input, "cwd") ?? context.cwd,
+        cleanupEvents.has(eventName) ? undefined : context.signal,
+      ),
     ),
   );
   const results: HookResult[] = [];

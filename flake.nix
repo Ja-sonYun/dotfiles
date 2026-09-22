@@ -14,6 +14,8 @@
     nixpkgs-prev.url = "github:NixOS/nixpkgs/4724d5647207377bede08da3212f809cbd94a648";
     nixpkgs-stable.url = "github:NixOS/nixpkgs/release-25.05";
 
+    dream2nix.url = "github:nix-community/dream2nix";
+
     pyproject-nix = {
       url = "github:pyproject-nix/pyproject.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -76,7 +78,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     mkutils = {
-      url = "github:Ja-sonYun/mkutils";
+      url = ./.mkutils;
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixlib = {
@@ -100,5 +102,6 @@
     inputs.nixpkgs.lib.recursiveUpdate (
       (import ./flake/configurations.nix { inherit inputs; })
       // (import ./flake/development.nix { inherit inputs; })
+      // (import ./flake/packages.nix { inherit inputs; })
     ) (import ./vm { inherit inputs; });
 }

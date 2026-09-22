@@ -38,6 +38,9 @@ let
 
   instancePackages = lib.mapAttrs (
     name: instance:
+    let
+      package = if instance.home == ".claude" then wrappedPackage else cfg.package;
+    in
     pkgs.writeShellScriptBin name ''
       set -euo pipefail
       umask 077
@@ -46,7 +49,7 @@ let
       ${pkgs.coreutils}/bin/mkdir -p "$CLAUDE_CONFIG_DIR"
 
       exec ${pkgs.state-get}/bin/state-run ${lib.escapeShellArg name} \
-        ${cfg.package}/bin/claude "$@"
+        ${package}/bin/claude "$@"
     ''
   ) cfg.instances;
 
@@ -61,13 +64,18 @@ let
   );
 
   mcpPlugin = pkgs.runCommand "claude-code-home-manager" { } ''
-    install -Dm444 ${jsonFormat.generate "plugin.json" { name = "hm"; }} \
+    install -Dm444 ${jsonFormat.generate "plugin.json" { name = cfg.mcpPluginName; }} \
       "$out/.claude-plugin/plugin.json"
     install -Dm444 ${jsonFormat.generate "mcp.json" { inherit (cfg) mcpServers; }} \
       "$out/.mcp.json"
   '';
 in
 {
+  imports = [
+    ../state
+    ./status-line
+  ];
+
   disabledModules = [ "programs/claude-code" ];
 
   options.programs.claude-code = {
@@ -91,6 +99,11 @@ in
       description = "Packages added to Claude Code's PATH.";
     };
 
+    defaultProfileName = lib.mkOption {
+      type = lib.types.strMatching "[A-Za-z0-9_-]+";
+      description = "Declared instance selected when ~/.state.toml is first created.";
+    };
+
     instances = lib.mkOption {
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -101,7 +114,7 @@ in
         }
       );
       default = { };
-      description = "Additional Claude Code commands with independent user profiles.";
+      description = "Claude Code commands with independent user profiles.";
     };
 
     settings = lib.mkOption {
@@ -140,6 +153,13 @@ in
       description = "MCP servers exposed through the managed hm plugin.";
     };
 
+    mcpPluginName = lib.mkOption {
+      type = lib.types.str;
+      default = "hm";
+      readOnly = true;
+      internal = true;
+    };
+
     chromeNativeHost.enable = lib.mkEnableOption "Claude Code Chrome native messaging host (Claude in Chrome)";
 
     keybindings = lib.mkOption {
@@ -148,20 +168,26 @@ in
       description = "Contents of ~/.claude/keybindings.json (written as JSON when non-null).";
     };
 
-    desktopConfig = lib.mkOption {
-      type = lib.types.nullOr (lib.types.attrsOf lib.types.anything);
-      default = null;
-      description = "Contents of ~/Library/Application Support/Claude/claude_desktop_config.json (written as JSON when non-null).";
-    };
   };
 
   config = lib.mkMerge [
     { programs.claude-code.finalPackage = wrappedPackage; }
 
     (lib.mkIf cfg.enable {
-      home.packages = [ wrappedPackage ] ++ lib.attrValues instancePackages;
+      programs.state.commands.claude = lib.mkIf (cfg.instances != { }) {
+        key = "defaults.claude";
+        default = cfg.defaultProfileName;
+        choices = lib.mapAttrs (name: package: "${package}/bin/${name}") instancePackages;
+      };
+
+      home.packages =
+        if cfg.instances == { } then [ wrappedPackage ] else lib.attrValues instancePackages;
 
       assertions = [
+        {
+          assertion = cfg.instances == { } || builtins.hasAttr cfg.defaultProfileName cfg.instances;
+          message = "programs.claude-code.defaultProfileName must name a declared instance.";
+        }
         {
           assertion = !(builtins.hasAttr "claude" cfg.instances);
           message = "programs.claude-code.instances must not use the reserved command name claude.";
@@ -221,11 +247,5 @@ in
       home.file.".claude/keybindings.json".text = builtins.toJSON cfg.keybindings;
     })
 
-    (lib.mkIf (cfg.enable && cfg.desktopConfig != null) {
-      home.file."Library/Application Support/Claude/claude_desktop_config.json" = {
-        force = true;
-        text = builtins.toJSON cfg.desktopConfig;
-      };
-    })
   ];
 }

@@ -247,7 +247,7 @@ let
       hasDesc = command.description != null;
       helpBlock = lib.optionalString hasDesc ''
         if [[ "''${1-}" == "-h" || "''${1-}" == "--help" ]]; then
-          print -- "${command.description}"
+          print -r -- ${lib.escapeShellArg command.description}
           exit 0
         fi
       '';

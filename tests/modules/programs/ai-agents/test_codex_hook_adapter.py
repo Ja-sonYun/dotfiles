@@ -25,6 +25,7 @@ ADAPTER_PATH = (
         / "programs"
         / "ai-agents"
         / "hooks"
+        / "adapters"
         / "codex_adapter.py"
     )
 )
@@ -214,6 +215,7 @@ class MainTest(unittest.TestCase):
         process.communicate.side_effect = [
             subprocess.TimeoutExpired("test-hook", 1),
             (None, None),
+            (None, None),
         ]
 
         with (
@@ -228,8 +230,11 @@ class MainTest(unittest.TestCase):
             text=True,
             start_new_session=True,
         )
-        killpg.assert_called_once_with(123, signal.SIGTERM)
-        self.assertEqual(process.communicate.call_count, 2)
+        self.assertEqual(
+            killpg.call_args_list,
+            [call(123, signal.SIGTERM), call(123, signal.SIGKILL)],
+        )
+        self.assertEqual(process.communicate.call_count, 3)
 
     def test_signal_is_forwarded_and_normalized(self) -> None:
         process = MagicMock()
@@ -256,8 +261,11 @@ class MainTest(unittest.TestCase):
         ):
             self.assertEqual(RUN_COMMAND("test-hook", "{}", 60), 143)
 
-        killpg.assert_called_once_with(123, signal.SIGTERM)
-        self.assertEqual(process.communicate.call_count, 2)
+        self.assertEqual(
+            killpg.call_args_list,
+            [call(123, signal.SIGTERM), call(123, signal.SIGKILL)],
+        )
+        self.assertEqual(process.communicate.call_count, 3)
 
     def test_signal_kills_process_group_after_grace_period(self) -> None:
         process = MagicMock()
@@ -321,13 +329,17 @@ class MainTest(unittest.TestCase):
 
         self.assertEqual(
             killpg.call_args_list,
-            [call(123, signal.SIGTERM), call(123, signal.SIGKILL)],
+            [
+                call(123, signal.SIGTERM),
+                call(123, signal.SIGKILL),
+                call(123, signal.SIGKILL),
+            ],
         )
-        self.assertEqual(process.communicate.call_count, 2)
+        self.assertEqual(process.communicate.call_count, 3)
 
     def test_negative_command_exit_code_is_normalized(self) -> None:
         process = MagicMock()
-        process.returncode = -signal.SIGTERM
+        process.wait.return_value = -signal.SIGTERM
 
         with patch.object(subprocess, "Popen", return_value=process):
             self.assertEqual(RUN_COMMAND("test-hook", "{}", 60), 143)

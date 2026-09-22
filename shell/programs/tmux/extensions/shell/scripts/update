@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-pane_id="${1:-${TMUX_PANE:-}}"
-invoc_seq="${2:-}"
-
-script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-[[ -n "$pane_id" ]] || exit 0
-exec "$script_dir/panes" "$pane_id" "" "$invoc_seq"

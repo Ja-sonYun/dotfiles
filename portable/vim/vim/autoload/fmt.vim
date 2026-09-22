@@ -4,8 +4,8 @@ function! fmt#Formatter(name) abort
 endfunction
 
 function! fmt#RunFmt(ext, cmds) abort
-  let s = getpos("'<")[1]
-  let e = getpos("'>")[1]
+  let s = v:lnum
+  let e = s + v:count - 1
   let before = getline(s, e)
   let prev_change = changenr()
 
@@ -32,7 +32,7 @@ function! fmt#RunFmt(ext, cmds) abort
   " Run each formatter command
   for cmd in a:cmds
     call add(sc, '[ $status -ne 0 ] && exit $status')
-    let full = substitute(cmd, '{file}', shellescape(tmp), 'g')
+    let full = substitute(cmd, '{file}', {_ -> shellescape(tmp)}, 'g')
     call add(sc, full . ' >/dev/null 2>>' . shellescape(err) . ' || status=$?')
   endfor
   call add(sc, '[ $status -ne 0 ] && exit $status')
@@ -40,12 +40,12 @@ function! fmt#RunFmt(ext, cmds) abort
   " Output formatted file
   call add(sc, 'cat ' . shellescape(tmp) . ' || status=$?')
   call add(sc, 'exit $status')
-  let shcmd = 'sh -c ' . shellescape(join(sc, ' ; '))
+  let shcmd = 'sh -c ' . shellescape(join(sc, ' ; '), 1)
 
-  " Execute formatter over the selection
+  " Format the requested line range.
   let shell_error = 0
   try
-    execute "'<,'>!" . shcmd
+    execute s . ',' . e . '!' . shcmd
     let shell_error = v:shell_error
   catch /^Vim\%((\a\+)\)\=:E/
     " Handle Vim errors (e.g., command execution failure)

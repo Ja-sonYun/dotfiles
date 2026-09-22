@@ -52,12 +52,23 @@ export const runStopFailure = async (
   pi: ExtensionAPI,
   assistant: AssistantResult,
   context: ExtensionContext,
+  input: Record<string, unknown> = commonInput("StopFailure", context),
 ): Promise<void> => {
-  const input = commonInput("StopFailure", context);
   const errorMessage =
     assistant.errorMessage ??
-    (assistant.text === "" ? "Unknown provider error." : assistant.text);
-  const error = stopFailureKind(errorMessage);
+    (assistant.stopReason === "aborted"
+      ? "Agent run was cancelled."
+      : assistant.stopReason === "length"
+        ? "Assistant response reached the maximum output token limit."
+        : assistant.text === ""
+          ? "Unknown provider error."
+          : assistant.text);
+  const error =
+    assistant.stopReason === "aborted"
+      ? "cancelled"
+      : assistant.stopReason === "length"
+        ? "max_output_tokens"
+        : stopFailureKind(errorMessage);
   input["error"] = error;
   input["error_details"] = errorMessage;
   input["last_assistant_message"] = errorMessage;

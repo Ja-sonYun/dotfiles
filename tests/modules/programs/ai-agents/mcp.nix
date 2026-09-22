@@ -10,9 +10,10 @@ let
   inherit (testPkgs) lib;
   configuration = mkConfiguration {
     featureModules = [
-      aiAgentModules.core
+      aiAgentModules.enable
       aiAgentModules.mcp
     ];
+    module.programs.claude-desktop.enable = true;
     module.programs.ai-agents = {
       enable = true;
       mcp.servers = {
@@ -47,7 +48,7 @@ let
         builtins.deepSeq
           (mkConfiguration {
             featureModules = [
-              aiAgentModules.core
+              aiAgentModules.enable
               aiAgentModules.mcp
             ];
             module.programs.ai-agents = {
@@ -63,7 +64,7 @@ let
   programs = configuration.config.programs;
   homeFiles = homeFilesFor configuration;
   secretCommand = programs.codex.settings.mcp_servers.secret-docs.command;
-  bridgeCommand = programs.claude-code.desktopConfig.mcpServers.remote-docs.command;
+  bridgeCommand = programs.claude-desktop.settings.mcpServers.remote-docs.command;
   claudeMcpServers = {
     disabled-docs = {
       command = "disabled-mcp";
@@ -86,7 +87,7 @@ let
       type = "stdio";
     };
   };
-  claudeDesktopMcpServers = claudeMcpServers // {
+  claudeDesktopMcpServers = builtins.removeAttrs claudeMcpServers [ "disabled-docs" ] // {
     remote-docs = {
       command = bridgeCommand;
       type = "stdio";

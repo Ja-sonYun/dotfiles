@@ -19,10 +19,10 @@ export const runStop = async (
   state: HookState,
   assistant: AssistantResult,
   context: ExtensionContext,
+  input: Record<string, unknown> = commonInput("Stop", context),
 ): Promise<boolean> => {
-  const input = commonInput("Stop", context);
   input["last_assistant_message"] = assistant.text;
-  input["stop_hook_active"] = state.stopContinuations > 0;
+  input["stop_hook_active"] ??= state.stopContinuations > 0;
   const results = await runHooks(pi, "Stop", "", input, context);
   if (shouldStop(results)) {
     return true;

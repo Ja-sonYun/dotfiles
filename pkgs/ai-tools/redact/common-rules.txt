@@ -1,0 +1,1 @@
+token:(?i)\b(?:Bearer|Basic)[ \t]+([a-z0-9._~+/=-]+)

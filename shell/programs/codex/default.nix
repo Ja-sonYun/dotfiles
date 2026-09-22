@@ -1,9 +1,4 @@
 {
-  hasTag,
-  lib,
-  ...
-}:
-{
   programs.ai-agents.modelMap.codex = {
     xhigh = {
       model = "gpt-6-astra";
@@ -25,9 +20,13 @@
 
   programs.codex = {
     enable = true;
+    trustCurrentDirectory = true;
     defaultProfileName = "codex-1";
 
     instances = {
+      codex-1 = {
+        home = ".codex";
+      };
       codex-2 = {
         home = ".codex2";
         shareWith = ".codex";
@@ -35,10 +34,6 @@
       codex-work = {
         home = ".codex-work";
       };
-    };
-
-    toolGuard.computer-use = lib.mkIf (!hasTag "unsafe-ai") {
-      matcher = "^mcp__cua_repl__";
     };
 
     settings = {

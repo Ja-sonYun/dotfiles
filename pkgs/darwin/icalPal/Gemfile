@@ -1,0 +1,8 @@
+source "https://rubygems.org"
+
+gem "icalPal", "3.7.0"
+gem "bigdecimal"
+gem "csv"
+gem "plist"
+gem "sqlite3", force_ruby_platform: true
+gem "timezone"

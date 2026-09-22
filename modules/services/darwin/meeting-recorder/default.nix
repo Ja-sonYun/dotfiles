@@ -8,10 +8,11 @@
 }:
 let
   cfg = config.services.meetingRecorder;
+  audioArchive = pkgs.callPackage ./pkgs/audio-archive { };
   audioProcessWatcher = pkgs.callPackage ./pkgs/audio-process-watcher { };
   calendarEventQuery = pkgs.callPackage ./pkgs/calendar-event-query { };
   meetingRecorder = pkgs.callPackage ./pkgs/meeting-recorder { };
-  helpersDirectory = "${userhome}/.local/libexec/hammerspoon";
+  helpersDirectory = "${userhome}/.local/libexec/meeting-recorder";
   stateNotification = "com.jaykuroyanagi.audio-process-watcher.state";
   refreshNotification = "com.jaykuroyanagi.audio-process-watcher.refresh";
   calendarResponseNotification = "com.jaykuroyanagi.calendar-event-query.response";
@@ -36,6 +37,7 @@ let
       iconDirectory = "${./misc/status-icons}";
       logPath = "/tmp/meeting-recorder";
       transcriberPath = if cfg.transcription.enable then "${pkgs.whisper-local}/bin/whisper" else null;
+      archivePath = if cfg.transcription.enable then "${audioArchive}/bin/archive-audio" else null;
       transcription = {
         inherit (cfg.transcription) model language;
       };
@@ -95,6 +97,13 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = config.services.hammerspoon.enable;
+        message = "services.meetingRecorder requires services.hammerspoon.enable.";
+      }
+    ];
+
     services.codeSigning.targets = {
       calendar-event-query = {
         source = "${calendarEventQuery}/Applications/Calendar Event Query.app";
@@ -109,7 +118,7 @@ in
 
     services.hammerspoon = {
       enable = lib.mkDefault true;
-      preparedScripts = [
+      scripts = [
         {
           name = "meeting-recorder.lua";
           path = script;
@@ -130,9 +139,10 @@ in
       };
     };
 
-    home-manager.users.${username}.home.packages = [ pkgs.whisper-local ];
+    home-manager.users.${username}.home.packages =
+      lib.optional cfg.transcription.enable pkgs.whisper-local;
 
-    launchd.user.agents.hammerspoon-audio-process-watcher.serviceConfig = {
+    launchd.user.agents.meeting-recorder-audio-process-watcher.serviceConfig = {
       ProgramArguments = [
         (toString (
           pkgs.writeShellScript "audio-process-watcher" ''

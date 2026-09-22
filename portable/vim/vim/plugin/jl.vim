@@ -9,9 +9,9 @@ function! s:NextFileJump(forward) abort
 
   for _ in range(max)
     if a:forward
-      call feedkeys("\<C-i>", 'n')
+      execute "normal! \<C-i>"
     else
-      call feedkeys("\<C-o>", 'n')
+      execute "normal! \<C-o>"
     endif
     redraw
 
