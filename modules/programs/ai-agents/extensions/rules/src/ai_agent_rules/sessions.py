@@ -12,25 +12,17 @@ from pathlib import Path
 
 from ai_agent_hooks.hook_input import HookInput
 
-from ai_agent_jev.rule_files import (
-    project_root,
-    read_json,
-    rule_path,
-    rules_directory,
-    write_json,
-)
+from ai_agent_rules.rule_files import read_json, write_json
 
 
 @dataclass(frozen=True)
 class Session:
     cwd: Path
-    root: Path
     last_seen: float
 
     def record(self) -> dict[str, object]:
         return {
             "cwd": str(self.cwd),
-            "root": str(self.root),
             "last_seen": self.last_seen,
         }
 
@@ -53,35 +45,21 @@ def read_session(path: Path) -> Session:
     data = read_json(path)
     if not isinstance(data, dict):
         raise TypeError(f"Invalid session metadata: {path}")
-    cwd, root, last_seen = data.get("cwd"), data.get("root"), data.get("last_seen")
+    cwd, last_seen = data.get("cwd"), data.get("last_seen")
     if (
         not isinstance(cwd, str)
         or not Path(cwd).is_absolute()
-        or not isinstance(root, str)
-        or not Path(root).is_absolute()
         or not isinstance(last_seen, (int, float))
         or isinstance(last_seen, bool)
     ):
         raise ValueError(f"Invalid session metadata: {path}")
-    return Session(Path(cwd), Path(root), float(last_seen))
-
-
-def delete_session(path: Path, session: Session) -> None:
-    directory = rules_directory(session.root, path.stem)
-    try:
-        entries = list(directory.iterdir())
-    except FileNotFoundError:
-        entries = []
-    for entry in entries:
-        if entry.suffix == ".json":
-            rule_path(directory, entry.stem).unlink()
-    path.unlink()
+    return Session(Path(cwd), float(last_seen))
 
 
 @contextmanager
 def state_lock() -> Iterator[Path]:
     cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
-    directory = cache / "ai-agent" / "jev" / "sessions"
+    directory = cache / "ai-agent" / "rules" / "sessions"
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     descriptor = os.open(
         directory.parent / "state.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600
@@ -94,7 +72,7 @@ def state_lock() -> Iterator[Path]:
                 break
             except BlockingIOError:
                 if time.monotonic() >= deadline:
-                    raise TimeoutError("Jev rule storage is busy.") from None
+                    raise TimeoutError("Rule storage is busy.") from None
                 time.sleep(0.01)
         cutoff = time.time() - 86400
         for path in directory.iterdir():
@@ -103,9 +81,9 @@ def state_lock() -> Iterator[Path]:
             try:
                 session = read_session(session_path(directory, path.stem))
                 if session.last_seen < cutoff:
-                    delete_session(path, session)
+                    path.unlink()
             except (OSError, TypeError, ValueError) as error:
-                print(f"[Jev cleanup failed] {path}: {error}", file=sys.stderr)
+                print(f"[Rules cleanup failed] {path}: {error}", file=sys.stderr)
         yield directory
 
 
@@ -119,7 +97,7 @@ def require_session(directory: Path, handle: str) -> Session:
         ) from error
     if previous.last_seen < time.time() - 86400:
         raise ValueError("Expired session_handle; session cleanup is incomplete.")
-    session = Session(previous.cwd, previous.root, time.time())
+    session = Session(previous.cwd, time.time())
     write_json(path, session.record())
     return session
 
@@ -137,12 +115,10 @@ def register_session(hook_input: HookInput) -> tuple[str | None, bool]:
                 raise ValueError(
                     "Cannot reuse an expired session before its cleanup completes."
                 )
-            root = previous.root
             created = False
         except FileNotFoundError:
-            root = project_root(cwd)
             created = True
-        write_json(path, Session(cwd, root, time.time()).record())
+        write_json(path, Session(cwd, time.time()).record())
     return handle, created
 
 
@@ -152,7 +128,7 @@ def end_session(hook_input: HookInput) -> None:
         with state_lock() as directory:
             path = session_path(directory, handle)
             try:
-                session = read_session(path)
+                read_session(path)
             except FileNotFoundError:
                 return
-            delete_session(path, session)
+            path.unlink()

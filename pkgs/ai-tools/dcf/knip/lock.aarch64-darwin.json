@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-knip",
-    "version": "6.37.0",
+    "version": "6.38.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-knip",
-        "version": "6.37.0",
+        "version": "6.38.0",
         "dependencies": {
-          "knip": "6.37.0"
+          "knip": "6.38.0"
         }
       },
       "node_modules/@emnapi/core": {
@@ -553,9 +553,9 @@
         }
       },
       "node_modules/knip": {
-        "version": "6.37.0",
-        "resolved": "https://registry.npmjs.org/knip/-/knip-6.37.0.tgz",
-        "integrity": "sha512-NKCYuoGKJ+o2AuoCuV1mDvfMYnSSWfDXqxwmzxeHyd8fftjNRl8TBUg3fbSrtJjhm7Vj6sc1PX3WZnZhECs9EQ==",
+        "version": "6.38.0",
+        "resolved": "https://registry.npmjs.org/knip/-/knip-6.38.0.tgz",
+        "integrity": "sha512-umytiMCaZf02MV9SOO1FEDgbDf6h20VZk3ruJE0kh52kkGjYZFRUAXHJWYoLhvhoHGINO/7GXVJmQ2vxTBvl6A==",
         "funding": [
           {
             "type": "github",
@@ -684,9 +684,9 @@
         }
       },
       "node_modules/smol-toml": {
-        "version": "1.8.0",
-        "resolved": "https://registry.npmjs.org/smol-toml/-/smol-toml-1.8.0.tgz",
-        "integrity": "sha512-kCZr2V3ch9i00x8zXRhjUNVcjG9ijES5dDudkXvUVCT5QlJNQWElSJdZqyPemffHoLNUYwOcou0Fy+ojN0uHSQ==",
+        "version": "1.9.0",
+        "resolved": "https://registry.npmjs.org/smol-toml/-/smol-toml-1.9.0.tgz",
+        "integrity": "sha512-hpd+HLON7HdZXqYchMM/+LaTTbdK0AU3NngIJ4KVyWbY9bfQqdL9cD+4yf6dUoU2Ap4VsU0JkQi6FxAI1B2mXQ==",
         "license": "BSD-3-Clause",
         "engines": {
           "node": ">= 18"
@@ -774,5 +774,5 @@
       }
     }
   },
-  "invalidationHash": "def986ae6a78e6b310a0b97d176264a34d6a01327514890be1af59eaeefb9cdc"
+  "invalidationHash": "c93fe80ab0314aad619c95b81baa4f03b2a86f4cbfb0fd3377a36e9308b168f2"
 }

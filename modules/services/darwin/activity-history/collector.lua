@@ -80,15 +80,16 @@ local function prepare()
 		if recorder.archiveTask and recorder.archiveTask:isRunning() then
 			return
 		end
-		recorder.archiveDay = activityDay
+		local archiveDay = activityDay
 		logger:i("archive_started")
 		recorder.archiveTask = hs.task.new(helper, function(code, _, stderr)
 			if code ~= 0 then
 				logger:e("archive_failed", { exit_code = code, stderr = stderr })
 			else
+				recorder.archiveDay = archiveDay
 				logger:i("archive_finished", { exit_code = code })
 			end
-		end, { "_archive", "--before", activityDay })
+		end, { "_archive", "--before", archiveDay })
 		assert(recorder.archiveTask and recorder.archiveTask:start(), "Cannot start activity history archive")
 	end)
 	if not ok then

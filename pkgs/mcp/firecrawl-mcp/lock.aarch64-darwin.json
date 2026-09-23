@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-firecrawl-mcp",
-    "version": "3.25.2",
+    "version": "3.25.3",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-firecrawl-mcp",
-        "version": "3.25.2",
+        "version": "3.25.3",
         "dependencies": {
-          "firecrawl-mcp": "3.25.2"
+          "firecrawl-mcp": "3.25.3"
         }
       },
       "node_modules/@borewit/text-codec": {
@@ -882,9 +882,9 @@
         }
       },
       "node_modules/firecrawl-mcp": {
-        "version": "3.25.2",
-        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.25.2.tgz",
-        "integrity": "sha512-Z0PWA9UD757p8w1ahAh6Fyqm28uDc8ng7OkTE3NE0x1F85vAeU4/MMmx1l+xtmDm8OSpybriMjNJZavca4ijfA==",
+        "version": "3.25.3",
+        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.25.3.tgz",
+        "integrity": "sha512-XvhSvmOiz6X+Hh+3n9UaDHekkfBXDynLyxvBD1HtUnECqGKg1F0F+WPtgUHH8LNclppHCVf3ii5Z0VljYt7JAg==",
         "license": "MIT",
         "dependencies": {
           "dotenv": "^17.2.2",
@@ -2412,5 +2412,5 @@
       }
     }
   },
-  "invalidationHash": "6c3f563612f5f4595485a511612c2acf38f2a3d95bc25a8e962a0407f00d81d9"
+  "invalidationHash": "82ccacd1146b487dc9ea9040da3421cc5515fd0b9530b2b0a7e1440e1926e3af"
 }

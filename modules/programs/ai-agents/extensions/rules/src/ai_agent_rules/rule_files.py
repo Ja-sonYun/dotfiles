@@ -17,12 +17,14 @@ def project_root(cwd: Path, fallback: Path | None = None) -> Path:
     return cwd
 
 
-def rules_directory(root: Path, handle: str | None = None) -> Path:
-    parts = (
-        [".agents", "rules"] if handle is None else [".agents", "session-rules", handle]
-    )
+def rules_directory(root: Path) -> Path:
     directory = root
-    if handle is None and (root / ".git").exists():
+    if (root / ".git").exists():
+        environment = {
+            name: value
+            for name, value in os.environ.items()
+            if name not in {"GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"}
+        }
         try:
             result = subprocess.run(
                 [
@@ -33,27 +35,60 @@ def rules_directory(root: Path, handle: str | None = None) -> Path:
                     "--path-format=absolute",
                     "--git-common-dir",
                 ],
-                env={
-                    name: value
-                    for name, value in os.environ.items()
-                    if name not in {"GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"}
-                },
+                env=environment,
                 capture_output=True,
                 text=True,
                 check=True,
                 timeout=5,
             )
-        except (OSError, subprocess.SubprocessError, UnicodeError) as error:
-            raise OSError(
-                f"Cannot resolve the Git common directory for {root}."
-            ) from error
-        common = result.stdout.rstrip("\n")
-        if not common or not Path(common).is_absolute():
-            raise OSError(f"Git returned an invalid common directory for {root}.")
-        directory = Path(common).resolve()
-        parts = ["ai-agent", "jev", "rules"]
+            common = result.stdout.rstrip("\n")
+            if not common or not Path(common).is_absolute():
+                raise OSError("Git returned an invalid common directory.")
+            common_directory = Path(common).resolve()
 
-    for part in parts:
+            # Submodules may list their Git metadata directory as the main worktree.
+            result = subprocess.run(
+                [
+                    "git",
+                    "config",
+                    "--file",
+                    str(common_directory / "config"),
+                    "--null",
+                    "--get",
+                    "core.worktree",
+                ],
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=5,
+            )
+            if result.returncode == 1:
+                result = subprocess.run(
+                    ["git", "-C", str(root), "worktree", "list", "--porcelain", "-z"],
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=5,
+                )
+                first = result.stdout.split("\0", 1)[0]
+                if not first.startswith("worktree "):
+                    raise OSError("Git returned an invalid worktree list.")
+                directory = Path(first.removeprefix("worktree "))
+                if not directory.is_absolute():
+                    raise OSError("Git returned an invalid main worktree path.")
+                directory = directory.resolve()
+            else:
+                result.check_returncode()
+                checkout = result.stdout.removesuffix("\0")
+                if not checkout:
+                    raise OSError("Git returned an empty core.worktree path.")
+                directory = (common_directory / checkout).resolve()
+        except (OSError, subprocess.SubprocessError, UnicodeError) as error:
+            raise OSError(f"Cannot resolve the main checkout for {root}.") from error
+
+    for part in (".agents", "rules"):
         directory = directory / part
         if directory.is_symlink():
             raise ValueError(
@@ -113,5 +148,5 @@ def read_rules(directory: Path) -> dict[str, object]:
     return {
         path.stem: read_json(rule_path(directory, path.stem))
         for path in paths
-        if path.suffix == ".json"
+        if path.suffix == ".json" and re.fullmatch(r"[A-Za-z0-9_-]+", path.stem)
     }

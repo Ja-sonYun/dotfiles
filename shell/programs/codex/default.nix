@@ -46,7 +46,6 @@
 
       suppress_unstable_features_warning = true;
       check_for_update_on_startup = false;
-      hide_rate_limit_model_nudge = true;
 
       file_opener = "none";
 

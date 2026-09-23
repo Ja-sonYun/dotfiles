@@ -19,7 +19,7 @@ HOOK_PATH = (
     Path(hook_path)
     if hook_path
     else Path(__file__).parents[4]
-    / "modules/programs/ai-agents/extensions/notification/pkgs/notification.py"
+    / "modules/programs/ai-agents/extensions/notification/notification.py"
 )
 NOTIFICATION = runpy.run_path(str(HOOK_PATH))
 NOTIFICATION_FOR_EVENT = cast(

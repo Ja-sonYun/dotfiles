@@ -132,7 +132,7 @@ export class Job
   def Join(timeout_ms: number = -1): Result
     this._GuardStarted()
     var t0 = reltime()
-    while this.IsRunning()
+    while this.Status() !=# Status.fail && !this._finished
       if timeout_ms >= 0 && reltimefloat(reltime(t0)) * 1000.0 > timeout_ms
         throw 'Join timeout'
       endif
@@ -145,7 +145,7 @@ export class Job
     this._GuardStarted()
     var self = this
     var timer_id = timer_start(interval_ms, (_) => {
-      if self.IsRunning()
+      if self.Status() !=# Status.fail && !self._finished
         timer_start(interval_ms, (_) => self.WaitAsync(interval_ms, cb))
       else
         if type(cb) != v:t_none

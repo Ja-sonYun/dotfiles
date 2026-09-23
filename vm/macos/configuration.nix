@@ -95,7 +95,7 @@ inputs.darwin.lib.darwinSystem {
           ];
 
           programs.radare2 = {
-            envFiles = lib.mkForce { };
+            env = lib.mkForce { };
             decai.enable = lib.mkForce false;
             extraConfig = lib.mkForce ''
               e scr.color=1

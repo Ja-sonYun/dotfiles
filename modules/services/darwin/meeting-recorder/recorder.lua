@@ -2451,4 +2451,14 @@ hs.distributednotifications.post("@refreshNotification@", "org.hammerspoon.Hamme
 
 logger:i("module_started", { recorder_poll_seconds = 1, queue_length = #module.transcriptionQueue })
 
+local previousShutdown = hs.shutdownCallback
+hs.shutdownCallback = function()
+	for requestID in pairs(module.pendingRecordings) do
+		requestRecorderStop(requestID)
+	end
+	if previousShutdown then
+		previousShutdown()
+	end
+end
+
 return module

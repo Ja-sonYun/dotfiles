@@ -24,16 +24,26 @@ export class Response
         if len(parts) >= 2
           this.status = str2nr(parts[1])
         endif
+        this.headers = {}
+        var has_location = false
         i += 1
-        while i < len(lines) && lines[i] !=# ''
+        while i < len(lines) && lines[i] !~# '^\r\?$'
           var h = matchlist(lines[i], '^\([^:]\+\):\(.*\)$')
           if len(h) >= 3
             this.headers[trim(h[1])] = trim(h[2])
+            if tolower(trim(h[1])) ==# 'location' && trim(h[2]) !=# ''
+              has_location = true
+            endif
           endif
           i += 1
         endwhile
-        if i < len(lines) && lines[i] ==# ''
+        if i < len(lines) && lines[i] =~# '^\r\?$'
           i += 1
+        endif
+        var intermediate = (this.status >= 100 && this.status < 200 && this.status != 101)
+          || (this.status >= 300 && this.status < 400 && has_location)
+        if intermediate && i < len(lines) && lines[i] =~# '^HTTP/'
+          continue
         endif
         this.body = join(lines[i :], "\n")
         break
@@ -73,7 +83,9 @@ export class Request
     this.done_cb = get(opts, 'done_cb', v:none)
     this.err_cb = get(opts, 'err_cb', v:none)
 
-    var argv: list<string> = ['curl', '-i', '-sSL', '-X', this.method, this.url]
+    var argv: list<string> = [
+      'curl', '-i', '-sSL', '--suppress-connect-headers', '-X', this.method, this.url,
+    ]
 
     for [k, v] in items(this.headers)
       add(argv, '-H')

@@ -1,7 +1,7 @@
 {
   imports = [
     ./format-lint
-    ./jev
+    ./rules
     ./edit-feedback.nix
     ./notification
   ];

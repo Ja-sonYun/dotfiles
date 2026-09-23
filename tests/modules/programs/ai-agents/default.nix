@@ -135,8 +135,8 @@ let
   codexModule = ../../../../modules/programs/codex;
   codexHookAdapter = ../../../../modules/programs/ai-agents/hooks/adapters/codex_adapter.py;
   hookInput = ../../../../modules/programs/ai-agents/hooks/runtime/hook_input.py;
-  statusHook = ../../../../modules/programs/tmux/extensions/agent/pkgs/status.py;
-  notificationHook = ../../../../modules/programs/ai-agents/extensions/notification/pkgs/notification.py;
+  statusHook = ../../../../modules/programs/tmux/extensions/agent/status.py;
+  notificationHook = ../../../../modules/programs/ai-agents/extensions/notification/notification.py;
   disabledConfiguration = home-manager.lib.homeManagerConfiguration {
     pkgs = testPkgs;
     modules = [

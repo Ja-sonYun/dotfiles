@@ -17,9 +17,9 @@ let
       str
     ];
 
-  # secrets are read at launch, not baked, so $(cat) must run in the wrapper
+  # Read secrets at launch to avoid baking them into the store.
   wrappedPackage =
-    if cfg.envFiles == { } then
+    if cfg.env == { } then
       cfg.package
     else
       pkgs.runCommand "${cfg.package.name}-wrapped" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
@@ -28,12 +28,7 @@ let
         for b in r2 radare2; do
           rm -f "$out/bin/$b"
           makeWrapper ${cfg.package}/bin/$b $out/bin/$b \
-            ${lib.concatStringsSep " \\\n          " (
-              lib.mapAttrsToList (
-                name: file:
-                "--run ${lib.escapeShellArg ''export ${name}="$(cat -- ${lib.escapeShellArg file} 2>/dev/null)"''}"
-              ) cfg.envFiles
-            )}
+            --run ${lib.escapeShellArg (pkgs.tool.shell.util.shellExports cfg.env)}
         done
       '';
 in
@@ -60,13 +55,21 @@ in
       description = "Plugins linked into the r2 user plugins dir, keyed by filename (r2js or native).";
     };
 
-    envFiles = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
+    env = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.oneOf [
+          lib.types.str
+          pkgs.tool.secretValue.type
+        ]
+      );
       default = { };
       example = {
-        OPENAI_API_KEY = "/run/agenix/capi-key";
+        OPENAI_API_KEY._secret = "/run/agenix/capi-key";
       };
-      description = "Env vars exported into the r2/radare2 process at launch, each read at runtime from a file (e.g. an agenix secret path).";
+      description = ''
+        Environment variables exported into the r2/radare2 process at launch.
+        Values are strings or { _secret = path; } values read from files at runtime.
+      '';
     };
 
     decai = {

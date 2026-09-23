@@ -23,9 +23,9 @@ in
       "libcore_r2ghidra${extension}" = "${pkgs.r2ghidra}/lib/radare2/last/libcore_r2ghidra${extension}";
     };
 
-    envFiles = {
-      OPENAI_API_KEY = config.age.secrets."capi-key".path;
-      LLM_DOMAIN = config.age.secrets."llm-domain".path;
+    env = {
+      OPENAI_API_KEY._secret = config.age.secrets."capi-key".path;
+      LLM_DOMAIN._secret = config.age.secrets."llm-domain".path;
     };
 
     decai = {

@@ -21,7 +21,7 @@
   rustfmt,
 }:
 let
-  hookLibrary = callPackage ../../../hooks/runtime { };
+  hookLibrary = callPackage ../../hooks/runtime { };
   python = python3.withPackages (_: [ hookLibrary ]);
 in
 writeShellApplication {

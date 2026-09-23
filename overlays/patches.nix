@@ -17,6 +17,7 @@
             entrypoint,
             python ? final.python312,
             runtimeInputs ? [ ],
+            extraPythonPaths ? [ ],
           }:
           let
             entrypointParts = final.lib.splitString ":" entrypoint;
@@ -42,6 +43,9 @@
               import sys
 
               sys.path.insert(0, ${builtins.toJSON (toString root)})
+              ${final.lib.optionalString (extraPythonPaths != [ ]) ''
+                sys.path[0:0] = ${builtins.toJSON (map toString extraPythonPaths)}
+              ''}
               module = importlib.import_module(${builtins.toJSON entrypointModule})
               main = getattr(module, ${builtins.toJSON entrypointFunction})
               raise SystemExit(main())

@@ -98,7 +98,7 @@ let
             fi
           done
 
-          [ -f "$source" ] || continue
+          [ -f "$source" ] && [ ! -L "$source" ] || continue
           if [ -e "$target" ] || [ -L "$target" ]; then
             echo "skipped existing: $rel" >&2
             continue

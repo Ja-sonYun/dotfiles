@@ -14,6 +14,37 @@ class Inspection:
     path: Path
     kind: str
     code: str
+    regex_text: str | None = None
+
+    def matching_text(self) -> str:
+        """Return added text, preserving physical lines for replacements."""
+        if self.kind == "patch":
+            return added_text(self.code)
+        if self.kind == "replacement":
+            if self.regex_text is None:
+                raise ValueError("replacement line context is unavailable")
+            return self.regex_text
+        if self.kind == "notebook_cell":
+            return str(json.loads(self.code)["new_source"])
+        return self.code
+
+
+def added_text(patch: str) -> str:
+    """Extract added lines from an apply_patch or unified patch."""
+    lines = []
+    in_hunk = False
+    for line in patch.splitlines():
+        if line.startswith(("*** Add File:", "*** Update File:")):
+            in_hunk = True
+        elif line.startswith("*** Move to:"):
+            continue
+        elif line.startswith(("*** ", "diff --git ")):
+            in_hunk = False
+        elif line.startswith("@@"):
+            in_hunk = True
+        elif in_hunk and line.startswith("+"):
+            lines.append(line[1:])
+    return "\n".join(lines)
 
 
 def check_source_path(path: Path) -> None:
@@ -37,7 +68,82 @@ def source_text(path: Path) -> str:
     return data.decode("utf-8")
 
 
-def inspections(hook_input: HookInput) -> tuple[list[Inspection], list[str]]:
+def replacement_edits(tool_input: object) -> list[tuple[str, str, bool]]:
+    if not isinstance(tool_input, dict):
+        raise TypeError("missing edit input")
+    edits = tool_input.get("edits", [tool_input])
+    if not isinstance(edits, list):
+        raise TypeError("invalid replacement input")
+    result = []
+    for edit in edits:
+        if not isinstance(edit, dict):
+            raise TypeError("invalid replacement input")
+        old = edit.get("old_string", edit.get("oldText"))
+        new = edit.get("new_string", edit.get("newText"))
+        if not isinstance(old, str) or not isinstance(new, str):
+            raise TypeError("missing replacement text")
+        if "\0" in old or "\0" in new:
+            raise ValueError("binary replacement excluded")
+        result.append((old, new, edit.get("replace_all") is True))
+    return result
+
+
+def replacement_context(source: str, tool_input: object) -> tuple[str, list[str]]:
+    edits = replacement_edits(tool_input)
+    spans: list[tuple[int, int, int]] = []
+    for index, (old, new, replace_all) in enumerate(edits):
+        count = source.count(old)
+        if not old or not count:
+            raise ValueError("cannot locate the original replacement text")
+        if not replace_all and count != 1:
+            raise ValueError("replacement location is ambiguous")
+        positions = [match.start() for match in re.finditer(re.escape(old), source)]
+        for start in reversed(positions):
+            end = start + len(old)
+            shift = len(new) - len(old)
+            remaining = []
+            # Preserve only earlier replacement text that this edit does not overwrite.
+            for owner, left, right in spans:
+                if left < start:
+                    remaining.append((owner, left, min(right, start)))
+                if right > end:
+                    remaining.append((owner, max(left, end) + shift, right + shift))
+            if new:
+                remaining.append((index, start, start + len(new)))
+            spans = remaining
+            source = source[:start] + new + source[end:]
+        if len(source.encode("utf-8")) > MAX_SOURCE_BYTES:
+            raise ValueError("replacement result exceeds the 1 MiB inspection limit")
+
+    texts = []
+    for index, (_, new, _) in enumerate(edits):
+        if not new:
+            continue
+        ranges = sorted(
+            {
+                (
+                    left if source[left] in "\r\n" else source.rfind("\n", 0, left) + 1,
+                    source.find("\n", right - 1),
+                )
+                for owner, left, right in spans
+                if owner == index
+            }
+        )
+        merged: list[tuple[int, int]] = []
+        for left, right in ranges:
+            if right < 0:
+                right = len(source)
+            if merged and left <= merged[-1][1] + 1:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], right))
+            else:
+                merged.append((left, right))
+        texts.append("\n".join(source[left:right] for left, right in merged))
+    return source, texts
+
+
+def inspections(
+    hook_input: HookInput, matching_texts: list[str] | None = None
+) -> tuple[list[Inspection], list[str]]:
     targets = edit_targets(hook_input)
     if not targets:
         return [], []
@@ -70,7 +176,7 @@ def inspections(hook_input: HookInput) -> tuple[list[Inspection], list[str]]:
                         check_source_path(block_targets[0].after)
                     except ValueError as error:
                         notes.append(
-                            f"[Jev not checked] {block_targets[0].after}: {error}"
+                            f"[Rules not checked] {block_targets[0].after}: {error}"
                         )
                         continue
                     inputs.append(Inspection(block_targets[0].after, "patch", block))
@@ -103,18 +209,7 @@ def inspections(hook_input: HookInput) -> tuple[list[Inspection], list[str]]:
                     raise TypeError("missing write content")
                 inputs.append(Inspection(targets[0].after, "write", content))
             else:
-                edits = tool_input.get("edits", [tool_input])
-                if not isinstance(edits, list):
-                    raise TypeError("invalid replacement input")
-                for edit in edits:
-                    if not isinstance(edit, dict):
-                        raise TypeError("invalid replacement input")
-                    old = edit.get("old_string", edit.get("oldText"))
-                    new = edit.get("new_string", edit.get("newText"))
-                    if not isinstance(old, str) or not isinstance(new, str):
-                        raise TypeError("missing replacement text")
-                    if "\0" in old or "\0" in new:
-                        raise ValueError("binary replacement excluded")
+                for old, new, _ in replacement_edits(tool_input):
                     if new:
                         inputs.append(
                             Inspection(
@@ -124,12 +219,15 @@ def inspections(hook_input: HookInput) -> tuple[list[Inspection], list[str]]:
                                     {"old_text": old, "replacement": new},
                                     ensure_ascii=False,
                                 ),
+                                matching_texts[len(inputs)]
+                                if matching_texts is not None
+                                else None,
                             )
                         )
         else:
             raise ValueError("missing edit input")
     except (TypeError, ValueError) as error:
-        return [], [f"[Jev not checked] Editing tool input: {error}"]
+        return [], [f"[Rules not checked] Editing tool input: {error}"]
 
     eligible = []
     for inspection in inputs:
@@ -138,7 +236,7 @@ def inspections(hook_input: HookInput) -> tuple[list[Inspection], list[str]]:
             or len(inspection.code.encode("utf-8")) > MAX_SOURCE_BYTES
         ):
             notes.append(
-                f"[Jev not checked] {inspection.path}: binary or oversized input"
+                f"[Rules not checked] {inspection.path}: binary or oversized input"
             )
         else:
             eligible.append(inspection)

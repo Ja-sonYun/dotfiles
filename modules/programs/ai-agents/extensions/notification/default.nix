@@ -5,7 +5,7 @@
   ...
 }:
 let
-  package = pkgs.callPackage ./pkgs { };
+  package = pkgs.callPackage ./package.nix { };
   block = {
     hooks = [
       {

@@ -125,28 +125,47 @@ let
 
     real_git=${quote "${pkgs.git}/bin/git"}
 
+    git_args=("$@")
+    global_args=()
+    preserve_git_dir="''${GIT_DIR+x}"
+    command_index=0
+    while [ "$command_index" -lt "''${#git_args[@]}" ]; do
+        arg="''${git_args[$command_index]}"
+        case "$arg" in
+            --git-dir | --git-dir=* | --bare) preserve_git_dir=x ;;
+        esac
+        case "$arg" in
+            -C | -c | --git-dir | --work-tree | --namespace | --config-env | --super-prefix)
+                global_args+=("$arg")
+                command_index=$((command_index + 1))
+                [ "$command_index" -lt "''${#git_args[@]}" ] || break
+                global_args+=("''${git_args[$command_index]}")
+                ;;
+            --)
+                exec "$real_git" "$@"
+                ;;
+            -*) global_args+=("$arg") ;;
+            *) break ;;
+        esac
+        command_index=$((command_index + 1))
+    done
+
+    if [ "$command_index" -gt 0 ] && [ "$command_index" -lt "''${#git_args[@]}" ]; then
+        dispatch_path="$0"
+        [[ "$dispatch_path" = /* ]] || dispatch_path="$PWD/$dispatch_path"
+        # Let Git export global configuration; discard only the Git directory inferred by its shell alias.
+        # https://github.com/git/git/blob/master/git.c
+        exec "$real_git" "''${global_args[@]}" \
+            -c 'alias.dotfiles-dispatch=!f() {
+                cd -- "''${GIT_PREFIX:-.}" || exit
+                [ "$1" = x ] || unset GIT_DIR
+                shift
+                exec "$@"
+            }; f' \
+            dotfiles-dispatch "$preserve_git_dir" "$dispatch_path" "''${git_args[@]:command_index}"
+    fi
+
     ${lib.optionalString restrictLinkedWorktreeBranchSwitching ''
-      git_args=("$@")
-      global_args=()
-      command_index=0
-      while [ "$command_index" -lt "''${#git_args[@]}" ]; do
-          arg="''${git_args[$command_index]}"
-          case "$arg" in
-              -C | -c | --git-dir | --work-tree | --namespace | --config-env | --super-prefix)
-                  global_args+=("$arg")
-                  command_index=$((command_index + 1))
-                  [ "$command_index" -lt "''${#git_args[@]}" ] || break
-                  global_args+=("''${git_args[$command_index]}")
-                  ;;
-              --)
-                  command_index=$((command_index + 1))
-                  break
-                  ;;
-              -*) global_args+=("$arg") ;;
-              *) break ;;
-          esac
-          command_index=$((command_index + 1))
-      done
       git_command="''${git_args[$command_index]-}"
       first_argument="''${git_args[$((command_index + 1))]-}"
       if { [ "$git_command" = "checkout" ] || [ "$git_command" = "co" ] || [ "$git_command" = "switch" ]; } &&

@@ -6,7 +6,7 @@
 }:
 let
   tmuxRoot = ../..;
-  package = pkgs.callPackage ./pkgs { };
+  package = pkgs.callPackage ./package.nix { };
   command = lib.escapeShellArgs [
     (lib.getExe package)
     "${tmuxRoot}/extensions/agent/scripts/status"

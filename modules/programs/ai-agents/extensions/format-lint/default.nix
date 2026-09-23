@@ -10,7 +10,7 @@
       type = lib.types.package;
       internal = true;
       readOnly = true;
-      default = pkgs.callPackage ./pkgs { };
+      default = pkgs.callPackage ./package.nix { };
       description = "Formatter and lint executable used by the post-edit hook chain.";
     };
   };

@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-n8n-mcp",
-    "version": "2.87.0",
+    "version": "2.89.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-n8n-mcp",
-        "version": "2.87.0",
+        "version": "2.89.0",
         "dependencies": {
-          "n8n-mcp": "2.87.0"
+          "n8n-mcp": "2.89.0"
         }
       },
       "node_modules/@hono/node-server": {
@@ -1252,9 +1252,9 @@
         "license": "MIT"
       },
       "node_modules/n8n-mcp": {
-        "version": "2.87.0",
-        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.87.0.tgz",
-        "integrity": "sha512-xadw4KMsqP9CIPnvAVcuBTysY2S/87pO5nGuHS7dda655am+uY6qicnLA7QUxe/SJzaU2BtX8O4qtsmn8HLtbw==",
+        "version": "2.89.0",
+        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.89.0.tgz",
+        "integrity": "sha512-3rBc2C7mIBR2DhIKH3H199npGsWLAcZMquwIN8BrIYJVW+VVixZpkcD/VReOTsD7D94poatwnAOxmTRTuQpu1Q==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/sdk": "1.30.0",
@@ -2017,5 +2017,5 @@
       }
     }
   },
-  "invalidationHash": "f1433eb3552734739ca1c530f572935da2e1e3d1d514b4ffe06947b0a7629aa1"
+  "invalidationHash": "144baa7802561232ac13954bc703764ca5c6d0030c359d447ca2b1b73cf8b855"
 }

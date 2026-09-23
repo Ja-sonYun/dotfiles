@@ -138,14 +138,24 @@ end
 local function updateDisplay(screen, uuid, activeSpace)
 	local frame = screen:frame()
 	local fullFrame = screen:fullFrame()
-	if frame.y - fullFrame.y < height or not activeSpace or hs.spaces.spaceType(activeSpace) ~= "user" then
+	if frame.y - fullFrame.y < height then
+		removeDisplay(uuid)
+		return
+	end
+	if not activeSpace then
+		return
+	end
+	local activeSpaceType = hs.spaces.spaceType(activeSpace)
+	if not activeSpaceType then
+		return
+	end
+	if activeSpaceType ~= "user" then
 		removeDisplay(uuid)
 		return
 	end
 
 	local spaces = hs.spaces.spacesForScreen(screen)
 	if not spaces then
-		removeDisplay(uuid)
 		return
 	end
 
@@ -154,7 +164,6 @@ local function updateDisplay(screen, uuid, activeSpace)
 	for _, space in ipairs(spaces) do
 		local spaceType = hs.spaces.spaceType(space)
 		if not spaceType then
-			removeDisplay(uuid)
 			return
 		end
 		if spaceType == "user" then
@@ -165,7 +174,6 @@ local function updateDisplay(screen, uuid, activeSpace)
 		end
 	end
 	if not currentIndex then
-		removeDisplay(uuid)
 		return
 	end
 
@@ -177,39 +185,54 @@ local function updateDisplay(screen, uuid, activeSpace)
 		contents[#contents + 1] = module.occupancy[space] == false and "empty" or "filled"
 	end
 	local state = table.concat({ table.concat(desktops, ","), table.concat(contents, ","), activeSpace, x, y }, ":")
-	if module.displays[uuid] and module.displays[uuid].state == state then
+	local display = module.displays[uuid]
+	if display and display.state == state then
 		return
 	end
 
-	removeDisplay(uuid)
-	local canvas = hs.canvas.new({
+	local canvasFrame = {
 		x = x,
 		y = y,
 		w = width,
 		h = height,
-	})
-	canvas:level("status")
-	canvas:behavior({ "canJoinAllSpaces" })
-	canvas:clickActivating(false)
-
-	canvas:appendElements({
-		type = "rectangle",
-		action = "fill",
-		fillColor = {
-			white = 0.1,
-			alpha = 0.65,
-		},
-		frame = {
+	}
+	local create = not display or display.count ~= #desktops
+	local canvas
+	if create then
+		removeDisplay(uuid)
+		canvas = hs.canvas.new(canvasFrame)
+		canvas:level("status")
+		canvas:behavior({ "canJoinAllSpaces" })
+		canvas:clickActivating(false)
+		canvas:appendElements({
+			type = "rectangle",
+			action = "fill",
+			fillColor = {
+				white = 0.1,
+				alpha = 0.65,
+			},
+			frame = {
+				x = 0,
+				y = 0,
+				w = width,
+				h = height,
+			},
+			roundedRectRadii = {
+				xRadius = height / 2,
+				yRadius = height / 2,
+			},
+		})
+	else
+		canvas = display.canvas
+		canvas:frame(canvasFrame)
+		canvas[1].frame = {
 			x = 0,
 			y = 0,
 			w = width,
 			h = height,
-		},
-		roundedRectRadii = {
-			xRadius = height / 2,
-			yRadius = height / 2,
-		},
-	})
+		}
+	end
+
 	for index = 1, #desktops do
 		local empty = module.occupancy[desktops[index]] == false
 		local inset = empty and outlineWidth / 2 or 0
@@ -217,7 +240,7 @@ local function updateDisplay(screen, uuid, activeSpace)
 			white = 1,
 			alpha = index == currentIndex and 1 or 0.4,
 		}
-		canvas:appendElements({
+		local element = {
 			type = "rectangle",
 			action = empty and "stroke" or "fill",
 			fillColor = color,
@@ -233,13 +256,25 @@ local function updateDisplay(screen, uuid, activeSpace)
 				xRadius = barHeight / 2 - inset,
 				yRadius = barHeight / 2 - inset,
 			},
-		})
+		}
+		if create then
+			canvas:appendElements(element)
+		else
+			canvas[index + 1].action = element.action
+			canvas[index + 1].fillColor = element.fillColor
+			canvas[index + 1].strokeColor = element.strokeColor
+			canvas[index + 1].frame = element.frame
+			canvas[index + 1].roundedRectRadii = element.roundedRectRadii
+		end
 	end
 	module.displays[uuid] = {
 		canvas = canvas,
 		state = state,
+		count = #desktops,
 	}
-	canvas:show()
+	if create then
+		canvas:show()
+	end
 end
 
 local function refresh()

@@ -31,7 +31,7 @@ let
             hooks = [
               {
                 command = "test-session-end-hook";
-                timeout = 5;
+                timeout = 3;
                 type = "command";
               }
             ];
@@ -121,10 +121,10 @@ let
         {
           command =
             if client == "Codex" then
-              codexCommand 5 "test-session-end-hook"
+              codexCommand 3 "test-session-end-hook"
             else
               commonCommand client "test-session-end-hook";
-          timeout = if client == "Codex" then 9 else 5;
+          timeout = 3;
           type = "command";
         }
       ];

@@ -122,6 +122,26 @@ def _remove_generated(document: MutableMapping[str, Any]) -> None:
             document.pop(key)
 
 
+def _remove_obsolete_mcp_servers(
+    document: MutableMapping[str, Any],
+    fragment: MutableMapping[str, Any],
+) -> None:
+    servers = document.get("mcp_servers")
+    if not isinstance(servers, MutableMapping):
+        return
+
+    declared = fragment.get("mcp_servers", {})
+    for name in list(servers):
+        server = _item(servers, name)
+        if name in declared or not isinstance(server, MutableMapping):
+            continue
+        if any(
+            key in server and _is_generated(_item(server, key))
+            for key in ("command", "url")
+        ):
+            servers.pop(name)
+
+
 def _merge_generated(
     document: MutableMapping[str, Any],
     fragment: MutableMapping[str, Any],
@@ -235,6 +255,7 @@ def main() -> None:
     _add_hook_state(fragment, target)
     _mark_generated(fragment)
 
+    _remove_obsolete_mcp_servers(document, fragment)
     _remove_generated(document)
     _merge_generated(document, fragment)
 

@@ -18,8 +18,7 @@ hook_path = os.environ.get("AI_AGENTS_STATUS_HOOK")
 HOOK_PATH = (
     Path(hook_path)
     if hook_path
-    else Path(__file__).parents[4]
-    / "modules/programs/tmux/extensions/agent/pkgs/status.py"
+    else Path(__file__).parents[4] / "modules/programs/tmux/extensions/agent/status.py"
 )
 STATUS = runpy.run_path(str(HOOK_PATH))
 STATE_FOR_EVENT = cast(StateForEvent, STATUS["state_for_event"])

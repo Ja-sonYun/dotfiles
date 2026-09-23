@@ -1,26 +1,19 @@
 import asyncio
 import json
 import os
+import re
 import time
 import traceback
 from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
-
-from ai_agent_jev.debug_log import save_log, start_log
-from ai_agent_jev.process import run_process
-from ai_agent_jev.rule_files import project_root, read_rules, rule_path, rules_directory
-from ai_agent_jev.sessions import require_session, state_lock
+from ai_agent_rules.code_changes import project_instructions
+from ai_agent_rules.debug_log import save_log, start_log
+from ai_agent_rules.process import run_process
+from ai_agent_rules.rules import Rule
 
 MAX_REQUEST_BYTES = 64 * 1024
-NonEmptyText = Annotated[str, StringConstraints(min_length=1, pattern=r"\S")]
-Extension = Annotated[
-    str, StringConstraints(to_lower=True, pattern=r"^\.[A-Za-z0-9]+$")
-]
-Target = Literal["code", "tool", "task"]
 CHOICES = {
     "compliant": "The inspected input complies with this rule, or the rule does not apply.",
     "violation": "The rule applies and the inspected input provides evidence of a violation.",
@@ -51,79 +44,23 @@ conversation or that proposed actions have happened or drafts have been delivere
 }
 
 
-class RuleDefinition(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
-
-    enable: bool = True
-    target: Target
-    title: NonEmptyText | None = None
-    extensions: list[Extension] = Field(default_factory=list)
-    instructions: NonEmptyText
-    why: NonEmptyText
-    message: NonEmptyText
-
-    @model_validator(mode="after")
-    def validate_extensions(self) -> Self:
-        if self.extensions and self.target != "code":
-            raise ValueError("Only code rules may specify extensions.")
-        return self
-
-
-@dataclass(frozen=True)
-class Rule:
-    id: str
-    definition: RuleDefinition
-    source: str
-    path: Path | None = None
-    effective: bool = True
-
-    def applies(self, path: Path) -> bool:
-        return (
-            self.effective
-            and self.definition.enable
-            and self.definition.target == "code"
-            and (
-                not self.definition.extensions
-                or path.suffix.lower() in self.definition.extensions
-            )
-        )
-
-    def record(self) -> dict[str, object]:
-        return {
-            **self.definition.model_dump(mode="json"),
-            "id": self.id,
-            "title": self.definition.title or self.id,
-            "source": self.source,
-            "path": str(self.path) if self.path is not None else None,
-            "effective": self.effective,
-        }
-
-
 @dataclass
 class Evaluation:
     applicable_rule_count: int
     results: list[dict[str, object]]
     errors: list[str]
     halted: bool = False
+    log_path: Path | None = None
 
     def feedback(self, label: str) -> list[str]:
-        notes = [f"[Jev not checked] {label}: {error}" for error in self.errors]
+        notes = [f"[Rules not checked] {label}: {error}" for error in self.errors]
         for result in self.results:
             verdict = result["verdict"]
             if verdict == "compliant":
                 continue
-            note = (
-                f"[Jev {verdict}] {label}\n"
-                f"Rule: {result['id']} — {result['title']} ({result['source']})\n"
-                f"Model: {result['model']}\n"
-                "Probabilities (as returned by Jev): "
-                + json.dumps(result["probabilities"], ensure_ascii=False)[:1000]
-            )
+            note = f"[Rules {verdict}] {label}\nRule: {result['id']}"
             if verdict == "violation":
-                note += (
-                    f"\nWhy this rule matters (rule author): {result['why']}"
-                    f"\nCorrection guidance (rule author): {result['message']}"
-                )
+                note += f"\nCorrection guidance: {result['message']}"
                 if result["target"] == "code":
                     note += (
                         "\nThe inspected tool input is not an exact violation location."
@@ -131,58 +68,9 @@ class Evaluation:
             else:
                 note += "\nInsufficient evidence; this is not a confirmed violation."
             notes.append(note)
+        if notes and self.log_path is not None:
+            notes.append(f"[Rules log] {self.log_path}")
         return notes
-
-
-def parse_rules(data: object, source: str, directory: Path | None = None) -> list[Rule]:
-    if not isinstance(data, dict):
-        raise TypeError("Rules must be a JSON object.")
-    rules = []
-    for name, value in sorted(data.items()):
-        if not isinstance(name, str) or not name.strip():
-            raise ValueError("Rule ID must not be empty.")
-        try:
-            definition = RuleDefinition.model_validate(value)
-        except ValueError as error:
-            raise ValueError(f"Invalid {source} rule: {name}") from error
-        rules.append(
-            Rule(
-                name,
-                definition,
-                source,
-                rule_path(directory, name) if directory is not None else None,
-            )
-        )
-    return rules
-
-
-def load_rules(path: Path) -> list[Rule]:
-    return parse_rules(json.loads(path.read_text(encoding="utf-8")), "static")
-
-
-def effective_rules(
-    path: Path, handle: str | None, cwd: Path | None = None
-) -> tuple[Path, list[Rule]]:
-    static = load_rules(path)
-    dynamic: list[Rule] = []
-    fallback: Path | None = None
-    with state_lock() as metadata:
-        if handle is not None:
-            session = require_session(metadata, handle)
-            cwd = cwd if cwd is not None else session.cwd
-            fallback = session.cwd
-            directory = rules_directory(session.root, handle)
-            dynamic = parse_rules(read_rules(directory), "session", directory)
-        elif cwd is None:
-            raise ValueError("A working directory is required without a session.")
-        directory = rules_directory(project_root(cwd, fallback))
-        project = parse_rules(read_rules(directory), "project", directory)
-
-    selected = {rule.id: rule for rule in [*project, *dynamic, *static]}
-    return cwd, [
-        replace(rule, effective=selected[rule.id] is rule)
-        for rule in [*static, *project, *dynamic]
-    ]
 
 
 def questions_for(rules: Sequence[Rule]) -> dict[str, dict[str, object]]:
@@ -192,8 +80,7 @@ def questions_for(rules: Sequence[Rule]) -> dict[str, dict[str, object]]:
             "instructions": (
                 QUESTION_SCOPE
                 + TARGET_SCOPE[rule.definition.target]
-                + "\nRule:\n"
-                + rule.definition.instructions
+                + f"\nRule:\n{rule.definition.check.intent}"
             ),
             "criteria": CHOICES,
         }
@@ -234,6 +121,7 @@ def response_results(output: str, rules: Sequence[Rule]) -> list[dict[str, objec
             "source": rule.source,
             "target": rule.definition.target,
             "verdict": verdict,
+            "check": "intent",
             "model": model,
             "probabilities": probabilities
             if isinstance(probabilities, (dict, list))
@@ -245,6 +133,21 @@ def response_results(output: str, rules: Sequence[Rule]) -> list[dict[str, objec
     return results
 
 
+def input_strings(value: object, fields: Sequence[str] = ()) -> list[str]:
+    """Select string values under matching keys, including nested arrays."""
+    if isinstance(value, str):
+        return [] if fields else [value]
+    if isinstance(value, list):
+        return [text for item in value for text in input_strings(item, fields)]
+    if isinstance(value, dict):
+        return [
+            text
+            for key, item in value.items()
+            for text in input_strings(item, () if key in fields else fields)
+        ]
+    return []
+
+
 async def evaluate(
     jev: str,
     rules: Sequence[Rule],
@@ -252,12 +155,16 @@ async def evaluate(
     cwd: Path,
     deadline: float,
     *,
+    context_path: Path,
+    regex_text: str | None = None,
+    intent_halted: bool = False,
     session_handle: str | None = None,
     debug_log: bool = False,
 ) -> Evaluation:
-    result = Evaluation(len(rules), [], [])
+    result = Evaluation(0, [], [])
     requests: list[dict[str, object]] = []
     log: dict[str, object] = {
+        "operation": "check",
         "started_at": time.time(),
         "status": "started",
         "session_handle": session_handle,
@@ -268,8 +175,65 @@ async def evaluate(
         "requests": requests,
     }
     path = await asyncio.to_thread(start_log, debug_log, session_handle, log)
+    result.log_path = path
     try:
+        intent_rules = []
+        for rule in rules:
+            trigger = rule.definition.trigger
+            if rule.definition.target == "tool":
+                if (
+                    trigger.matcher is not None
+                    and re.search(trigger.matcher, state["tool_name"]) is None
+                ):
+                    continue
+                values = input_strings(
+                    json.loads(state["tool_input"]), trigger.inputFields
+                )
+                if trigger.inputFields and not values:
+                    continue
+            else:
+                values = [regex_text if regex_text is not None else state["text"]]
+            if trigger.pattern is not None and not any(
+                re.search(trigger.pattern, value) is not None for value in values
+            ):
+                continue
+
+            result.applicable_rule_count += 1
+            pattern = rule.definition.check.regex
+            if pattern is None:
+                intent_rules.append(rule)
+                continue
+            matched = any(re.search(pattern, value) is not None for value in values)
+            response: dict[str, object] = {
+                "id": rule.id,
+                "title": rule.definition.title or rule.id,
+                "source": rule.source,
+                "target": rule.definition.target,
+                "check": "regex",
+                "verdict": "violation" if matched else "compliant",
+            }
+            if matched:
+                response.update(
+                    why=rule.definition.why, message=rule.definition.message
+                )
+            result.results.append(response)
+
+        rules = intent_rules
         if not rules:
+            return result
+        if intent_halted:
+            result.errors.append(
+                "Intent checks skipped after an earlier request failure."
+            )
+            result.halted = True
+            return result
+        try:
+            state["project_instructions"] = await asyncio.to_thread(
+                project_instructions, context_path
+            )
+        except (OSError, TypeError, ValueError) as error:
+            result.errors.append(f"Cannot load inspection context: {error}")
+            result.halted = True
             return result
         if not os.environ.get("TYPESAFE_API_KEY"):
             result.errors.append("TYPESAFE_API_KEY is unavailable.")
@@ -356,5 +320,6 @@ async def evaluate(
             results=result.results,
             errors=result.errors,
             halted=result.halted,
+            applicable_rule_count=result.applicable_rule_count,
         )
         await asyncio.to_thread(save_log, path, log)

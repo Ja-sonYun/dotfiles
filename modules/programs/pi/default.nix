@@ -23,18 +23,13 @@ let
 
   # Read secrets at launch to avoid baking them into the store.
   wrappedPackage =
-    if cfg.envFiles == { } then
+    if cfg.env == { } then
       basePackage
     else
       pkgs.runCommand "${basePackage.name}-wrapped" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         mkdir -p $out/bin
         makeWrapper ${basePackage}/bin/pi $out/bin/pi \
-          ${lib.concatStringsSep " \\\n      " (
-            lib.mapAttrsToList (
-              name: file:
-              "--run ${lib.escapeShellArg ''export ${name}="$(cat -- ${lib.escapeShellArg file} 2>/dev/null)"''}"
-            ) cfg.envFiles
-          )}
+          --run ${lib.escapeShellArg (pkgs.tool.shell.util.shellExports cfg.env)}
       '';
 in
 {
@@ -59,16 +54,21 @@ in
       description = "Packages added to Pi's PATH.";
     };
 
-    envFiles = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
+    env = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.oneOf [
+          lib.types.str
+          pkgs.tool.secretValue.type
+        ]
+      );
       default = { };
       example = {
-        CAPI_KEY = "/run/agenix/capi-key";
+        CAPI_KEY._secret = "/run/agenix/capi-key";
       };
       description = ''
-        Environment variables exported into the pi process at launch, each read
-        at runtime from a file (e.g. an agenix secret path). Readable from
-        extensions via process.env.
+        Environment variables exported into the pi process at launch. Values
+        are strings or { _secret = path; } values read from files at runtime.
+        Readable from extensions via process.env.
       '';
     };
 

@@ -5,7 +5,7 @@
   writeShellApplication,
 }:
 let
-  hookLibrary = callPackage ../../../../ai-agents/hooks/runtime { };
+  hookLibrary = callPackage ../../../ai-agents/hooks/runtime { };
   python = python3.withPackages (_: [ hookLibrary ]);
 in
 writeShellApplication {

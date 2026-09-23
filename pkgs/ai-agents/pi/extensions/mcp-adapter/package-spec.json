@@ -2,7 +2,7 @@
   "registry": "npm",
   "name": "pi-mcp-adapter",
   "versions": {
-    "aarch64-darwin": "2.36.0",
+    "aarch64-darwin": "2.37.0",
     "x86_64-linux": "2.35.0"
   }
 }

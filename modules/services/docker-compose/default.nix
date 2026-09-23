@@ -26,7 +26,13 @@ let
   cfg = config.services.dockerCompose;
   cacheDir = paths.cache;
 
-  envValue = value: if builtins.isBool value then lib.boolToString value else toString value;
+  shellValue =
+    value:
+    if pkgs.tool.secretValue.isSecret value then
+      ''"$(read_secret_file ${escapeShellArg value._secret})"''
+    else
+      escapeShellArg (if builtins.isBool value then lib.boolToString value else toString value);
+
   hostSystem = if system != null then system else "x86_64-linux";
   isDarwin = lib.hasSuffix "-darwin" hostSystem;
   isLinux = lib.hasSuffix "-linux" hostSystem;
@@ -101,18 +107,26 @@ let
   mkEnvFileScript =
     _: envFile:
     let
-      valueLines = mapAttrsToList (
-        key: value: "        printf '%s=%s\\n' ${escapeShellArg key} ${escapeShellArg (envValue value)}"
-      ) envFile.environment;
-      secretLines = mapAttrsToList (key: path: ''
-        value="$(read_secret_file ${escapeShellArg path})"
-        printf '%s=%s\n' ${escapeShellArg key} "$value"
-      '') envFile.secrets;
+      valueLines = mapAttrsToList (key: value: ''
+        value=${shellValue value}
+        write_env_value ${escapeShellArg key} "$value"
+      '') envFile.environment;
     in
     mkFileWriteScript envFile ''
+      write_env_value() {
+        local value="$2"
+        value="''${value//\\/\\\\}"
+        value="''${value//\"/\\\"}"
+        value="''${value//\$/\$\$}"
+        value="''${value//$'\n'/\\n}"
+        value="''${value//$'\r'/\\r}"
+        value="''${value//$'\t'/\\t}"
+        printf '%s="%s"\n' "$1" "$value"
+      }
+
       {
         :
-      ${concatStringsSep "\n" (valueLines ++ secretLines)}
+      ${concatStringsSep "\n" valueLines}
       } > "$file_tmp"
     '';
 
@@ -121,8 +135,8 @@ let
     let
       source = pkgs.writeText "docker-compose-${name}" file.text;
       replaceScript = concatStringsSep "\n" (
-        mapAttrsToList (placeholder: path: ''
-          value="$(read_secret_file ${escapeShellArg path})"
+        mapAttrsToList (placeholder: value: ''
+          value=${shellValue value}
           PLACEHOLDER=${escapeShellArg placeholder} VALUE="$value" ${pkgs.perl}/bin/perl -0pi -e 's/\Q$ENV{PLACEHOLDER}\E/$ENV{VALUE}/g' "$file_tmp"
         '') file.replace
       );
@@ -304,18 +318,15 @@ in
                     };
                     environment = mkOption {
                       default = { };
+                      description = "Environment values, with { _secret = path; } read before this project starts.";
                       type = types.attrsOf (
                         types.oneOf [
                           types.str
                           types.int
                           types.bool
+                          pkgs.tool.secretValue.type
                         ]
                       );
-                    };
-                    secrets = mkOption {
-                      default = { };
-                      description = "Environment variables whose values are read from secret files.";
-                      type = types.attrsOf types.str;
                     };
                   };
                 }
@@ -340,8 +351,13 @@ in
                     };
                     replace = mkOption {
                       default = { };
-                      description = "Placeholder strings replaced with values read from files.";
-                      type = types.attrsOf types.str;
+                      description = "Placeholder replacements: literal strings or { _secret = path; } values read from files.";
+                      type = types.attrsOf (
+                        types.oneOf [
+                          types.str
+                          pkgs.tool.secretValue.type
+                        ]
+                      );
                     };
                   };
                 }

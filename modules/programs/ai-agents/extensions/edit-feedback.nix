@@ -17,11 +17,11 @@ in
 {
   config = lib.mkIf config.programs.ai-agents.enable {
     programs.ai-agents.hooks =
-      if cfg.jev.enable then
+      if cfg.rules.enable then
         lib.mapAttrs
           (event: timeout: [
             (block (
-              cfg.jev.hookCommand
+              cfg.rules.hookCommand
               + lib.optionalString (event == "PostToolUse" && cfg.formatLint.enable) (
                 " "
                 + lib.escapeShellArgs [

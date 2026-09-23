@@ -1,0 +1,16 @@
+[project]
+name = "ai-agent-rules"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["mcp>=1,<2", "pydantic>=2,<3"]
+
+[project.scripts]
+ai-agent-rules-hook = "ai_agent_rules.hooks:main"
+ai-agent-rules-mcp = "ai_agent_rules.mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_agent_rules"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

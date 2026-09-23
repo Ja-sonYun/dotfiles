@@ -212,9 +212,9 @@ class MainTest(unittest.TestCase):
     def test_timeout_kills_process_group(self) -> None:
         process = MagicMock()
         process.pid = 123
+        process.returncode = None
         process.communicate.side_effect = [
             subprocess.TimeoutExpired("test-hook", 1),
-            (None, None),
             (None, None),
         ]
 
@@ -234,11 +234,12 @@ class MainTest(unittest.TestCase):
             killpg.call_args_list,
             [call(123, signal.SIGTERM), call(123, signal.SIGKILL)],
         )
-        self.assertEqual(process.communicate.call_count, 3)
+        self.assertEqual(process.communicate.call_count, 2)
 
     def test_signal_is_forwarded_and_normalized(self) -> None:
         process = MagicMock()
         process.pid = 123
+        process.returncode = None
         handlers: dict[int, Callable[[int, object], None]] = {}
 
         def install_handler(
@@ -265,11 +266,12 @@ class MainTest(unittest.TestCase):
             killpg.call_args_list,
             [call(123, signal.SIGTERM), call(123, signal.SIGKILL)],
         )
-        self.assertEqual(process.communicate.call_count, 3)
+        self.assertEqual(process.communicate.call_count, 2)
 
     def test_signal_kills_process_group_after_grace_period(self) -> None:
         process = MagicMock()
         process.pid = 123
+        process.returncode = None
         handlers: dict[int, Callable[[int, object], None]] = {}
 
         def install_handler(
@@ -283,7 +285,7 @@ class MainTest(unittest.TestCase):
             if process.communicate.call_count == 1:
                 handlers[signal.SIGTERM](signal.SIGTERM, None)
             if process.communicate.call_count == 2:
-                raise subprocess.TimeoutExpired("test-hook", 1)
+                killpg.assert_any_call(123, signal.SIGKILL)
             return None, None
 
         process.communicate.side_effect = communicate
@@ -298,11 +300,12 @@ class MainTest(unittest.TestCase):
             killpg.call_args_list,
             [call(123, signal.SIGTERM), call(123, signal.SIGKILL)],
         )
-        self.assertEqual(process.communicate.call_count, 3)
+        self.assertEqual(process.communicate.call_count, 2)
 
     def test_repeated_signal_escalates_without_interrupting_cleanup(self) -> None:
         process = MagicMock()
         process.pid = 123
+        process.returncode = None
         handlers: dict[int, Callable[[int, object], None]] = {}
 
         def install_handler(
@@ -335,7 +338,7 @@ class MainTest(unittest.TestCase):
                 call(123, signal.SIGKILL),
             ],
         )
-        self.assertEqual(process.communicate.call_count, 3)
+        self.assertEqual(process.communicate.call_count, 2)
 
     def test_negative_command_exit_code_is_normalized(self) -> None:
         process = MagicMock()

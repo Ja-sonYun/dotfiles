@@ -22,12 +22,15 @@ let
         type = lib.types.attrsOf (
           lib.types.oneOf [
             lib.types.str
-            (lib.types.submodule {
-              options.file = lib.mkOption { type = lib.types.str; };
-            })
+            pkgs.tool.secretValue.type
           ]
         );
         default = { };
+        description = ''
+          Environment variables for local MCP servers. Values are strings or
+          { _secret = path; } values exported by the wrapper at server startup.
+          Unreadable secret files produce empty values.
+        '';
       };
       url = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -65,6 +68,23 @@ let
     // lib.optionalAttrs (lib.isDerivation (server.command or null)) {
       command = toString server.command;
     };
+
+  wrapSecretEnvCommand =
+    name: server:
+    let
+      environment = server.env or { };
+      secrets = lib.filterAttrs (_: pkgs.tool.secretValue.isSecret) environment;
+    in
+    server
+    // lib.optionalAttrs (secrets != { } && (server.command or null) != null) {
+      command = pkgs.writeShellScript "mcp-${name}-env-wrapper" ''
+        ${pkgs.tool.shell.util.shellExports secrets}
+        exec ${lib.escapeShellArgs ([ server.command ] ++ (server.args or [ ]))} "$@"
+      '';
+      args = [ ];
+      env = lib.filterAttrs (_: value: !pkgs.tool.secretValue.isSecret value) environment;
+    };
+
   wrapInstructionsCommand =
     name: server:
     let
@@ -136,7 +156,7 @@ let
         extraTransforms = [
           (value: value // lib.optionalAttrs (value.headers or { } != { }) { http_headers = value.headers; })
           lib.hm.mcp.addType
-          (lib.hm.mcp.wrapEnvFilesCommand { inherit pkgs name; })
+          (wrapSecretEnvCommand name)
           (wrapInstructionsCommand name)
           stringifyCommand
         ];
@@ -158,7 +178,7 @@ let
             ];
             extraTransforms = lib.optional bridgeRemote (bridgeRemoteCommand name) ++ [
               lib.hm.mcp.addType
-              (lib.hm.mcp.wrapEnvFilesCommand { inherit pkgs name; })
+              (wrapSecretEnvCommand name)
               (wrapInstructionsCommand name)
               stringifyCommand
             ];
@@ -186,7 +206,7 @@ let
           "type"
         ];
         extraTransforms = [
-          (lib.hm.mcp.wrapEnvFilesCommand { inherit pkgs name; })
+          (wrapSecretEnvCommand name)
           (wrapInstructionsCommand name)
           stringifyCommand
         ];

@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-mcp-adapter",
-    "version": "2.36.0",
+    "version": "2.37.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-mcp-adapter",
-        "version": "2.36.0",
+        "version": "2.37.0",
         "dependencies": {
-          "pi-mcp-adapter": "2.36.0"
+          "pi-mcp-adapter": "2.37.0"
         }
       },
       "node_modules/@hono/node-server": {
@@ -1298,9 +1298,9 @@
         }
       },
       "node_modules/pi-mcp-adapter": {
-        "version": "2.36.0",
-        "resolved": "https://registry.npmjs.org/pi-mcp-adapter/-/pi-mcp-adapter-2.36.0.tgz",
-        "integrity": "sha512-aX7Hf1FMGoHFjjx2Y4t12Hkue83CiBQmZaeQQ0mg+2wxOzbIOYdWzEkh1bmKlLHKiH6zRWlxWitsr+RaiXvoRQ==",
+        "version": "2.37.0",
+        "resolved": "https://registry.npmjs.org/pi-mcp-adapter/-/pi-mcp-adapter-2.37.0.tgz",
+        "integrity": "sha512-Adjvt70MZz9U68z50i+KIeTvI5H9ls31fHi5i0JIwVgXJyS3mEaYEfa4lkHbSUq/P8JHS1iO4BInt9MhdWnG9Q==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/client": "2.0.0",
@@ -1326,7 +1326,7 @@
           "node": ">=20"
         },
         "peerDependencies": {
-          "@earendil-works/pi-ai": "^0.84.1 || ^0.85.0 || ^0.86.0",
+          "@earendil-works/pi-ai": "^0.84.1 || ^0.85.0 || ^0.86.0 || ^0.87.0",
           "@earendil-works/pi-tui": "*",
           "typebox": "*",
           "zod": "^3.25.0 || ^4.0.0"
@@ -1686,9 +1686,9 @@
         }
       },
       "node_modules/smol-toml": {
-        "version": "1.8.0",
-        "resolved": "https://registry.npmjs.org/smol-toml/-/smol-toml-1.8.0.tgz",
-        "integrity": "sha512-kCZr2V3ch9i00x8zXRhjUNVcjG9ijES5dDudkXvUVCT5QlJNQWElSJdZqyPemffHoLNUYwOcou0Fy+ojN0uHSQ==",
+        "version": "1.9.0",
+        "resolved": "https://registry.npmjs.org/smol-toml/-/smol-toml-1.9.0.tgz",
+        "integrity": "sha512-hpd+HLON7HdZXqYchMM/+LaTTbdK0AU3NngIJ4KVyWbY9bfQqdL9cD+4yf6dUoU2Ap4VsU0JkQi6FxAI1B2mXQ==",
         "license": "BSD-3-Clause",
         "engines": {
           "node": ">= 18"
@@ -1864,5 +1864,5 @@
       }
     }
   },
-  "invalidationHash": "00f2f0be9d204a479947cebf935079f7d2b69451e4785558f7141c27943a5dea"
+  "invalidationHash": "8ca6b0e5758068b3a338cd980489e19782bff8c5c04d0ab4a926ce97456e5636"
 }

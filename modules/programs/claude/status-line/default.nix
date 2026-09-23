@@ -6,7 +6,7 @@
 }:
 let
   cfg = config.programs.claude-code.statusLine;
-  renderer = pkgs.callPackage ./pkgs { };
+  renderer = pkgs.callPackage ./package.nix { };
   command = pkgs.writeShellScript "claude-statusline" ''
     input="$(${pkgs.coreutils}/bin/cat)"
     ${lib.concatMapStringsSep "\n" (observer: ''
