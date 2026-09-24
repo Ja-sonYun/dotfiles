@@ -19,22 +19,28 @@ def is_proposed_plan(hook_input: HookInput) -> bool:
     return "<proposed_plan>" in message.lower()
 
 
-def emit_feedback(event: str, notes: list[str]) -> None:
-    if not notes:
+def emit_feedback(
+    event: str, notes: list[str], *, deny_reason: str | None = None
+) -> None:
+    """Emit bounded feedback, applying an optional denial only to PreToolUse."""
+    if not notes and deny_reason is None:
         return
     feedback = "\n\n".join(dict.fromkeys(notes))
     # Leave room for adapters to restore the PostToolUseFailure event name.
     output_limit = HOOK_OUTPUT_BYTES - (len("Failure") if event == "PostToolUse" else 0)
 
     def serialize(text: str) -> str:
+        specific = {
+            "hookEventName": event,
+            "additionalContext": text,
+        }
+        if event == "PreToolUse" and deny_reason is not None:
+            specific.update(
+                permissionDecision="deny", permissionDecisionReason=deny_reason
+            )
         return (
             json.dumps(
-                {
-                    "hookSpecificOutput": {
-                        "hookEventName": event,
-                        "additionalContext": text,
-                    }
-                },
+                {"hookSpecificOutput": specific},
                 ensure_ascii=False,
             )
             + "\n"

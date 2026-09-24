@@ -9,7 +9,7 @@
         reasoning_effort = "xhigh";
       };
       high = {
-        model = "claude-opus-5";
+        model = "claude-opus-5-5";
         reasoning_effort = "high";
       };
       middle = {

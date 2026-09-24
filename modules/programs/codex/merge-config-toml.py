@@ -237,6 +237,11 @@ def _add_hook_state(fragment: Any, target: Path) -> None:
 
 
 def main() -> None:
+    """Merge managed settings while preserving entries outside their ownership.
+
+    On success, write through an atomic replacement of the target path when the
+    text changes.
+    """
     if len(sys.argv) != 3:
         raise SystemExit("usage: merge-codex-config TARGET FRAGMENT")
 

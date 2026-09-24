@@ -6,6 +6,32 @@
 }:
 let
   cfg = config.programs.ai-agents.extensions.rules;
+  claudeRulesEnabled =
+    config.programs.claude-code.mcpServers ? rules
+    && !(builtins.elem "rules" (config.programs.claude-code.settings.disabledMcpjsonServers or [ ]));
+  codexRulesEnabled =
+    (config.programs.codex.settings.mcp_servers or { }) ? rules
+    && (config.programs.codex.settings.mcp_servers.rules.enabled or true) != false
+    && (config.programs.codex.settings.mcp_servers.rules.disabled or false) != true;
+  independentCodexInstances = lib.filterAttrs (
+    _: instance: instance.shareWith == null
+  ) config.programs.codex.instances;
+  requireRules =
+    clientName: serverEnabled:
+    lib.mapAttrsToList (
+      name: instance:
+      let
+        selection = instance.sync.mcpServers;
+      in
+      {
+        assertion =
+          serverEnabled
+          && (selection.include == "all" || builtins.elem "rules" selection.include)
+          && !(builtins.elem "rules" selection.exclude);
+        message = "programs.${clientName}.instances.${name}: shared rules hooks require the enabled rules MCP server in sync.mcpServers.";
+      }
+    );
+
   package = pkgs.callPackage ./package.nix { };
   rules = lib.concatLists (
     lib.mapAttrsToList (
@@ -115,7 +141,7 @@ let
 in
 {
   options.programs.ai-agents.extensions.rules = {
-    enable = lib.mkEnableOption "Rules and inspection tools";
+    enable = lib.mkEnableOption "Rules and inspection tools, requiring the rules MCP server in every active Claude Code and Codex instance";
     debugLog.enable = lib.mkEnableOption "raw rule debug logs with seven-day retention";
     hookCommand = lib.mkOption {
       type = lib.types.str;
@@ -159,7 +185,33 @@ in
         assertion = builtins.match "[A-Za-z0-9_-]+" rule.name != null;
         message = "Rule IDs may contain only letters, digits, underscores, and hyphens.";
       }
-    ]) rules;
+    ]) rules
+    ++ lib.optionals config.programs.claude-code.enable (
+      requireRules "claude-code" claudeRulesEnabled config.programs.claude-code.instances
+    )
+    ++ lib.optionals config.programs.codex.enable (
+      requireRules "codex" codexRulesEnabled independentCodexInstances
+    );
+
+    programs.ai-agents.hooks =
+      lib.mapAttrs
+        (_: timeout: [
+          {
+            hooks = [
+              {
+                type = "command";
+                command = cfg.hookCommand;
+                inherit timeout;
+              }
+            ];
+          }
+        ])
+        {
+          SessionStart = 5;
+          PreToolUse = 70;
+          PostToolUse = 160;
+          SessionEnd = 3;
+        };
 
     programs.ai-agents.mcp.servers.rules = {
       command = "${package}/bin/ai-agent-rules-mcp";

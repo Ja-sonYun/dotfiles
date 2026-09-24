@@ -1,14 +1,11 @@
 import argparse
 import asyncio
-import json
 import time
 from pathlib import Path
-from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
 
 from ai_agent_rules.checks import evaluate
-from ai_agent_rules.code_changes import added_text, check_source_path
 from ai_agent_rules.debug_log import save_log, start_log
 from ai_agent_rules.guidance import RULES_GUIDANCE
 from ai_agent_rules.process import with_termination
@@ -21,7 +18,6 @@ from ai_agent_rules.rule_files import (
 from ai_agent_rules.rules import (
     Rule,
     RuleDefinition,
-    Target,
     effective_rules,
     load_rules,
 )
@@ -139,78 +135,34 @@ def create_server(
             raise RuntimeError("Project rule storage is unavailable.") from error
 
     @server.tool()
-    async def rules_check(
-        session_handle: str,
-        target: Target,
-        text: str | None = None,
-        path: str | None = None,
-        input_kind: Literal["code", "patch"] = "code",
-        tool_name: str | None = None,
-        tool_input: dict[str, object] | str | None = None,
-    ) -> dict[str, object]:
-        """Check supplied material during a task without executing it.
+    async def rules_check(session_handle: str, text: str) -> dict[str, object]:
+        """Check a plan, decision, explanation, or response draft without executing it.
 
-        For code, supply one file's text and path, relative to the session cwd
-        or absolute. Set input_kind to patch for an apply_patch or unified patch.
-        Regex checks inspect only added text; intent checks retain patch context.
-        For tool, supply tool_name and tool_input; text is optional context.
-        For task, supply a plan, decision, explanation, or response draft as text.
-        Evaluates enabled, effective rules whose target, extension, and trigger
-        match. Intent uses supplied evidence and project instructions.
+        Supply task material as text. Code and tool checks run automatically
+        through hooks. Evaluates enabled, effective task rules whose extension
+        and trigger match. Intent uses supplied evidence and project instructions.
         Returns status: completed, incomplete, or skipped, with feedback only
         for violations, uncertain verdicts, or failures.
         Completed means the check finished, not that the material is compliant.
         Detailed scores and results remain in debug logs when enabled; feedback
         includes the log path. Skipped means no rules pass the selection conditions.
         """
-        if target == "tool":
-            if tool_name is None or not tool_name.strip() or tool_input is None:
-                raise ValueError("Tool checks require tool_name and tool_input.")
-        elif tool_name is not None or tool_input is not None:
-            raise ValueError("Only tool checks accept tool_name and tool_input.")
-        if target != "tool" and text is None:
-            raise ValueError("Code and task checks require text.")
-        if target != "code" and input_kind != "code":
-            raise ValueError("Only code checks accept patch input.")
-        if target == "code" and (path is None or not path.strip()):
-            raise ValueError("Code checks require a file path.")
-        if target != "code" and path is not None:
-            raise ValueError("Only code checks accept a file path.")
         try:
             cwd, rules = await asyncio.to_thread(
                 effective_rules, rules_path, session_handle
             )
-            source = cwd / f".{target}"
-            if target == "code" and path is not None:
-                source = await asyncio.to_thread((cwd / path).resolve)
-                check_source_path(source)
-                _, rules = await asyncio.to_thread(
-                    effective_rules, rules_path, session_handle, source.parent
-                )
-            applicable = [rule for rule in rules if rule.applies(target, source)]
+            source = cwd / ".task"
+            applicable = [rule for rule in rules if rule.applies("task", source)]
         except OSError as error:
-            raise RuntimeError(
-                "Cannot read the rules or resolve the inspection path."
-            ) from error
-        state = {"text": text if text is not None else "", "cwd": str(cwd)}
-        regex_text = state["text"]
-        if target == "code":
-            state.update(path=str(source), input_kind=input_kind)
-            if input_kind == "patch":
-                regex_text = added_text(state["text"])
-        elif target == "tool" and tool_name is not None:
-            state.update(
-                tool_name=tool_name,
-                tool_input=json.dumps(tool_input, ensure_ascii=False),
-            )
+            raise RuntimeError("Cannot read the rules.") from error
         result = await evaluate(
             jev,
             applicable,
-            state,
+            {"text": text, "cwd": str(cwd)},
             cwd,
             time.monotonic() + 30,
             context_path=source,
-            regex_text=regex_text,
+            regex_text=text,
             session_handle=session_handle,
             debug_log=debug_log,
         )
@@ -221,7 +173,7 @@ def create_server(
         else:
             status = "completed"
         response: dict[str, object] = {"status": status}
-        feedback = result.feedback(f"{target} check")
+        feedback = result.feedback("task check")
         if feedback:
             response["feedback"] = feedback
         return response

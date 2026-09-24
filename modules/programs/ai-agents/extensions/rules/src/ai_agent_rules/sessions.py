@@ -19,11 +19,13 @@ from ai_agent_rules.rule_files import read_json, write_json
 class Session:
     cwd: Path
     last_seen: float
+    blocked_inputs: frozenset[str] = frozenset()
 
     def record(self) -> dict[str, object]:
         return {
             "cwd": str(self.cwd),
             "last_seen": self.last_seen,
+            "blocked_inputs": sorted(self.blocked_inputs),
         }
 
 
@@ -46,14 +48,17 @@ def read_session(path: Path) -> Session:
     if not isinstance(data, dict):
         raise TypeError(f"Invalid session metadata: {path}")
     cwd, last_seen = data.get("cwd"), data.get("last_seen")
+    blocked_inputs = data.get("blocked_inputs", [])
     if (
         not isinstance(cwd, str)
         or not Path(cwd).is_absolute()
         or not isinstance(last_seen, (int, float))
         or isinstance(last_seen, bool)
+        or not isinstance(blocked_inputs, list)
+        or any(not isinstance(value, str) for value in blocked_inputs)
     ):
         raise ValueError(f"Invalid session metadata: {path}")
-    return Session(Path(cwd), float(last_seen))
+    return Session(Path(cwd), float(last_seen), frozenset(blocked_inputs))
 
 
 @contextmanager
@@ -97,7 +102,7 @@ def require_session(directory: Path, handle: str) -> Session:
         ) from error
     if previous.last_seen < time.time() - 86400:
         raise ValueError("Expired session_handle; session cleanup is incomplete.")
-    session = Session(previous.cwd, time.time())
+    session = Session(previous.cwd, time.time(), previous.blocked_inputs)
     write_json(path, session.record())
     return session
 
@@ -117,9 +122,31 @@ def register_session(hook_input: HookInput) -> tuple[str | None, bool]:
                 )
             created = False
         except FileNotFoundError:
+            previous = Session(cwd, time.time())
             created = True
-        write_json(path, Session(cwd, time.time()).record())
+        write_json(path, Session(cwd, time.time(), previous.blocked_inputs).record())
     return handle, created
+
+
+def record_rejection(handle: str, hook_input: HookInput) -> bool:
+    """Record this input atomically and report whether it was already rejected."""
+    value = [
+        str(Path(str(hook_input.get("cwd") or Path.cwd())).resolve()),
+        str(hook_input.get("tool_name") or "").rsplit(".", 1)[-1].lower(),
+        hook_input.get("tool_input"),
+    ]
+    digest = hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+    with state_lock() as directory:
+        session = require_session(directory, handle)
+        if digest in session.blocked_inputs:
+            return True
+        write_json(
+            session_path(directory, handle),
+            Session(
+                session.cwd, session.last_seen, session.blocked_inputs | {digest}
+            ).record(),
+        )
+    return False
 
 
 def end_session(hook_input: HookInput) -> None:

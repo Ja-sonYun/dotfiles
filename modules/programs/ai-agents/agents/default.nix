@@ -19,6 +19,17 @@ let
     servers = builtins.attrNames cfg.mcp.servers;
     codex_servers = config.programs.codex.settings.mcp_servers or { };
   };
+  agentNames =
+    if cfg.agentsDir == null then
+      [ ]
+    else
+      map (lib.removeSuffix ".md") (
+        builtins.attrNames (
+          lib.filterAttrs (
+            name: type: type != "directory" && lib.hasSuffix ".md" name && name != "README.md"
+          ) (builtins.readDir cfg.agentsDir)
+        )
+      );
   adaptedAgents = pkgs.runCommandLocal "adapted-ai-agents" { } ''
     set -euo pipefail
     shopt -s nullglob
@@ -51,6 +62,11 @@ in
     agentsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
+      description = ''
+        Source directory of custom-agent Markdown files, excluding README.md.
+        File stems are selectable names in Claude Code and Codex instance sync settings;
+        the adapter requires each frontmatter name to match its file stem.
+      '';
     };
 
     modelMap = lib.mkOption {
@@ -92,10 +108,12 @@ in
       lib.mkMerge [
         (lib.mkIf config.programs.codex.enable {
           programs.codex.agentsDir = "${cfg.adaptedAgents}/codex";
+          programs.codex.agentNames = agentNames;
         })
 
         (lib.mkIf config.programs.claude-code.enable {
           programs.claude-code.agentsDir = "${cfg.adaptedAgents}/claude";
+          programs.claude-code.agentNames = agentNames;
         })
 
         (lib.mkIf config.programs.pi.enable {

@@ -24,6 +24,7 @@ def OpenMacroEditorWindow(reg: string = ''): void
     return
   endif
 
+  register_name = tolower(register_name)
   var bufname = 'MacroEditor[' .. register_name .. ']'
   if bufexists(bufname)
     var winid = bufwinid(bufname)

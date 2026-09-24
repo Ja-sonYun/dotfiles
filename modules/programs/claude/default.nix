@@ -6,6 +6,7 @@
 }:
 let
   cfg = config.programs.claude-code;
+  syncLib = import ../ai-agents/sync.nix { inherit lib; };
   jsonFormat = pkgs.formats.json { };
 
   sourceType =
@@ -15,6 +16,33 @@ let
       path
       str
     ];
+
+  selectSync =
+    instanceName: resource:
+    syncLib.select "programs.claude-code.instances.${instanceName}.sync.${resource}"
+      cfg.instances.${instanceName}.sync.${resource};
+
+  instanceResources = lib.mapAttrs (
+    name: _:
+    let
+      mcpServers = lib.filterAttrs (
+        serverName: _: !(builtins.elem serverName (cfg.settings.disabledMcpjsonServers or [ ]))
+      ) (selectSync name "mcpServers" cfg.mcpServers);
+    in
+    {
+      skills = selectSync name "skills" cfg.skills;
+      agents = selectSync name "agents" (
+        lib.genAttrs cfg.agentNames (agentName: "${cfg.agentsDir}/${agentName}.md")
+      );
+      inherit mcpServers;
+      mcpPlugin = pkgs.runCommand "claude-code-${name}-mcp" { } ''
+        install -Dm444 ${jsonFormat.generate "plugin.json" { name = cfg.mcpPluginName; }} \
+          "$out/.claude-plugin/plugin.json"
+        install -Dm444 ${jsonFormat.generate "mcp.json" { inherit mcpServers; }} \
+          "$out/.mcp.json"
+      '';
+    }
+  ) cfg.instances;
 
   nodeOnly = pkgs.runCommand "nodejs-24-node-only" { } ''
     mkdir -p $out/bin
@@ -38,9 +66,6 @@ let
 
   instancePackages = lib.mapAttrs (
     name: instance:
-    let
-      package = if instance.home == ".claude" then wrappedPackage else cfg.package;
-    in
     pkgs.writeShellScriptBin name ''
       set -euo pipefail
       umask 077
@@ -49,7 +74,14 @@ let
       ${pkgs.coreutils}/bin/mkdir -p "$CLAUDE_CONFIG_DIR"
 
       exec ${pkgs.state-get}/bin/state-run ${lib.escapeShellArg name} \
-        ${package}/bin/claude "$@"
+        ${wrappedPackage}/bin/claude ${
+          lib.optionalString (instanceResources.${name}.mcpServers != { }) (
+            lib.escapeShellArgs [
+              "--plugin-dir"
+              (toString instanceResources.${name}.mcpPlugin)
+            ]
+          )
+        } "$@"
     ''
   ) cfg.instances;
 
@@ -63,12 +95,28 @@ let
     }
   );
 
-  mcpPlugin = pkgs.runCommand "claude-code-home-manager" { } ''
-    install -Dm444 ${jsonFormat.generate "plugin.json" { name = cfg.mcpPluginName; }} \
-      "$out/.claude-plugin/plugin.json"
-    install -Dm444 ${jsonFormat.generate "mcp.json" { inherit (cfg) mcpServers; }} \
-      "$out/.mcp.json"
-  '';
+  sharedFiles =
+    home:
+    {
+      "${home}/settings.json".source = settingsFile;
+    }
+    // lib.optionalAttrs (cfg.context != null) {
+      "${home}/CLAUDE.md".text = cfg.context;
+    }
+    // lib.optionalAttrs (cfg.customInstructions != "") {
+      "${home}/output-styles/shared-instructions.md".text = ''
+        ---
+        name: Shared Instructions
+        description: Shared personal working and response preferences
+        keep-coding-instructions: true
+        ---
+
+        ${cfg.customInstructions}
+      '';
+    }
+    // lib.optionalAttrs (cfg.keybindings != null) {
+      "${home}/keybindings.json".text = builtins.toJSON cfg.keybindings;
+    };
 in
 {
   imports = [
@@ -96,7 +144,7 @@ in
     extraPath = lib.mkOption {
       type = lib.types.listOf lib.types.package;
       default = [ ];
-      description = "Packages added to Claude Code's PATH.";
+      description = "Packages added to every Claude Code instance's PATH.";
     };
 
     defaultProfileName = lib.mkOption {
@@ -106,12 +154,19 @@ in
 
     instances = lib.mkOption {
       type = lib.types.attrsOf (
-        lib.types.submodule {
-          options.home = lib.mkOption {
-            type = lib.types.str;
-            description = "Instance config directory relative to the user's home.";
-          };
-        }
+        lib.types.submodule (
+          { name, ... }:
+          {
+            options = {
+              home = lib.mkOption {
+                type = lib.types.str;
+                description = "Instance config directory relative to the user's home.";
+              };
+
+              sync = syncLib.mkOptions (name == cfg.defaultProfileName);
+            };
+          }
+        )
       );
       default = { };
       description = "Claude Code commands with independent user profiles.";
@@ -120,13 +175,13 @@ in
     settings = lib.mkOption {
       inherit (jsonFormat) type;
       default = { };
-      description = "Claude Code JSON settings.";
+      description = "Claude Code JSON settings shared by every instance, including hooks and permissions.";
     };
 
     context = lib.mkOption {
       type = lib.types.nullOr lib.types.lines;
       default = null;
-      description = "Content for ~/.claude/CLAUDE.md.";
+      description = "CLAUDE.md content shared by every instance.";
     };
 
     customInstructions = lib.mkOption {
@@ -138,19 +193,28 @@ in
     skills = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
-      description = "Skill directories linked into ~/.claude/skills.";
+      description = "Skill directory catalog selected by each instance's sync settings.";
     };
 
     agentsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = "Directory linked into ~/.claude/agents.";
+      description = "Directory of adapted Markdown agents selected by each instance's sync settings.";
+    };
+
+    agentNames = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Selectable agent names, matching Markdown file stems in agentsDir.";
     };
 
     mcpServers = lib.mkOption {
       type = lib.types.attrsOf jsonFormat.type;
       default = { };
-      description = "MCP servers exposed through the managed hm plugin.";
+      description = ''
+        MCP server catalog selected for each instance's managed hm plugin.
+        Servers listed in settings.disabledMcpjsonServers are excluded from every instance.
+      '';
     };
 
     mcpPluginName = lib.mkOption {
@@ -165,7 +229,7 @@ in
     keybindings = lib.mkOption {
       type = lib.types.nullOr (lib.types.attrsOf lib.types.anything);
       default = null;
-      description = "Contents of ~/.claude/keybindings.json (written as JSON when non-null).";
+      description = "Keybindings shared by every instance (written as JSON when non-null).";
     };
 
   };
@@ -192,34 +256,34 @@ in
           assertion = !(builtins.hasAttr "claude" cfg.instances);
           message = "programs.claude-code.instances must not use the reserved command name claude.";
         }
+        {
+          assertion = cfg.agentNames == [ ] || cfg.agentsDir != null;
+          message = "programs.claude-code.agentNames requires agentsDir.";
+        }
       ];
 
-      home.file = {
-        ".claude/settings.json".source = settingsFile;
-      }
-      // lib.optionalAttrs (cfg.context != null) {
-        ".claude/CLAUDE.md".text = cfg.context;
-      }
-      // lib.optionalAttrs (cfg.customInstructions != "") {
-        ".claude/output-styles/shared-instructions.md".text = ''
-          ---
-          name: Shared Instructions
-          description: Shared personal working and response preferences
-          keep-coding-instructions: true
-          ---
-
-          ${cfg.customInstructions}
-        '';
-      }
-      // lib.mapAttrs' (
-        name: source: lib.nameValuePair ".claude/skills/${name}" { inherit source; }
-      ) cfg.skills
-      // lib.optionalAttrs (cfg.agentsDir != null) {
-        ".claude/agents".source = cfg.agentsDir;
-      }
-      // lib.optionalAttrs (cfg.mcpServers != { }) {
-        ".claude/skills/claude-code-home-manager".source = mcpPlugin;
-      };
+      home.file =
+        if cfg.instances == { } then
+          sharedFiles ".claude"
+          // lib.optionalAttrs (cfg.agentsDir != null) {
+            ".claude/agents".source = cfg.agentsDir;
+          }
+        else
+          lib.concatMapAttrs (
+            instanceName: instance:
+            sharedFiles instance.home
+            // lib.mapAttrs' (
+              name: source: lib.nameValuePair "${instance.home}/skills/${name}" { inherit source; }
+            ) instanceResources.${instanceName}.skills
+            // lib.optionalAttrs (instanceResources.${instanceName}.agents != { }) {
+              "${instance.home}/agents".source = pkgs.linkFarm "claude-${instanceName}-agents" (
+                lib.mapAttrsToList (name: path: {
+                  name = "${name}.md";
+                  inherit path;
+                }) instanceResources.${instanceName}.agents
+              );
+            }
+          ) cfg.instances;
     })
 
     (lib.mkIf (cfg.enable && cfg.chromeNativeHost.enable && pkgs.stdenv.hostPlatform.isDarwin) (
@@ -242,10 +306,6 @@ in
           };
       }
     ))
-
-    (lib.mkIf (cfg.enable && cfg.keybindings != null) {
-      home.file.".claude/keybindings.json".text = builtins.toJSON cfg.keybindings;
-    })
 
   ];
 }

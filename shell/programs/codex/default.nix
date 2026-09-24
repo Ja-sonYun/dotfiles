@@ -9,11 +9,11 @@
       reasoning_effort = "medium";
     };
     middle = {
-      model = "gpt-6-astra";
-      reasoning_effort = "low";
+      model = "gpt-6-sol";
+      reasoning_effort = "medium";
     };
     low = {
-      model = "gpt-5.6-luna";
+      model = "gpt-6-luna";
       reasoning_effort = "medium";
     };
   };

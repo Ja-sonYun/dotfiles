@@ -100,7 +100,7 @@ let
       words = lib.splitString " " (builtins.replaceStrings [ "\n" "\\" ] [ " " "" ] activation);
     in
     lib.findFirst (
-      word: lib.hasSuffix "-codex-managed-settings.toml" word
+      word: lib.hasSuffix "-codex-default-managed-settings.toml" word
     ) (throw "Codex activation does not reference a managed settings fragment") words;
   scenarioArgs = {
     inherit
