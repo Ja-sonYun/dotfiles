@@ -7,12 +7,12 @@
 }:
 {
   age.secrets."nix-cache-netrc" = {
-    file = "${infraSrc}/services/linode-server/nix/secrets/nix-cache.netrc.age";
+    file = "${infraSrc}/modules-nixhm/roles/nix-cache-client/generated/ncc-test0-zip-nix-cache.netrc.age";
     path = "${userhome}/.config/nix/nix-cache.netrc";
     mode = "0600";
   };
   age.secrets."nix-cache-upload-token".file =
-    "${infraSrc}/services/linode-server/nix/secrets/attic-upload-token.age";
+    "${infraSrc}/modules-nixhm/roles/nix-cache-client/generated/attic-upload-token.age";
 
   nix = {
     enable = true;
