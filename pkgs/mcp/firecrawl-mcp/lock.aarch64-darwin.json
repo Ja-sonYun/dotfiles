@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-firecrawl-mcp",
-    "version": "3.25.4",
+    "version": "3.25.5",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-firecrawl-mcp",
-        "version": "3.25.4",
+        "version": "3.25.5",
         "dependencies": {
-          "firecrawl-mcp": "3.25.4"
+          "firecrawl-mcp": "3.25.5"
         }
       },
       "node_modules/@borewit/text-codec": {
@@ -882,9 +882,9 @@
         }
       },
       "node_modules/firecrawl-mcp": {
-        "version": "3.25.4",
-        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.25.4.tgz",
-        "integrity": "sha512-jF67Qe8ZXO5zBs29RMy6jX/uEO+vWqq0TtYhvBk+e6nzmSqN9nbKyUBrkkSY9L52JuBg+jQ6LTUxwWLj0OAkDg==",
+        "version": "3.25.5",
+        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.25.5.tgz",
+        "integrity": "sha512-maWfL4TQRvu2nHnaHGsSxBP8SwZB7nVyHAicRIZTdfZdqJDsvz1SiTqN6tZOLjmjyg7UgLmbMibXb7Ndtq/Iog==",
         "license": "MIT",
         "dependencies": {
           "dotenv": "^17.2.2",
@@ -2055,9 +2055,9 @@
         "license": "ISC"
       },
       "node_modules/string-width": {
-        "version": "8.2.2",
-        "resolved": "https://registry.npmjs.org/string-width/-/string-width-8.2.2.tgz",
-        "integrity": "sha512-GaPUh5gfdrYzqeVNZvUfT23vYYxXzKYidUcnMtJg/3rxRV63EFZy3k6xfKlmfeJD0176lnUV/Usr3XcwSvFzpg==",
+        "version": "8.3.0",
+        "resolved": "https://registry.npmjs.org/string-width/-/string-width-8.3.0.tgz",
+        "integrity": "sha512-ZbmZM0JCihQN91dWnxoipT2KOEyHqEyfRXUyjuRhW8b/xnqPDoq4gWEVApTVa9db2wN8mmoikgFBbjh71+cGeQ==",
         "license": "MIT",
         "dependencies": {
           "get-east-asian-width": "^1.5.0",
@@ -2212,9 +2212,9 @@
         }
       },
       "node_modules/undici": {
-        "version": "7.29.1",
-        "resolved": "https://registry.npmjs.org/undici/-/undici-7.29.1.tgz",
-        "integrity": "sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==",
+        "version": "7.30.0",
+        "resolved": "https://registry.npmjs.org/undici/-/undici-7.30.0.tgz",
+        "integrity": "sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==",
         "license": "MIT",
         "engines": {
           "node": ">=20.18.1"
@@ -2412,5 +2412,5 @@
       }
     }
   },
-  "invalidationHash": "14e84c8b213f1594a8bb106939c74edbe00ec59f74654a733617a98140ad6366"
+  "invalidationHash": "1f22dffb3f1a7c5f15764ebc3de9da04d0ad38bf0413fbb1838d695d9372d3b7"
 }

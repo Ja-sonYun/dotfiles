@@ -8,7 +8,7 @@ let
 in
 {
   options.services.menubar.desktopNumber.enable =
-    lib.mkEnableOption "the focused display's relative desktop number in the menu bar";
+    lib.mkEnableOption "the current desktop number in the menu bar";
 
   config = lib.mkIf cfg.enable {
     assertions = [

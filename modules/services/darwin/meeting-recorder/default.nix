@@ -52,31 +52,31 @@ in
     calendarEventBufferMinutes = lib.mkOption {
       type = lib.types.ints.positive;
       default = 4;
-      description = "Minutes around meeting detection used to find calendar events.";
+      description = "Calendar search window around detection, in minutes.";
     };
 
     calendarQueryTimeoutSeconds = lib.mkOption {
       type = lib.types.ints.positive;
       default = 60;
-      description = "Seconds to wait for a Calendar query.";
+      description = "Calendar query timeout in seconds.";
     };
 
     outputDirectory = lib.mkOption {
       type = lib.types.nonEmptyStr;
       default = "${userhome}/Documents/Meetings";
-      description = "Directory for meeting recordings.";
+      description = "Recording directory.";
     };
 
     startTimeoutSeconds = lib.mkOption {
       type = lib.types.ints.positive;
       default = 60;
-      description = "Seconds to wait for the recorder capture to start.";
+      description = "Recording startup timeout in seconds.";
     };
 
     stopDelaySeconds = lib.mkOption {
       type = lib.types.ints.positive;
       default = 180;
-      description = "Seconds to keep recording while waiting for a meeting reconnect.";
+      description = "Reconnect grace period in seconds.";
     };
 
     transcription = {
@@ -85,13 +85,13 @@ in
       model = lib.mkOption {
         type = lib.types.nullOr lib.types.nonEmptyStr;
         default = null;
-        description = "Whisper model file path, or null to use the bundled large-v3 model.";
+        description = "Whisper model path; null uses bundled large-v3.";
       };
 
       language = lib.mkOption {
         type = lib.types.nonEmptyStr;
         default = "auto";
-        description = "Whisper language code, or auto for language detection.";
+        description = "Whisper language code or auto.";
       };
     };
   };

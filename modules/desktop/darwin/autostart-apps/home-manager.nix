@@ -7,7 +7,7 @@
   options.services.autostartApps = lib.mkOption {
     type = lib.types.listOf lib.types.nonEmptyStr;
     default = [ ];
-    description = "Application names to launch at macOS GUI login.";
+    description = "Applications to launch at login.";
   };
 
   config.launchd.agents = builtins.listToAttrs (

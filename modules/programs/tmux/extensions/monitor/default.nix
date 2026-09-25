@@ -25,7 +25,7 @@ in
     mainSession = lib.mkOption {
       type = lib.types.str;
       default = "main";
-      description = "Session followed by the global pane monitor.";
+      description = "Session to monitor.";
     };
     scripts = lib.mkOption {
       type = lib.types.str;
@@ -36,7 +36,7 @@ in
     afterCreateCommands = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "Commands called with the active pane ID after a monitor pane is created.";
+      description = "Monitor startup commands receiving the active pane ID.";
     };
   };
   config = lib.mkIf cfg.enable {

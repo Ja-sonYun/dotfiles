@@ -28,7 +28,7 @@ in
     };
     tokenFile = lib.mkOption {
       type = lib.types.nonEmptyStr;
-      description = "Runtime path to the upload token file.";
+      description = "Upload token file path.";
     };
     cache = lib.mkOption {
       type = lib.types.nonEmptyStr;

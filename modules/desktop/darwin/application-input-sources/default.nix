@@ -12,7 +12,7 @@ let
 in
 {
   options.services.applicationInputSources = {
-    enable = lib.mkEnableOption "switching input sources when applications activate";
+    enable = lib.mkEnableOption "per-application input sources";
 
     rules = lib.mkOption {
       type = lib.types.attrsOf lib.types.nonEmptyStr;

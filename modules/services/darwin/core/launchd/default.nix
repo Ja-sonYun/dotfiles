@@ -80,16 +80,16 @@
         {
           options = {
             startupGuard = {
-              enable = lib.mkEnableOption "startup path checks with retry logging and a delayed notification";
+              enable = lib.mkEnableOption "startup path checks";
               extraExecutables = lib.mkOption {
                 type = lib.types.listOf lib.types.str;
                 default = [ ];
-                description = "Additional paths that must be executable before starting the service.";
+                description = "Executables required at startup.";
               };
               readableFileFlags = lib.mkOption {
                 type = lib.types.listOf lib.types.str;
                 default = [ ];
-                description = "Flags whose following argument must be a readable file before startup.";
+                description = "Flags requiring a readable file argument at startup.";
               };
             };
             serviceConfig = lib.mkOption {

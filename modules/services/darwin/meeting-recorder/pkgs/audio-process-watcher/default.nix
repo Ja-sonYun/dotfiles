@@ -39,7 +39,7 @@ stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "Publish per-process macOS microphone activity changes";
+    description = "macOS microphone activity monitor";
     platforms = lib.platforms.darwin;
     mainProgram = "audio-process-watcher";
   };

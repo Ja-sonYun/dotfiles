@@ -8,7 +8,7 @@ in
   options.services.skhd.bindings = lib.mkOption {
     type = lib.types.attrsOf lib.types.str;
     default = { };
-    description = "skhd hotkey bindings mapped to shell commands.";
+    description = "Hotkeys mapped to shell commands.";
   };
 
   config = lib.mkMerge [

@@ -100,9 +100,9 @@
         }
       },
       "node_modules/@modelcontextprotocol/sdk": {
-        "version": "1.30.0",
-        "resolved": "https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.30.0.tgz",
-        "integrity": "sha512-xKd8OIzlqNzcqcNumGAa6g+PW2kjD5vrpcKOnfldAUPP3j7lnqMPwlTXQm8gF+UwH72z0lqaRbjr9hqGz0eITA==",
+        "version": "1.30.1",
+        "resolved": "https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.30.1.tgz",
+        "integrity": "sha512-H2HxLvC3HDNybePJaLdSrU1hhUK5iQw+WvV1b01myFyI7sdVGe1u/IPTE5D9fGCiJDVtgMV/lmFkQXLmQyIFYA==",
         "license": "MIT",
         "peer": true,
         "dependencies": {
@@ -944,9 +944,9 @@
         }
       },
       "node_modules/hono": {
-        "version": "4.13.8",
-        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.8.tgz",
-        "integrity": "sha512-/Gng7NfoykZl2pjukW5Z6+8Yxm3BPRf86GTbQnt0SbySkvax4fyL4H3HhY1cCpBGmiW9XDRFzRV+CXK2W8QudQ==",
+        "version": "4.13.9",
+        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.9.tgz",
+        "integrity": "sha512-7dMkQmZoC4E6F7AtaQSPhlWAdnBti+j7rreMZl8QB4jFiEhP9TWbGWUMi8WYzBCgmgulxuvLQupKqo+Co6Omyg==",
         "license": "MIT",
         "peer": true,
         "engines": {
@@ -1864,5 +1864,5 @@
       }
     }
   },
-  "invalidationHash": "8ca6b0e5758068b3a338cd980489e19782bff8c5c04d0ab4a926ce97456e5636"
+  "invalidationHash": "c3d29fc0a87d0a3c769aa6dc84790dd23f41072ff2f5c7c0fb4705d2e53094db"
 }

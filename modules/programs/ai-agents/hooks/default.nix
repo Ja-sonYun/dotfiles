@@ -59,12 +59,7 @@ in
     hooks = lib.mkOption {
       type = hookSetType;
       default = { };
-      description = ''
-        Command hooks shared by Codex, Claude Code, and Pi with Claude-compatible
-        JSON input and AI_AGENT_CLIENT set. Native tool-failure events are delivered
-        to PostToolUse commands with tool_failed = true and the original payload preserved.
-        StopFailure is delivered by Claude Code and Pi; SessionInfoChanged by Pi only.
-      '';
+      description = "Shared AI agent command hooks.";
     };
     hooksByAgent = lib.mkOption {
       type = lib.types.submodule {
@@ -84,7 +79,7 @@ in
         };
       };
       default = { };
-      description = "Command hooks applied only to the selected AI agent.";
+      description = "Command hooks by AI agent.";
     };
   };
 

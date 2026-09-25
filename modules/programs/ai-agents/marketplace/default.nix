@@ -63,11 +63,7 @@ in
   options.programs.ai-agents.marketplaces = lib.mkOption {
     type = lib.types.attrsOf sourceType;
     default = { };
-    description = ''
-      Claude-style marketplace paths or packages whose skills and command hooks are shared by AI agents
-      and whose MCP dependencies must be configured explicitly.
-      Package sources require import-from-derivation; use a flake input outPath when IFD is disabled.
-    '';
+    description = "Claude-style marketplaces for shared skills and hooks.";
   };
 
   config = lib.mkIf (cfg.enable && cfg.marketplaces != { }) {

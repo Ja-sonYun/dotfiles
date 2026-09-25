@@ -12,7 +12,7 @@ in
     settings = lib.mkOption {
       type = lib.types.attrsOf lib.types.anything;
       default = { };
-      description = "Contents of the Claude Desktop JSON configuration.";
+      description = "Claude Desktop settings.";
     };
   };
 

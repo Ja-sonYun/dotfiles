@@ -62,11 +62,7 @@ in
     agentsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = ''
-        Source directory of custom-agent Markdown files, excluding README.md.
-        File stems are selectable names in Claude Code and Codex instance sync settings;
-        the adapter requires each frontmatter name to match its file stem.
-      '';
+      description = "Custom-agent Markdown directory.";
     };
 
     modelMap = lib.mkOption {
@@ -81,14 +77,14 @@ in
               reasoning_effort = lib.mkOption {
                 type = lib.types.nullOr lib.types.nonEmptyStr;
                 default = null;
-                description = "Optional reasoning effort supported by the client and model.";
+                description = "Reasoning effort.";
               };
             };
           }
         )
       );
       default = { };
-      description = "Per-client model and reasoning mappings for portable custom agent tiers.";
+      description = "Agent tier models and reasoning effort by client.";
     };
 
     adaptedAgents = lib.mkOption {

@@ -790,9 +790,9 @@
         }
       },
       "node_modules/hono": {
-        "version": "4.13.8",
-        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.8.tgz",
-        "integrity": "sha512-/Gng7NfoykZl2pjukW5Z6+8Yxm3BPRf86GTbQnt0SbySkvax4fyL4H3HhY1cCpBGmiW9XDRFzRV+CXK2W8QudQ==",
+        "version": "4.13.9",
+        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.9.tgz",
+        "integrity": "sha512-7dMkQmZoC4E6F7AtaQSPhlWAdnBti+j7rreMZl8QB4jFiEhP9TWbGWUMi8WYzBCgmgulxuvLQupKqo+Co6Omyg==",
         "license": "MIT",
         "peer": true,
         "engines": {
@@ -1300,9 +1300,9 @@
         }
       },
       "node_modules/undici": {
-        "version": "7.29.1",
-        "resolved": "https://registry.npmjs.org/undici/-/undici-7.29.1.tgz",
-        "integrity": "sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==",
+        "version": "7.30.0",
+        "resolved": "https://registry.npmjs.org/undici/-/undici-7.30.0.tgz",
+        "integrity": "sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==",
         "license": "MIT",
         "engines": {
           "node": ">=20.18.1"
@@ -1349,5 +1349,5 @@
       }
     }
   },
-  "invalidationHash": "c8a3e6d3484f3f80509a8b366f4cf678224b453d1bd2cbd9ca9c6640d9ca12d8"
+  "invalidationHash": "e9d093021e37dd2620356d5f118bbdac2c08664083c05798cfecb23a92140cee"
 }

@@ -76,7 +76,7 @@ stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "Record macOS system and microphone audio for meetings";
+    description = "macOS meeting audio recorder";
     platforms = lib.platforms.darwin;
     mainProgram = "meeting-recorder";
   };

@@ -31,17 +31,17 @@ in
     ac.displaySleep = lib.mkOption {
       type = lib.types.nullOr (lib.types.either lib.types.ints.positive (lib.types.enum [ "never" ]));
       default = null;
-      description = "Display sleep timeout in minutes on AC power, never, or null to leave unmanaged.";
+      description = "AC display sleep: minutes, never, or null for unmanaged.";
     };
     ac.highPerformance = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
-      description = "Use High Power Mode on supported adapters; false selects automatic mode, null leaves it unmanaged.";
+      description = "High Power Mode; false selects automatic, null leaves unmanaged.";
     };
     preventSleep = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
-      description = "Prevent system sleep; false allows manual sleep without changing idle timers, null leaves it unmanaged.";
+      description = "Prevent system sleep; null leaves it unmanaged.";
     };
   };
 

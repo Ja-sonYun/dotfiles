@@ -15,7 +15,7 @@ in
       internal = true;
       readOnly = true;
       default = pkgs.callPackage ./package.nix { };
-      description = "Formatter and lint executable used by the post-edit hook.";
+      description = "Post-edit formatter and linter.";
     };
   };
 

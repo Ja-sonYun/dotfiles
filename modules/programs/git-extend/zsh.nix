@@ -3,11 +3,7 @@
   options.programs.gitExtend.enableZshIntegration = lib.mkOption {
     type = lib.types.bool;
     default = false;
-    description = ''
-      Let Git commands request directory changes in the parent zsh by writing
-      a directory and newline to SHELL_CD_REQUEST_FILE. The precmd hook consumes
-      the request. This integration does not require the worktree command set.
-    '';
+    description = "Let Git commands change the parent shell's directory.";
   };
 
   config = lib.mkIf config.programs.gitExtend.enableZshIntegration {

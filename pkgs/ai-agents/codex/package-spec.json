@@ -2,7 +2,7 @@
   "registry": "npm",
   "name": "@openai/codex",
   "versions": {
-    "aarch64-darwin": "0.156.1",
+    "aarch64-darwin": "0.157.0",
     "x86_64-linux": "0.155.1"
   }
 }

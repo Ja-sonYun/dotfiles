@@ -27,10 +27,10 @@ let
 in
 {
   options.programs.open-code-review = {
-    enable = lib.mkEnableOption "Open Code Review with the shared provider environment";
+    enable = lib.mkEnableOption "Open Code Review";
     model = lib.mkOption {
       type = lib.types.nonEmptyStr;
-      description = "Model used by the OCR wrapper.";
+      description = "OCR model.";
     };
   };
 

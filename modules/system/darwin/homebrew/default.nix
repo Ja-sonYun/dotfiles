@@ -50,12 +50,7 @@ in
     example = {
       node = false;
     };
-    description = ''
-      Link (true) or unlink (false) already-installed formulae without installing them.
-      Omitted formulae are unmanaged. Use brews[].link for explicitly installed formulae.
-      Linking allows keg-only formulae without overwriting conflicting files.
-      Activation fails if Homebrew does not reach the requested link state.
-    '';
+    description = "Link (true) or unlink (false) installed formulae.";
   };
 
   config = lib.mkIf (cfg.enable && cfg.formulaLinks != { }) {

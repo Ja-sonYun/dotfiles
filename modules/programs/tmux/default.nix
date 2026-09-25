@@ -12,27 +12,27 @@ let
       whenEnv = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Guard: all these session env vars must be set.";
+        description = "Required session environment variables.";
       };
       unlessEnv = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Guard: all these session env vars must be unset.";
+        description = "Session environment variables that must be unset.";
       };
       match = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Extra raw if-shell condition, AND-ed with the env guards.";
+        description = "Additional shell condition.";
       };
       command = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "tmux command for this case. Exclusive with script.";
+        description = "tmux command for this case.";
       };
       script = lib.mkOption {
         type = lib.types.nullOr lib.types.lines;
         default = null;
-        description = "Inline shell for this case; run via run-shell.";
+        description = "Shell script for this case.";
       };
     };
   };
@@ -41,32 +41,32 @@ let
     key = lib.mkOption {
       type = lib.types.str;
       default = name;
-      description = "Key spec emitted verbatim to bind-key; defaults to the attribute name.";
+      description = "Key combination.";
     };
     repeat = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Add -r (repeatable).";
+      description = "Allow key repeats.";
     };
     command = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Unconditional tmux command; use \\; to chain. Exclusive with script/cases.";
+      description = "tmux command for this binding.";
     };
     script = lib.mkOption {
       type = lib.types.nullOr lib.types.lines;
       default = null;
-      description = "Unconditional inline shell; run via run-shell. Exclusive with command/cases.";
+      description = "Shell script for this binding.";
     };
     cases = lib.mkOption {
       type = lib.types.listOf caseType;
       default = [ ];
-      description = "Ordered env-guarded branches (first match wins); a guardless case is the default else.";
+      description = "Conditional bindings; first match wins.";
     };
     noDefault = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "When cases are used and none match: do nothing instead of the key's tmux default.";
+      description = "Disable the default binding when no case matches.";
     };
   };
 
@@ -81,7 +81,7 @@ let
             "copy-mode-vi"
           ];
           default = "prefix";
-          description = "Key table: root -> -n, others -> -T <table>.";
+          description = "Key table.";
         };
       };
     }
@@ -188,11 +188,11 @@ let
     options = {
       event = lib.mkOption {
         type = lib.types.str;
-        description = "Hook event, e.g. after-new-window.";
+        description = "Hook event.";
       };
       command = lib.mkOption {
         type = lib.types.str;
-        description = "Command run by the hook.";
+        description = "Hook command.";
       };
     };
   };
@@ -212,7 +212,7 @@ let
           ]
         );
         default = "prefix";
-        description = "Table; null omits -T.";
+        description = "Key table override.";
       };
     };
   };
@@ -339,62 +339,62 @@ in
   disabledModules = [ "programs/tmux.nix" ];
 
   options.programs.tmux = {
-    enable = lib.mkEnableOption "tmux (custom module)";
+    enable = lib.mkEnableOption "tmux";
 
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.tmux;
-      description = "tmux package to install.";
+      description = "tmux package.";
     };
 
     setGlobalOptions = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Rendered as `set -g <name> <value>`.";
+      description = "Global session options.";
     };
 
     setWindowOptions = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Rendered as `set-window-option -g <name> <value>`.";
+      description = "Global window options.";
     };
 
     setServerOptions = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Rendered as `set -sg <name> <value>`.";
+      description = "Server options.";
     };
 
-    enableVimIntegration = lib.mkEnableOption "vim-aware C-hjkl pane nav (root + copy-mode-vi + C-\\ last-pane)";
+    enableVimIntegration = lib.mkEnableOption "Vim-aware pane navigation";
 
     bindings = lib.mkOption {
       type = lib.types.attrsOf bindingType;
       default = { };
-      description = "Named key bindings; attr name describes the binding.";
+      description = "Named key bindings.";
     };
 
     keyTables = lib.mkOption {
       type = lib.types.attrsOf (lib.types.attrsOf keyTableBindingType);
       default = { };
-      description = "Named custom key tables containing key bindings.";
+      description = "Custom key tables.";
     };
 
     hooks = lib.mkOption {
       type = lib.types.attrsOf hookType;
       default = { };
-      description = "Named set-hook entries.";
+      description = "Named hooks.";
     };
 
     unbind = lib.mkOption {
       type = lib.types.listOf unbindType;
       default = [ ];
-      description = "unbind-key entries.";
+      description = "Keys to unbind.";
     };
 
     extraConfig = lib.mkOption {
       type = lib.types.lines;
       default = "";
-      description = "Verbatim lines appended after generated config.";
+      description = "Additional tmux configuration.";
     };
   };
 

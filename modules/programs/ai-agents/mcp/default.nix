@@ -26,11 +26,7 @@ let
           ]
         );
         default = { };
-        description = ''
-          Environment variables for local MCP servers. Values are strings or
-          { _secret = path; } values exported by the wrapper at server startup.
-          Unreadable secret files produce empty values.
-        '';
+        description = "Server environment variables; supports { _secret = path; }.";
       };
       url = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -43,7 +39,7 @@ let
       instructions = lib.mkOption {
         type = lib.types.nullOr lib.types.lines;
         default = null;
-        description = "Instructions exposed by the MCP server to connected clients.";
+        description = "MCP server instructions.";
       };
       enabled = lib.mkOption {
         type = lib.types.nullOr lib.types.bool;

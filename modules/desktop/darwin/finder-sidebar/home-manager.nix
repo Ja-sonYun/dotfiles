@@ -32,15 +32,11 @@ in
     enable = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
-      description = ''
-        Manage sidebar items at login and daily. False stops the agent, removes
-        declared monthly items, and restores hidden items. Null leaves items unmanaged.
-        Keep the item declarations when disabling; previous declarations are not recorded.
-      '';
+      description = "Manage sidebar items; null leaves them unmanaged.";
     };
     items = lib.mkOption {
       default = [ ];
-      description = "Ordered folders to show when enabled; these remain when disabled.";
+      description = "Ordered sidebar folders; retained when disabled.";
       type = lib.types.listOf (
         lib.types.submodule {
           options = {
@@ -52,7 +48,7 @@ in
     };
     hiddenItems = lib.mkOption {
       default = [ ];
-      description = "Items hidden while enabled and restored at their URI when disabled; original order is not saved.";
+      description = "Items to hide; restored when disabled.";
       type = lib.types.listOf (
         lib.types.submodule {
           options = {
@@ -64,7 +60,7 @@ in
     };
     monthlyFolders = lib.mkOption {
       default = null;
-      description = "Create current and previous month folders and insert them after a named item.";
+      description = "Current and previous month folders after a named item.";
       type = lib.types.nullOr (
         lib.types.submodule {
           options = {

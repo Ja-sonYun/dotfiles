@@ -63,13 +63,13 @@ let
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Whether to evaluate this rule.";
+          description = "Evaluate this rule.";
         };
 
         title = lib.mkOption {
           type = nonEmptyString;
           default = name;
-          description = "Display name included in coding-rule feedback.";
+          description = "Rule display name.";
         };
 
         extensions = lib.mkOption {
@@ -81,28 +81,28 @@ let
             ".py"
             ".pyi"
           ];
-          description = "Case-insensitive final file extensions, or an empty list for every inspected file.";
+          description = "Case-insensitive file extensions; empty matches all.";
         };
 
         trigger = lib.mkOption {
           default = { };
-          description = "Optional conditions that select when to evaluate this rule.";
+          description = "Rule trigger conditions.";
           type = lib.types.submodule {
             options = {
               matcher = lib.mkOption {
                 type = lib.types.nullOr nonEmptyString;
                 default = null;
-                description = "Python regular expression matching tool names; only for tool rules.";
+                description = "Tool-name Python regex for tool rules.";
               };
               inputFields = lib.mkOption {
                 type = lib.types.listOf nonEmptyString;
                 default = [ ];
-                description = "Nested tool input fields to inspect, or all strings when empty.";
+                description = "Input fields to inspect; empty selects all strings.";
               };
               pattern = lib.mkOption {
                 type = lib.types.nullOr nonEmptyString;
                 default = null;
-                description = "Python regular expression that selected input must match.";
+                description = "Python regex required to match selected input.";
               };
             };
           };
@@ -115,12 +115,12 @@ let
               intent = lib.mkOption {
                 type = lib.types.nullOr nonEmptyString;
                 default = null;
-                description = "Independent violation criteria and exceptions sent to Jev.";
+                description = "Violation criteria and exceptions for Jev.";
               };
               regex = lib.mkOption {
                 type = lib.types.nullOr nonEmptyString;
                 default = null;
-                description = "Python regular expression whose match is a violation.";
+                description = "Python regex matching violations.";
               };
             };
           };
@@ -128,12 +128,12 @@ let
 
         why = lib.mkOption {
           type = nonEmptyString;
-          description = "Author-written explanation of why a violation matters.";
+          description = "Why a violation matters.";
         };
 
         message = lib.mkOption {
           type = nonEmptyString;
-          description = "Author-written correction guidance returned for a violation.";
+          description = "Violation correction guidance.";
         };
       };
     }
@@ -141,7 +141,7 @@ let
 in
 {
   options.programs.ai-agents.extensions.rules = {
-    enable = lib.mkEnableOption "Rules and inspection tools, requiring the rules MCP server in every active Claude Code and Codex instance";
+    enable = lib.mkEnableOption "AI agent rule checks";
     debugLog.enable = lib.mkEnableOption "raw rule debug logs with seven-day retention";
     hookCommand = lib.mkOption {
       type = lib.types.str;
@@ -154,7 +154,7 @@ in
       lib.mkOption {
         type = lib.types.attrsOf ruleType;
         default = { };
-        description = "Static ${target} rules evaluated by their check; MCP cannot modify them.";
+        description = "Static ${target} rules.";
       }
     );
   };

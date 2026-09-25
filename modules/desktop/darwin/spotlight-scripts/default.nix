@@ -49,25 +49,25 @@ let
 
         command = lib.mkOption {
           type = lib.types.listOf lib.types.str;
-          description = "Command and arguments executed by the application.";
+          description = "Application command and arguments.";
         };
 
         runAsAdmin = lib.mkOption {
           type = lib.types.bool;
           default = false;
-          description = "Run the command with administrator privileges.";
+          description = "Run as administrator.";
         };
 
         icon = lib.mkOption {
           type = lib.types.nullOr lib.types.path;
           default = null;
-          description = "SVG source rendered as the application icon.";
+          description = "Application icon SVG.";
         };
 
         appleEventsUsageDescription = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          description = "Reason the application sends Apple events.";
+          description = "Apple events permission reason.";
         };
       };
     }
@@ -205,13 +205,13 @@ in
     bundleIdentifierPrefix = lib.mkOption {
       type = lib.types.str;
       default = "local.spotlight-script";
-      description = "Bundle identifier prefix used by generated applications.";
+      description = "Application bundle ID prefix.";
     };
 
     apps = lib.mkOption {
       type = lib.types.attrsOf appType;
       default = { };
-      description = "Scripts exposed as command-line and Spotlight applications.";
+      description = "Scripts for CLI and Spotlight access.";
     };
   };
 

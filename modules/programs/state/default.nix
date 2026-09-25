@@ -38,12 +38,12 @@ in
             options = {
               key = lib.mkOption {
                 type = lib.types.strMatching "[A-Za-z_][A-Za-z0-9_-]*(\\.[A-Za-z_][A-Za-z0-9_-]*)*";
-                description = "Dotted state key selecting the executable.";
+                description = "Dotted state key for executable selection.";
               };
 
               default = lib.mkOption {
                 type = lib.types.enum (builtins.attrNames config.choices);
-                description = "Initial selection when ~/.state.toml is first created.";
+                description = "Initial executable selection.";
               };
 
               choices = lib.mkOption {
@@ -55,7 +55,7 @@ in
         )
       );
       default = { };
-      description = "Commands that select an executable from runtime state.";
+      description = "Commands selected by runtime state.";
     };
   };
 

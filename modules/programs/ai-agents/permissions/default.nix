@@ -22,7 +22,7 @@ let
     options = {
       prefix = lib.mkOption {
         type = lib.types.nonEmptyListOf token;
-        description = "Literal executable and argument prefix, without shell patterns.";
+        description = "Literal command prefix.";
       };
       decision = lib.mkOption { type = decision; };
     };
@@ -31,22 +31,15 @@ let
     options = {
       path = lib.mkOption {
         type = lib.types.nonEmptyStr;
-        description = "Path glob relative to the tool working directory, or an absolute/home path. * matches one component; ** matches across directories.";
-      };
-      excludes = lib.mkOption {
-        type = lib.types.listOf lib.types.nonEmptyStr;
-        default = [ ];
-        description = "Path globs excluded from this rule, relative to the tool working directory or absolute/home paths. Exclusions are matched separately against the original and resolved target paths and are not themselves symlink-resolved.";
+        description = "File path or glob.";
       };
       read = lib.mkOption {
-        type = lib.types.nullOr access;
-        default = null;
-        description = "Direct file-read decision; null preserves native behavior. Allow does not bypass native sandbox or approval checks.";
+        type = access;
+        description = "Read access; deny also requires write denial.";
       };
       write = lib.mkOption {
-        type = lib.types.nullOr access;
-        default = null;
-        description = "Direct file-write decision; null preserves native behavior. Allow does not bypass native sandbox or approval checks.";
+        type = access;
+        description = "Write access.";
       };
     };
   };
@@ -55,120 +48,65 @@ let
       default = lib.mkOption {
         type = lib.types.nullOr decision;
         default = null;
-        description = "Decision for tools without an explicit rule; null preserves native behavior.";
+        description = "Default tool permission; null keeps client defaults.";
       };
       tools = lib.mkOption {
         type = lib.types.attrsOf decision;
         default = { };
-        description = "Decisions keyed by exact MCP tool names.";
+        description = "Permissions by exact MCP tool name.";
       };
     };
   };
   servers = policy.mcp;
-  policyFile = (pkgs.formats.json { }).generate "ai-agent-permissions.json" {
-    inherit (policy) files;
-    mcp = servers;
-    claudePlugin = config.programs.claude-code.mcpPluginName;
-  };
+  policyFile = (pkgs.formats.json { }).generate "ai-agent-permissions.json" policy;
   package = pkgs.callPackage ./package.nix { };
   command = lib.escapeShellArgs [
     (lib.getExe package)
     "--config"
     policyFile
   ];
-  codexDecisions = {
-    allow = "allow";
-    ask = "prompt";
-    deny = "forbidden";
-  };
-  codexApproval = {
-    allow = "approve";
-    ask = "prompt";
-    deny = "prompt";
-  };
-  codexServers = lib.mapAttrs (
-    _: server:
-    let
-      permitted = builtins.attrNames (lib.filterAttrs (_: value: value != "deny") server.tools);
-    in
-    {
-      tools = lib.mapAttrs (_: value: {
-        enabled = if value == "deny" then lib.mkForce false else lib.mkDefault true;
-        approval_mode = codexApproval.${value};
-      }) server.tools;
-    }
-    // lib.optionalAttrs (server.default != null) {
-      default_tools_approval_mode = codexApproval.${server.default};
-    }
-    // lib.optionalAttrs (server.default == "deny") {
-      enabled_tools = permitted;
-    }
-    // lib.optionalAttrs (server.default == "deny" && permitted == [ ]) {
-      enabled = lib.mkForce false;
-    }
-  ) servers;
-  claudeRules =
-    value:
-    lib.concatMap (
-      rule:
-      let
-        prefix = lib.concatStringsSep " " rule.prefix;
-      in
-      lib.optionals (rule.decision == value) [
-        "Bash(${prefix})"
-        "Bash(${prefix} *)"
-      ]
-    ) policy.commands.rules;
-  claudeReadDenyRules = map (
-    rule:
-    let
-      path =
-        if lib.hasPrefix "/" rule.path then
-          "/" + rule.path
-        else if lib.hasPrefix "~/" rule.path then
-          rule.path
-        else
-          "./" + rule.path;
-    in
-    "Read(${path})"
-  ) (lib.filter (rule: rule.read == "deny" && rule.excludes == [ ]) policy.files.rules);
-  claudeMcpRules =
-    value:
-    lib.concatLists (
-      lib.mapAttrsToList (
-        server: entry:
-        let
-          prefixes = [
-            "mcp__${server}__"
-            "mcp__plugin_${config.programs.claude-code.mcpPluginName}_${server}__"
-          ];
-          tools = builtins.attrNames (lib.filterAttrs (_: decision: decision == value) entry.tools);
-        in
-        lib.concatMap (
-          prefix:
-          map (tool: prefix + tool) tools
-          ++ lib.optional (value == "allow" && entry.default == "allow") (prefix + "*")
-        ) prefixes
-      ) servers
-    );
-  permissionHooks = [
-    {
-      matcher = "";
-      hooks = [
-        {
-          type = "command";
-          inherit command;
-          timeout = 5;
-        }
-      ];
-    }
-  ];
+  settingsTransform =
+    client:
+    pkgs.writeShellScript "${client}-permissions" ''
+      exec ${command} --client ${client} \
+        --claude-plugin ${lib.escapeShellArg config.programs.claude-code.mcpPluginName}
+    '';
+  codexRules = pkgs.runCommandLocal "codex-managed.rules" { } ''
+    ${command} --client codex --rules > "$out"
+  '';
 in
 {
   options.programs.ai-agents.permissions = lib.mkOption {
     type = lib.types.nullOr (
       lib.types.submodule {
         options = {
+          presets = {
+            denyDotenv = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Block workspace dotenv files.";
+            };
+            denySsh = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Block ~/.ssh access.";
+            };
+            allowGitWrite = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Allow Git metadata writes.";
+            };
+          };
+          unixSockets.allow = lib.mkOption {
+            type = lib.types.listOf (lib.types.strMatching "/.+");
+            default = [ ];
+            description = "Allowed Unix socket paths.";
+          };
+          webSearch = lib.mkOption {
+            type = lib.types.nullOr access;
+            default = null;
+            description = "Web search permission; null keeps client settings.";
+          };
           commands = {
             rules = lib.mkOption {
               type = lib.types.listOf commandRule;
@@ -184,13 +122,13 @@ in
           mcp = lib.mkOption {
             type = lib.types.attrsOf serverPolicy;
             default = { };
-            description = "Policies for literal MCP server names. Omitted servers and tools without a default preserve native behavior.";
+            description = "Permissions by MCP server name.";
           };
         };
       }
     );
     default = null;
-    description = "Explicit Claude and Codex command, direct-file and MCP tool permissions. Unmatched calls preserve native behavior. Overlapping command/file rules use deny > ask > allow; exact MCP tools override server defaults. File rules govern direct file tools, not shell access, and do not grant sandbox access.";
+    description = "Shared Claude Code and Codex permissions.";
   };
 
   config = lib.mkIf (cfg.enable && policy != null) (
@@ -198,8 +136,8 @@ in
       {
         assertions = [
           {
-            assertion = lib.all (rule: rule.read != null || rule.write != null) policy.files.rules;
-            message = "Each programs.ai-agents.permissions.files rule must set read or write.";
+            assertion = lib.all (rule: rule.read != "deny" || rule.write == "deny") policy.files.rules;
+            message = "Shared file permissions cannot allow writing while denying reading.";
           }
           {
             assertion = lib.all (
@@ -208,40 +146,28 @@ in
             message = "AI agent MCP permissions require literal server and tool names, without selectors or wildcards.";
           }
         ];
-        programs.ai-agents.hooksByAgent = {
-          claude = lib.optionalAttrs (policy.files.rules != [ ] || servers != { }) {
-            PreToolUse = permissionHooks;
-          };
-          codex = lib.optionalAttrs (policy.files.rules != [ ]) {
-            PreToolUse = permissionHooks;
-          };
-        };
       }
       (lib.mkIf config.programs.codex.enable {
-        assertions = lib.mapAttrsToList (server: entry: {
-          assertion =
-            entry.default != "deny"
-            || lib.all (tool: builtins.hasAttr tool entry.tools && entry.tools.${tool} != "deny") (
-              config.programs.codex.settings.mcp_servers.${server}.enabled_tools or [ ]
-            );
-          message = "Codex MCP enabled_tools for ${server} must not expand the shared default-deny policy.";
-        }) servers;
-        programs.codex.rules.managed =
-          lib.concatMapStringsSep "\n" (
-            rule:
-            ''prefix_rule(pattern = ${builtins.toJSON rule.prefix}, decision = "${
-              codexDecisions.${rule.decision}
-            }")''
-          ) policy.commands.rules
-          + "\n";
-        programs.codex.settings.mcp_servers = codexServers;
+        programs.codex = {
+          settingsTransform = settingsTransform "codex";
+          rulesSources.managed = codexRules;
+          settings =
+            lib.mkIf
+              (
+                policy.files.rules != [ ]
+                || policy.presets.denyDotenv
+                || policy.presets.denySsh
+                || policy.presets.allowGitWrite
+                || policy.unixSockets.allow != [ ]
+              )
+              {
+                default_permissions = lib.mkDefault "managed";
+                permissions.managed.extends = lib.mkDefault ":workspace";
+              };
+        };
       })
       (lib.mkIf config.programs.claude-code.enable {
-        programs.claude-code.settings.permissions = {
-          allow = claudeRules "allow" ++ claudeMcpRules "allow";
-          ask = claudeRules "ask" ++ claudeMcpRules "ask";
-          deny = claudeRules "deny" ++ claudeMcpRules "deny" ++ claudeReadDenyRules;
-        };
+        programs.claude-code.settingsTransform = settingsTransform "claude";
       })
     ]
   );

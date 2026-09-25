@@ -7,6 +7,7 @@
 let
   cfg = config.programs.codex;
   syncLib = import ../ai-agents/sync.nix { inherit lib; };
+  jsonFormat = pkgs.formats.json { };
   tomlFormat = pkgs.formats.toml { };
   nodeOnly = pkgs.runCommand "nodejs-24-node-only" { } ''
     mkdir -p $out/bin
@@ -59,13 +60,13 @@ let
     "mcp_servers"
     "model_providers"
     "tui"
+    "web_search"
   ];
   mirroredSettingKeys = [
     "model"
     "model_provider"
     "model_verbosity"
     "model_reasoning_effort"
-    "web_search"
   ];
 
   selectSettings = keys: lib.filterAttrs (name: _: builtins.elem name keys);
@@ -99,9 +100,18 @@ let
   mkManagedFragment =
     name: instanceSettings: selectedAgents:
     let
-      baseManagedFragment = tomlFormat.generate "codex-${name}-managed-settings.toml" (
-        if cfg.enable then instanceSettings else { }
-      );
+      baseManagedFragment =
+        if cfg.enable && cfg.settingsTransform != null then
+          pkgs.runCommandLocal "codex-${name}-managed-settings.toml" { } ''
+            set -euo pipefail
+            ${cfg.settingsTransform} \
+              < ${jsonFormat.generate "codex-${name}-settings.json" instanceSettings} \
+              | ${pkgs.yq-go}/bin/yq --input-format=json --output-format=toml '.' > "$out"
+          ''
+        else
+          tomlFormat.generate "codex-${name}-managed-settings.toml" (
+            if cfg.enable then instanceSettings else { }
+          );
       agentSelection = lib.concatMapStringsSep " or " (
         agentName: ".key == ${builtins.toJSON agentName}"
       ) selectedAgents;
@@ -200,7 +210,10 @@ let
     }
     // lib.mapAttrs' (
       name: text: lib.nameValuePair "${home}/rules/${name}.rules" { inherit text; }
-    ) cfg.rules;
+    ) cfg.rules
+    // lib.mapAttrs' (
+      name: source: lib.nameValuePair "${home}/rules/${name}.rules" { inherit source; }
+    ) cfg.rulesSources;
 in
 {
   imports = [ ../state ];
@@ -213,20 +226,20 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.codex;
-      description = "Codex package to install.";
+      description = "Codex package.";
     };
 
     extraPath = lib.mkOption {
       type = lib.types.listOf lib.types.package;
       default = [ ];
-      description = "Packages added to every Codex instance's PATH.";
+      description = "Packages on each instance's PATH.";
     };
 
     trustCurrentDirectory = lib.mkEnableOption "trusting the current directory when starting Codex";
 
     defaultProfileName = lib.mkOption {
       type = lib.types.strMatching "[A-Za-z0-9_-]+";
-      description = "Declared instance selected when ~/.state.toml is first created.";
+      description = "Initial default instance.";
     };
 
     instances = lib.mkOption {
@@ -237,18 +250,13 @@ in
             options = {
               home = lib.mkOption {
                 type = lib.types.str;
-                description = "Instance home directory relative to the user's home.";
+                description = "Home-relative instance directory.";
               };
 
               shareWith = lib.mkOption {
                 type = lib.types.nullOr lib.types.str;
                 default = null;
-                description = ''
-                  Codex home to link missing entries from, relative to the user's home.
-                  Excludes only auth.json. Uses the source home's skills, MCP servers, and agents;
-                  this instance's sync selections do not apply.
-                  Null keeps runtime data independent. Declared settings are shared by every instance.
-                '';
+                description = "Home-relative Codex directory to share, except authentication.";
               };
 
               sync = syncLib.mkOptions (name == cfg.defaultProfileName);
@@ -257,49 +265,61 @@ in
         )
       );
       default = { };
-      description = "Codex commands with separate user profiles.";
+      description = "Codex instances.";
     };
 
     settings = lib.mkOption {
       inherit (tomlFormat) type;
       default = { };
-      description = "Codex TOML settings shared by every instance, including hooks and permissions.";
+      description = "Shared Codex settings.";
+    };
+
+    settingsTransform = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Build-time settings transformer (JSON stdin/stdout).";
     };
 
     context = lib.mkOption {
       type = lib.types.nullOr lib.types.lines;
       default = null;
-      description = "AGENTS.md content shared by every instance.";
+      description = "Shared AGENTS.md content.";
     };
 
     customInstructions = lib.mkOption {
       type = lib.types.lines;
       default = "";
-      description = "Instructions prepended to Codex developer instructions.";
+      description = "Additional developer instructions.";
     };
 
     agentsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = "Directory containing adapted Codex custom agents.";
+      description = "Custom agent directory.";
     };
 
     agentNames = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "Selectable custom-agent names matching entries in agentsDir/agents.toml.";
+      description = "Available agent names.";
     };
 
     skills = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
-      description = "Skill directory catalog selected by each instance's sync settings.";
+      description = "Available skill directories.";
     };
 
     rules = lib.mkOption {
       type = lib.types.attrsOf lib.types.lines;
       default = { };
-      description = "Rule files shared in every instance's rules directory.";
+      description = "Shared rule file contents.";
+    };
+
+    rulesSources = lib.mkOption {
+      type = lib.types.attrsOf lib.types.path;
+      default = { };
+      description = "Shared rule file sources; names must differ from rules.";
     };
   };
 
@@ -353,6 +373,11 @@ in
         if cfg.instances == { } then [ wrappedPackage ] else lib.attrValues instancePackages;
 
       assertions = [
+        {
+          assertion =
+            lib.intersectLists (builtins.attrNames cfg.rules) (builtins.attrNames cfg.rulesSources) == [ ];
+          message = "programs.codex.rules and rulesSources must use distinct names.";
+        }
         {
           assertion = cfg.instances == { } || builtins.hasAttr cfg.defaultProfileName cfg.instances;
           message = "programs.codex.defaultProfileName must name a declared instance.";

@@ -31,7 +31,7 @@ in
     autoLaunch = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Whether Hammerspoon starts automatically at login.";
+      description = "Start at login.";
     };
 
     scripts = lib.mkOption {
@@ -51,7 +51,7 @@ in
         }
       );
       default = [ ];
-      description = "Named Hammerspoon Lua modules loaded in list order.";
+      description = "Lua modules in load order.";
     };
   };
 

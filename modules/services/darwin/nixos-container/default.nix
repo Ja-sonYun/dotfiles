@@ -360,18 +360,18 @@ in
         modules = mkOption {
           type = types.listOf types.deferredModule;
           default = [ ];
-          description = "Extra NixOS modules imported into every container guest.";
+          description = "Extra NixOS modules for all guests.";
         };
 
         volume = mkOption {
           default = { };
-          description = "Volume definitions, referenced by id from instance.<id>.volumes.";
+          description = "Named volume definitions.";
           type = types.attrsOf (
             types.submodule {
               options = {
                 mountPoint = mkOption {
                   type = types.str;
-                  description = "Path inside the guest where the volume is mounted.";
+                  description = "Guest mount path.";
                 };
                 readOnly = mkOption {
                   type = types.bool;
@@ -381,7 +381,7 @@ in
                 hostPath = mkOption {
                   type = types.nullOr types.str;
                   default = null;
-                  description = "If set, bind-mount this host path instead of a named volume.";
+                  description = "Host path for a bind mount.";
                 };
               };
             }
@@ -418,7 +418,7 @@ in
                   volumes = mkOption {
                     type = types.listOf types.str;
                     default = [ ];
-                    description = "Volume ids (from services.nixosContainer.volume) to mount in this instance.";
+                    description = "Volume IDs to mount.";
                   };
                 };
               }

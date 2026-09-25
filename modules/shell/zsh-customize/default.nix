@@ -19,7 +19,7 @@ let
       description = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Help text. When null, no -h/--help parsing is added.";
+        description = "Help text; null disables help handling.";
       };
       body = lib.mkOption {
         type = lib.types.lines;
@@ -32,7 +32,7 @@ let
       flags = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "When set, render with typeset and these flags.";
+        description = "typeset flags.";
       };
       value = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -46,12 +46,12 @@ let
       function = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Existing shell function registered as this zle widget.";
+        description = "Shell function for this ZLE widget.";
       };
       body = lib.mkOption {
         type = lib.types.nullOr lib.types.lines;
         default = null;
-        description = "Inline shell body for this zle widget.";
+        description = "Shell script for this ZLE widget.";
       };
       bindkeys = lib.mkOption {
         type = lib.types.listOf lib.types.str;
@@ -68,7 +68,7 @@ let
       tmuxOnly = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Register this hook only when the shell starts inside tmux.";
+        description = "Enable this hook only inside tmux.";
       };
     };
   };
@@ -278,7 +278,7 @@ in
     autoload = lib.mkOption {
       type = lib.types.attrsOf autoloadType;
       default = { };
-      description = "Functions autoloaded with zsh autoload.";
+      description = "Functions to autoload.";
     };
 
     variables = lib.mkOption {
@@ -302,13 +302,13 @@ in
     blocks = lib.mkOption {
       type = lib.types.listOf blockType;
       default = [ ];
-      description = "Ordered zsh init blocks. Omit order unless sequencing matters.";
+      description = "Ordered zsh initialization blocks.";
     };
 
     commands = lib.mkOption {
       type = lib.types.attrsOf commandType;
       default = { };
-      description = "Executable zsh scripts added to home.packages.";
+      description = "Executable zsh scripts.";
     };
   };
 

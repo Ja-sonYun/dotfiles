@@ -1,23 +1,27 @@
 import argparse
-import fnmatch
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Literal, TypedDict
 
-from ai_agent_hooks.edit_input import edit_targets
-
+type Json = None | bool | int | float | str | list[Json] | dict[str, Json]
 Decision = Literal["allow", "ask", "deny"]
 Access = Literal["allow", "deny"]
-PRIORITY = {"allow": 0, "ask": 1, "deny": 2}
+
+
+class CommandRule(TypedDict):
+    prefix: list[str]
+    decision: Decision
+
+
+class Commands(TypedDict):
+    rules: list[CommandRule]
 
 
 class FileRule(TypedDict):
     path: str
-    excludes: list[str]
-    read: Access | None
-    write: Access | None
+    read: Access
+    write: Access
 
 
 class Files(TypedDict):
@@ -29,160 +33,257 @@ class Server(TypedDict):
     tools: dict[str, Decision]
 
 
+class Presets(TypedDict):
+    denyDotenv: bool
+    denySsh: bool
+    allowGitWrite: bool
+
+
+class UnixSockets(TypedDict):
+    allow: list[str]
+
+
 class Policy(TypedDict):
+    presets: Presets
+    unixSockets: UnixSockets
+    webSearch: Access | None
+    commands: Commands
     files: Files
     mcp: dict[str, Server]
-    claudePlugin: str
 
 
-def match_path(path: tuple[str, ...], pattern: tuple[str, ...]) -> bool:
-    if not pattern:
-        return not path
-    if pattern[0] == "**":
-        return any(
-            match_path(path[index:], pattern[1:]) for index in range(len(path) + 1)
+def table(parent: dict[str, Json], key: str) -> dict[str, Json]:
+    value = parent.setdefault(key, {})
+    if not isinstance(value, dict):
+        raise TypeError(f"Expected a settings object at {key!r}.")
+    return value
+
+
+def strings(parent: dict[str, Json], key: str) -> list[str]:
+    value = parent.get(key, [])
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise TypeError(f"Expected a string list at {key!r}.")
+    return [item for item in value if isinstance(item, str)]
+
+
+def file_access(rule: FileRule) -> str:
+    if rule["read"] == "deny":
+        if rule["write"] != "deny":
+            raise ValueError(f"Cannot allow writing without reading {rule['path']!r}.")
+        return "deny"
+    return "write" if rule["write"] == "allow" else "read"
+
+
+def file_rules(policy: Policy, client: Literal["claude", "codex"]) -> list[FileRule]:
+    """Return preset rules followed by explicit file rules.
+
+    Codex uses workspace-root Git paths and grants socket paths filesystem access.
+    Claude uses recursive Git paths and handles sockets only in network settings.
+    """
+    rules: list[FileRule] = []
+    if policy["presets"]["denyDotenv"]:
+        rules.extend(
+            {"path": path, "read": "deny", "write": "deny"}
+            for path in ("**/.env", "**/*.env", "**/*.env.*")
         )
-    return (
-        bool(path)
-        and fnmatch.fnmatchcase(path[0], pattern[0])
-        and match_path(path[1:], pattern[1:])
-    )
+    if policy["presets"]["denySsh"]:
+        rules.append({"path": "~/.ssh/**", "read": "deny", "write": "deny"})
+    if policy["presets"]["allowGitWrite"]:
+        rules.append(
+            {
+                "path": "**/.git/**" if client == "claude" else ".git/**",
+                "read": "allow",
+                "write": "allow",
+            }
+        )
+    if client == "codex":
+        rules.extend(
+            {"path": path, "read": "allow", "write": "allow"}
+            for path in policy["unixSockets"]["allow"]
+        )
+    return rules + policy["files"]["rules"]
 
 
-def file_decision(
-    path: Path, operation: Literal["read", "write"], cwd: Path, policy: Files
-) -> Access | None:
-    path = path.expanduser()
-    candidates = {Path(os.path.abspath(path)), path.resolve()}
-    matches: list[Access] = []
-    for rule in policy["rules"]:
-        value = rule[operation]
-        if value is None:
-            continue
-        pattern = Path(os.path.expanduser(rule["path"]))
-        if not pattern.is_absolute():
-            pattern = cwd / pattern
-        patterns = {pattern, pattern.resolve()}
+def claude_settings(
+    settings: dict[str, Json], policy: Policy, plugin: str
+) -> dict[str, Json]:
+    """Prepend generated permissions so native deny-list exceptions follow them.
 
-        exclusions: list[Path] = []
-        for excluded in rule["excludes"]:
-            exclusion = Path(os.path.expanduser(excluded))
-            if not exclusion.is_absolute():
-                exclusion = cwd / exclusion
-            exclusions.append(Path(os.path.abspath(exclusion)))
+    Raise ValueError if a shared MCP tool would relax its server's ask or deny.
+    """
+    permissions = table(settings, "permissions")
+    rules: dict[str, list[str]] = {value: [] for value in ("allow", "ask", "deny")}
+    if policy["webSearch"] is not None:
+        rules[policy["webSearch"]].append("WebSearch")
+    for rule in policy["commands"]["rules"]:
+        prefix = " ".join(rule["prefix"])
+        rules[rule["decision"]].extend([f"Bash({prefix})", f"Bash({prefix} *)"])
 
-        if any(
-            any(match_path(candidate.parts, entry.parts) for entry in patterns)
-            and not any(
-                match_path(candidate.parts, exclusion.parts) for exclusion in exclusions
-            )
-            for candidate in candidates
+    for rule in file_rules(policy, "claude"):
+        file_access(rule)
+        path = rule["path"]
+        if path.startswith("/"):
+            path = "/" + path
+        elif not path.startswith("~/"):
+            path = "./" + path.removeprefix("./")
+        rules[rule["read"]].append(f"Read({path})")
+        rules[rule["write"]].append(f"Edit({path})")
+
+    priority = {"allow": 0, "ask": 1, "deny": 2}
+    for server, entry in policy["mcp"].items():
+        default = entry["default"]
+        if default is not None and any(
+            priority[value] < priority[default] for value in entry["tools"].values()
         ):
-            matches.append(value)
-    return max(matches, key=PRIORITY.__getitem__) if matches else None
+            raise ValueError(
+                f"Claude cannot override the {default!r} MCP default for {server!r}. "
+                "Define this policy in the client's native settings."
+            )
+        for prefix in (f"mcp__{server}__", f"mcp__plugin_{plugin}_{server}__"):
+            if default is not None:
+                rules[default].append(prefix + "*")
+            for tool, value in entry["tools"].items():
+                rules[value].append(prefix + tool)
 
-
-def mcp_decision(server: str, tool: str, policy: Policy) -> Decision | None:
-    entry = policy["mcp"].get(server)
-    if entry is None or not tool:
-        return None
-    return entry["tools"].get(tool, entry["default"])
-
-
-def decide(hook: dict[str, object], policy: Policy, client: str) -> Decision | None:
-    tool = str(hook.get("tool_name") or "").removeprefix("functions.")
-    data = hook.get("tool_input")
-    cwd = Path(str(hook.get("cwd") or Path.cwd()))
-
-    if client == "Claude" and tool.startswith("mcp__"):
-        matches = []
-        for server in policy["mcp"]:
-            for prefix in (
-                f"mcp__{server}__",
-                f"mcp__plugin_{policy['claudePlugin']}_{server}__",
-            ):
-                if tool.startswith(prefix):
-                    matches.append((server, tool[len(prefix) :]))
-        if not matches:
-            return None
-        if len(matches) != 1:
-            return "deny"
-        return mcp_decision(*matches[0], policy)
-
-    tool = tool.lower()
-    if not policy["files"]["rules"]:
-        return None
-
-    if tool in {"read", "read_file", "view_image"}:
-        if not isinstance(data, dict):
-            return "deny"
-        path = data.get("file_path", data.get("path"))
-        if not isinstance(path, str) or not path:
-            return "deny"
-        return file_decision(
-            cwd / Path(path).expanduser(), "read", cwd, policy["files"]
+    for value, entries in rules.items():
+        permissions[value] = entries + strings(permissions, value)
+    if policy["unixSockets"]["allow"]:
+        network = table(table(settings, "sandbox"), "network")
+        network["allowUnixSockets"] = list(
+            dict.fromkeys(
+                strings(network, "allowUnixSockets") + policy["unixSockets"]["allow"]
+            )
         )
+    return settings
 
-    if tool in {
-        "write",
-        "edit",
-        "multiedit",
-        "notebookedit",
-        "write_file",
-        "edit_file",
-        "apply_patch",
-    }:
-        targets = edit_targets(hook, resolve_paths=False)
-        if not targets:
-            return "deny"
-        decisions = [
-            file_decision(path, "write", cwd, policy["files"])
-            for target in targets
-            for path in (target.before, target.after)
-        ]
-        if "deny" in decisions:
-            return "deny"
-        return "allow" if all(value == "allow" for value in decisions) else None
-    return None
+
+def codex_settings(settings: dict[str, Json], policy: Policy) -> dict[str, Json]:
+    """Merge native file, socket, search and selected-server permissions.
+
+    Existing tool restrictions and stricter access at the same file path are kept.
+    File rules, presets and sockets require the managed profile or raise ValueError.
+    """
+    if policy["webSearch"] == "deny":
+        settings["web_search"] = "disabled"
+    elif policy["webSearch"] == "allow":
+        settings.setdefault("web_search", "live")
+
+    rules = file_rules(policy, "codex")
+    if rules:
+        if settings.get("default_permissions") != "managed":
+            raise ValueError(
+                "Shared file permissions require Codex's managed permission profile."
+            )
+        managed = table(table(settings, "permissions"), "managed")
+        filesystem = table(managed, "filesystem")
+        priority = {"write": 0, "read": 1, "deny": 2}
+        for rule in rules:
+            access = file_access(rule)
+            path = rule["path"]
+            target = filesystem
+            if not path.startswith(("/", "~/")):
+                target = table(filesystem, ":workspace_roots")
+                path = path.removeprefix("./")
+            path = path.removesuffix("/**")
+            previous = target.get(path)
+            if previous is not None:
+                if not isinstance(previous, str) or previous not in priority:
+                    raise ValueError(
+                        f"Cannot merge the Codex filesystem entry {path!r}."
+                    )
+                access = max((access, previous), key=priority.__getitem__)
+            target[path] = access
+
+        if policy["unixSockets"]["allow"]:
+            sockets = table(table(managed, "network"), "unix_sockets")
+            for path in policy["unixSockets"]["allow"]:
+                sockets.setdefault(path, "allow")
+
+    servers = table(settings, "mcp_servers")
+    for server, entry in policy["mcp"].items():
+        if server not in servers:
+            continue
+        native = table(servers, server)
+        native_default = native.get("default_tools_approval_mode")
+        default = entry["default"]
+        if default == "deny":
+            permitted = {
+                tool for tool, value in entry["tools"].items() if value != "deny"
+            }
+            if "enabled_tools" in native:
+                permitted.intersection_update(strings(native, "enabled_tools"))
+            native["enabled_tools"] = sorted(permitted)
+            if not permitted:
+                native["enabled"] = False
+        elif default == "ask":
+            native["default_tools_approval_mode"] = "prompt"
+            for tool, options in table(native, "tools").items():
+                if tool not in entry["tools"]:
+                    if not isinstance(options, dict):
+                        raise TypeError(
+                            f"Expected MCP tool settings for {server}.{tool}."
+                        )
+                    options["approval_mode"] = "prompt"
+        elif default == "allow":
+            native.setdefault("default_tools_approval_mode", "approve")
+
+        disabled = set(strings(native, "disabled_tools"))
+        for tool, value in entry["tools"].items():
+            options = table(table(native, "tools"), tool)
+            if value == "deny":
+                options["enabled"] = False
+                disabled.add(tool)
+            elif value == "ask":
+                options["approval_mode"] = "prompt"
+            else:
+                options.setdefault(
+                    "approval_mode",
+                    native_default if native_default is not None else "approve",
+                )
+        if disabled:
+            native["disabled_tools"] = sorted(disabled)
+    return settings
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Convert shared permissions to native client settings."
+    )
     parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--client", choices=("claude", "codex"), required=True)
+    parser.add_argument("--claude-plugin", default="hm")
+    parser.add_argument(
+        "--rules",
+        action="store_true",
+        help="Output Codex command rules instead of settings.",
+    )
     args = parser.parse_args()
-    client = os.environ.get("AI_AGENT_CLIENT", "")
-    reason = "Tool call rejected by the shared AI agent permissions."
+
     try:
         with args.config.open(encoding="utf-8") as stream:
             policy: Policy = json.load(stream)
-        hook = json.load(sys.stdin)
-        if not isinstance(hook, dict):
-            raise TypeError("Expected a tool call object.")
-        decision = decide(hook, policy, client)
-    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as error:
-        decision = "deny"
-        reason = f"Cannot evaluate the shared AI agent permissions: {error}"
+        if args.rules:
+            if args.client != "codex":
+                raise ValueError("--rules is only supported for Codex.")
+            decisions = {"allow": "allow", "ask": "prompt", "deny": "forbidden"}
+            for rule in policy["commands"]["rules"]:
+                print(
+                    f"prefix_rule(pattern = {json.dumps(rule['prefix'])}, "
+                    f"decision = {json.dumps(decisions[rule['decision']])})"
+                )
+            return 0
 
-    # Codex approvals come from native command and MCP rules, not hook decisions.
-    if decision is None or (client == "Codex" and decision != "deny"):
-        return 0
-    if decision == "ask":
-        reason = (
-            "This tool call requires approval under the shared AI agent permissions."
-        )
-    elif decision == "allow":
-        reason = "Tool call allowed by the shared AI agent permissions."
-    print(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": decision,
-                    "permissionDecisionReason": reason,
-                },
-            }
-        )
-    )
+        settings: Json = json.load(sys.stdin)
+        if not isinstance(settings, dict):
+            raise TypeError("Expected a JSON settings object on stdin.")
+        if args.client == "claude":
+            result = claude_settings(settings, policy, args.claude_plugin)
+        else:
+            result = codex_settings(settings, policy)
+        print(json.dumps(result, indent=2))
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        print(f"Cannot convert shared permissions: {error}", file=sys.stderr)
+        return 1
     return 0
 
 

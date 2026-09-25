@@ -566,9 +566,9 @@
         }
       },
       "node_modules/exa-js": {
-        "version": "2.22.2",
-        "resolved": "https://registry.npmjs.org/exa-js/-/exa-js-2.22.2.tgz",
-        "integrity": "sha512-pqXI4ADGL0Ryas5tT4JIowE9PKJmsUu2Ml2IUkNJtWBPnWTnmAZRlKTSCwmJdwXsd3HgdEaMwCrTC3AMcGZlOg==",
+        "version": "2.23.0",
+        "resolved": "https://registry.npmjs.org/exa-js/-/exa-js-2.23.0.tgz",
+        "integrity": "sha512-KI+dFWS4WzyUsrWw53FA3UsAC5kYj10tY0MG9F7LRkvefq1TxJ8QWGHQ4MMp/ZvkzwzOD2eFg1uk9L+sfYrLog==",
         "license": "MIT",
         "dependencies": {
           "cross-fetch": "~4.1.0",
@@ -896,9 +896,9 @@
         }
       },
       "node_modules/hono": {
-        "version": "4.13.8",
-        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.8.tgz",
-        "integrity": "sha512-/Gng7NfoykZl2pjukW5Z6+8Yxm3BPRf86GTbQnt0SbySkvax4fyL4H3HhY1cCpBGmiW9XDRFzRV+CXK2W8QudQ==",
+        "version": "4.13.9",
+        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.9.tgz",
+        "integrity": "sha512-7dMkQmZoC4E6F7AtaQSPhlWAdnBti+j7rreMZl8QB4jFiEhP9TWbGWUMi8WYzBCgmgulxuvLQupKqo+Co6Omyg==",
         "license": "MIT",
         "engines": {
           "node": ">=16.9.0"
@@ -1661,5 +1661,5 @@
       }
     }
   },
-  "invalidationHash": "b5bb7626c254ef2c506821640375746f9aca45cb09bc5392bd6a62e946a53cfd"
+  "invalidationHash": "5633e2a59febb5dbb5a600f6838632cf81ddf3d7c3c9e7da26464c4e972b66a2"
 }

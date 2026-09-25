@@ -45,15 +45,15 @@ in
     rules = lib.mkOption {
       type = lib.types.listOf (lib.types.attrsOf lib.types.str);
       default = [ ];
-      description = "Window rules applied when yabai starts.";
+      description = "Window rules.";
     };
-    scriptingAddition.enable = lib.mkEnableOption "the locally managed yabai scripting addition";
+    scriptingAddition.enable = lib.mkEnableOption "the yabai scripting addition";
     displayManagement = {
       enable = lib.mkEnableOption "yabai desktop reconciliation on display changes";
       targetDesktopsPerDisplay = lib.mkOption {
         type = lib.types.ints.positive;
         default = 4;
-        description = "Number of regular desktops to maintain on each display.";
+        description = "Regular desktops per display.";
       };
     };
   };

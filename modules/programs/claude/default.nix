@@ -85,7 +85,7 @@ let
     ''
   ) cfg.instances;
 
-  settingsFile = jsonFormat.generate "claude-code-settings.json" (
+  baseSettingsFile = jsonFormat.generate "claude-code-settings.json" (
     cfg.settings
     // lib.optionalAttrs (cfg.customInstructions != "") {
       outputStyle = "Shared Instructions";
@@ -94,6 +94,13 @@ let
       "$schema" = "https://json.schemastore.org/claude-code-settings.json";
     }
   );
+  settingsFile =
+    if cfg.settingsTransform == null then
+      baseSettingsFile
+    else
+      pkgs.runCommandLocal "claude-code-settings.json" { } ''
+        ${cfg.settingsTransform} < ${baseSettingsFile} > "$out"
+      '';
 
   sharedFiles =
     home:
@@ -132,7 +139,7 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.claude-code;
-      description = "Claude Code package to install.";
+      description = "Claude Code package.";
     };
 
     finalPackage = lib.mkOption {
@@ -144,12 +151,12 @@ in
     extraPath = lib.mkOption {
       type = lib.types.listOf lib.types.package;
       default = [ ];
-      description = "Packages added to every Claude Code instance's PATH.";
+      description = "Packages on each instance's PATH.";
     };
 
     defaultProfileName = lib.mkOption {
       type = lib.types.strMatching "[A-Za-z0-9_-]+";
-      description = "Declared instance selected when ~/.state.toml is first created.";
+      description = "Initial default instance.";
     };
 
     instances = lib.mkOption {
@@ -160,7 +167,7 @@ in
             options = {
               home = lib.mkOption {
                 type = lib.types.str;
-                description = "Instance config directory relative to the user's home.";
+                description = "Home-relative instance config directory.";
               };
 
               sync = syncLib.mkOptions (name == cfg.defaultProfileName);
@@ -169,52 +176,55 @@ in
         )
       );
       default = { };
-      description = "Claude Code commands with independent user profiles.";
+      description = "Claude Code instances.";
     };
 
     settings = lib.mkOption {
       inherit (jsonFormat) type;
       default = { };
-      description = "Claude Code JSON settings shared by every instance, including hooks and permissions.";
+      description = "Shared Claude Code settings.";
+    };
+
+    settingsTransform = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Build-time settings transformer (JSON stdin/stdout).";
     };
 
     context = lib.mkOption {
       type = lib.types.nullOr lib.types.lines;
       default = null;
-      description = "CLAUDE.md content shared by every instance.";
+      description = "Shared CLAUDE.md content.";
     };
 
     customInstructions = lib.mkOption {
       type = lib.types.lines;
       default = "";
-      description = "Instructions applied through a managed Claude Code output style.";
+      description = "Output style instructions.";
     };
 
     skills = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
-      description = "Skill directory catalog selected by each instance's sync settings.";
+      description = "Available skill directories.";
     };
 
     agentsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = "Directory of adapted Markdown agents selected by each instance's sync settings.";
+      description = "Markdown agent directory.";
     };
 
     agentNames = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "Selectable agent names, matching Markdown file stems in agentsDir.";
+      description = "Available agent names.";
     };
 
     mcpServers = lib.mkOption {
       type = lib.types.attrsOf jsonFormat.type;
       default = { };
-      description = ''
-        MCP server catalog selected for each instance's managed hm plugin.
-        Servers listed in settings.disabledMcpjsonServers are excluded from every instance.
-      '';
+      description = "Available MCP servers.";
     };
 
     mcpPluginName = lib.mkOption {
@@ -224,12 +234,12 @@ in
       internal = true;
     };
 
-    chromeNativeHost.enable = lib.mkEnableOption "Claude Code Chrome native messaging host (Claude in Chrome)";
+    chromeNativeHost.enable = lib.mkEnableOption "Claude in Chrome";
 
     keybindings = lib.mkOption {
       type = lib.types.nullOr (lib.types.attrsOf lib.types.anything);
       default = null;
-      description = "Keybindings shared by every instance (written as JSON when non-null).";
+      description = "Shared keybindings.";
     };
 
   };
@@ -298,7 +308,7 @@ in
             force = true;
             text = builtins.toJSON {
               name = "com.anthropic.claude_code_browser_extension";
-              description = "Claude Code Browser Extension Native Host";
+              description = "Claude in Chrome native host";
               path = "${launcher}";
               type = "stdio";
               allowed_origins = [ "chrome-extension://fcoeoabgfenejglbffodgkkbkcdhcgfn/" ];

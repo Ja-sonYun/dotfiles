@@ -43,7 +43,7 @@ let
       nextMenu = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Target menu by attr name (e.g. \"git\"); \".yaml\" is appended.";
+        description = "Target menu name.";
       };
       closeAfterCommand = lib.mkOption {
         type = lib.types.nullOr lib.types.bool;
@@ -194,26 +194,26 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.tmux-menu;
-      description = "tmux-menu package to install.";
+      description = "tmux-menu package.";
     };
 
     menus = lib.mkOption {
       type = lib.types.attrsOf menuType;
       default = { };
-      description = "Menus rendered to YAML; attr name is the file stem (e.g. menu, git).";
+      description = "Named menus.";
     };
 
     configDir = lib.mkOption {
       type = lib.types.package;
       readOnly = true;
       internal = true;
-      description = "Dir containing generated menu YAMLs under menu/.";
+      description = "Menu configuration directory.";
     };
 
     showScript = lib.mkOption {
       type = lib.types.package;
       internal = true;
-      description = "Launcher that shows the @menu (or 'menu') group.";
+      description = "Menu launcher.";
     };
   };
 

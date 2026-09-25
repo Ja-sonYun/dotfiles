@@ -48,6 +48,9 @@ pkgs.lib.makeOverridable (
             lockFile = "lock.${system}.json";
           };
           lock.invalidationData.targetSystem = system;
+          public.lockInvalidationHash = builtins.hashString "sha256" (
+            builtins.toJSON config.lock.invalidationData
+          );
           mkDerivation.meta.platforms = builtins.attrNames spec.versions;
           public.overrideAttrs = config.package-func.result.overrideAttrs;
         }

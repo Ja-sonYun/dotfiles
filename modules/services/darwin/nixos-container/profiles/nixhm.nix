@@ -71,10 +71,10 @@ in
       options.identityFile = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Host identity file mounted read-only for agenix.";
+        description = "Host agenix identity file.";
       };
     };
-    description = "Like services.nixosContainer, but service bodies are nixhm presets.";
+    description = "NixOS containers using nixhm presets.";
   };
 
   config = lib.mkIf (instances != { }) {

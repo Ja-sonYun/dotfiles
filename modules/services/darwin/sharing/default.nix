@@ -66,7 +66,7 @@ in
         enable = lib.mkOption {
           type = lib.types.nullOr lib.types.bool;
           default = null;
-          description = "Whether to enable ${name}; false disables it and null leaves it unmanaged.";
+          description = "Enable ${name}; null leaves it unmanaged.";
         };
       });
 

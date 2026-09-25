@@ -32,7 +32,7 @@ in
   options.services.codeSigning.targets = lib.mkOption {
     type = lib.types.attrsOf targetType;
     default = { };
-    description = "Resolved targets installed by the code-signing activation.";
+    description = "Code-signing targets.";
   };
 
   config = lib.mkIf hasTargets {

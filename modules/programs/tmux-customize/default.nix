@@ -13,7 +13,7 @@ let
       enable = lib.mkOption {
         type = lib.types.nullOr lib.types.bool;
         default = null;
-        description = "Turn the session status line on/off; null inherits the global setting.";
+        description = "Session status line; null inherits the global setting.";
       };
       position = lib.mkOption {
         type = lib.types.nullOr (
@@ -69,12 +69,12 @@ let
       match.env = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Session env marker; if set on a session, it belongs to this group.";
+        description = "Environment variable identifying this session group.";
       };
       priority = lib.mkOption {
         type = lib.types.int;
         default = 0;
-        description = "Env-match check order (highest first).";
+        description = "Group match priority; highest first.";
       };
       status = lib.mkOption {
         type = statusType;
@@ -87,7 +87,7 @@ let
       menu = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Session @menu value; the menu opener reads it.";
+        description = "Session menu name.";
       };
     };
   };
@@ -320,18 +320,18 @@ in
     segments = lib.mkOption {
       type = lib.types.attrsOf lib.types.lines;
       default = { };
-      description = "Named shell snippets printing a status fragment.";
+      description = "Named status scripts.";
     };
 
     separator = lib.mkOption {
       type = lib.types.str;
       default = "";
-      description = "String joined between rendered segments.";
+      description = "Status segment separator.";
     };
 
     defaultGroup = lib.mkOption {
       type = lib.types.str;
-      description = "Group used as the global default and fallback.";
+      description = "Default session group.";
     };
 
     groups = lib.mkOption {
@@ -342,20 +342,20 @@ in
     sessions = lib.mkOption {
       type = lib.types.attrsOf sessionType;
       default = { };
-      description = "Named session registry: logical name -> group (+ bootstrap env/unicode).";
+      description = "Named session definitions.";
     };
 
     launcher = {
-      enable = lib.mkEnableOption "the tmc-tmux bootstrap launcher (aliased as tm)";
+      enable = lib.mkEnableOption "the tm launcher";
       startSessions = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Session names (keys of sessions) created on startup, in order.";
+        description = "Sessions to create on startup, in order.";
       };
       attach = lib.mkOption {
         type = lib.types.str;
         default = "main";
-        description = "Session attached to as fallback.";
+        description = "Fallback session.";
       };
     };
   };

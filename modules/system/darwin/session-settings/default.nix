@@ -1,6 +1,6 @@
 { config, lib, ... }:
 {
-  options.system.defaults.applyToCurrentSession = lib.mkEnableOption "applying defaults to the current session during activation";
+  options.system.defaults.applyToCurrentSession = lib.mkEnableOption "defaults in the current session";
 
   config = lib.mkIf config.system.defaults.applyToCurrentSession {
     # Run after defaults are written and before menu extras are reloaded.

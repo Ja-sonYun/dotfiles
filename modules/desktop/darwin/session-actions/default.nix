@@ -11,25 +11,25 @@ let
     quitApps = lib.mkOption {
       type = lib.types.listOf lib.types.nonEmptyStr;
       default = [ ];
-      description = "Application names to quit when the event occurs.";
+      description = "Applications to quit.";
     };
     wallpaper = lib.mkOption {
       type = lib.types.nullOr lib.types.nonEmptyStr;
       default = null;
       example = "Valley";
-      description = "Downloaded macOS wallpaper name, without .heic, to apply after requesting application quits. Null leaves the wallpaper unchanged.";
+      description = "Downloaded wallpaper name without .heic; null keeps current.";
     };
   };
 in
 {
   options.services.sessionActions = {
     onLock = actionOptions // {
-      enable = lib.mkEnableOption "running actions when the screen locks";
-      muteMicrophone = lib.mkEnableOption "muting the default microphone when the screen locks";
-      muteAudio = lib.mkEnableOption "muting the default audio output when the screen locks";
+      enable = lib.mkEnableOption "screen-lock actions";
+      muteMicrophone = lib.mkEnableOption "microphone muting on screen lock";
+      muteAudio = lib.mkEnableOption "audio muting on screen lock";
     };
     onBattery = actionOptions // {
-      enable = lib.mkEnableOption "running actions when external power is disconnected";
+      enable = lib.mkEnableOption "power-disconnect actions";
     };
   };
 

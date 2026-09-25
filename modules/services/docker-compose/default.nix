@@ -231,7 +231,7 @@ in
 {
   options.services.dockerCompose = mkOption {
     default = { };
-    description = "Docker Compose projects, each run as a platform-managed service.";
+    description = "Docker Compose projects.";
     type = types.submodule {
       freeformType = types.attrsOf (
         types.submodule {
@@ -241,7 +241,7 @@ in
             preStart = mkOption {
               type = types.lines;
               default = "";
-              description = "Shell run before this project starts.";
+              description = "Pre-start shell script.";
             };
             options = mkOption {
               default = { };
@@ -250,14 +250,14 @@ in
                   extraFlags = mkOption {
                     type = types.listOf types.str;
                     default = [ ];
-                    description = "Extra flags passed to `docker compose up` for this project.";
+                    description = "Extra docker compose up flags.";
                   };
                 };
               };
             };
             images = mkOption {
               default = { };
-              description = "Docker images to load before this project starts.";
+              description = "Images to load before startup.";
               type = types.attrsOf (
                 types.submodule (
                   { config, name, ... }:
@@ -279,7 +279,7 @@ in
                       dockerfile = mkOption {
                         type = types.attrs;
                         default = { };
-                        description = "Arguments passed to pkgs.dockerTools.buildLayeredImage.";
+                        description = "buildLayeredImage arguments.";
                       };
                       image = mkOption {
                         type = types.package;
@@ -318,7 +318,7 @@ in
                     };
                     environment = mkOption {
                       default = { };
-                      description = "Environment values, with { _secret = path; } read before this project starts.";
+                      description = "Environment values; supports { _secret = path; }.";
                       type = types.attrsOf (
                         types.oneOf [
                           types.str
@@ -334,7 +334,7 @@ in
             };
             files = mkOption {
               default = { };
-              description = "Generated files for Docker Compose services.";
+              description = "Generated service files.";
               type = types.attrsOf (
                 types.submodule {
                   options = {
@@ -351,7 +351,7 @@ in
                     };
                     replace = mkOption {
                       default = { };
-                      description = "Placeholder replacements: literal strings or { _secret = path; } values read from files.";
+                      description = "Placeholder values; supports { _secret = path; }.";
                       type = types.attrsOf (
                         types.oneOf [
                           types.str
@@ -370,12 +370,12 @@ in
         extraPath = mkOption {
           type = types.listOf types.str;
           default = [ ];
-          description = "Additional directories in Docker Compose service PATH.";
+          description = "Additional service PATH directories.";
         };
         dockerBin = mkOption {
           type = types.nullOr types.str;
           default = null;
-          description = "Path to the docker binary.";
+          description = "Docker executable path.";
         };
       };
     };

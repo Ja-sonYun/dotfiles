@@ -7,7 +7,7 @@ in
     enable = lib.mkEnableOption "generating a commit message with git commit -g";
     command = lib.mkOption {
       type = lib.types.nonEmptyStr;
-      description = "Shell command to execute for git commit -g. The private configuration supplies the implementation.";
+      description = "Shell command for git commit -g.";
     };
   };
 

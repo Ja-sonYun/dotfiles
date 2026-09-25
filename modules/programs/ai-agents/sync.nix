@@ -6,22 +6,19 @@
       resource:
       lib.mkOption {
         default = { };
-        description = ''
-          Shared ${resource} selected for this instance.
-          Unknown names in include or exclude cause an evaluation error.
-        '';
+        description = "Shared ${resource} for this instance.";
         type = lib.types.submodule {
           options = {
             include = lib.mkOption {
               type = lib.types.either (lib.types.enum [ "all" ]) (lib.types.listOf lib.types.str);
               default = if defaultAll then "all" else [ ];
-              description = "Names to sync, or all catalog entries. Defaults to all for the default profile and none otherwise.";
+              description = "Names to sync, or all entries.";
             };
 
             exclude = lib.mkOption {
               type = lib.types.listOf lib.types.str;
               default = [ ];
-              description = "Catalog names excluded from the selection, taking precedence over include.";
+              description = "Excluded names; overrides include.";
             };
           };
         };

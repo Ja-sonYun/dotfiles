@@ -10,7 +10,7 @@ in
   options.programs.ai-agents.extraPath = lib.mkOption {
     type = lib.types.listOf lib.types.package;
     default = [ ];
-    description = "Packages added to the PATH of every enabled AI agent.";
+    description = "Packages on every AI agent's PATH.";
   };
 
   config = lib.mkIf cfg.enable (

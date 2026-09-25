@@ -45,7 +45,7 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.pi;
-      description = "Pi coding agent package to install.";
+      description = "Pi package.";
     };
 
     extraPath = lib.mkOption {
@@ -65,53 +65,49 @@ in
       example = {
         CAPI_KEY._secret = "/run/agenix/capi-key";
       };
-      description = ''
-        Environment variables exported into the pi process at launch. Values
-        are strings or { _secret = path; } values read from files at runtime.
-        Readable from extensions via process.env.
-      '';
+      description = "Environment variables; supports { _secret = path; }.";
     };
 
     settings = lib.mkOption {
       inherit (jsonFormat) type;
       default = { };
-      description = "Settings written to ~/.pi/agent/settings.json.";
+      description = "Pi settings.";
     };
 
     context = lib.mkOption {
       type = lib.types.nullOr lib.types.lines;
       default = null;
-      description = "Content for ~/.pi/agent/AGENTS.md.";
+      description = "AGENTS.md content.";
     };
 
     customInstructions = lib.mkOption {
       type = lib.types.lines;
       default = "";
-      description = "Content appended through ~/.pi/agent/APPEND_SYSTEM.md.";
+      description = "Additional system instructions.";
     };
 
     systemPrompt = lib.mkOption {
       type = lib.types.nullOr lib.types.lines;
       default = null;
-      description = "Content for ~/.pi/agent/SYSTEM.md.";
+      description = "System prompt.";
     };
 
     skills = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
-      description = "Skill directories linked into ~/.pi/agent/skills.";
+      description = "Skill directories.";
     };
 
     agentsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = "Directory containing adapted Pi subagents.";
+      description = "Subagent directory.";
     };
 
     extensions = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
-      description = "Extension files/directories linked into ~/.pi/agent/extensions.";
+      description = "Extension files and directories.";
     };
   };
 

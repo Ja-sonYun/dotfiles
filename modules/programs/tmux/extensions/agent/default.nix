@@ -104,12 +104,12 @@ in
         }
       );
       default = [ ];
-      description = "Commands offered in the agent menu and recognized by status tracking.";
+      description = "Agent commands for menus and status tracking.";
     };
     mainSession = lib.mkOption {
       type = lib.types.str;
       default = "main";
-      description = "Session whose windows show project agent counts.";
+      description = "Session displaying project agent counts.";
     };
     colors = {
       counts = colorOptions {

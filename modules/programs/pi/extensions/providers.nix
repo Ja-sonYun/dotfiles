@@ -17,15 +17,15 @@ let
       };
       baseUrlEnv = lib.mkOption {
         type = nonEmptyString;
-        description = "Environment variable containing the provider base URL.";
+        description = "Base URL environment variable.";
       };
       apiKeyEnv = lib.mkOption {
         type = nonEmptyString;
-        description = "Environment variable containing the provider API key.";
+        description = "API key environment variable.";
       };
       fallbackModels = lib.mkOption {
         type = lib.types.nonEmptyListOf nonEmptyString;
-        description = "Model IDs available before catalog refresh.";
+        description = "Initial model IDs.";
       };
       defaults = lib.mkOption {
         type = lib.types.submodule {
@@ -38,12 +38,12 @@ let
       imageModelMarkers = lib.mkOption {
         type = lib.types.listOf nonEmptyString;
         default = [ ];
-        description = "Model ID substrings that indicate image input support.";
+        description = "Model ID substrings enabling image input.";
       };
       nonReasoningModelMarkers = lib.mkOption {
         type = lib.types.listOf nonEmptyString;
         default = [ ];
-        description = "Model ID substrings that disable reasoning support.";
+        description = "Model ID substrings disabling reasoning.";
       };
     };
   };

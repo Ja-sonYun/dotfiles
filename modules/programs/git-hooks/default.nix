@@ -55,12 +55,7 @@ in
   options.programs.gitHooks.hooks = lib.mkOption {
     type = lib.types.attrsOf (lib.types.attrsOf lib.types.lines);
     default = { };
-    description = ''
-      Git hook scripts keyed by hook name, then task name. Tasks run in
-      alphabetical name order in separate processes with Git's arguments.
-      Post hooks continue after failures; other hooks stop at the first failure.
-      Repository-local core.hooksPath settings override this global directory.
-    '';
+    description = "Git hook scripts by hook and task name.";
   };
 
   config = lib.mkIf (hooks != { }) {

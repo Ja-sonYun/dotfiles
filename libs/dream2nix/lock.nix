@@ -1,8 +1,10 @@
+# Return the refresh derivation, or the current input hash when hashOnly is true.
 {
   root,
   package,
   candidate,
   system,
+  hashOnly ? false,
 }:
 let
   lock = builtins.fromJSON (builtins.readFile (root + "/flake.lock"));
@@ -12,9 +14,10 @@ let
   dream2nix = builtins.getFlake (builtins.unsafeDiscardStringContext "path:${dreamSource.outPath}");
   pkgs = import nixpkgs.outPath { inherit system; };
   mkDreamPackage = import ./default.nix { inherit pkgs dream2nix; };
+  dreamPackage = (mkDreamPackage (/. + package)).override {
+    spec = builtins.fromJSON (builtins.readFile (candidate + "/package-spec.json"));
+    projectRoot = /. + candidate;
+    packagePath = ".";
+  };
 in
-((mkDreamPackage (/. + package)).override {
-  spec = builtins.fromJSON (builtins.readFile (candidate + "/package-spec.json"));
-  projectRoot = /. + candidate;
-  packagePath = ".";
-}).lock
+if hashOnly then dreamPackage.lockInvalidationHash else dreamPackage.lock

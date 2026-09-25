@@ -23,7 +23,7 @@ stdenvNoCC.mkDerivation {
   '';
 
   meta = {
-    description = "Compress meeting recordings while preserving audio track timing";
+    description = "Meeting audio compression";
     mainProgram = "archive-audio";
     platforms = lib.platforms.darwin;
   };

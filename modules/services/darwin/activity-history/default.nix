@@ -70,22 +70,22 @@ in
     startPaused = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Start paused when Hammerspoon starts or reloads.";
+      description = "Start or reload with recording paused.";
     };
     dataDirectory = lib.mkOption {
       type = lib.types.str;
       default = "${hm.xdg.dataHome}/activity-history";
-      description = "Absolute directory for dated JSONL history.";
+      description = "Absolute history directory.";
     };
     stateDirectory = lib.mkOption {
       type = lib.types.str;
       default = "${hm.xdg.stateHome}/activity-history";
-      description = "Absolute directory for collector state and tmux deduplication.";
+      description = "Absolute collector state directory.";
     };
     excludedApps = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "Application bundle IDs excluded from recording.";
+      description = "Excluded application bundle IDs.";
     };
     capture = {
       intervalSeconds = lib.mkOption {
@@ -101,22 +101,22 @@ in
       idleThresholdSeconds = lib.mkOption {
         type = lib.types.ints.positive;
         default = 300;
-        description = "Input inactivity threshold for idle state events.";
+        description = "Idle detection threshold.";
       };
       onContextChange = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Capture application location after application or window changes.";
+        description = "Capture location on app or window changes.";
       };
       onClick = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Capture application location after mouse clicks.";
+        description = "Capture location after clicks.";
       };
       onEnter = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Capture application location after Return or keypad Enter without storing keystrokes.";
+        description = "Capture location after Return or Enter.";
       };
     };
     integrations = {
@@ -129,7 +129,7 @@ in
       zsh.enable = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Record interactive zsh commands and prompt returns.";
+        description = "Record zsh command activity.";
       };
     };
   };

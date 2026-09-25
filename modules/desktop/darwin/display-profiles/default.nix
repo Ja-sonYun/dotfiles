@@ -29,7 +29,7 @@ in
   options.services.displayProfiles = {
     enable = lib.mkEnableOption "display layout profiles";
     layouts = lib.mkOption {
-      description = "Layouts in preference order; the first matching layout is applied.";
+      description = "Display layouts; first match wins.";
       default = [ ];
       type = lib.types.listOf (
         lib.types.submodule {

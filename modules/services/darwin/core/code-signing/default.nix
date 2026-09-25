@@ -24,13 +24,13 @@ in
     defaultIdentity = lib.mkOption {
       type = lib.types.nullOr lib.types.nonEmptyStr;
       default = null;
-      description = "Default Keychain identity used to sign configured targets.";
+      description = "Default signing identity.";
     };
 
     targets = lib.mkOption {
       type = lib.types.attrsOf targetType;
       default = { };
-      description = "Files and application bundles installed as signed copies.";
+      description = "Files and applications to sign.";
     };
   };
 

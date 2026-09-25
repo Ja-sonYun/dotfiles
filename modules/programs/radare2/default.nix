@@ -39,20 +39,20 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.radare2;
-      description = "radare2 package to install.";
+      description = "radare2 package.";
     };
 
     extraConfig = lib.mkOption {
       type = lib.types.lines;
       default = "";
-      description = "Lines written to ~/.config/radare2/radare2rc.";
+      description = "radare2rc content.";
     };
 
     plugins = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
       example = lib.literalExpression ''{ "r2dec.r2.js" = ./r2dec.r2.js; }'';
-      description = "Plugins linked into the r2 user plugins dir, keyed by filename (r2js or native).";
+      description = "Plugins by filename.";
     };
 
     env = lib.mkOption {
@@ -66,10 +66,7 @@ in
       example = {
         OPENAI_API_KEY._secret = "/run/agenix/capi-key";
       };
-      description = ''
-        Environment variables exported into the r2/radare2 process at launch.
-        Values are strings or { _secret = path; } values read from files at runtime.
-      '';
+      description = "Environment variables; supports { _secret = path; }.";
     };
 
     decai = {
@@ -81,7 +78,7 @@ in
           url = "https://raw.githubusercontent.com/radareorg/r2ai/888251a2eaf76820f2a8ddc681d16d2b0d3ed139/decai/decai.r2.js";
           sha256 = "1sjw84zrln2s7ai6dl9w9cviv3zw2z7n64l3jwj39l7y9rykrgr0";
         };
-        description = "decai.r2.js plugin, autoloaded from the r2 user plugins dir.";
+        description = "decai plugin package.";
       };
 
       settings = lib.mkOption {
@@ -90,7 +87,7 @@ in
         example = {
           api = "openai";
         };
-        description = "decai eval vars written to ~/.config/r2ai/decai.txt.";
+        description = "decai evaluation variables.";
       };
     };
   };

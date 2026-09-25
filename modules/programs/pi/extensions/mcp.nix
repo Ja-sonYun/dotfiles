@@ -20,13 +20,13 @@ in
     settings = lib.mkOption {
       inherit (jsonFormat) type;
       default = { };
-      description = "Settings written to the Pi MCP configuration.";
+      description = "MCP adapter settings.";
     };
 
     servers = lib.mkOption {
       inherit (jsonFormat) type;
       default = { };
-      description = "MCP servers written to the Pi MCP configuration.";
+      description = "MCP servers.";
     };
   };
 

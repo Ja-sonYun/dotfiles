@@ -56,7 +56,7 @@ in
   options.programs.pi.hooks = lib.mkOption {
     type = lib.types.attrsOf (lib.types.nonEmptyListOf hookBlockType);
     default = { };
-    description = "Claude-style hook events and configuration with Pi-native tool payloads.";
+    description = "Claude-style hooks with Pi tool payloads.";
   };
 
   config = lib.mkMerge [

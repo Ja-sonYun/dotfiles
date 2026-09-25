@@ -69,7 +69,7 @@ stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "Query macOS calendar events in a time range";
+    description = "macOS calendar event queries";
     platforms = lib.platforms.darwin;
     mainProgram = "calendar-event-query";
   };

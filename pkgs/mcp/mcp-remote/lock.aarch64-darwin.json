@@ -958,9 +958,9 @@
         }
       },
       "node_modules/undici": {
-        "version": "7.29.1",
-        "resolved": "https://registry.npmjs.org/undici/-/undici-7.29.1.tgz",
-        "integrity": "sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==",
+        "version": "7.30.0",
+        "resolved": "https://registry.npmjs.org/undici/-/undici-7.30.0.tgz",
+        "integrity": "sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==",
         "license": "MIT",
         "engines": {
           "node": ">=20.18.1"
@@ -1010,5 +1010,5 @@
       }
     }
   },
-  "invalidationHash": "d096cde88fa85207b198c36ab93a0fda3777971a8e03abba50d0c0dbc11f5c9f"
+  "invalidationHash": "cd3118a175708b9ed5cc05534d95d3f0cd95a318b2f102d99551c491d6053b5a"
 }

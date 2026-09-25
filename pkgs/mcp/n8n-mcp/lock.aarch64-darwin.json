@@ -996,9 +996,9 @@
         }
       },
       "node_modules/hono": {
-        "version": "4.13.8",
-        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.8.tgz",
-        "integrity": "sha512-/Gng7NfoykZl2pjukW5Z6+8Yxm3BPRf86GTbQnt0SbySkvax4fyL4H3HhY1cCpBGmiW9XDRFzRV+CXK2W8QudQ==",
+        "version": "4.13.9",
+        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.9.tgz",
+        "integrity": "sha512-7dMkQmZoC4E6F7AtaQSPhlWAdnBti+j7rreMZl8QB4jFiEhP9TWbGWUMi8WYzBCgmgulxuvLQupKqo+Co6Omyg==",
         "license": "MIT",
         "engines": {
           "node": ">=16.9.0"
@@ -2017,5 +2017,5 @@
       }
     }
   },
-  "invalidationHash": "144baa7802561232ac13954bc703764ca5c6d0030c359d447ca2b1b73cf8b855"
+  "invalidationHash": "27c94699eda41be0e58015b8c858105aa5943bd257ffdfa9fccb0eacd929d4cb"
 }

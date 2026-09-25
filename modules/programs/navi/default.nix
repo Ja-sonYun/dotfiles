@@ -18,13 +18,13 @@ in
       type = lib.types.package;
       default = pkgs.navi;
       defaultText = lib.literalExpression "pkgs.navi";
-      description = "The navi package to use.";
+      description = "navi package.";
     };
 
     settings = lib.mkOption {
       inherit (yamlFormat) type;
       default = { };
-      description = "Configuration written to ~/.config/navi/config.yaml.";
+      description = "navi settings.";
     };
 
     enableBashIntegration = lib.mkEnableOption "Bash integration" // {

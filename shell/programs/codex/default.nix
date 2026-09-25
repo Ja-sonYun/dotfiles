@@ -49,8 +49,6 @@
 
       file_opener = "none";
 
-      web_search = "live";
-
       # service_tier = "fast";
 
       features = {

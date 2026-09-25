@@ -54,7 +54,7 @@ cleanup_package() {
 update_package() (
 	local file=$1 package_dir lock_file had_lock=false
 	local stage final_spec='' final_lock='' package_cancel_status=0
-	local name registry version previous_version generator generated_lock status
+	local name registry version previous_version generator generated_lock status current_hash
 
 	stage=$(mktemp -d) || exit $?
 	trap cleanup_package EXIT
@@ -90,8 +90,15 @@ update_package() (
 		version=$(latest_version "$registry" "$name" "$stage") || exit $?
 		if [[ $version == "$previous_version" && $had_lock == true ]] &&
 			validate_lock "$registry" "$stage/original-lock.json" 2>/dev/null; then
-			printf 'Unchanged %s (%s): %s\n' "$name" "$system" "$version"
-			exit 0
+			current_hash=$(nix-instantiate --eval --strict --json "$root_dir/libs/dream2nix/lock.nix" \
+				--argstr root "$root_dir" --argstr package "$package_dir" \
+				--argstr candidate "$stage" --argstr system "$system" \
+				--arg hashOnly true) || exit $?
+			if jq -e --argjson hash "$current_hash" '.invalidationHash == $hash' \
+				"$stage/original-lock.json" >/dev/null; then
+				printf 'Unchanged %s (%s): %s\n' "$name" "$system" "$version"
+				exit 0
+			fi
 		fi
 	fi
 
@@ -200,7 +207,7 @@ while (($# > 0)); do
 	esac
 done
 
-for command_name in git nix nix-build curl jq rg realpath; do
+for command_name in git nix nix-build nix-instantiate curl jq rg realpath; do
 	if ! command -v "$command_name" >/dev/null 2>&1; then
 		printf 'Missing command: %s\n' "$command_name" >&2
 		exit 1

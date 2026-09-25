@@ -47,12 +47,12 @@ in
     hideSpotlight = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
-      description = "Hide Spotlight in the menu bar; false shows it and null leaves it unmanaged.";
+      description = "Hide Spotlight; null leaves it unmanaged.";
     };
     weather.enable = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
-      description = "Start WeatherMenu at activation; false stops it for the primary user and null leaves it unmanaged.";
+      description = "Run WeatherMenu; false stops it, null leaves unmanaged.";
     };
   };
 

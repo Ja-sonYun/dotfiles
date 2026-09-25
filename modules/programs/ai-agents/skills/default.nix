@@ -50,7 +50,7 @@ in
     skillsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = "Directory searched recursively for skill directories.";
+      description = "Root directory for skills.";
     };
 
     skills = lib.mkOption {

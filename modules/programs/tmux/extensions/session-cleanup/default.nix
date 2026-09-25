@@ -17,7 +17,7 @@
 
     programs.zsh-customize = {
       commands._tmux-session-cleanup-register = {
-        description = "Register the current tmux session for project cleanup";
+        description = "Register session for project cleanup";
         body = ''
           [[ -n "$TMUX" && -n "$TMUX_PANE" && -n "$1" ]] || exit 0
           session_id=$(tmux display-message -p -t "$TMUX_PANE" '#{session_id}') || exit 1
