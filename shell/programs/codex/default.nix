@@ -65,7 +65,7 @@
       };
 
       tui = {
-        alternate_screen = "always";
+        alternate_screen = "never";
         status_line = [
           "context-remaining"
           "current-dir"

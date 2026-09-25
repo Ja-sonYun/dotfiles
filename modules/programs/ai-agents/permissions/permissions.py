@@ -1,8 +1,9 @@
 import argparse
 import json
 import sys
+from copy import deepcopy
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 type Json = None | bool | int | float | str | list[Json] | dict[str, Json]
 Decision = Literal["allow", "ask", "deny"]
@@ -33,10 +34,27 @@ class Server(TypedDict):
     tools: dict[str, Decision]
 
 
-class Presets(TypedDict):
-    denyDotenv: bool
-    denySsh: bool
-    allowGitWrite: bool
+class PresetRules(TypedDict, total=False):
+    files: list[FileRule]
+    allow: list[str]
+    deny: list[str]
+    network: dict[str, Json]
+
+
+class Preset(TypedDict):
+    name: str
+    default: bool
+    description: str
+    files: NotRequired[list[FileRule]]
+    claude: NotRequired[PresetRules]
+    codex: NotRequired[PresetRules]
+
+
+class ExpandedPresets(TypedDict):
+    files: list[FileRule]
+    allow: list[str]
+    deny: list[str]
+    network: dict[str, Json]
 
 
 class UnixSockets(TypedDict):
@@ -44,7 +62,7 @@ class UnixSockets(TypedDict):
 
 
 class Policy(TypedDict):
-    presets: Presets
+    presets: list[Preset]
     unixSockets: UnixSockets
     webSearch: Access | None
     commands: Commands
@@ -74,34 +92,26 @@ def file_access(rule: FileRule) -> str:
     return "write" if rule["write"] == "allow" else "read"
 
 
-def file_rules(policy: Policy, client: Literal["claude", "codex"]) -> list[FileRule]:
-    """Return preset rules followed by explicit file rules.
-
-    Codex uses workspace-root Git paths and grants socket paths filesystem access.
-    Claude uses recursive Git paths and handles sockets only in network settings.
-    """
-    rules: list[FileRule] = []
-    if policy["presets"]["denyDotenv"]:
-        rules.extend(
-            {"path": path, "read": "deny", "write": "deny"}
-            for path in ("**/.env", "**/*.env", "**/*.env.*")
+def expand_presets(
+    presets: list[Preset], client: Literal["claude", "codex"]
+) -> ExpandedPresets:
+    """Collect selected rules, rejecting conflicting network defaults."""
+    result: ExpandedPresets = {"files": [], "allow": [], "deny": [], "network": {}}
+    for preset in presets:
+        native = (
+            preset.get("claude", {}) if client == "claude" else preset.get("codex", {})
         )
-    if policy["presets"]["denySsh"]:
-        rules.append({"path": "~/.ssh/**", "read": "deny", "write": "deny"})
-    if policy["presets"]["allowGitWrite"]:
-        rules.append(
-            {
-                "path": "**/.git/**" if client == "claude" else ".git/**",
-                "read": "allow",
-                "write": "allow",
-            }
-        )
-    if client == "codex":
-        rules.extend(
-            {"path": path, "read": "allow", "write": "allow"}
-            for path in policy["unixSockets"]["allow"]
-        )
-    return rules + policy["files"]["rules"]
+        result["files"].extend(preset.get("files", []))
+        result["files"].extend(native.get("files", []))
+        result["allow"].extend(native.get("allow", []))
+        result["deny"].extend(native.get("deny", []))
+        for key, value in native.get("network", {}).items():
+            if key in result["network"] and result["network"][key] != value:
+                raise ValueError(
+                    f"Conflicting network default {key!r} in preset {preset['name']!r}."
+                )
+            result["network"][key] = deepcopy(value)
+    return result
 
 
 def claude_settings(
@@ -112,14 +122,19 @@ def claude_settings(
     Raise ValueError if a shared MCP tool would relax its server's ask or deny.
     """
     permissions = table(settings, "permissions")
-    rules: dict[str, list[str]] = {value: [] for value in ("allow", "ask", "deny")}
+    expanded = expand_presets(policy["presets"], "claude")
+    rules: dict[str, list[str]] = {
+        "allow": expanded["allow"],
+        "ask": [],
+        "deny": [],
+    }
     if policy["webSearch"] is not None:
         rules[policy["webSearch"]].append("WebSearch")
     for rule in policy["commands"]["rules"]:
         prefix = " ".join(rule["prefix"])
         rules[rule["decision"]].extend([f"Bash({prefix})", f"Bash({prefix} *)"])
 
-    for rule in file_rules(policy, "claude"):
+    for rule in expanded["files"] + policy["files"]["rules"]:
         file_access(rule)
         path = rule["path"]
         if path.startswith("/"):
@@ -128,6 +143,8 @@ def claude_settings(
             path = "./" + path.removeprefix("./")
         rules[rule["read"]].append(f"Read({path})")
         rules[rule["write"]].append(f"Edit({path})")
+
+    rules["deny"].extend(expanded["deny"])
 
     priority = {"allow": 0, "ask": 1, "deny": 2}
     for server, entry in policy["mcp"].items():
@@ -146,7 +163,7 @@ def claude_settings(
                 rules[value].append(prefix + tool)
 
     for value, entries in rules.items():
-        permissions[value] = entries + strings(permissions, value)
+        permissions[value] = list[Json](entries + strings(permissions, value))
     if policy["unixSockets"]["allow"]:
         network = table(table(settings, "sandbox"), "network")
         network["allowUnixSockets"] = list(
@@ -168,13 +185,23 @@ def codex_settings(settings: dict[str, Json], policy: Policy) -> dict[str, Json]
     elif policy["webSearch"] == "allow":
         settings.setdefault("web_search", "live")
 
-    rules = file_rules(policy, "codex")
-    if rules:
+    expanded = expand_presets(policy["presets"], "codex")
+    rules = expanded["files"]
+    rules.extend(
+        {"path": path, "read": "allow", "write": "allow"}
+        for path in policy["unixSockets"]["allow"]
+    )
+    rules.extend(policy["files"]["rules"])
+    if rules or expanded["network"]:
         if settings.get("default_permissions") != "managed":
             raise ValueError(
-                "Shared file permissions require Codex's managed permission profile."
+                "Shared file permissions and defaults require Codex's managed profile."
             )
         managed = table(table(settings, "permissions"), "managed")
+        if expanded["network"]:
+            network = table(managed, "network")
+            for key, value in expanded["network"].items():
+                network.setdefault(key, value)
         filesystem = table(managed, "filesystem")
         priority = {"write": 0, "read": 1, "deny": 2}
         for rule in rules:
@@ -212,7 +239,7 @@ def codex_settings(settings: dict[str, Json], policy: Policy) -> dict[str, Json]
             }
             if "enabled_tools" in native:
                 permitted.intersection_update(strings(native, "enabled_tools"))
-            native["enabled_tools"] = sorted(permitted)
+            native["enabled_tools"] = list[Json](sorted(permitted))
             if not permitted:
                 native["enabled"] = False
         elif default == "ask":
@@ -241,7 +268,7 @@ def codex_settings(settings: dict[str, Json], policy: Policy) -> dict[str, Json]
                     native_default if native_default is not None else "approve",
                 )
         if disabled:
-            native["disabled_tools"] = sorted(disabled)
+            native["disabled_tools"] = list[Json](sorted(disabled))
     return settings
 
 

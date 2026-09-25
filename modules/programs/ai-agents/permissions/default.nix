@@ -7,6 +7,9 @@
 let
   cfg = config.programs.ai-agents;
   policy = cfg.permissions;
+  catalog = builtins.fromJSON (builtins.readFile ./presets.json);
+  presetNames = map (preset: preset.name) catalog;
+  selectedPresets = lib.filter (preset: policy.presets.${preset.name}) catalog;
   decision = lib.types.enum [
     "allow"
     "ask"
@@ -58,7 +61,9 @@ let
     };
   };
   servers = policy.mcp;
-  policyFile = (pkgs.formats.json { }).generate "ai-agent-permissions.json" policy;
+  policyFile = (pkgs.formats.json { }).generate "ai-agent-permissions.json" (
+    policy // { presets = selectedPresets; }
+  );
   package = pkgs.callPackage ./package.nix { };
   command = lib.escapeShellArgs [
     (lib.getExe package)
@@ -80,23 +85,17 @@ in
     type = lib.types.nullOr (
       lib.types.submodule {
         options = {
-          presets = {
-            denyDotenv = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-              description = "Block workspace dotenv files.";
-            };
-            denySsh = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-              description = "Block ~/.ssh access.";
-            };
-            allowGitWrite = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-              description = "Allow Git metadata writes.";
-            };
-          };
+          presets = lib.listToAttrs (
+            map (
+              preset:
+              lib.nameValuePair preset.name (
+                lib.mkOption {
+                  type = lib.types.bool;
+                  inherit (preset) default description;
+                }
+              )
+            ) catalog
+          );
           unixSockets.allow = lib.mkOption {
             type = lib.types.listOf (lib.types.strMatching "/.+");
             default = [ ];
@@ -127,7 +126,7 @@ in
         };
       }
     );
-    default = null;
+    default = { };
     description = "Shared Claude Code and Codex permissions.";
   };
 
@@ -135,6 +134,10 @@ in
     lib.mkMerge [
       {
         assertions = [
+          {
+            assertion = builtins.length presetNames == builtins.length (lib.unique presetNames);
+            message = "Permission preset names must be unique.";
+          }
           {
             assertion = lib.all (rule: rule.read != "deny" || rule.write == "deny") policy.files.rules;
             message = "Shared file permissions cannot allow writing while denying reading.";
@@ -155,10 +158,13 @@ in
             lib.mkIf
               (
                 policy.files.rules != [ ]
-                || policy.presets.denyDotenv
-                || policy.presets.denySsh
-                || policy.presets.allowGitWrite
                 || policy.unixSockets.allow != [ ]
+                || lib.any (
+                  preset:
+                  (preset.files or [ ]) != [ ]
+                  || (preset.codex.files or [ ]) != [ ]
+                  || (preset.codex.network or { }) != { }
+                ) selectedPresets
               )
               {
                 default_permissions = lib.mkDefault "managed";

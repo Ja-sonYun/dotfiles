@@ -1,0 +1,87 @@
+[
+  {
+    "name": "defaults",
+    "default": true,
+    "description": "Allow file reads and network access.",
+    "claude": {
+      "allow": ["Read", "WebFetch(domain:*)", "Skill"]
+    },
+    "codex": {
+      "network": {
+        "enabled": true,
+        "domains": { "*": "allow" }
+      }
+    }
+  },
+  {
+    "name": "denyDotenv",
+    "default": false,
+    "description": "Block workspace dotenv files.",
+    "files": [
+      { "path": "**/.env", "read": "deny", "write": "deny" },
+      { "path": "**/*.env", "read": "deny", "write": "deny" },
+      { "path": "**/*.env.*", "read": "deny", "write": "deny" }
+    ],
+    "claude": {
+      "allow": [
+        "Edit(./**/.env.example)",
+        "Edit(./**/.env.*.example)",
+        "Edit(./**/*.env.*.example)",
+        "Edit(./**/*.env.example)",
+        "Edit(./**/.env.sample)",
+        "Edit(./**/.env.*.sample)",
+        "Edit(./**/*.env.*.sample)",
+        "Edit(./**/*.env.sample)"
+      ],
+      "deny": [
+        "Read(!./**/.env.example)",
+        "Read(!./**/.env.*.example)",
+        "Read(!./**/*.env.*.example)",
+        "Read(!./**/*.env.example)",
+        "Read(!./**/.env.sample)",
+        "Read(!./**/.env.*.sample)",
+        "Read(!./**/*.env.*.sample)",
+        "Read(!./**/*.env.sample)",
+        "Read(!./**/.env.age)",
+        "Read(!./**/*.env.age)",
+        "Edit(!./**/.env.example)",
+        "Edit(!./**/.env.*.example)",
+        "Edit(!./**/*.env.*.example)",
+        "Edit(!./**/*.env.example)",
+        "Edit(!./**/.env.sample)",
+        "Edit(!./**/.env.*.sample)",
+        "Edit(!./**/*.env.*.sample)",
+        "Edit(!./**/*.env.sample)"
+      ]
+    },
+    "codex": {
+      "files": [
+        { "path": ".env.age", "read": "allow", "write": "deny" },
+        { "path": ".env.example", "read": "allow", "write": "allow" },
+        { "path": ".env.sample", "read": "allow", "write": "allow" }
+      ]
+    }
+  },
+  {
+    "name": "denySsh",
+    "default": false,
+    "description": "Block ~/.ssh access.",
+    "files": [{ "path": "~/.ssh/**", "read": "deny", "write": "deny" }],
+    "codex": {
+      "files": [
+        { "path": "~/.ssh/known_hosts", "read": "allow", "write": "deny" }
+      ]
+    }
+  },
+  {
+    "name": "allowGitWrite",
+    "default": false,
+    "description": "Allow Git metadata writes.",
+    "claude": {
+      "allow": ["Read(./**/.git/**)", "Edit(./**/.git/**)"]
+    },
+    "codex": {
+      "files": [{ "path": ".git/**", "read": "allow", "write": "allow" }]
+    }
+  }
+]
