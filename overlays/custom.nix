@@ -13,6 +13,7 @@
     jev = final.callPackage ../pkgs/ai-tools/jev { };
     open-code-review = final.callPackage ../pkgs/ai-tools/open-code-review { };
     redact = final.callPackage ../pkgs/ai-tools/redact { };
+    sed-readonly = final.callPackage ../pkgs/ai-tools/sed { };
     shell-assistant = final.callPackage ../pkgs/ai-tools/shell-assistant { };
     whisper-local = final.callPackage ../pkgs/ai-tools/whisper-local { };
 

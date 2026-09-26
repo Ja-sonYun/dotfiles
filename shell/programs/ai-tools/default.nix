@@ -8,6 +8,7 @@
   ];
 
   programs.ai-agents.extraPath = with pkgs; [
+    sed-readonly
     aws-ro
     gh-ro
     jev
