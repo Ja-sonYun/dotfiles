@@ -65,7 +65,7 @@ def create_server(
     async def rules_list(session_handle: str) -> dict[str, object]:
         """List static and project rules, including their effective status."""
         try:
-            _, rules = await asyncio.to_thread(
+            _, _, rules = await asyncio.to_thread(
                 effective_rules, rules_path, session_handle
             )
         except OSError as error:
@@ -112,7 +112,7 @@ def create_server(
     async def project_rules_list(session_handle: str) -> dict[str, object]:
         """List current project rules, including those overridden by static rules."""
         try:
-            cwd, rules = await asyncio.to_thread(
+            cwd, _, rules = await asyncio.to_thread(
                 effective_rules, rules_path, session_handle
             )
             root = await asyncio.to_thread(project_root, cwd)
@@ -148,11 +148,13 @@ def create_server(
         includes the log path. Skipped means no rules pass the selection conditions.
         """
         try:
-            cwd, rules = await asyncio.to_thread(
+            cwd, client, rules = await asyncio.to_thread(
                 effective_rules, rules_path, session_handle
             )
             source = cwd / ".task"
-            applicable = [rule for rule in rules if rule.applies("task", source)]
+            applicable = [
+                rule for rule in rules if rule.applies("task", client, source)
+            ]
         except OSError as error:
             raise RuntimeError("Cannot read the rules.") from error
         result = await evaluate(

@@ -12,8 +12,8 @@ let
     yabai -m signal --add ${renderAttrs [ "label" "event" "action" ] signal}
   '';
 
-  reconcileSpaces = pkgs.writeShellApplication {
-    name = "yabai-reconcile-spaces";
+  reconcileSpacesWorker = pkgs.writeShellApplication {
+    name = "yabai-reconcile-spaces-worker";
     runtimeInputs = [
       pkgs.jq
       pkgs.yabai
@@ -24,6 +24,14 @@ let
       gap_spec=${lib.escapeShellArg "abs:${toString (yabaiSettings.window_gap or 0)}"}
 
       ${builtins.readFile ./reconcile-spaces.sh}
+    '';
+  };
+
+  reconcileSpaces = pkgs.writeShellApplication {
+    name = "yabai-reconcile-spaces";
+    text = ''
+      lock_file="''${TMPDIR:-/tmp}/yabai-reconcile-spaces-$UID.lock"
+      exec /usr/bin/lockf -k "$lock_file" ${reconcileSpacesWorker}/bin/yabai-reconcile-spaces-worker "$lock_file"
     '';
   };
 

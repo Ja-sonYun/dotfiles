@@ -1,7 +1,4 @@
-lock_file="${TMPDIR:-/tmp}/yabai-reconcile-spaces-$UID.lock"
-exec 9>>"$lock_file"
-/usr/bin/lockf 9
-printf '%s\n' "$$" >"$lock_file"
+printf '%s\n' "$$" >"$1"
 
 /bin/sleep 2
 

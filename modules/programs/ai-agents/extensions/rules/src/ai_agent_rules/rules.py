@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -63,10 +64,18 @@ class Check(BaseModel):
         return self
 
 
+class ClientEnable(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    codex: bool = True
+    claude: bool = True
+    pi: bool = True
+
+
 class RuleDefinition(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    enable: bool = True
+    enable: ClientEnable = Field(default_factory=ClientEnable)
     target: Target
     title: NonEmptyText | None = None
     extensions: list[Extension] = Field(default_factory=list)
@@ -94,10 +103,10 @@ class Rule:
     path: Path | None = None
     effective: bool = True
 
-    def applies(self, target: Target, path: Path | None = None) -> bool:
+    def applies(self, target: Target, client: str, path: Path | None = None) -> bool:
         if (
             not self.effective
-            or not self.definition.enable
+            or not self.definition.enable.model_dump()[client]
             or self.definition.target != target
         ):
             return False
@@ -149,19 +158,23 @@ def load_rules(path: Path) -> list[Rule]:
 
 def effective_rules(
     path: Path, handle: str | None, cwd: Path | None = None
-) -> tuple[Path, list[Rule]]:
+) -> tuple[Path, str, list[Rule]]:
     static = load_rules(path)
+    client = os.environ.get("AI_AGENT_CLIENT", "").lower()
     fallback: Path | None = None
     with state_lock() as metadata:
         if handle is not None:
             session = require_session(metadata, handle)
+            client = session.client
             cwd = cwd if cwd is not None else session.cwd
             fallback = session.cwd
         elif cwd is None:
             raise ValueError("A working directory is required without a session.")
+        if client not in {"codex", "claude", "pi"}:
+            raise ValueError("A supported agent client is required to select rules.")
         directory = rules_directory(project_root(cwd, fallback))
         project = parse_rules(read_rules(directory), "project", directory)
 
     static_ids = {rule.id for rule in static}
     project = [replace(rule, effective=rule.id not in static_ids) for rule in project]
-    return cwd, [*static, *project]
+    return cwd, client, [*static, *project]

@@ -48,10 +48,12 @@ async def check_changes(
     violated = False
     for region in regions:
         try:
-            _, rules = await asyncio.to_thread(
+            _, client, rules = await asyncio.to_thread(
                 effective_rules, rules_path, handle, region.path.parent
             )
-            applicable = [rule for rule in rules if rule.applies("code", region.path)]
+            applicable = [
+                rule for rule in rules if rule.applies("code", client, region.path)
+            ]
             if not applicable:
                 continue
         except (OSError, TypeError, ValueError) as error:
@@ -141,8 +143,10 @@ async def handle_event(
         if is_rules_tool(hook_input):
             return None
         try:
-            _, rules = await asyncio.to_thread(effective_rules, rules_path, handle, cwd)
-            applicable = [rule for rule in rules if rule.applies("tool")]
+            _, client, rules = await asyncio.to_thread(
+                effective_rules, rules_path, handle, cwd
+            )
+            applicable = [rule for rule in rules if rule.applies("tool", client)]
         except (OSError, TypeError, ValueError) as error:
             notes.append(f"[Rules not checked] Cannot load tool rules ({error})")
             applicable = []

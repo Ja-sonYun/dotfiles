@@ -18,12 +18,14 @@ from ai_agent_rules.rule_files import read_json, write_json
 @dataclass(frozen=True)
 class Session:
     cwd: Path
+    client: str
     last_seen: float
     blocked_inputs: frozenset[str] = frozenset()
 
     def record(self) -> dict[str, object]:
         return {
             "cwd": str(self.cwd),
+            "client": self.client,
             "last_seen": self.last_seen,
             "blocked_inputs": sorted(self.blocked_inputs),
         }
@@ -32,7 +34,11 @@ class Session:
 def session_key(hook_input: HookInput) -> str | None:
     client = os.environ.get("AI_AGENT_CLIENT", "").lower()
     session = hook_input.get("session_id")
-    if not client or not isinstance(session, str) or not session:
+    if (
+        client not in {"codex", "claude", "pi"}
+        or not isinstance(session, str)
+        or not session
+    ):
         return None
     return hashlib.sha256(json.dumps([client, session]).encode()).hexdigest()
 
@@ -48,17 +54,20 @@ def read_session(path: Path) -> Session:
     if not isinstance(data, dict):
         raise TypeError(f"Invalid session metadata: {path}")
     cwd, last_seen = data.get("cwd"), data.get("last_seen")
+    client = data.get("client")
     blocked_inputs = data.get("blocked_inputs", [])
     if (
         not isinstance(cwd, str)
         or not Path(cwd).is_absolute()
+        or not isinstance(client, str)
+        or client not in {"codex", "claude", "pi"}
         or not isinstance(last_seen, (int, float))
         or isinstance(last_seen, bool)
         or not isinstance(blocked_inputs, list)
         or any(not isinstance(value, str) for value in blocked_inputs)
     ):
         raise ValueError(f"Invalid session metadata: {path}")
-    return Session(Path(cwd), float(last_seen), frozenset(blocked_inputs))
+    return Session(Path(cwd), client, float(last_seen), frozenset(blocked_inputs))
 
 
 @contextmanager
@@ -102,7 +111,9 @@ def require_session(directory: Path, handle: str) -> Session:
         ) from error
     if previous.last_seen < time.time() - 86400:
         raise ValueError("Expired session_handle; session cleanup is incomplete.")
-    session = Session(previous.cwd, time.time(), previous.blocked_inputs)
+    session = Session(
+        previous.cwd, previous.client, time.time(), previous.blocked_inputs
+    )
     write_json(path, session.record())
     return session
 
@@ -112,6 +123,7 @@ def register_session(hook_input: HookInput) -> tuple[str | None, bool]:
     if handle is None:
         return None, False
     cwd = Path(str(hook_input.get("cwd") or Path.cwd())).resolve()
+    client = os.environ["AI_AGENT_CLIENT"].lower()
     with state_lock() as directory:
         path = session_path(directory, handle)
         try:
@@ -122,9 +134,11 @@ def register_session(hook_input: HookInput) -> tuple[str | None, bool]:
                 )
             created = False
         except FileNotFoundError:
-            previous = Session(cwd, time.time())
+            previous = Session(cwd, client, time.time())
             created = True
-        write_json(path, Session(cwd, time.time(), previous.blocked_inputs).record())
+        write_json(
+            path, Session(cwd, client, time.time(), previous.blocked_inputs).record()
+        )
     return handle, created
 
 
@@ -143,7 +157,10 @@ def record_rejection(handle: str, hook_input: HookInput) -> bool:
         write_json(
             session_path(directory, handle),
             Session(
-                session.cwd, session.last_seen, session.blocked_inputs | {digest}
+                session.cwd,
+                session.client,
+                session.last_seen,
+                session.blocked_inputs | {digest},
             ).record(),
         )
     return False

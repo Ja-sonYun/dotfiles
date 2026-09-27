@@ -61,9 +61,18 @@ let
     {
       options = {
         enable = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Evaluate this rule.";
+          type = lib.types.submodule {
+            options = lib.genAttrs [ "codex" "claude" "pi" ] (
+              client:
+              lib.mkOption {
+                type = lib.types.bool;
+                default = true;
+                description = "Evaluate this rule in ${client}.";
+              }
+            );
+          };
+          default = { };
+          description = "Clients that evaluate this rule; each defaults to enabled.";
         };
 
         title = lib.mkOption {
