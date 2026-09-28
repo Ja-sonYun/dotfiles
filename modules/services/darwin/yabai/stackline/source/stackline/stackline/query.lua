@@ -82,8 +82,6 @@ run = function(opts)
 	local request = {
 		revision = revision,
 		started = hs.timer.absoluteTime(),
-		stdout = {},
-		stdoutTail = "",
 		stdoutBytes = 0,
 		stderrBytes = 0,
 	}
@@ -97,9 +95,10 @@ run = function(opts)
 		request.timeout:stop()
 		local elapsed = (hs.timer.absoluteTime() - request.started) / 1e9
 		local message = string.format(
-			"Query %s after %.3fs (stdout=%d bytes, stderr=%d bytes)",
+			"Stackline query --windows %s after %.3fs (exit=%s, stdout=%d bytes, stderr=%d bytes)",
 			reason,
 			elapsed,
+			tostring(request.exitCode),
 			request.stdoutBytes,
 			request.stderrBytes
 		)
@@ -115,10 +114,14 @@ run = function(opts)
 		end
 	end
 
-	local function complete()
-		if active ~= request or request.exitCode == nil then
+	request.task = hs.task.new(stackline.config:get("paths.yabai"), function(code, stdout, stderr)
+		if active ~= request then
 			return
 		end
+		request.exitCode = code
+		request.stdoutBytes = #(stdout or "")
+		request.stderrBytes = #(stderr or "")
+
 		if request.timedOut then
 			finish("timeout")
 			return
@@ -128,12 +131,10 @@ run = function(opts)
 			return
 		end
 
-		-- A final streaming callback can arrive after the termination callback.
-		-- Its bytes precede the tail read by the termination callback.
-		local output = table.concat(request.stdout) .. request.stdoutTail
-		local clean = output:gsub(":inf,", ":0,")
+		local clean = (stdout or ""):gsub(":inf,", ":0,")
 		local ok, windows = pcall(hs.json.decode, clean)
 		if not ok or type(windows) ~= "table" then
+			finish("invalid-json")
 			return
 		end
 		if request.revision ~= revision then
@@ -157,44 +158,14 @@ run = function(opts)
 			forceRedraw = false
 		end
 		finish(applied and "applied" or "apply-error")
-	end
-
-	request.task = hs.task.new(stackline.config:get("paths.yabai"), function(code, stdout, stderr)
-		if active ~= request then
-			return
-		end
-		request.exitCode = code
-		request.stdoutTail = stdout or ""
-		request.stdoutBytes = request.stdoutBytes + #request.stdoutTail
-		request.stderrBytes = request.stderrBytes + #(stderr or "")
-		complete()
-	end, function(_, stdout, stderr)
-		if active ~= request then
-			return false
-		end
-		table.insert(request.stdout, stdout or "")
-		request.stdoutBytes = request.stdoutBytes + #(stdout or "")
-		request.stderrBytes = request.stderrBytes + #(stderr or "")
-		complete()
-		return true
 	end, { "-m", "query", "--windows" })
 	request.timeout = hs.timer.doAfter(5, function()
 		if active ~= request then
 			return
 		end
-		if request.exitCode ~= nil then
-			finish("invalid-json")
-		else
-			request.timedOut = true
-			log.e(
-				string.format(
-					"Query timeout after 5s; waiting for termination (stdout=%d bytes, stderr=%d bytes)",
-					request.stdoutBytes,
-					request.stderrBytes
-				)
-			)
-			request.task:terminate()
-		end
+		request.timedOut = true
+		log.e("Stackline query --windows timeout after 5s; waiting for termination")
+		request.task:terminate()
 	end)
 	if not request.task or not request.task:start() then
 		finish("start-failed")

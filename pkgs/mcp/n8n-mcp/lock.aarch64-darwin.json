@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-n8n-mcp",
-    "version": "2.89.0",
+    "version": "2.90.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-n8n-mcp",
-        "version": "2.89.0",
+        "version": "2.90.0",
         "dependencies": {
-          "n8n-mcp": "2.89.0"
+          "n8n-mcp": "2.90.0"
         }
       },
       "node_modules/@hono/node-server": {
@@ -81,90 +81,6 @@
         },
         "peerDependencies": {
           "express": ">= 4.11"
-        }
-      },
-      "node_modules/@supabase/auth-js": {
-        "version": "2.109.0",
-        "resolved": "https://registry.npmjs.org/@supabase/auth-js/-/auth-js-2.109.0.tgz",
-        "integrity": "sha512-krf61vksi92kEUYtNH70GnIMOoQqLBAKG2e3Aha4e/0uJA6i1OWCxL7WUGHo6c0Vu/w96Y1DdnkYz0NOg0kYog==",
-        "license": "MIT",
-        "dependencies": {
-          "tslib": "2.8.1"
-        },
-        "engines": {
-          "node": ">=20.0.0"
-        }
-      },
-      "node_modules/@supabase/functions-js": {
-        "version": "2.109.0",
-        "resolved": "https://registry.npmjs.org/@supabase/functions-js/-/functions-js-2.109.0.tgz",
-        "integrity": "sha512-IiwAspZrVrBRYQoFgSJvkcA9iJvTCw8nHOdvlKARDushlw/x1YY3YJYtwwgZFtl7utUbTiZ5SwohXPNgnpZM+g==",
-        "license": "MIT",
-        "dependencies": {
-          "tslib": "2.8.1"
-        },
-        "engines": {
-          "node": ">=20.0.0"
-        }
-      },
-      "node_modules/@supabase/phoenix": {
-        "version": "0.4.4",
-        "resolved": "https://registry.npmjs.org/@supabase/phoenix/-/phoenix-0.4.4.tgz",
-        "integrity": "sha512-Gt0pqoXuIqX/8dvG0OKp/wMCobXNH3klNbUPBNyOfN0YA1IswrM3HyWFMOPk1Jy+BRaIyDPcFx4jLBwHNmlyfQ==",
-        "license": "MIT"
-      },
-      "node_modules/@supabase/postgrest-js": {
-        "version": "2.109.0",
-        "resolved": "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-2.109.0.tgz",
-        "integrity": "sha512-Xk4gzuzyrGIPWCUuJolDQS/9zdFZDEXRhNsVeOHEKwFr+vpNU0himsHtLOhSEYlyPqwmeY8LUCKL6bLsDp0ScA==",
-        "license": "MIT",
-        "dependencies": {
-          "tslib": "2.8.1"
-        },
-        "engines": {
-          "node": ">=20.0.0"
-        }
-      },
-      "node_modules/@supabase/realtime-js": {
-        "version": "2.109.0",
-        "resolved": "https://registry.npmjs.org/@supabase/realtime-js/-/realtime-js-2.109.0.tgz",
-        "integrity": "sha512-q9tjGUgWLNhfLz6HeYE7yl6FG9WEsnr6bFmmLpn2Nakxp3Z36pqI4xu0xns5/n8Xtq10HVcy9CRxOxgvviCM4Q==",
-        "license": "MIT",
-        "dependencies": {
-          "@supabase/phoenix": "0.4.4",
-          "tslib": "2.8.1"
-        },
-        "engines": {
-          "node": ">=20.0.0"
-        }
-      },
-      "node_modules/@supabase/storage-js": {
-        "version": "2.109.0",
-        "resolved": "https://registry.npmjs.org/@supabase/storage-js/-/storage-js-2.109.0.tgz",
-        "integrity": "sha512-j119SdEuwrOPGqiPjshpfovrQPFqeATKg990jNV88Ie+SEufznzVD2mL5kQvly+z2oVBeZn+pweU0QN/OYLmJw==",
-        "license": "MIT",
-        "dependencies": {
-          "iceberg-js": "^0.8.1",
-          "tslib": "2.8.1"
-        },
-        "engines": {
-          "node": ">=20.0.0"
-        }
-      },
-      "node_modules/@supabase/supabase-js": {
-        "version": "2.109.0",
-        "resolved": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.109.0.tgz",
-        "integrity": "sha512-eNpUGegTT3hhoTK9j6aLViVjybYtdq6Ishb4BkVLi5tT58S1D80n7dmALMoBWkbrYG4uQv30c8iAB6nZylX0Fg==",
-        "license": "MIT",
-        "dependencies": {
-          "@supabase/auth-js": "2.109.0",
-          "@supabase/functions-js": "2.109.0",
-          "@supabase/postgrest-js": "2.109.0",
-          "@supabase/realtime-js": "2.109.0",
-          "@supabase/storage-js": "2.109.0"
-        },
-        "engines": {
-          "node": ">=20.0.0"
         }
       },
       "node_modules/accepts": {
@@ -1037,15 +953,6 @@
           "node": ">= 6"
         }
       },
-      "node_modules/iceberg-js": {
-        "version": "0.8.1",
-        "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
-        "integrity": "sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==",
-        "license": "MIT",
-        "engines": {
-          "node": ">=20.0.0"
-        }
-      },
       "node_modules/iconv-lite": {
         "version": "0.7.3",
         "resolved": "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.7.3.tgz",
@@ -1252,13 +1159,12 @@
         "license": "MIT"
       },
       "node_modules/n8n-mcp": {
-        "version": "2.89.0",
-        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.89.0.tgz",
-        "integrity": "sha512-3rBc2C7mIBR2DhIKH3H199npGsWLAcZMquwIN8BrIYJVW+VVixZpkcD/VReOTsD7D94poatwnAOxmTRTuQpu1Q==",
+        "version": "2.90.0",
+        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.90.0.tgz",
+        "integrity": "sha512-sq+/oZPi0CY05C76Ht/DD72A6tK1qA1bFhcvxYVAkPG5FXw1VVA28eXh4TNaUCHYgnyNouThcd0BvQyEbW7aGQ==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/sdk": "1.30.0",
-          "@supabase/supabase-js": ">=2.57.4 <2.110.0",
           "axios": "^1.7.7",
           "dotenv": "^16.5.0",
           "express": "^5.1.0",
@@ -1930,9 +1836,9 @@
         }
       },
       "node_modules/undici": {
-        "version": "6.28.1",
-        "resolved": "https://registry.npmjs.org/undici/-/undici-6.28.1.tgz",
-        "integrity": "sha512-zWpdTVD54H48CIybL0rWQ3ukpb9d23wM7eH5RtfdmeP70cWHNjtfo7P4vZX+5CoDcO53J4Pu5uXp7lNfjc6DRA==",
+        "version": "6.29.0",
+        "resolved": "https://registry.npmjs.org/undici/-/undici-6.29.0.tgz",
+        "integrity": "sha512-R+RODBqp6i2pPflGdq+xIOUkl+RNfGgHwoinecKu/JCuf2uO06cOKoDbI2P7Dn6KcswdKwrczbU6IYJ6K8X+wg==",
         "license": "MIT",
         "engines": {
           "node": ">=18.17"
@@ -2017,5 +1923,5 @@
       }
     }
   },
-  "invalidationHash": "27c94699eda41be0e58015b8c858105aa5943bd257ffdfa9fccb0eacd929d4cb"
+  "invalidationHash": "12dce64d87a5874d76c620d24092d7abc9cb6af287f883c5c53a99a9c91b867e"
 }

@@ -14,57 +14,62 @@ local outlineWidth = 0.5
 
 local function query(domain, callback)
 	local request = {
-		chunks = {},
-		tail = "",
+		stdoutBytes = 0,
+		stderrBytes = 0,
 	}
 	module.query = request
 
-	local function finish(result)
+	local function finish(result, reason)
 		if module.query ~= request then
 			return
 		end
 		request.timeout:stop()
+		if reason then
+			logger:e("query_failed", {
+				domain = domain,
+				reason = reason,
+				exit_code = request.code,
+				stdout_bytes = request.stdoutBytes,
+				stderr_bytes = request.stderrBytes,
+			})
+		end
 		module.query = nil
 		callback(result)
 	end
 
-	local function complete()
-		if module.query ~= request or request.code == nil then
+	request.task = hs.task.new("@yabai@", function(code, stdout, stderr)
+		if module.query ~= request then
 			return
 		end
-		if request.expired or request.code ~= 0 then
-			finish(nil)
+		request.code = code
+		request.stdoutBytes = #(stdout or "")
+		request.stderrBytes = #(stderr or "")
+
+		if request.expired then
+			finish(nil, "timeout")
 			return
 		end
-		local output = (table.concat(request.chunks) .. request.tail):gsub(":inf,", ":0,")
+		if code ~= 0 then
+			finish(nil, "exit")
+			return
+		end
+		local output = (stdout or ""):gsub(":inf,", ":0,")
 		local ok, result = pcall(hs.json.decode, output)
 		if ok and type(result) == "table" then
 			finish(result)
+		else
+			finish(nil, "invalid-json")
 		end
-	end
-
-	request.task = hs.task.new("@yabai@", function(code, stdout)
-		request.code = code
-		request.tail = stdout or ""
-		complete()
-	end, function(_, stdout)
-		if module.query ~= request then
-			return false
-		end
-		table.insert(request.chunks, stdout or "")
-		complete()
-		return true
 	end, { "-m", "query", domain })
 	request.timeout = hs.timer.doAfter(5, function()
-		request.expired = true
-		if request.code == nil then
-			request.task:terminate()
-		else
-			finish(nil)
+		if module.query ~= request then
+			return
 		end
+		request.expired = true
+		request.task:terminate()
 	end)
 	if not request.task or not request.task:start() then
-		finish(nil)
+		finish(nil, "start-failed")
 	end
 end
 
