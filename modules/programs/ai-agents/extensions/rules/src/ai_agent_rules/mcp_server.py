@@ -76,12 +76,7 @@ def create_server(
     async def project_rules_upsert(
         session_handle: str, id: str, rule: RuleDefinition
     ) -> dict[str, object]:
-        """Add or replace a project rule at the user's request or after approval.
-
-        For suggested rules, obtain approval of the content and project scope
-        before saving. Git worktrees share .agents/rules in the main checkout;
-        submodules use their own checkout and non-Git projects use their root.
-        """
+        """Add or replace a project rule with user authorization."""
         log: dict[str, object] = {
             "operation": "rule_upsert",
             "started_at": time.time(),
@@ -136,16 +131,12 @@ def create_server(
 
     @server.tool()
     async def rules_check(session_handle: str, text: str) -> dict[str, object]:
-        """Check a plan, decision, explanation, or response draft without executing it.
+        """Check task text against applicable rules without executing it.
 
-        Supply task material as text. Code and tool checks run automatically
-        through hooks. Evaluates enabled, effective task rules whose extension
-        and trigger match. Intent uses supplied evidence and project instructions.
-        Returns status: completed, incomplete, or skipped, with feedback only
-        for violations, uncertain verdicts, or failures.
-        Completed means the check finished, not that the material is compliant.
-        Detailed scores and results remain in debug logs when enabled; feedback
-        includes the log path. Skipped means no rules pass the selection conditions.
+        Intent uses supplied evidence and project instructions. Status: completed
+        (not a pass), incomplete (check failed), skipped (no applicable rules).
+        Feedback reports violations, uncertainty, or failures, with a debug log
+        path when enabled. Fix findings and recheck before presenting the draft.
         """
         try:
             cwd, client, rules = await asyncio.to_thread(
