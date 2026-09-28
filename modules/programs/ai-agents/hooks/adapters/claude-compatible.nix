@@ -1,4 +1,4 @@
-{ lib, pkgs }:
+{ lib, runner }:
 let
   normalizeHook =
     client: hook:
@@ -18,8 +18,8 @@ let
     client: hook:
     let
       arguments = [
-        "${pkgs.python3}/bin/python"
-        "${./post_tool_adapter.py}"
+        (lib.getExe runner)
+        "post-tool-failure"
       ]
       ++ lib.optionals (hook.timeout != null) [
         "--timeout"

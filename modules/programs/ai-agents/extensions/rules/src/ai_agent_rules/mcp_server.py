@@ -3,6 +3,7 @@ import asyncio
 import time
 from pathlib import Path
 
+import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ai_agent_rules.checks import evaluate
@@ -21,7 +22,7 @@ from ai_agent_rules.rules import (
     effective_rules,
     load_rules,
 )
-from ai_agent_rules.sessions import require_session, state_lock
+from ai_agent_rules.sessions import require_session, state_transaction
 
 
 def change_rule(
@@ -34,8 +35,8 @@ def change_rule(
         raise ValueError(
             "Static rule IDs are reserved and cannot be changed through MCP."
         )
-    with state_lock() as metadata:
-        session = require_session(metadata, handle)
+    with state_transaction() as database:
+        session = require_session(database, handle)
         directory = rules_directory(project_root(session.cwd))
         path = rule_path(directory, name)
         if definition is None:
@@ -56,7 +57,7 @@ def change_rule(
 
 def create_server(
     rules_path: Path,
-    jev: str,
+    api: httpx.AsyncClient,
     debug_log: bool = False,
 ) -> FastMCP:
     server = FastMCP("rules", instructions=RULES_GUIDANCE)
@@ -149,7 +150,7 @@ def create_server(
         except OSError as error:
             raise RuntimeError("Cannot read the rules.") from error
         result = await evaluate(
-            jev,
+            api,
             applicable,
             {"text": text, "cwd": str(cwd)},
             cwd,
@@ -177,12 +178,16 @@ def create_server(
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--rules", required=True, type=Path)
-    parser.add_argument("--jev", required=True)
     parser.add_argument("--debug-log", action="store_true")
     args = parser.parse_args()
-    server = create_server(args.rules, args.jev, args.debug_log)
+
+    async def serve() -> None:
+        async with httpx.AsyncClient(follow_redirects=False) as api:
+            server = create_server(args.rules, api, args.debug_log)
+            await server.run_stdio_async()
+
     try:
-        asyncio.run(with_termination(server.run_stdio_async()))
+        asyncio.run(with_termination(serve()))
     except (asyncio.CancelledError, KeyboardInterrupt):
         return 130
     return 0

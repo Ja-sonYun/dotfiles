@@ -2,10 +2,10 @@
 name = "ai-agent-rules"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["mcp>=1,<2", "pydantic>=2,<3"]
+dependencies = ["httpx>=0.28,<1", "mcp>=1,<2", "pydantic>=2,<3"]
 
 [project.scripts]
-ai-agent-rules-hook = "ai_agent_rules.hooks:main"
+ai-agent-rules-server = "ai_agent_rules.server:main"
 ai-agent-rules-mcp = "ai_agent_rules.mcp_server:main"
 
 [tool.hatch.build.targets.wheel]

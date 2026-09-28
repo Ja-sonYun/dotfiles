@@ -1,38 +1,26 @@
-import fcntl
 import hashlib
 import json
 import os
 import re
-import sys
-import time
+import sqlite3
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 from ai_agent_hooks.hook_input import HookInput
 
-from ai_agent_rules.rule_files import read_json, write_json
+from ai_agent_rules.context import environment
 
 
 @dataclass(frozen=True)
 class Session:
     cwd: Path
     client: str
-    last_seen: float
-    blocked_inputs: frozenset[str] = frozenset()
-
-    def record(self) -> dict[str, object]:
-        return {
-            "cwd": str(self.cwd),
-            "client": self.client,
-            "last_seen": self.last_seen,
-            "blocked_inputs": sorted(self.blocked_inputs),
-        }
 
 
 def session_key(hook_input: HookInput) -> str | None:
-    client = os.environ.get("AI_AGENT_CLIENT", "").lower()
+    client = environment().get("AI_AGENT_CLIENT", "").lower()
     session = hook_input.get("session_id")
     if (
         client not in {"codex", "claude", "pi"}
@@ -43,79 +31,53 @@ def session_key(hook_input: HookInput) -> str | None:
     return hashlib.sha256(json.dumps([client, session]).encode()).hexdigest()
 
 
-def session_path(directory: Path, handle: str) -> Path:
+@contextmanager
+def state_transaction() -> Iterator[sqlite3.Connection]:
+    cache = Path(environment().get("XDG_CACHE_HOME") or Path.home() / ".cache")
+    directory = cache / "ai-agent" / "rules"
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    directory.chmod(0o700)
+    path = directory / "sessions.sqlite3"
+    descriptor = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        os.fchmod(descriptor, 0o600)
+    finally:
+        os.close(descriptor)
+
+    try:
+        with closing(
+            sqlite3.connect(path, timeout=1, isolation_level=None)
+        ) as database:
+            database.execute("PRAGMA auto_vacuum = FULL")
+            database.execute("PRAGMA foreign_keys = ON")
+            database.execute("BEGIN IMMEDIATE")
+            with database:
+                database.execute(
+                    "CREATE TABLE IF NOT EXISTS sessions ("
+                    "handle TEXT PRIMARY KEY, cwd TEXT NOT NULL, client TEXT NOT NULL)"
+                )
+                database.execute(
+                    "CREATE TABLE IF NOT EXISTS rejections ("
+                    "session_handle TEXT NOT NULL REFERENCES sessions(handle) "
+                    "ON DELETE CASCADE, input_hash TEXT NOT NULL, "
+                    "PRIMARY KEY (session_handle, input_hash))"
+                )
+                yield database
+    except sqlite3.Error as error:
+        raise OSError(f"Rule storage is unavailable ({error}).") from error
+
+
+def require_session(database: sqlite3.Connection, handle: str) -> Session:
     if re.fullmatch(r"[0-9a-f]{64}", handle) is None:
         raise ValueError("Use the session_handle supplied by the session hook.")
-    return directory / f"{handle}.json"
-
-
-def read_session(path: Path) -> Session:
-    data = read_json(path)
-    if not isinstance(data, dict):
-        raise TypeError(f"Invalid session metadata: {path}")
-    cwd, last_seen = data.get("cwd"), data.get("last_seen")
-    client = data.get("client")
-    blocked_inputs = data.get("blocked_inputs", [])
-    if (
-        not isinstance(cwd, str)
-        or not Path(cwd).is_absolute()
-        or not isinstance(client, str)
-        or client not in {"codex", "claude", "pi"}
-        or not isinstance(last_seen, (int, float))
-        or isinstance(last_seen, bool)
-        or not isinstance(blocked_inputs, list)
-        or any(not isinstance(value, str) for value in blocked_inputs)
-    ):
-        raise ValueError(f"Invalid session metadata: {path}")
-    return Session(Path(cwd), client, float(last_seen), frozenset(blocked_inputs))
-
-
-@contextmanager
-def state_lock() -> Iterator[Path]:
-    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
-    directory = cache / "ai-agent" / "rules" / "sessions"
-    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-    descriptor = os.open(
-        directory.parent / "state.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600
-    )
-    with os.fdopen(descriptor, "a") as lock:
-        deadline = time.monotonic() + 1
-        while True:
-            try:
-                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except BlockingIOError:
-                if time.monotonic() >= deadline:
-                    raise TimeoutError("Rule storage is busy.") from None
-                time.sleep(0.01)
-        cutoff = time.time() - 86400
-        for path in directory.iterdir():
-            if path.suffix != ".json":
-                continue
-            try:
-                session = read_session(session_path(directory, path.stem))
-                if session.last_seen < cutoff:
-                    path.unlink()
-            except (OSError, TypeError, ValueError) as error:
-                print(f"[Rules cleanup failed] {path}: {error}", file=sys.stderr)
-        yield directory
-
-
-def require_session(directory: Path, handle: str) -> Session:
-    path = session_path(directory, handle)
-    try:
-        previous = read_session(path)
-    except FileNotFoundError as error:
+    row = database.execute(
+        "SELECT cwd, client FROM sessions WHERE handle = ?", (handle,)
+    ).fetchone()
+    if row is None:
         raise ValueError(
-            "Unknown or expired session_handle; use the handle from the session hook."
-        ) from error
-    if previous.last_seen < time.time() - 86400:
-        raise ValueError("Expired session_handle; session cleanup is incomplete.")
-    session = Session(
-        previous.cwd, previous.client, time.time(), previous.blocked_inputs
-    )
-    write_json(path, session.record())
-    return session
+            "Unknown session_handle; use the handle from the session hook."
+        )
+    return Session(Path(row[0]), row[1])
 
 
 def register_session(hook_input: HookInput) -> tuple[str | None, bool]:
@@ -123,22 +85,20 @@ def register_session(hook_input: HookInput) -> tuple[str | None, bool]:
     if handle is None:
         return None, False
     cwd = Path(str(hook_input.get("cwd") or Path.cwd())).resolve()
-    client = os.environ["AI_AGENT_CLIENT"].lower()
-    with state_lock() as directory:
-        path = session_path(directory, handle)
-        try:
-            previous = read_session(path)
-            if previous.last_seen < time.time() - 86400:
-                raise ValueError(
-                    "Cannot reuse an expired session before its cleanup completes."
-                )
-            created = False
-        except FileNotFoundError:
-            previous = Session(cwd, client, time.time())
-            created = True
-        write_json(
-            path, Session(cwd, client, time.time(), previous.blocked_inputs).record()
+    client = environment()["AI_AGENT_CLIENT"].lower()
+    with state_transaction() as database:
+        created = (
+            database.execute(
+                "INSERT OR IGNORE INTO sessions (handle, cwd, client) VALUES (?, ?, ?)",
+                (handle, str(cwd), client),
+            ).rowcount
+            == 1
         )
+        if not created:
+            database.execute(
+                "UPDATE sessions SET cwd = ?, client = ? WHERE handle = ?",
+                (str(cwd), client, handle),
+            )
     return handle, created
 
 
@@ -150,29 +110,26 @@ def record_rejection(handle: str, hook_input: HookInput) -> bool:
         hook_input.get("tool_input"),
     ]
     digest = hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
-    with state_lock() as directory:
-        session = require_session(directory, handle)
-        if digest in session.blocked_inputs:
-            return True
-        write_json(
-            session_path(directory, handle),
-            Session(
-                session.cwd,
-                session.client,
-                session.last_seen,
-                session.blocked_inputs | {digest},
-            ).record(),
+    with state_transaction() as database:
+        require_session(database, handle)
+        repeated = (
+            database.execute(
+                "INSERT OR IGNORE INTO rejections (session_handle, input_hash) "
+                "VALUES (?, ?)",
+                (handle, digest),
+            ).rowcount
+            == 0
         )
-    return False
+    return repeated
 
 
 def end_session(hook_input: HookInput) -> None:
     handle = session_key(hook_input)
     if handle is not None:
-        with state_lock() as directory:
-            path = session_path(directory, handle)
-            try:
-                read_session(path)
-            except FileNotFoundError:
-                return
-            path.unlink()
+        with state_transaction() as database:
+            database.execute("DELETE FROM sessions WHERE handle = ?", (handle,))
+
+
+def reset_sessions() -> None:
+    with state_transaction() as database:
+        database.execute("DELETE FROM sessions")

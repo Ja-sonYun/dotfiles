@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import re
 import time
 import traceback
@@ -8,7 +7,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+import httpx
+
 from ai_agent_rules.code_changes import project_instructions
+from ai_agent_rules.context import current, environment, remaining
 from ai_agent_rules.debug_log import save_log, start_log
 from ai_agent_rules.process import run_process
 from ai_agent_rules.rules import Rule
@@ -146,7 +148,7 @@ def input_strings(value: object, fields: Sequence[str] = ()) -> list[str]:
 
 
 async def evaluate(
-    jev: str,
+    api: httpx.AsyncClient,
     rules: Sequence[Rule],
     state: dict[str, str],
     cwd: Path,
@@ -159,6 +161,7 @@ async def evaluate(
     debug_log: bool = False,
 ) -> Evaluation:
     result = Evaluation(0, [], [])
+    targets = sorted({rule.definition.target for rule in rules})
     requests: list[dict[str, object]] = []
     log: dict[str, object] = {
         "operation": "check",
@@ -168,7 +171,7 @@ async def evaluate(
         "cwd": str(cwd),
         "input": state,
         "rules": [rule.record() for rule in rules],
-        "input_stage": "before_cli_redaction",
+        "input_stage": "before_redaction",
         "requests": requests,
     }
     path = await asyncio.to_thread(start_log, debug_log, session_handle, log)
@@ -232,7 +235,8 @@ async def evaluate(
             result.errors.append(f"Cannot load inspection context: {error}")
             result.halted = True
             return result
-        if not os.environ.get("TYPESAFE_API_KEY"):
+        api_key = environment().get("TYPESAFE_API_KEY")
+        if not api_key:
             result.errors.append("TYPESAFE_API_KEY is unavailable.")
             result.halted = True
             return result
@@ -254,21 +258,19 @@ async def evaluate(
 
         for batch in batches:
             names = ", ".join(rule.id for rule in batch)
-            remaining = deadline - time.monotonic()
-            if result.halted or remaining < 0.01:
+            budget = remaining(deadline - time.monotonic())
+            if result.halted or budget < 0.01:
                 result.errors.append(
                     f"Not checked: {names}; time limit or earlier request failure."
                 )
                 result.halted = True
                 continue
-            timeout = min(10.0, remaining)
+            timeout = min(10.0, budget)
             request = json.dumps(
                 {"state": state, "questions": questions_for(batch)},
                 ensure_ascii=False,
             )
-            arguments = [jev, "--model", "jev-latest", "--timeout", f"{timeout:.3f}s"]
             capture: dict[str, object] = {
-                "arguments": arguments,
                 "stdin": request,
                 "rule_mapping": {
                     f"rule_{index}": rule.id for index, rule in enumerate(batch)
@@ -277,24 +279,37 @@ async def evaluate(
             if debug_log:
                 requests.append(capture)
             try:
-                output = await run_process(
-                    arguments,
-                    cwd,
-                    timeout,
-                    input_text=request,
-                    capture=capture if debug_log else None,
-                )
-                result.results.extend(response_results(output, batch))
+                async with asyncio.timeout(timeout):
+                    status, masked, _ = await run_process(
+                        ["redact"], cwd, timeout, input_text=request
+                    )
+                    if status:
+                        raise RuntimeError("Request redaction failed.")
+                    payload = json.loads(masked)
+                    if not isinstance(payload, dict):
+                        raise TypeError("Redacted request is not an object.")
+                    response = await api.post(
+                        "https://api.typesafe.ai/v1/systemone",
+                        json={**payload, "model": "jev-latest"},
+                        headers={"Authorization": f"Bearer {api_key}"},
+                        timeout=timeout,
+                        follow_redirects=False,
+                    )
+                    response.raise_for_status()
+                    if debug_log:
+                        capture["stdout"] = response.text
+                    result.results.extend(response_results(response.text, batch))
             except (
                 TimeoutError,
                 OSError,
                 RuntimeError,
                 TypeError,
                 ValueError,
+                httpx.HTTPError,
             ) as error:
-                if isinstance(error, TimeoutError):
+                if isinstance(error, (TimeoutError, httpx.TimeoutException)):
                     reason = "Timed out"
-                elif isinstance(error, (OSError, RuntimeError)):
+                elif isinstance(error, (OSError, RuntimeError, httpx.HTTPError)):
                     reason = "Request failed"
                 else:
                     reason = "Invalid response"
@@ -319,4 +334,19 @@ async def evaluate(
             halted=result.halted,
             applicable_rule_count=result.applicable_rule_count,
         )
+        context = current.get()
+        if context is not None:
+            context.evaluations.append(
+                {
+                    "targets": targets,
+                    "status": log["status"],
+                    "applicable_rule_count": result.applicable_rule_count,
+                    "results": [
+                        {"id": item["id"], "verdict": item["verdict"]}
+                        for item in result.results
+                    ],
+                    "error_count": len(result.errors),
+                    "halted": result.halted,
+                }
+            )
         await asyncio.to_thread(save_log, path, log)

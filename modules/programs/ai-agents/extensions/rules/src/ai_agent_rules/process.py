@@ -1,23 +1,53 @@
 import asyncio
-import base64
 import os
 import signal
+import time
 from collections.abc import Awaitable, Sequence
 from pathlib import Path
+
+import psutil
+
+from ai_agent_rules.context import environment, remaining
+
+
+def group_members(group: int) -> list[psutil.Process]:
+    members = []
+    for process in psutil.process_iter():
+        try:
+            if os.getpgid(process.pid) == group:
+                process.create_time()
+                members.append(process)
+        except (OSError, psutil.Error):
+            continue
+    return members
+
+
+def group_alive(group: int, members: list[psutil.Process]) -> bool:
+    for process in members:
+        try:
+            if (
+                process.is_running()
+                and process.status() != psutil.STATUS_ZOMBIE
+                and os.getpgid(process.pid) == group
+            ):
+                return True
+        except (OSError, psutil.Error):
+            continue
+    return False
 
 
 async def run_process(
     arguments: Sequence[str],
     cwd: Path,
     timeout: float,
-    input_text: str | None = None,
     *,
-    capture: dict[str, object] | None = None,
-) -> str:
+    input_text: str | None = None,
+) -> tuple[int, str, str]:
     creation = asyncio.create_task(
         asyncio.create_subprocess_exec(
             *arguments,
             cwd=cwd,
+            env=environment(),
             stdin=asyncio.subprocess.PIPE
             if input_text is not None
             else asyncio.subprocess.DEVNULL,
@@ -27,41 +57,53 @@ async def run_process(
         )
     )
     communication: asyncio.Task[tuple[bytes, bytes]] | None = None
+    completed = False
     try:
         process = await asyncio.shield(creation)
         communication = asyncio.create_task(
             process.communicate(input_text.encode() if input_text is not None else None)
         )
-        output, _ = await asyncio.wait_for(asyncio.shield(communication), timeout)
-        if process.returncode:
-            raise RuntimeError(f"Command exited with status {process.returncode}.")
-        return output.decode("utf-8")
+        output, errors = await asyncio.wait_for(
+            asyncio.shield(communication), remaining(timeout)
+        )
+        completed = True
+        return (
+            process.returncode or 0,
+            output.decode("utf-8", errors="replace"),
+            errors.decode("utf-8", errors="replace"),
+        )
     finally:
-        process = await creation
-        if communication is None:
-            communication = asyncio.create_task(process.communicate())
-        if not communication.done():
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            try:
-                await asyncio.wait_for(asyncio.shield(communication), 2)
-            except TimeoutError:
-                pass
-            finally:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-        output, stderr = await communication
-        if capture is not None:
-            capture["exit_code"] = process.returncode
-            for name, value in (("stdout", output), ("stderr", stderr)):
-                try:
-                    capture[name] = value.decode("utf-8")
-                except UnicodeDecodeError:
-                    capture[f"{name}_base64"] = base64.b64encode(value).decode("ascii")
+
+        async def finish() -> None:
+            process = await creation
+            if not completed:
+                drain = communication or asyncio.create_task(process.communicate())
+                members = group_members(process.pid)
+                if group_alive(process.pid, members):
+                    try:
+                        os.killpg(process.pid, signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass
+                deadline = time.monotonic() + 2
+                # Retain process identities so a reused group ID is never the sole
+                # reason for sending a later signal after the leader exits.
+                while group_alive(process.pid, members):
+                    if time.monotonic() >= deadline:
+                        try:
+                            os.killpg(process.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                        break
+                    members = group_members(process.pid)
+                    await asyncio.sleep(0.05)
+                await drain
+
+        cleanup = asyncio.create_task(finish())
+        try:
+            await asyncio.shield(cleanup)
+        except asyncio.CancelledError:
+            await cleanup
+            raise
 
 
 async def with_termination(awaitable: Awaitable[None]) -> None:

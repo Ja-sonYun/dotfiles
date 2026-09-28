@@ -1,19 +1,19 @@
-import argparse
 import asyncio
 import json
 import re
-import sys
 import time
 from pathlib import Path
 
+import httpx
 from ai_agent_hooks.edit_input import edit_targets
-from ai_agent_hooks.hook_input import HookInput, emit_feedback, load_hook_input
+from ai_agent_hooks.hook_input import HookInput
 
 from ai_agent_rules.checks import evaluate
 from ai_agent_rules.code_changes import inspections
+from ai_agent_rules.context import current, write_output
 from ai_agent_rules.edit_context import capture_context
+from ai_agent_rules.feedback import emit_feedback
 from ai_agent_rules.guidance import RULES_GUIDANCE
-from ai_agent_rules.process import with_termination
 from ai_agent_rules.rules import effective_rules
 from ai_agent_rules.sessions import end_session, record_rejection, register_session
 
@@ -37,7 +37,7 @@ async def check_changes(
     hook_input: HookInput,
     rules_path: Path,
     handle: str | None,
-    jev: str,
+    api: httpx.AsyncClient,
     debug_log: bool = False,
     matching_texts: list[str] | None = None,
 ) -> tuple[list[str], bool]:
@@ -77,7 +77,7 @@ async def check_changes(
         if not applicable:
             continue
         result = await evaluate(
-            jev,
+            api,
             applicable,
             {
                 "path": str(region.path),
@@ -103,11 +103,11 @@ async def check_changes(
 async def handle_event(
     hook_input: HookInput,
     rules_path: Path,
-    jev: str,
+    api: httpx.AsyncClient,
     notes: list[str],
     debug_log: bool = False,
 ) -> str | None:
-    """Collect event feedback and return a reason when the proposed edit is denied."""
+    """Collect event feedback and return a reason when the tool call is denied."""
     event = hook_input.get("hook_event_name")
     if event not in {"SessionStart", "PreToolUse", "PostToolUse", "SessionEnd"}:
         return None
@@ -121,8 +121,8 @@ async def handle_event(
         try:
             await asyncio.to_thread(end_session, hook_input)
         except (OSError, TypeError, ValueError):
-            print(
-                "[Rules cleanup failed] Cannot remove session state.", file=sys.stderr
+            write_output(
+                "[Rules cleanup failed] Cannot remove session state.\n", error=True
             )
         return None
 
@@ -142,6 +142,7 @@ async def handle_event(
     if event == "PreToolUse":
         if is_rules_tool(hook_input):
             return None
+        violated = False
         try:
             _, client, rules = await asyncio.to_thread(
                 effective_rules, rules_path, handle, cwd
@@ -152,7 +153,7 @@ async def handle_event(
             applicable = []
         if applicable:
             result = await evaluate(
-                jev,
+                api,
                 applicable,
                 {
                     "tool_name": str(hook_input.get("tool_name") or ""),
@@ -168,6 +169,7 @@ async def handle_event(
                 debug_log=debug_log,
             )
             notes.extend(result.feedback("Proposed tool call"))
+            violated = any(item["verdict"] == "violation" for item in result.results)
 
         if edit_targets(hook_input):
             matching_texts = None
@@ -177,77 +179,57 @@ async def handle_event(
                 notes.append(
                     f"[Rules not checked] Cannot capture replacement context ({error})"
                 )
-            feedback, violated = await check_changes(
-                hook_input, rules_path, handle, jev, debug_log, matching_texts
+            feedback, code_violated = await check_changes(
+                hook_input, rules_path, handle, api, debug_log, matching_texts
             )
             notes.extend(feedback)
-            if violated:
-                repeated = False
-                if handle is not None:
-                    try:
-                        repeated = await asyncio.to_thread(
-                            record_rejection, handle, hook_input
-                        )
-                    except (OSError, TypeError, ValueError) as error:
-                        notes.append(
-                            f"[Rules retry unavailable] Cannot record this edit ({error})"
-                        )
-                if not repeated:
-                    return (
-                        "Code rules rejected this edit. Review the feedback before "
-                        "retrying. An identical retry in this session bypasses this "
-                        "rules rejection when the rejection was recorded."
+            violated = violated or code_violated
+        if violated:
+            repeated = False
+            if handle is not None:
+                try:
+                    repeated = await asyncio.to_thread(
+                        record_rejection, handle, hook_input
                     )
+                except (OSError, TypeError, ValueError) as error:
+                    notes.append(
+                        f"[Rules retry unavailable] Cannot record this request ({error})"
+                    )
+            else:
                 notes.append(
-                    "[Rules retry] This identical edit was already rejected in this "
-                    "session. Rules will not block it again; other permission "
-                    "checks still apply."
+                    "[Rules retry unavailable] Session storage is unavailable."
                 )
+            context = current.get()
+            if context is not None:
+                context.rules_decision = "retry_allowed" if repeated else "deny"
+            if not repeated:
+                return (
+                    "Rules rejected this request. Review the feedback before "
+                    "retrying. An identical retry in this session bypasses this "
+                    "rules rejection when the rejection was recorded."
+                )
+            notes.append(
+                "[Rules retry] This identical request was already rejected in this "
+                "session. Rules will not block it again; other permission "
+                "checks still apply."
+            )
     return None
 
 
 async def process_event(
     hook_input: HookInput,
     rules_path: Path,
-    jev: str,
+    api: httpx.AsyncClient,
     debug_log: bool = False,
 ) -> None:
     notes: list[str] = []
     deny_reason = await handle_event(
         hook_input,
         rules_path,
-        jev,
+        api,
         notes,
         debug_log,
     )
     emit_feedback(
         str(hook_input.get("hook_event_name")), notes, deny_reason=deny_reason
     )
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--rules", required=True, type=Path)
-    parser.add_argument("--jev", required=True)
-    parser.add_argument("--debug-log", action="store_true")
-    args = parser.parse_args()
-    raw_input = sys.stdin.read()
-    hook_input = load_hook_input(raw_input)
-    try:
-        asyncio.run(
-            with_termination(
-                process_event(
-                    hook_input,
-                    args.rules,
-                    args.jev,
-                    args.debug_log,
-                )
-            )
-        )
-    except (asyncio.CancelledError, KeyboardInterrupt):
-        return 130
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -1,7 +1,7 @@
 {
   canonicalHooks,
   lib,
-  pkgs,
+  runner,
 }:
 let
   notificationTypes = [
@@ -33,8 +33,8 @@ let
     let
       timeout = if hook.timeout == null then (if event == "SessionEnd" then 3 else 600) else hook.timeout;
       adapterArguments = [
-        "${pkgs.python3}/bin/python"
-        "${./codex_adapter.py}"
+        (lib.getExe runner)
+        "codex"
         "--timeout"
         (toString timeout)
       ]

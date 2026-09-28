@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from ai_agent_rules.context import environment as hook_environment
+
 
 def project_root(cwd: Path, fallback: Path | None = None) -> Path:
     cwd = cwd.resolve()
@@ -22,7 +24,7 @@ def rules_directory(root: Path) -> Path:
     if (root / ".git").exists():
         environment = {
             name: value
-            for name, value in os.environ.items()
+            for name, value in hook_environment().items()
             if name not in {"GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"}
         }
         try:

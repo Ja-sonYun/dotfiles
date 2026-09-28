@@ -6,6 +6,7 @@
 }:
 let
   cfg = config.programs.ai-agents;
+  runner = pkgs.callPackage ./package.nix { };
   eventNames = import ./contract/events.nix;
   hookTypes = import ./contract/types.nix { inherit lib; };
   hookSetType = lib.types.attrsOf (lib.types.nonEmptyListOf hookTypes.hookBlock);
@@ -49,10 +50,12 @@ let
   );
   codex = import ./adapters/codex.nix {
     canonicalHooks = codexHooks;
-    inherit lib pkgs;
+    inherit lib runner;
   };
 
-  claudeCompatible = import ./adapters/claude-compatible.nix { inherit lib pkgs; };
+  claudeCompatible = import ./adapters/claude-compatible.nix {
+    inherit lib runner;
+  };
 in
 {
   options.programs.ai-agents = {

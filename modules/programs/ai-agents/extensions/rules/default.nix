@@ -48,11 +48,8 @@ let
   arguments = [
     "--rules"
     "${rulesFile}"
-    "--jev"
-    "${pkgs.jev}/bin/jev"
   ]
   ++ lib.optional cfg.debugLog.enable "--debug-log";
-  hookCommand = lib.escapeShellArgs ([ "${package}/bin/ai-agent-rules-hook" ] ++ arguments);
   nonEmptyString = lib.types.addCheck lib.types.str (
     value: builtins.match "[[:space:]]*" value == null
   );
@@ -152,12 +149,6 @@ in
   options.programs.ai-agents.extensions.rules = {
     enable = lib.mkEnableOption "AI agent rule checks";
     debugLog.enable = lib.mkEnableOption "raw rule debug logs with seven-day retention";
-    hookCommand = lib.mkOption {
-      type = lib.types.str;
-      default = hookCommand;
-      readOnly = true;
-      internal = true;
-    };
     rules = lib.genAttrs [ "code" "tool" "task" ] (
       target:
       lib.mkOption {
@@ -202,33 +193,47 @@ in
       requireRules "codex" codexRulesEnabled independentCodexInstances
     );
 
-    programs.ai-agents.hooks =
-      lib.mapAttrs
-        (_: timeout: [
+    programs.ai-agents = {
+      hooks =
+        lib.mapAttrs
+          (event: timeout: [
+            {
+              hooks = [
+                {
+                  type = "command";
+                  command = lib.escapeShellArgs (
+                    [
+                      "${package}/bin/ai-agent-rules-client"
+                      "--server"
+                      "${package}/bin/ai-agent-rules-server"
+                      "--cache-name"
+                      "ai-agent/rules/server"
+                      "--timeout"
+                      (toString timeout)
+                      "--"
+                    ]
+                    ++ arguments
+                  );
+                  timeout = if event == "SessionEnd" then timeout else timeout + 3;
+                }
+              ];
+            }
+          ])
           {
-            hooks = [
-              {
-                type = "command";
-                command = cfg.hookCommand;
-                inherit timeout;
-              }
-            ];
-          }
-        ])
-        {
-          SessionStart = 5;
-          PreToolUse = 70;
-          PostToolUse = 160;
-          SessionEnd = 3;
-        };
+            SessionStart = 5;
+            PreToolUse = 70;
+            PostToolUse = 160;
+            SessionEnd = 3;
+          };
 
-    programs.ai-agents.mcp.servers.rules = {
-      command = "${package}/bin/ai-agent-rules-mcp";
-      args = arguments;
-      env_vars = [
-        "TYPESAFE_API_KEY"
-        "XDG_CACHE_HOME"
-      ];
+      mcp.servers.rules = {
+        command = "${package}/bin/ai-agent-rules-mcp";
+        args = arguments;
+        env_vars = [
+          "TYPESAFE_API_KEY"
+          "XDG_CACHE_HOME"
+        ];
+      };
     };
   };
 }

@@ -1,5 +1,4 @@
 import json
-import os
 import re
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -13,13 +12,14 @@ from pydantic import (
     model_validator,
 )
 
+from ai_agent_rules.context import environment
 from ai_agent_rules.rule_files import (
     project_root,
     read_rules,
     rule_path,
     rules_directory,
 )
-from ai_agent_rules.sessions import require_session, state_lock
+from ai_agent_rules.sessions import require_session, state_transaction
 
 NonEmptyText = Annotated[str, StringConstraints(min_length=1, pattern=r"\S")]
 Extension = Annotated[
@@ -160,11 +160,11 @@ def effective_rules(
     path: Path, handle: str | None, cwd: Path | None = None
 ) -> tuple[Path, str, list[Rule]]:
     static = load_rules(path)
-    client = os.environ.get("AI_AGENT_CLIENT", "").lower()
+    client = environment().get("AI_AGENT_CLIENT", "").lower()
     fallback: Path | None = None
-    with state_lock() as metadata:
+    with state_transaction() as database:
         if handle is not None:
-            session = require_session(metadata, handle)
+            session = require_session(database, handle)
             client = session.client
             cwd = cwd if cwd is not None else session.cwd
             fallback = session.cwd
@@ -172,8 +172,8 @@ def effective_rules(
             raise ValueError("A working directory is required without a session.")
         if client not in {"codex", "claude", "pi"}:
             raise ValueError("A supported agent client is required to select rules.")
-        directory = rules_directory(project_root(cwd, fallback))
-        project = parse_rules(read_rules(directory), "project", directory)
+    directory = rules_directory(project_root(cwd, fallback))
+    project = parse_rules(read_rules(directory), "project", directory)
 
     static_ids = {rule.id for rule in static}
     project = [replace(rule, effective=rule.id not in static_ids) for rule in project]
