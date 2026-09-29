@@ -82,8 +82,7 @@ func exchange(ctx context.Context, started time.Time, timeout int, server, cache
 		cache = filepath.Join(home, ".cache")
 	}
 	configuration := fmt.Sprintf("%x", sha256.Sum256([]byte(server+"\x00"+strings.Join(serverArgs, "\x00"))))
-	// Keep the Unix socket path within macOS limits while isolating configurations.
-	directory := filepath.Join(cache, cacheName, configuration[:32])
+	directory := filepath.Join(cache, cacheName, "shared")
 	event := textField(payload, "hook_event_name")
 	if event != "SessionStart" && event != "PreToolUse" && event != "PostToolUse" && event != "SessionEnd" {
 		return 0, errors.New("unsupported rules hook event")
@@ -106,71 +105,85 @@ func exchange(ctx context.Context, started time.Time, timeout int, server, cache
 	var encoded bytes.Buffer
 	encoder := json.NewEncoder(&encoded)
 	encoder.SetEscapeHTML(false)
-	if err := encoder.Encode(request); err != nil {
-		return 0, err
-	}
 	registrationContext, cancelRegistration := context.WithDeadline(ctx, started.Add(time.Duration(timeout)*time.Second))
 	defer cancelRegistration()
-	for request.RegisterOnly {
-		connection, err := (&net.Dialer{}).DialContext(registrationContext, "unix", filepath.Join(directory, "server.sock"))
+	for {
+		request.RegisterOnly = event != "SessionEnd"
+		encoded.Reset()
+		if err := encoder.Encode(request); err != nil {
+			return 0, err
+		}
+		for request.RegisterOnly {
+			connection, err := (&net.Dialer{}).DialContext(registrationContext, "unix", filepath.Join(directory, "server.sock"))
+			if err != nil {
+				if !errors.Is(err, syscall.ENOENT) && !errors.Is(err, syscall.ECONNREFUSED) {
+					return 0, err
+				}
+				connection, err = startServer(registrationContext, directory, server, serverArgs, configuration)
+				if err != nil && !errors.Is(err, errStartupRace) {
+					return 0, err
+				}
+			}
+			if err == nil {
+				var response serverResponse
+				response, err = sendRequest(registrationContext, connection, encoded.Bytes())
+				if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, syscall.EPIPE) {
+					return 0, err
+				}
+				if err == nil {
+					if response.Registered {
+						break
+					}
+					if !response.RetryRegistration {
+						return 0, errors.New("rules session registration failed")
+					}
+				}
+			}
+			select {
+			case <-registrationContext.Done():
+				return 0, registrationContext.Err()
+			case <-time.After(20 * time.Millisecond):
+			}
+		}
+
+		request.RegisterOnly = false
+		encoded.Reset()
+		if err := encoder.Encode(request); err != nil {
+			return 0, err
+		}
+		connection, err := (&net.Dialer{}).DialContext(ctx, "unix", filepath.Join(directory, "server.sock"))
 		if err != nil {
 			if !errors.Is(err, syscall.ENOENT) && !errors.Is(err, syscall.ECONNREFUSED) {
 				return 0, err
 			}
-			connection, err = startServer(registrationContext, directory, server, serverArgs, configuration, client, session)
-			if err != nil && !errors.Is(err, errStartupRace) {
+			if event == "SessionEnd" {
+				return 0, nil
+			}
+		} else {
+			response, err := sendRequest(ctx, connection, encoded.Bytes())
+			// A lost response does not prove that the event was left unprocessed.
+			if err != nil {
 				return 0, err
 			}
-		}
-		if err == nil {
-			var response serverResponse
-			response, err = sendRequest(registrationContext, connection, encoded.Bytes())
-			if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, syscall.EPIPE) {
-				return 0, err
+			if !response.RetryRegistration {
+				if _, err := io.WriteString(os.Stdout, *response.Stdout); err != nil {
+					return 0, err
+				}
+				if _, err := io.WriteString(os.Stderr, *response.Stderr); err != nil {
+					return 0, err
+				}
+				return *response.ExitCode, nil
 			}
-			if err == nil {
-				if response.Registered {
-					break
-				}
-				if !response.RetryRegistration {
-					return 0, errors.New("rules session registration failed")
-				}
+			if event == "SessionEnd" {
+				return 0, nil
 			}
 		}
-		// Registration can be repeated; the actual event below is sent only once.
 		select {
 		case <-registrationContext.Done():
 			return 0, registrationContext.Err()
 		case <-time.After(20 * time.Millisecond):
 		}
 	}
-
-	request.RegisterOnly = false
-	encoded.Reset()
-	if err := encoder.Encode(request); err != nil {
-		return 0, err
-	}
-	connection, err := (&net.Dialer{}).DialContext(ctx, "unix", filepath.Join(directory, "server.sock"))
-	if err != nil {
-		if event == "SessionEnd" && (errors.Is(err, syscall.ENOENT) || errors.Is(err, syscall.ECONNREFUSED)) {
-			return 0, nil
-		}
-		return 0, err
-	}
-	response, err := sendRequest(ctx, connection, encoded.Bytes())
-	if err != nil {
-		return 0, err
-	}
-	if response.RetryRegistration {
-		return 0, errors.New("rules server stopped before processing the event")
-	}
-	if _, err := io.WriteString(os.Stdout, *response.Stdout); err != nil {
-		return 0, err
-	}
-	if _, err := io.WriteString(os.Stderr, *response.Stderr); err != nil {
-		return 0, err
-	}
-	return *response.ExitCode, nil
 }
 
 type serverResponse struct {
@@ -215,7 +228,27 @@ func sendRequest(ctx context.Context, connection net.Conn, request []byte) (serv
 
 var errStartupRace = errors.New("another rules server holds the startup ownership")
 
-func startServer(ctx context.Context, directory, server string, arguments []string, configuration, client, session string) (net.Conn, error) {
+func lockExclusive(ctx context.Context, file *os.File) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			return nil
+		}
+		if err != syscall.EWOULDBLOCK && err != syscall.EAGAIN {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+}
+
+func startServer(ctx context.Context, directory, server string, arguments []string, configuration string) (net.Conn, error) {
 	if err := os.MkdirAll(directory, 0700); err != nil {
 		return nil, err
 	}
@@ -227,19 +260,8 @@ func startServer(ctx context.Context, directory, server string, arguments []stri
 		return nil, err
 	}
 	defer lock.Close()
-	for {
-		err = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
-		if err == nil {
-			break
-		}
-		if err != syscall.EWOULDBLOCK && err != syscall.EAGAIN {
-			return nil, err
-		}
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(20 * time.Millisecond):
-		}
+	if err := lockExclusive(ctx, lock); err != nil {
+		return nil, err
 	}
 	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 	address := filepath.Join(directory, "server.sock")
@@ -248,7 +270,19 @@ func startServer(ctx context.Context, directory, server string, arguments []stri
 	} else if !errors.Is(err, syscall.ENOENT) && !errors.Is(err, syscall.ECONNREFUSED) {
 		return nil, err
 	}
-	args := append(append([]string{}, arguments...), "--directory", directory, "--parent", strconv.Itoa(os.Getpid()), "--client", client, "--session", session, "--configuration", configuration)
+	lease, err := os.OpenFile(filepath.Join(directory, "server.lock"), os.O_CREATE|os.O_RDWR|syscall.O_NOFOLLOW, 0600)
+	if err != nil {
+		return nil, err
+	}
+	defer lease.Close()
+	if err := lockExclusive(ctx, lease); err != nil {
+		return nil, err
+	}
+	if err := syscall.Flock(int(lease.Fd()), syscall.LOCK_UN); err != nil {
+		return nil, err
+	}
+	deadline, _ := ctx.Deadline()
+	args := append(append([]string{}, arguments...), "--directory", directory, "--configuration", configuration, "--startup-deadline", strconv.FormatFloat(float64(deadline.UnixNano())/1e9, 'f', 9, 64))
 	command := exec.Command(server, args...)
 	command.Stderr = os.Stderr
 	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}

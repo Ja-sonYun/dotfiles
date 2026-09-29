@@ -9,8 +9,6 @@ import select
 import signal
 import sys
 import time
-from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -90,47 +88,6 @@ def reset_database(directory: Path, configuration: str, reason: str) -> None:
                 "error_type": error_type,
             },
         )
-
-
-@contextmanager
-def server_lifetime(directory: Path, configuration: str) -> Iterator[None]:
-    """Reset shared state only at the first startup and last shutdown."""
-    flags = os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW
-    with (
-        os.fdopen(os.open(directory / "lifecycle.lock", flags, 0o600), "a") as gate,
-        os.fdopen(os.open(directory / "active.lock", flags, 0o600), "a") as active,
-    ):
-        fcntl.flock(gate, fcntl.LOCK_EX)
-        joined = False
-        try:
-            try:
-                fcntl.flock(active, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                pass
-            else:
-                reset_database(directory, configuration, "startup")
-            fcntl.flock(active, fcntl.LOCK_SH)
-            joined = True
-        finally:
-            if not joined:
-                fcntl.flock(active, fcntl.LOCK_UN)
-            fcntl.flock(gate, fcntl.LOCK_UN)
-
-        try:
-            yield
-        finally:
-            fcntl.flock(gate, fcntl.LOCK_EX)
-            try:
-                fcntl.flock(active, fcntl.LOCK_UN)
-                try:
-                    fcntl.flock(active, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except BlockingIOError:
-                    pass
-                else:
-                    reset_database(directory, configuration, "shutdown")
-            finally:
-                fcntl.flock(active, fcntl.LOCK_UN)
-                fcntl.flock(gate, fcntl.LOCK_UN)
 
 
 def detach_stderr() -> None:
@@ -218,6 +175,7 @@ class Server:
         self.sessions: dict[SessionKey, Session] = {}
         self.requests: dict[asyncio.Task[None], Session | None] = {}
         self.stopped = asyncio.Event()
+        self.startup_timer: asyncio.TimerHandle | None = None
         self.stop_reason = "shutdown"
         self.log_queue: asyncio.Queue[dict[str, object] | None] = asyncio.Queue()
 
@@ -243,15 +201,17 @@ class Server:
 
     async def register(
         self, pid: int, client: str, session_id: str, start: bool
-    ) -> Session:
+    ) -> Session | None:
         process = await asyncio.to_thread(find_owner, pid, client)
         owner = (process.pid, process.create_time())
         key = (client, session_id, owner)
         session = self.sessions.get(key)
         if not start:
             if session is None or session.closing:
-                raise ValueError("The rules session is not registered.")
+                return None
             return session
+        if self.stopped.is_set():
+            return None
         if owner not in self.owners:
             descriptor, queue = watch_owner(process)
             try:
@@ -280,6 +240,9 @@ class Server:
                 owner_pid=owner[0],
                 owner_created=owner[1],
             )
+        if self.startup_timer is not None:
+            self.startup_timer.cancel()
+            self.startup_timer = None
         return session
 
     def remove_watch(self, owner: Owner) -> None:
@@ -323,7 +286,7 @@ class Server:
         for owner in tuple(self.owners):
             if owner not in active:
                 self.remove_watch(owner)
-        if not self.sessions and not self.requests:
+        if not self.sessions and not self.requests and self.startup_timer is None:
             self.stop("no_active_sessions")
 
     async def execute(
@@ -392,15 +355,15 @@ class Server:
                 return
             request = json.loads(raw)
             stage = "validate_request"
+            if not isinstance(request, dict):
+                raise TypeError("Rules server request must be an object.")
             if (
-                not isinstance(request, dict)
-                or request.get("configuration") != self.configuration
+                not isinstance(request.get("configuration"), str)
+                or not request["configuration"]
             ):
-                raise ValueError("Rules server configuration does not match.")
-            if self.stopped.is_set():
-                response["retry_registration"] = True
-                status = "retry_registration"
-                return
+                raise ValueError("Missing rules server configuration.")
+            if request.get("client") not in ("Codex", "Claude", "Pi"):
+                raise ValueError("Unsupported rules client.")
             hook_input = request["input"]
             if not isinstance(hook_input, dict):
                 raise TypeError("Hook input must be an object.")
@@ -424,6 +387,15 @@ class Server:
             )
             if registering and event == "SessionEnd":
                 raise ValueError("Cannot register a session during shutdown.")
+            ending = event == "SessionEnd"
+            if not ending and (
+                self.stopped.is_set() or request["configuration"] != self.configuration
+            ):
+                if registering:
+                    self.stop("configuration_changed")
+                response["retry_registration"] = True
+                status = "retry_registration"
+                return
             stage = "register_session"
             session = await self.register(
                 int(request["pid"]),
@@ -431,13 +403,17 @@ class Server:
                 session_id,
                 registering,
             )
+            if session is None or (self.stopped.is_set() and not ending):
+                if not ending:
+                    response["retry_registration"] = True
+                status = "session_not_registered" if ending else "retry_registration"
+                return
             self.requests[task] = session
             details["owner_pid"] = session.key[2][0]
             if registering:
                 response["registered"] = True
                 status = "registered"
                 return
-            ending = event == "SessionEnd"
             if ending:
                 session.closing = True
             stage = "execute_hook"
@@ -529,18 +505,17 @@ class Server:
                 self.requests.pop(task, None)
                 self.stop_if_unused()
 
-    async def serve(
-        self, directory: Path, parent: int, client: str, session_id: str
-    ) -> None:
+    async def serve(self, directory: Path, startup_deadline: float) -> None:
         log_task = asyncio.create_task(self.write_logs(directory.parent))
-        self.record("server_starting", client=client, session_id=session_id)
-        stage = "register_session"
+        self.record("server_starting")
+        stage = "listen"
         try:
-            await self.register(parent, client, session_id, True)
             loop = asyncio.get_running_loop()
+            self.startup_timer = loop.call_later(
+                max(0, startup_deadline - time.time()), self.stop, "startup_timeout"
+            )
             for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
                 loop.add_signal_handler(signum, self.stop, f"signal:{signum.name}")
-            stage = "listen"
             async with httpx.AsyncClient(follow_redirects=False) as api:
                 server = await asyncio.start_unix_server(
                     lambda reader, writer: self.handle(reader, writer, api),
@@ -558,11 +533,12 @@ class Server:
                     await self.stopped.wait()
                 finally:
                     server.close()
-                    await server.wait_closed()
-                    for task in tuple(self.requests):
-                        if not task.cancelling():
-                            task.cancel()
+                    if self.stop_reason != "configuration_changed":
+                        for task in tuple(self.requests):
+                            if not task.cancelling():
+                                task.cancel()
                     await asyncio.gather(*tuple(self.requests), return_exceptions=True)
+                    await server.wait_closed()
                     for owner in tuple(self.owners):
                         self.remove_watch(owner)
         except asyncio.CancelledError:
@@ -573,6 +549,8 @@ class Server:
             self.record("server_error", stage=stage, error_type=type(error).__name__)
             raise
         finally:
+            if self.startup_timer is not None:
+                self.startup_timer.cancel()
             self.record("server_stopped", reason=self.stop_reason)
             self.log_queue.put_nowait(None)
             await log_task
@@ -583,9 +561,7 @@ def main() -> int:
     parser.add_argument("--rules", type=Path, required=True)
     parser.add_argument("--debug-log", action="store_true")
     parser.add_argument("--directory", type=Path, required=True)
-    parser.add_argument("--parent", type=int, required=True)
-    parser.add_argument("--client", choices=("Codex", "Claude", "Pi"), required=True)
-    parser.add_argument("--session", required=True)
+    parser.add_argument("--startup-deadline", type=float, required=True)
     parser.add_argument("--configuration", required=True)
     args = parser.parse_args()
     os.umask(0o077)
@@ -602,16 +578,19 @@ def main() -> int:
         (args.directory / "server.sock").unlink(missing_ok=True)
         (args.directory / "server.pid").unlink(missing_ok=True)
         # Keep the lease until asyncio.run has also drained its worker threads.
-        with server_lifetime(args.directory.parent, args.configuration):
-            try:
-                asyncio.run(
-                    Server(args.rules, args.configuration, args.debug_log).serve(
-                        args.directory, args.parent, args.client, args.session
-                    )
+        reset_database(args.directory.parent, args.configuration, "startup")
+        try:
+            asyncio.run(
+                Server(args.rules, args.configuration, args.debug_log).serve(
+                    args.directory, args.startup_deadline
                 )
-            finally:
+            )
+        finally:
+            try:
                 (args.directory / "server.sock").unlink(missing_ok=True)
                 (args.directory / "server.pid").unlink(missing_ok=True)
+            finally:
+                reset_database(args.directory.parent, args.configuration, "shutdown")
     return 0
 
 

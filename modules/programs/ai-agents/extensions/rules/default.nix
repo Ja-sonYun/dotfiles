@@ -230,7 +230,6 @@ in
         command = "${package}/bin/ai-agent-rules-mcp";
         args = arguments;
         env_vars = [
-          "TYPESAFE_API_KEY"
           "XDG_CACHE_HOME"
         ];
       };
