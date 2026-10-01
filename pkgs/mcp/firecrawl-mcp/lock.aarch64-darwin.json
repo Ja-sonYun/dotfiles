@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-firecrawl-mcp",
-    "version": "3.26.0",
+    "version": "3.27.1",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-firecrawl-mcp",
-        "version": "3.26.0",
+        "version": "3.27.1",
         "dependencies": {
-          "firecrawl-mcp": "3.26.0"
+          "firecrawl-mcp": "3.27.1"
         }
       },
       "node_modules/@borewit/text-codec": {
@@ -23,9 +23,9 @@
         }
       },
       "node_modules/@hono/node-server": {
-        "version": "2.1.1",
-        "resolved": "https://registry.npmjs.org/@hono/node-server/-/node-server-2.1.1.tgz",
-        "integrity": "sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg==",
+        "version": "2.1.3",
+        "resolved": "https://registry.npmjs.org/@hono/node-server/-/node-server-2.1.3.tgz",
+        "integrity": "sha512-TA//nWMqPhbfdfneACk6t5a9eqbS9lABEPyKn0/xZTah3H3U2XaVg85rJFl0/Fyit0I552YDHgXGVSf3GwqbUw==",
         "license": "MIT",
         "engines": {
           "node": ">=20"
@@ -882,9 +882,9 @@
         }
       },
       "node_modules/firecrawl-mcp": {
-        "version": "3.26.0",
-        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.26.0.tgz",
-        "integrity": "sha512-aJPkPDSeQAIvA1RthFsLStXf5GHWE6hZa8MC36fk3JXC9etj0kUwBF1CFl3th0DmaFTZ0gZ9+eSvauyEDdPDwA==",
+        "version": "3.27.1",
+        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.27.1.tgz",
+        "integrity": "sha512-PSEFXLvDqwKUQnGamK2NaHuSD50FpFwysu6uVTPkI4ow+kSbuWGp+9Ag8ndYV5VSSyHs+0wUhcWSl5u9QSgyrQ==",
         "license": "MIT",
         "dependencies": {
           "dotenv": "^17.2.2",
@@ -1131,9 +1131,9 @@
         }
       },
       "node_modules/hono": {
-        "version": "4.13.10",
-        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.10.tgz",
-        "integrity": "sha512-dQuLsa5oO+47QVMVMaaD9cIv8ctmVtK1iRvwWngkfloFJMeFeuoUFDswIqZGxmGX3hrRzREgEArjkK9OgsQEhA==",
+        "version": "4.13.12",
+        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.12.tgz",
+        "integrity": "sha512-6E2QDAc9Ick9Sq77ZrGS/dk2WUYni91aufTw6LJKpV7w8kW5/GxVUc650FOADOmlwg3K+f7Pun6XlV+pYmW6gw==",
         "license": "MIT",
         "engines": {
           "node": ">=16.9.0"
@@ -2412,5 +2412,5 @@
       }
     }
   },
-  "invalidationHash": "32061767abb1c18d578948f3d4b36e1b7f1a6a58ba4db051c616cca0d7e1f763"
+  "invalidationHash": "c317c8dc2d79dcb223f5684ffce81761f1219bb250bdef23027c320d1478862d"
 }

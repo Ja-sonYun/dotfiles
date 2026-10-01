@@ -15,7 +15,7 @@ diff --git a/dist/modes/interactive/theme/theme.js b/dist/modes/interactive/them
 --- a/dist/modes/interactive/theme/theme.js
 +++ b/dist/modes/interactive/theme/theme.js
 @@ -282 +282,17 @@
--        return `${ansi}${text}\x1b[49m`; // Reset only background color
+-        return `${ansi}${text}\x1b[49m`;
 +        const barColors = {
 +            customMessageBg: "accent",
 +            toolPendingBg: "warning",
@@ -32,7 +32,7 @@ diff --git a/dist/modes/interactive/theme/theme.js b/dist/modes/interactive/them
 +            }
 +            return this.fg(barColor, "┃") + text.slice(0, -1);
 +        }
-+        return `${ansi}${text}\x1b[49m`; // Reset only background color
++        return `${ansi}${text}\x1b[49m`;
 diff --git a/dist/modes/interactive/components/assistant-message.js b/dist/modes/interactive/components/assistant-message.js
 --- a/dist/modes/interactive/components/assistant-message.js
 +++ b/dist/modes/interactive/components/assistant-message.js

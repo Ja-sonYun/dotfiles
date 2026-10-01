@@ -2,7 +2,7 @@
   "registry": "pypi",
   "name": "awslabs.aws-documentation-mcp-server",
   "versions": {
-    "aarch64-darwin": "1.2.1",
+    "aarch64-darwin": "1.2.2",
     "x86_64-linux": "1.2.1"
   }
 }

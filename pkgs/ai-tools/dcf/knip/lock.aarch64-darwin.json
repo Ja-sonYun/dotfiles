@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-knip",
-    "version": "6.38.0",
+    "version": "6.39.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-knip",
-        "version": "6.38.0",
+        "version": "6.39.0",
         "dependencies": {
-          "knip": "6.38.0"
+          "knip": "6.39.0"
         }
       },
       "node_modules/@emnapi/core": {
@@ -553,9 +553,9 @@
         }
       },
       "node_modules/knip": {
-        "version": "6.38.0",
-        "resolved": "https://registry.npmjs.org/knip/-/knip-6.38.0.tgz",
-        "integrity": "sha512-umytiMCaZf02MV9SOO1FEDgbDf6h20VZk3ruJE0kh52kkGjYZFRUAXHJWYoLhvhoHGINO/7GXVJmQ2vxTBvl6A==",
+        "version": "6.39.0",
+        "resolved": "https://registry.npmjs.org/knip/-/knip-6.39.0.tgz",
+        "integrity": "sha512-Y7g6Ve1ATMox1u1v+gx3z9LTlvzVLTJISm/LVn9TgBU4qc7OoC63AWGO8qCFPVDDdaqlYdXkDDvvO1METBfTRw==",
         "funding": [
           {
             "type": "github",
@@ -731,9 +731,9 @@
         "optional": true
       },
       "node_modules/unbash": {
-        "version": "4.0.11",
-        "resolved": "https://registry.npmjs.org/unbash/-/unbash-4.0.11.tgz",
-        "integrity": "sha512-FoSOKV7NEofQSkAefMVHam4ZPKYMxjAydxiV72UFEDNV/YofxjGfiZ2A9pZjdL/lRJzTjcu4PABo1JYJX8N5iQ==",
+        "version": "4.0.12",
+        "resolved": "https://registry.npmjs.org/unbash/-/unbash-4.0.12.tgz",
+        "integrity": "sha512-PnKvRX+Fbxl/usVlTr/31tXIOVAH+8OdC9qaxUQcvurwEnoc3Vk/ipi2Ce8IjMxzK9byfSGdsUBjqqJGc1o5lw==",
         "license": "ISC",
         "engines": {
           "node": ">=14"
@@ -774,5 +774,5 @@
       }
     }
   },
-  "invalidationHash": "4a70d66f98a4bacfe72126e8f846ba04c4a3ac9a6f7d893b2b931b0c01243918"
+  "invalidationHash": "406c01b2c5e6962ad34255f1647b7d27b6bb621a399c9c2a4546915ea9c9facf"
 }
