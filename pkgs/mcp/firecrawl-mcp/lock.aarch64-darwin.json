@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-firecrawl-mcp",
-    "version": "3.27.1",
+    "version": "3.27.2",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-firecrawl-mcp",
-        "version": "3.27.1",
+        "version": "3.27.2",
         "dependencies": {
-          "firecrawl-mcp": "3.27.1"
+          "firecrawl-mcp": "3.27.2"
         }
       },
       "node_modules/@borewit/text-codec": {
@@ -50,6 +50,15 @@
         },
         "engines": {
           "node": ">=20"
+        }
+      },
+      "node_modules/@modelcontextprotocol/client/node_modules/jose": {
+        "version": "6.2.12",
+        "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.12.tgz",
+        "integrity": "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==",
+        "license": "MIT",
+        "funding": {
+          "url": "https://github.com/sponsors/panva"
         }
       },
       "node_modules/@modelcontextprotocol/core": {
@@ -102,6 +111,15 @@
           "zod": {
             "optional": false
           }
+        }
+      },
+      "node_modules/@modelcontextprotocol/sdk/node_modules/jose": {
+        "version": "6.2.12",
+        "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.12.tgz",
+        "integrity": "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==",
+        "license": "MIT",
+        "funding": {
+          "url": "https://github.com/sponsors/panva"
         }
       },
       "node_modules/@modelcontextprotocol/server": {
@@ -882,14 +900,21 @@
         }
       },
       "node_modules/firecrawl-mcp": {
-        "version": "3.27.1",
-        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.27.1.tgz",
-        "integrity": "sha512-PSEFXLvDqwKUQnGamK2NaHuSD50FpFwysu6uVTPkI4ow+kSbuWGp+9Ag8ndYV5VSSyHs+0wUhcWSl5u9QSgyrQ==",
+        "version": "3.27.2",
+        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.27.2.tgz",
+        "integrity": "sha512-VmmWFz6vgEfacntG6bJzxU7LqpCgthWS2XtcNSeOai8+MLJ5kjS82XEtrWkS8mwQFo4fRxf6RSntjeb5x7nyjQ==",
         "license": "MIT",
         "dependencies": {
+          "@modelcontextprotocol/sdk": "^1.29.0",
           "dotenv": "^17.2.2",
           "fastmcp": "4.3.2",
           "firecrawl": "4.42.0",
+          "fuse.js": "^7.1.0",
+          "hono": "^4.12.27",
+          "mcp-proxy": "^6.5.1",
+          "undici": "^7.28.0",
+          "uri-templates": "^0.2.0",
+          "xsschema": "^0.4.4",
           "zod": "^4.2.1"
         },
         "bin": {
@@ -1346,10 +1371,12 @@
         "license": "ISC"
       },
       "node_modules/jose": {
-        "version": "6.2.12",
-        "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.12.tgz",
-        "integrity": "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==",
+        "version": "5.10.0",
+        "resolved": "https://registry.npmjs.org/jose/-/jose-5.10.0.tgz",
+        "integrity": "sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==",
         "license": "MIT",
+        "optional": true,
+        "peer": true,
         "funding": {
           "url": "https://github.com/sponsors/panva"
         }
@@ -2412,5 +2439,5 @@
       }
     }
   },
-  "invalidationHash": "c317c8dc2d79dcb223f5684ffce81761f1219bb250bdef23027c320d1478862d"
+  "invalidationHash": "899ca8e5281622144cd37ecd040547b05d85a365d4452e9a18bb330a3a1f1cba"
 }

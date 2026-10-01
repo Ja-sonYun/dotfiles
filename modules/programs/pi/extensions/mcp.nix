@@ -32,7 +32,7 @@ in
 
   config = lib.mkIf (cfg.enable && cfg.mcp.servers != { }) {
     programs.pi.extensions.mcp-adapter = "${cfg.mcp.package}/extension";
-    home.file."${agentDir}/mcp.json".source = jsonFormat.generate "pi-mcp.json" {
+    home.file."${agentDir}/mcp-adapter.json".source = jsonFormat.generate "pi-mcp-adapter.json" {
       inherit (cfg.mcp) settings;
       mcpServers = cfg.mcp.servers;
     };
