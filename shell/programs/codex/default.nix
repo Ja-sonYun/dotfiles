@@ -49,7 +49,7 @@
 
       file_opener = "none";
 
-      # service_tier = "fast";
+      service_tier = "fast";
 
       features = {
         unified_exec = true;

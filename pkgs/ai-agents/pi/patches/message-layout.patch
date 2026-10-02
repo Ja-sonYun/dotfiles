@@ -1,7 +1,7 @@
 diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
 --- a/dist/modes/interactive/interactive-mode.js
 +++ b/dist/modes/interactive/interactive-mode.js
-@@ -2892,8 +2892,6 @@
+@@ -3120,8 +3120,6 @@
                  const textContent = this.getUserMessageText(message);
                  if (textContent) {
 -                    if (this.chatContainer.children.length > 0) {
@@ -14,7 +14,7 @@ diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive
 diff --git a/dist/modes/interactive/theme/theme.js b/dist/modes/interactive/theme/theme.js
 --- a/dist/modes/interactive/theme/theme.js
 +++ b/dist/modes/interactive/theme/theme.js
-@@ -282 +282,17 @@
+@@ -209 +209,17 @@
 -        return `${ansi}${text}\x1b[49m`;
 +        const barColors = {
 +            customMessageBg: "accent",
@@ -36,7 +36,7 @@ diff --git a/dist/modes/interactive/theme/theme.js b/dist/modes/interactive/them
 diff --git a/dist/modes/interactive/components/assistant-message.js b/dist/modes/interactive/components/assistant-message.js
 --- a/dist/modes/interactive/components/assistant-message.js
 +++ b/dist/modes/interactive/components/assistant-message.js
-@@ -56,7 +56,7 @@
+@@ -58,7 +58,7 @@
          }
      }
      render(width) {
@@ -48,12 +48,12 @@ diff --git a/dist/modes/interactive/components/assistant-message.js b/dist/modes
 diff --git a/dist/modes/interactive/components/user-message.js b/dist/modes/interactive/components/user-message.js
 --- a/dist/modes/interactive/components/user-message.js
 +++ b/dist/modes/interactive/components/user-message.js
-@@ -26,7 +26,7 @@
-     }
-     rebuild() {
-         this.clear();
--        const contentBox = new Box(this.outputPad, 1, (content) => theme.bg("userMessageBg", content));
-+        const contentBox = new Box(this.outputPad, 0, (content) => theme.bg("userMessageBg", content));
-         contentBox.addChild(new Markdown(this.text, 0, 0, this.markdownTheme, {
+@@ -31,7 +31,7 @@
+-        this.addChild(new Markdown(this.text, this.outputPad, 1, this.markdownTheme, {
++        this.addChild(new Markdown(this.text, this.outputPad, 0, this.markdownTheme, {
              color: (content) => theme.fg("userMessageText", content),
+             bgColor: (content) => theme.bg("userMessageBg", content),
          }, {
+             preserveOrderedListMarkers: true,
+             preserveBackslashEscapes: true,
+             transform: createMarkdownTransform("user", false, this.markdownTransformers),

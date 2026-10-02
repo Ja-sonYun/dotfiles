@@ -1,5 +1,6 @@
 {
   hasTag,
+  hostname,
   lib,
   ...
 }:
@@ -61,6 +62,9 @@ let
       "protonvpn"
       "autodesk-fusion"
       "macfuse"
+    ]
+    ++ lib.optionals (hostname == "Jays-MacBook-Pro-Server") [
+      "jump-desktop-connect"
     ]
     ++ lib.optionals (hasTag "gui" && hasTag "ai") [
       "chatgpt"

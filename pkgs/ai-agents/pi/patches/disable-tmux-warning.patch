@@ -1,7 +1,7 @@
 diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
 --- a/dist/modes/interactive/interactive-mode.js
 +++ b/dist/modes/interactive/interactive-mode.js
-@@ -825,12 +825,6 @@
+@@ -847,12 +847,6 @@
                  this.updateTerminalTitle();
              }
          });

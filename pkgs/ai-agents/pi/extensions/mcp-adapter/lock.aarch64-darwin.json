@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-mcp-adapter",
-    "version": "4.0.0",
+    "version": "5.0.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-mcp-adapter",
-        "version": "4.0.0",
+        "version": "5.0.0",
         "dependencies": {
-          "pi-mcp-adapter": "4.0.0"
+          "pi-mcp-adapter": "5.0.0"
         }
       },
       "node_modules/@modelcontextprotocol/client": {
@@ -493,9 +493,9 @@
         }
       },
       "node_modules/pi-mcp-adapter": {
-        "version": "4.0.0",
-        "resolved": "https://registry.npmjs.org/pi-mcp-adapter/-/pi-mcp-adapter-4.0.0.tgz",
-        "integrity": "sha512-R01UeUDmlrNCSbWQRUim3XR1oCWJQf7UnFCjFUS70z0V9qBq4llwPW0D+iztp53EBQQ6dja1ISpaK17yUGehEQ==",
+        "version": "5.0.0",
+        "resolved": "https://registry.npmjs.org/pi-mcp-adapter/-/pi-mcp-adapter-5.0.0.tgz",
+        "integrity": "sha512-/3vWQLSXwud+VX1vV/dFfKpp6I40guCeqiaP/XMdXIyon+frIm+sPXGArLlmvY5PIwL2ChJ3AhELIusroGA8Ng==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/client": "2.0.0",
@@ -756,5 +756,5 @@
       }
     }
   },
-  "invalidationHash": "afe754a63630b888168d0100d745875453482dbbc50add02fec69c293eab5529"
+  "invalidationHash": "3f9d9791e753768dcde842768e6f834b986aa1401cf57184cfbfdeec1f79a8ad"
 }
