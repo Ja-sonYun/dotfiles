@@ -15,11 +15,8 @@ let
     window_opacity = "off";
     window_shadow = "float";
 
-    window_border = "off";
     insert_feedback_color = "0xE02d74da";
 
-    active_window_opacity = "0.0";
-    normal_window_opacity = "0.0";
     split_ratio = "0.50";
 
     auto_balance = "off";

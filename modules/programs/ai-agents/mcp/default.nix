@@ -76,7 +76,7 @@ let
       command = pkgs.writeShellScript "mcp-${name}-env-wrapper" ''
         ${lib.concatStringsSep "\n" (
           lib.mapAttrsToList (variable: value: ''
-            until ${variable}="$(${pkgs.coreutils}/bin/cat -- ${lib.escapeShellArg value._secret} 2>/dev/null)" \
+            until ${variable}="$(${pkgs.coreutils}/bin/cat -- "${value._secret}" 2>/dev/null)" \
               && [ -n "${"$" + variable}" ]; do
               ${pkgs.coreutils}/bin/sleep 1
             done
