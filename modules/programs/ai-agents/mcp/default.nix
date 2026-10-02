@@ -74,7 +74,15 @@ let
     server
     // lib.optionalAttrs (secrets != { } && (server.command or null) != null) {
       command = pkgs.writeShellScript "mcp-${name}-env-wrapper" ''
-        ${pkgs.tool.shell.util.shellExports secrets}
+        ${lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (variable: value: ''
+            until ${variable}="$(${pkgs.coreutils}/bin/cat -- ${lib.escapeShellArg value._secret} 2>/dev/null)" \
+              && [ -n "${"$" + variable}" ]; do
+              ${pkgs.coreutils}/bin/sleep 1
+            done
+            export ${variable}
+          '') secrets
+        )}
         exec ${lib.escapeShellArgs ([ server.command ] ++ (server.args or [ ]))} "$@"
       '';
       args = [ ];
