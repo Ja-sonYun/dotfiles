@@ -1,22 +1,22 @@
 {
   "package-lock": {
     "name": "dotfiles-claude-code",
-    "version": "2.1.287",
+    "version": "2.1.289",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-claude-code",
-        "version": "2.1.287",
+        "version": "2.1.289",
         "dependencies": {
-          "@anthropic-ai/claude-code": "2.1.287",
-          "@anthropic-ai/claude-code-darwin-arm64": "2.1.287"
+          "@anthropic-ai/claude-code": "2.1.289",
+          "@anthropic-ai/claude-code-darwin-arm64": "2.1.289"
         }
       },
       "node_modules/@anthropic-ai/claude-code": {
-        "version": "2.1.287",
-        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-2.1.287.tgz",
-        "integrity": "sha512-V5WRpA+p41siSlf/Ujxjm//RtYvySxH/p9/rh6zRxNoHeBzqTgSDw3nP8PgtACM/KcVx/g5TFUNdVkq51dfg0g==",
+        "version": "2.1.289",
+        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-2.1.289.tgz",
+        "integrity": "sha512-RQWjAlalf9aomgI3JaXDCdFPvmNVnRdjwMtYk5L+Lw1NWxCxbhY5T9F+w1xukqvJh/I2rR2+3hICZxhk0al1nA==",
         "hasInstallScript": true,
         "license": "SEE LICENSE IN README.md",
         "bin": {
@@ -26,82 +26,82 @@
           "node": ">=22.0.0"
         },
         "optionalDependencies": {
-          "@anthropic-ai/claude-code-darwin-arm64": "2.1.287",
-          "@anthropic-ai/claude-code-darwin-x64": "2.1.287",
-          "@anthropic-ai/claude-code-linux-arm64": "2.1.287",
-          "@anthropic-ai/claude-code-linux-arm64-musl": "2.1.287",
-          "@anthropic-ai/claude-code-linux-x64": "2.1.287",
-          "@anthropic-ai/claude-code-linux-x64-musl": "2.1.287",
-          "@anthropic-ai/claude-code-win32-arm64": "2.1.287",
-          "@anthropic-ai/claude-code-win32-x64": "2.1.287"
+          "@anthropic-ai/claude-code-darwin-arm64": "2.1.289",
+          "@anthropic-ai/claude-code-darwin-x64": "2.1.289",
+          "@anthropic-ai/claude-code-linux-arm64": "2.1.289",
+          "@anthropic-ai/claude-code-linux-arm64-musl": "2.1.289",
+          "@anthropic-ai/claude-code-linux-x64": "2.1.289",
+          "@anthropic-ai/claude-code-linux-x64-musl": "2.1.289",
+          "@anthropic-ai/claude-code-win32-arm64": "2.1.289",
+          "@anthropic-ai/claude-code-win32-x64": "2.1.289"
         }
       },
       "node_modules/@anthropic-ai/claude-code-darwin-arm64": {
-        "version": "2.1.287",
-        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-darwin-arm64/-/claude-code-darwin-arm64-2.1.287.tgz",
-        "integrity": "sha512-ZQLmkEpiWd8sxUYRpQr1yZ39DyVBhrl8MUtbxe33E+z4jFPtUy+CrJXmeRRyyM+FEfvGe/2ab+E59GiSKkprRw==",
+        "version": "2.1.289",
+        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-darwin-arm64/-/claude-code-darwin-arm64-2.1.289.tgz",
+        "integrity": "sha512-jhZQ4BdBt2E9oiHdgpwu/HIgRDlyUazDfXIbIerUFDAPcb6c7Tl1QtMvLz3KxXkZXigYv0q4U6xSHHd78TQdHA==",
         "cpu": ["arm64"],
         "license": "SEE LICENSE IN LICENSE.md",
         "os": ["darwin"]
       },
       "node_modules/@anthropic-ai/claude-code-darwin-x64": {
-        "version": "2.1.287",
-        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-darwin-x64/-/claude-code-darwin-x64-2.1.287.tgz",
-        "integrity": "sha512-B5TXBZxGKqglEj5DUp0EjZRBypee4hLSfgkTJIPHdLNB4PAtt6hBkNZVxytny0jUjk0ReWUNtVSb0PTldKRW7Q==",
+        "version": "2.1.289",
+        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-darwin-x64/-/claude-code-darwin-x64-2.1.289.tgz",
+        "integrity": "sha512-KErKulmExUbnAqXDz75FGfph+fslAHL0UqIW9rYlGwNFlPJAP5UTXIKcKp6Jh1bgVQjdJJEqg79kUjuriVUDDw==",
         "cpu": ["x64"],
         "license": "SEE LICENSE IN LICENSE.md",
         "optional": true,
         "os": ["darwin"]
       },
       "node_modules/@anthropic-ai/claude-code-linux-arm64": {
-        "version": "2.1.287",
-        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-arm64/-/claude-code-linux-arm64-2.1.287.tgz",
-        "integrity": "sha512-MU3ReK1kjstDmjEOzhFZaphh2AVUKnPaik6lOV0WLs3/mOM7mE/mqkdcQ/Sv0KwHH5MnOhSkIjCEl0/8tr+vRg==",
+        "version": "2.1.289",
+        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-arm64/-/claude-code-linux-arm64-2.1.289.tgz",
+        "integrity": "sha512-kzZKgmlPjtxeCl3jR4eO+BVwy4hJq/pApB2vWFgrjAGR1jOphhS6GJaU1XjZYGbJITSoeaWxHnD1xQ2EWVZLHw==",
         "cpu": ["arm64"],
         "license": "SEE LICENSE IN LICENSE.md",
         "optional": true,
         "os": ["linux"]
       },
       "node_modules/@anthropic-ai/claude-code-linux-arm64-musl": {
-        "version": "2.1.287",
-        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-arm64-musl/-/claude-code-linux-arm64-musl-2.1.287.tgz",
-        "integrity": "sha512-sdFvq6Aasxv1BzkqkUVPZyGaKxALdTmo0B03K7zsB7Lt8RDzOn/yQj6vPluS/464XkLyqlesTsziYtkdOpjocw==",
+        "version": "2.1.289",
+        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-arm64-musl/-/claude-code-linux-arm64-musl-2.1.289.tgz",
+        "integrity": "sha512-PGtu78PDsTKoPrbpbsM6JiG0ksdiQBFGNaMAS8h/FUUwdhxsL6D35UHDH0sj4izmcYFMV/akwHI2emiZiBJk/w==",
         "cpu": ["arm64"],
         "license": "SEE LICENSE IN LICENSE.md",
         "optional": true,
         "os": ["linux"]
       },
       "node_modules/@anthropic-ai/claude-code-linux-x64": {
-        "version": "2.1.287",
-        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/-/claude-code-linux-x64-2.1.287.tgz",
-        "integrity": "sha512-Q31ekN28viVjgfDuZKXUR5vxIBgUYoLGe+cRmjx/f01omqFDMi6IrgmcK5pWMnRbu/cjsTA/zO+bVES5oY3XUg==",
+        "version": "2.1.289",
+        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/-/claude-code-linux-x64-2.1.289.tgz",
+        "integrity": "sha512-I23SaSYE8vSwFbJ+Tc0mRlzvJmRQNaiyBUXK/K5R6BVr2lOoCdMI2SJR4N6xiVYy6yyIt39JNiyvPHoiOymyyw==",
         "cpu": ["x64"],
         "license": "SEE LICENSE IN LICENSE.md",
         "optional": true,
         "os": ["linux"]
       },
       "node_modules/@anthropic-ai/claude-code-linux-x64-musl": {
-        "version": "2.1.287",
-        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64-musl/-/claude-code-linux-x64-musl-2.1.287.tgz",
-        "integrity": "sha512-gBOT4E6fRaEJ+PyP/KU66dIn+aXoZ/+jMkFLJFNcsEppIGH1R9n90rV7/lHZr43b/0ngHPc4n+JRrVKz/AX6/Q==",
+        "version": "2.1.289",
+        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64-musl/-/claude-code-linux-x64-musl-2.1.289.tgz",
+        "integrity": "sha512-6Bs+1r/MePebevlvWAFia4VTUhT+SeM5kFjhzqYtjp/NOKnZep3xZG53oYkT659D7Lmh9P+hnThTDLaUjUXOIw==",
         "cpu": ["x64"],
         "license": "SEE LICENSE IN LICENSE.md",
         "optional": true,
         "os": ["linux"]
       },
       "node_modules/@anthropic-ai/claude-code-win32-arm64": {
-        "version": "2.1.287",
-        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-win32-arm64/-/claude-code-win32-arm64-2.1.287.tgz",
-        "integrity": "sha512-p0w81huWrtOHqn7AU2VOY2G9AV7hZLl1KcbDPPrD3edvjU3wPSvoCUVeJp1qDs/7EHySa8H5UyQshgCTeuwrlg==",
+        "version": "2.1.289",
+        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-win32-arm64/-/claude-code-win32-arm64-2.1.289.tgz",
+        "integrity": "sha512-dMKH0j/Zm2q5L71rVXx4NaWWlK5iUOCmN12XgwrIx7EjYhvpgVDLdNHm9yohxb3I0Cb4iaujR/EBb75FuLbIGQ==",
         "cpu": ["arm64"],
         "license": "SEE LICENSE IN LICENSE.md",
         "optional": true,
         "os": ["win32"]
       },
       "node_modules/@anthropic-ai/claude-code-win32-x64": {
-        "version": "2.1.287",
-        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-win32-x64/-/claude-code-win32-x64-2.1.287.tgz",
-        "integrity": "sha512-PWFxa2+cd8sIco+W3qDR85GhumGzNNdwgqHkz2u5jNhvoH8i4loBvOMEyrtZo3bYVwNeEt905GImhchv2duQGg==",
+        "version": "2.1.289",
+        "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-code-win32-x64/-/claude-code-win32-x64-2.1.289.tgz",
+        "integrity": "sha512-t6PwcRoMIeuNPbnkf9bFxdUv3xBgUSnk1yRU3r8b5CjovwzV1zUY/talE4rgGAvcTwmndirtWOny/3LPf6Ju+w==",
         "cpu": ["x64"],
         "license": "SEE LICENSE IN LICENSE.md",
         "optional": true,
@@ -109,5 +109,5 @@
       }
     }
   },
-  "invalidationHash": "8af58edef7f89fd6e08944f45b1321286238bceb1601eb25871044822928326d"
+  "invalidationHash": "b68432efde5c849ef888af3911b8015b8eaf3e53c5fee5d2d010a1a63317b202"
 }

@@ -2,7 +2,7 @@
   "registry": "npm",
   "name": "@earendil-works/pi-coding-agent",
   "versions": {
-    "aarch64-darwin": "1.0.0",
+    "aarch64-darwin": "1.0.2",
     "x86_64-linux": "0.86.1"
   }
 }
