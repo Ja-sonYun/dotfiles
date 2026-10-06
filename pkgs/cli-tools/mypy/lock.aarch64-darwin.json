@@ -1,0 +1,65 @@
+{
+  "fetchPipMetadata": {
+    "sources": {
+      "ast-serialize": {
+        "is_direct": false,
+        "sha256": "8a32f184ce3e4b1d0b06d642a1243281cf55b99e0323680b1b8f904029fd7700",
+        "type": "url",
+        "url": "https://files.pythonhosted.org/packages/1b/d7/c56955934a431a0fa3e4e9aa7af4a53ceab2a61241005427545208945eb4/ast_serialize-0.12.1-cp39-abi3-macosx_11_0_arm64.whl",
+        "version": "0.12.1"
+      },
+      "librt": {
+        "is_direct": false,
+        "sha256": "5bcc2c4726ced915b00de0c9856a4eeabfb3fddb93e10e0b8f735b7709358b6d",
+        "type": "url",
+        "url": "https://files.pythonhosted.org/packages/fd/0c/ab8ed3dab0085931aec4a792c7eaac8dc6c5ff4691fda3a5360d9d8a9cd2/librt-0.16.0-cp312-cp312-macosx_11_0_arm64.whl",
+        "version": "0.16.0"
+      },
+      "mypy": {
+        "is_direct": false,
+        "sha256": "e05ff2925d8b37ad26c80c1b9dc43ae5d455da2df1e23c24c095a6425917c57e",
+        "type": "url",
+        "url": "https://files.pythonhosted.org/packages/68/ed/e5d7cf4017e74a1c1e1c4058ce8f614fc1e3e7606564f47166e22bfc9f95/mypy-2.4.0-cp312-cp312-macosx_11_0_arm64.whl",
+        "version": "2.4.0"
+      },
+      "mypy-extensions": {
+        "is_direct": false,
+        "sha256": "1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505",
+        "type": "url",
+        "url": "https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl",
+        "version": "1.1.0"
+      },
+      "pathspec": {
+        "is_direct": false,
+        "sha256": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
+        "type": "url",
+        "url": "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl",
+        "version": "1.1.1"
+      },
+      "typing-extensions": {
+        "is_direct": false,
+        "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+        "type": "url",
+        "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+        "version": "4.16.0"
+      }
+    },
+    "targets": {
+      "default": {
+        "ast-serialize": [],
+        "librt": [],
+        "mypy": [
+          "ast-serialize",
+          "librt",
+          "mypy-extensions",
+          "pathspec",
+          "typing-extensions"
+        ],
+        "mypy-extensions": [],
+        "pathspec": [],
+        "typing-extensions": []
+      }
+    }
+  },
+  "invalidationHash": "6f467c205a9127af875ab8f77c4a52661e1d4cd47ee5023dffab023307b441b5"
+}

@@ -17,8 +17,11 @@
     shell-assistant = final.callPackage ../pkgs/ai-tools/shell-assistant { };
     whisper-local = final.callPackage ../pkgs/ai-tools/whisper-local { };
 
+    black = final.callPackage ../pkgs/cli-tools/black { };
     git-extend = final.callPackage ../pkgs/cli-tools/git-extend { };
+    isort = final.callPackage ../pkgs/cli-tools/isort { };
     mermaid-ascii = final.callPackage ../pkgs/cli-tools/mermaid-ascii { };
+    mypy = final.callPackage ../pkgs/cli-tools/mypy { };
     state-get = final.callPackage ../pkgs/cli-tools/state-get { };
     templates-cli = final.callPackage ../pkgs/cli-tools/templates-cli { };
     tmux-menu = final.callPackage ../pkgs/cli-tools/tmux-menu { };
@@ -43,6 +46,7 @@
     exa-mcp-server = final.callPackage ../pkgs/mcp/exa-mcp-server { };
     firecrawl-mcp = final.callPackage ../pkgs/mcp/firecrawl-mcp { };
     freecad-mcp = final.callPackage ../pkgs/mcp/freecad-mcp { };
+    mcp-nixos = final.callPackage ../pkgs/mcp/mcp-nixos { };
     mcp-remote = final.callPackage ../pkgs/mcp/mcp-remote { };
     n8n-mcp = final.callPackage ../pkgs/mcp/n8n-mcp { };
 

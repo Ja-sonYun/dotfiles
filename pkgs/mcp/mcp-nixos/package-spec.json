@@ -1,0 +1,7 @@
+{
+  "registry": "pypi",
+  "name": "mcp-nixos",
+  "versions": {
+    "aarch64-darwin": "3.1.0"
+  }
+}

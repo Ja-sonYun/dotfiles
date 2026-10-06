@@ -1,0 +1,7 @@
+{
+  "registry": "pypi",
+  "name": "isort",
+  "versions": {
+    "aarch64-darwin": "9.0.2"
+  }
+}

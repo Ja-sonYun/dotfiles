@@ -154,11 +154,8 @@ let
     with pkgs;
     [
       python312
-      python312Packages.black
-      # isort tests pull in flaky SciPy tests through pylama.
-      (python312Packages.isort.overridePythonAttrs (_: {
-        doCheck = false;
-      }))
+      black
+      isort
       pyright
     ]
   );

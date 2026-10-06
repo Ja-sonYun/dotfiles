@@ -1,0 +1,27 @@
+{
+  "fetchPipMetadata": {
+    "sources": {
+      "isort": {
+        "is_direct": false,
+        "sha256": "a05dc63cb6ae2a8e62ec4184153f424b1650593e00a24e6138184c46193891e9",
+        "type": "url",
+        "url": "https://files.pythonhosted.org/packages/41/c3/3cd3e0f66af21e1bf917f50b45d3389de3d9a25661f2e7f74e51c7fb37a8/isort-9.0.2-cp312-cp312-macosx_11_0_arm64.whl",
+        "version": "9.0.2"
+      },
+      "mypy-extensions": {
+        "is_direct": false,
+        "sha256": "1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505",
+        "type": "url",
+        "url": "https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl",
+        "version": "1.1.0"
+      }
+    },
+    "targets": {
+      "default": {
+        "isort": ["mypy-extensions"],
+        "mypy-extensions": []
+      }
+    }
+  },
+  "invalidationHash": "ddaf62a81450bbb8c1ea5a03e33972cbb30c2c161065e934b4565eac07707226"
+}

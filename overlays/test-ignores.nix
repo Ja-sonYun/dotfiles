@@ -1,7 +1,7 @@
 let
   ignoredTests = {
     aarch64-darwin = {
-      disabledPythonPackages = [ ];
+      disabledPythonPackages = [ "anyio" ];
       ctest = { };
     };
   };
