@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-exa-mcp-server",
-    "version": "3.4.1",
+    "version": "3.4.2",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-exa-mcp-server",
-        "version": "3.4.1",
+        "version": "3.4.2",
         "dependencies": {
-          "exa-mcp-server": "3.4.1"
+          "exa-mcp-server": "3.4.2"
         }
       },
       "node_modules/@hono/node-server": {
@@ -566,9 +566,9 @@
         }
       },
       "node_modules/exa-js": {
-        "version": "2.23.0",
-        "resolved": "https://registry.npmjs.org/exa-js/-/exa-js-2.23.0.tgz",
-        "integrity": "sha512-KI+dFWS4WzyUsrWw53FA3UsAC5kYj10tY0MG9F7LRkvefq1TxJ8QWGHQ4MMp/ZvkzwzOD2eFg1uk9L+sfYrLog==",
+        "version": "2.25.0",
+        "resolved": "https://registry.npmjs.org/exa-js/-/exa-js-2.25.0.tgz",
+        "integrity": "sha512-L/13R1e9o2taK6RnvThqEfvLttW2eb8+8f0I1bm3xKqDOrUdksg0SC49ebR9LLAwh8yY/fVPes+wpdM8WiWQ3g==",
         "license": "MIT",
         "dependencies": {
           "cross-fetch": "~4.1.0",
@@ -591,9 +591,9 @@
         }
       },
       "node_modules/exa-mcp-server": {
-        "version": "3.4.1",
-        "resolved": "https://registry.npmjs.org/exa-mcp-server/-/exa-mcp-server-3.4.1.tgz",
-        "integrity": "sha512-X6g4J9LXLJZ0uK52G8KE/KCaxpaD+wkEHzjkoDTYkC+afxfm5xqWgih3i0hgTfyufl6PggkLeR0L6rDAxW6ETg==",
+        "version": "3.4.2",
+        "resolved": "https://registry.npmjs.org/exa-mcp-server/-/exa-mcp-server-3.4.2.tgz",
+        "integrity": "sha512-2pqkOuXnABXrwVkB6VyMYA9ywr1aqjBGKlLtcgTBMkWtIn74yY+pMPn8Km2SAGfLeENfWaIHv1L7/kF0b+E5BQ==",
         "dependencies": {
           "@modelcontextprotocol/sdk": "^1.12.1",
           "agnost": "^0.2.0",
@@ -653,9 +653,9 @@
         }
       },
       "node_modules/express-rate-limit": {
-        "version": "8.7.0",
-        "resolved": "https://registry.npmjs.org/express-rate-limit/-/express-rate-limit-8.7.0.tgz",
-        "integrity": "sha512-hOwV7WOxXfjRpAM1DSJWZDXx3GhplwD8IfwuwvogD8i1Qnkgosw/H45s4ZnFAUHDAhPjlY9hLBvJhKmGMyY26g==",
+        "version": "8.7.1",
+        "resolved": "https://registry.npmjs.org/express-rate-limit/-/express-rate-limit-8.7.1.tgz",
+        "integrity": "sha512-2FXbqkygil3mZiXzEtM0IjE/UBmBNot0J1GEVrJT4JbrvwOSoEtqtO+wHbiMQELWe1eNvHoYRg2dkjOid+6JkA==",
         "license": "MIT",
         "dependencies": {
           "debug": "^4.4.3",
@@ -715,9 +715,9 @@
         }
       },
       "node_modules/follow-redirects": {
-        "version": "1.16.0",
-        "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.0.tgz",
-        "integrity": "sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==",
+        "version": "1.16.1",
+        "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.1.tgz",
+        "integrity": "sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==",
         "funding": [
           {
             "type": "individual",
@@ -896,9 +896,9 @@
         }
       },
       "node_modules/hono": {
-        "version": "4.13.9",
-        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.9.tgz",
-        "integrity": "sha512-7dMkQmZoC4E6F7AtaQSPhlWAdnBti+j7rreMZl8QB4jFiEhP9TWbGWUMi8WYzBCgmgulxuvLQupKqo+Co6Omyg==",
+        "version": "4.13.13",
+        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.13.tgz",
+        "integrity": "sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==",
         "license": "MIT",
         "engines": {
           "node": ">=16.9.0"
@@ -960,9 +960,9 @@
         "license": "ISC"
       },
       "node_modules/ip-address": {
-        "version": "10.7.2",
-        "resolved": "https://registry.npmjs.org/ip-address/-/ip-address-10.7.2.tgz",
-        "integrity": "sha512-7H/2gFSIitxc0hG3nOI1glS8QLo/EHBFFLk8vEUjXY/xu0AdL8jZ9U1IzO2PUm0d2D/ofQcAifb0g6OBkt8U7w==",
+        "version": "10.7.3",
+        "resolved": "https://registry.npmjs.org/ip-address/-/ip-address-10.7.3.tgz",
+        "integrity": "sha512-A1kdq/tSb5QjvKvAMgIoEvDBIgL7qaqVP/jkvSwYYRZ9iEzvPpopxp2wQfu3SuZRHtpHNxMn8Fs0bS+gf5Xmwg==",
         "license": "MIT",
         "engines": {
           "node": ">= 12"
@@ -1661,5 +1661,5 @@
       }
     }
   },
-  "invalidationHash": "5633e2a59febb5dbb5a600f6838632cf81ddf3d7c3c9e7da26464c4e972b66a2"
+  "invalidationHash": "df22e138b3d78afbb03c1ecdba30d7dc1832e9eed6306247d1a75339eff8ae9a"
 }

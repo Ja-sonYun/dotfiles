@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-knip",
-    "version": "6.39.0",
+    "version": "6.40.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-knip",
-        "version": "6.39.0",
+        "version": "6.40.0",
         "dependencies": {
-          "knip": "6.39.0"
+          "knip": "6.40.0"
         }
       },
       "node_modules/@emnapi/core": {
@@ -44,9 +44,9 @@
         }
       },
       "node_modules/@napi-rs/wasm-runtime": {
-        "version": "1.2.4",
-        "resolved": "https://registry.npmjs.org/@napi-rs/wasm-runtime/-/wasm-runtime-1.2.4.tgz",
-        "integrity": "sha512-AJxoUD2/15ESHbvpcyjU274nsAPLuOtPHCk0vKJM5pj//Fg/B1FXNWjPnXTT9PymCYYiHo4zPj0ZomXBKhoy7g==",
+        "version": "1.2.5",
+        "resolved": "https://registry.npmjs.org/@napi-rs/wasm-runtime/-/wasm-runtime-1.2.5.tgz",
+        "integrity": "sha512-HshSvXzmBxNzqejd3k/KemgQ3hdREUYFRRrgxOZ+gPljDIsO2SDZrVZMd4Z/HsxudQbE62OVyVFE8z9BCurfjA==",
         "license": "MIT",
         "optional": true,
         "dependencies": {
@@ -553,9 +553,9 @@
         }
       },
       "node_modules/knip": {
-        "version": "6.39.0",
-        "resolved": "https://registry.npmjs.org/knip/-/knip-6.39.0.tgz",
-        "integrity": "sha512-Y7g6Ve1ATMox1u1v+gx3z9LTlvzVLTJISm/LVn9TgBU4qc7OoC63AWGO8qCFPVDDdaqlYdXkDDvvO1METBfTRw==",
+        "version": "6.40.0",
+        "resolved": "https://registry.npmjs.org/knip/-/knip-6.40.0.tgz",
+        "integrity": "sha512-5Lp/ANJu3AkW5f+J+2QG14z7xKZGi/ybb5MU1EWjeGdt6MpuIaLpLFiyBi0ZKryTiuTHiJqo/WKJRaWYimvavw==",
         "funding": [
           {
             "type": "github",
@@ -657,9 +657,9 @@
         }
       },
       "node_modules/package-manager-detector": {
-        "version": "1.8.0",
-        "resolved": "https://registry.npmjs.org/package-manager-detector/-/package-manager-detector-1.8.0.tgz",
-        "integrity": "sha512-yQA4H19AmPEoMUeavPMDIe1higySl/gH/yaQrkT/s07Qp+7pp2hYz30N3z2l5BkjVkF9Ow6o0wjJamm2y7Sn0A==",
+        "version": "1.9.0",
+        "resolved": "https://registry.npmjs.org/package-manager-detector/-/package-manager-detector-1.9.0.tgz",
+        "integrity": "sha512-zAMfbta9nPA8AKkA4WdmNAT8R8s6Dk0/xwPsqNnRidMFcLo1YkLuPDTgs2f64XdzS8vbLNnoJ+uUIkgbz7oRHA==",
         "license": "MIT"
       },
       "node_modules/picomatch": {
@@ -774,5 +774,5 @@
       }
     }
   },
-  "invalidationHash": "406c01b2c5e6962ad34255f1647b7d27b6bb621a399c9c2a4546915ea9c9facf"
+  "invalidationHash": "d67fe4ae494d5b9e2ca881fcbb99f72b0918876fe312f9e666a1a19112b8f12e"
 }

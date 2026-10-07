@@ -45,17 +45,17 @@
       },
       "cryptography": {
         "is_direct": false,
-        "sha256": "b8f852c65863251b9e3a1b8c150ce21e59b522dbb6a7d4bc80e680d38388e986",
+        "sha256": "fa8f5efb344d6908a1ce62f4a24e2e5780f825d6f53f5f50ec5ffacac72936cb",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/ba/19/797e2aaac9df6a66f1550f49979dc1b1e39ecd2077501c30efa81e8d5d67/cryptography-50.0.1-cp311-abi3-macosx_11_0_arm64.whl",
-        "version": "50.0.1"
+        "url": "https://files.pythonhosted.org/packages/e5/56/d194340cc4a57535e82e1bee9e89667ac4b7c13b5d3f59686deae3094dd5/cryptography-50.0.2-cp311-abi3-macosx_11_0_arm64.whl",
+        "version": "50.0.2"
       },
       "freecad-mcp": {
         "is_direct": false,
-        "sha256": "e52f04f8042122f0917cdcc09ada9fe3a7ea6e34c255984af45e77a0dc4c3efa",
+        "sha256": "a4fab5aceb146a6d721dd125e4e3f82721cd88a1ee52d9e538d00b08cdfb0c6a",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/15/dc/a6500640507110977f28307a0b818ab15e5cb94d52a836fc0ffca572cf3c/freecad_mcp-0.1.25-py3-none-any.whl",
-        "version": "0.1.25"
+        "url": "https://files.pythonhosted.org/packages/02/d0/aa62865be5c31b87effcd53763ddcc154ac0775a526bb143ac01410123f7/freecad_mcp-0.1.26-py3-none-any.whl",
+        "version": "0.1.26"
       },
       "h11": {
         "is_direct": false,
@@ -108,17 +108,17 @@
       },
       "mcp": {
         "is_direct": false,
-        "sha256": "bde982589473a060ae145e3406e9a5333fe538c97229ba841f5a7f92be004f81",
+        "sha256": "dd0c44c089d16453e8ae31a3877a0054d7a2314caaa81f5e0541b9b1734b2377",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/1b/ff/8e7eade68b8a28f7da0ed1085544341b51f9c935dbf6b95c76b7edfea6a0/mcp-2.2.0-py3-none-any.whl",
-        "version": "2.2.0"
+        "url": "https://files.pythonhosted.org/packages/20/d7/4a2878f128df729db3ca04e71bfce26405cc2e0c9ebe19c592feeb4c61b9/mcp-2.3.0-py3-none-any.whl",
+        "version": "2.3.0"
       },
       "mcp-types": {
         "is_direct": false,
-        "sha256": "ea476b73ee86709ab5abc9452385ed36cc05907e582355622e294595c9a04f13",
+        "sha256": "968efdbdaedfab06adae40d378a34395f1090c5921d4be3c9cde283aaf76d91d",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/8f/d7/6ffba5d8cd5dd9b8a19478875c50e04945314ba5074e84d749283f27f62d/mcp_types-2.2.0-py3-none-any.whl",
-        "version": "2.2.0"
+        "url": "https://files.pythonhosted.org/packages/ce/48/32583066b155bb5d4507e7887dc88ee23118cc4de8e2a12870c49719e2a8/mcp_types-2.3.0-py3-none-any.whl",
+        "version": "2.3.0"
       },
       "mdurl": {
         "is_direct": false,
@@ -129,10 +129,10 @@
       },
       "opentelemetry-api": {
         "is_direct": false,
-        "sha256": "94b98c893a91b88657eaac1e3ba89618cdb85be6918196705354f34728b2cdef",
+        "sha256": "b31553efa588ae44bc306f863c785c5333a9ecc091248c6ee68b4b6c87fdedfb",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/ca/6f/a04e900f465ff3221ccc395522503e2d10e79fa21f2723c8e177aae1e0d1/opentelemetry_api-1.44.0-py3-none-any.whl",
-        "version": "1.44.0"
+        "url": "https://files.pythonhosted.org/packages/1e/41/f7dcf80b81ee8e71c1a2b59f14208bc723edbd89ed027a73b175abf6348e/opentelemetry_api-1.45.1-py3-none-any.whl",
+        "version": "1.45.1"
       },
       "pycparser": {
         "is_direct": false,
@@ -164,17 +164,17 @@
       },
       "pyjwt": {
         "is_direct": false,
-        "sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+        "sha256": "42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/e8/55/40e45bf052ee8ee12a4dfd785519660f8effa7b065442b91646ec6828619/pyjwt-2.15.0-py3-none-any.whl",
-        "version": "2.15.0"
+        "url": "https://files.pythonhosted.org/packages/50/ca/44de4e75f8aadc457f0634be3b542815078ded46dca30efb960edeecad6e/pyjwt-2.15.1-py3-none-any.whl",
+        "version": "2.15.1"
       },
       "python-dotenv": {
         "is_direct": false,
-        "sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+        "sha256": "42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/0d/17/c5c6b53ddc18f297992099b3d9ec16c855c0ccc83263a21fe4d1c625ec6c/python_dotenv-1.2.3-py3-none-any.whl",
-        "version": "1.2.3"
+        "url": "https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl",
+        "version": "1.2.4"
       },
       "python-multipart": {
         "is_direct": false,
@@ -199,10 +199,10 @@
       },
       "rpds-py": {
         "is_direct": false,
-        "sha256": "538949e262e46caa31ac01bdb3c1e8f642622922cacbabbae6a8445d9dc33eaf",
+        "sha256": "e21c1429e205828ea886a2293a4a2c8e01f4c25d9893ca330e97a6cf73f52e7b",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/a4/73/319dfa745dd668efe89309141ded489126461fcecd2b8f3a3cda185129b6/rpds_py-2026.6.3-cp312-cp312-macosx_11_0_arm64.whl",
-        "version": "2026.6.3"
+        "url": "https://files.pythonhosted.org/packages/90/81/ac6a0d064982251856ce009c9e1dd51a34110b3c055aa7d1aad18b4899a3/rpds_py-2026.9.1-cp312-cp312-macosx_11_0_arm64.whl",
+        "version": "2026.9.1"
       },
       "shellingham": {
         "is_direct": false,
@@ -213,10 +213,10 @@
       },
       "sse-starlette": {
         "is_direct": false,
-        "sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+        "sha256": "3e6e1070df3f0f5d9cea81496de92dbb72f6721871d99748ece67441dd8b7997",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/98/6a/2ba3ed4a69babf3afdddf7d8314a48d87562c0a442206bbc2a1b50d5efc0/sse_starlette-3.4.11-py3-none-any.whl",
-        "version": "3.4.11"
+        "url": "https://files.pythonhosted.org/packages/be/e4/cdda14023c316d71493bc54fdffc3dd006631b88866145c9d3cc33e0f1df/sse_starlette-3.5.0-py3-none-any.whl",
+        "version": "3.5.0"
       },
       "starlette": {
         "is_direct": false,
@@ -234,10 +234,10 @@
       },
       "typer": {
         "is_direct": false,
-        "sha256": "b3a5fc4342d5fc8fda8fc3010b1cf117e9249aab7fae800c2eff62fd3842d97d",
+        "sha256": "e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/dc/bf/205d0004930ede8f542fb58f601526fccf4ae7626075ca1e6c4de5d3d652/typer-0.27.2-py3-none-any.whl",
-        "version": "0.27.2"
+        "url": "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl",
+        "version": "0.27.3"
       },
       "typing-extensions": {
         "is_direct": false,
@@ -344,8 +344,8 @@
     }
   },
   "freecadAddon": {
-    "url": "https://files.pythonhosted.org/packages/d6/9e/771e276bc8a25bf32f6514e0f2f0770515b6928f0a7b49a8435cb7492c2c/freecad_mcp-0.1.25.tar.gz",
-    "sha256": "28b7bb22cb43c3b1bb672bef409386310308a8366851ab8bdf50ab687c8b5123"
+    "url": "https://files.pythonhosted.org/packages/ed/a7/e0a6130e9e52bb5aaa10dc5769c3857bfb70372da6e963c7e9682da717a6/freecad_mcp-0.1.26.tar.gz",
+    "sha256": "2ce12350416c54da40572c7fbc86b163d2c66c8a9d248ac0d0501cc39a7da8e1"
   },
-  "invalidationHash": "3bbf1c98a48b9f5fd746768189a8b6eb5865753134d54b2ef75f9cc9d7bef6dd"
+  "invalidationHash": "f24b25d80d3308e19191c9b46ec28dd07f0d193e01e44193a0b41ef3c003a7bd"
 }

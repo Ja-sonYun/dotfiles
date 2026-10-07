@@ -2,7 +2,7 @@
   "registry": "npm",
   "name": "exa-mcp-server",
   "versions": {
-    "aarch64-darwin": "3.4.1",
+    "aarch64-darwin": "3.4.2",
     "x86_64-linux": "3.4.1"
   }
 }
