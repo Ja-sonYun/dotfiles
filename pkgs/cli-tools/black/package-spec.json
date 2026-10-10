@@ -2,6 +2,6 @@
   "registry": "pypi",
   "name": "black",
   "versions": {
-    "aarch64-darwin": "26.10.0"
+    "aarch64-darwin": "26.10.1"
   }
 }

@@ -2,7 +2,7 @@
   "registry": "npm",
   "name": "@anthropic-ai/claude-code",
   "versions": {
-    "aarch64-darwin": "2.1.292",
+    "aarch64-darwin": "2.1.296",
     "x86_64-linux": "2.1.278"
   }
 }

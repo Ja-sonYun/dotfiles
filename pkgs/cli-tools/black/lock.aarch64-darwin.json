@@ -3,10 +3,10 @@
     "sources": {
       "black": {
         "is_direct": false,
-        "sha256": "fe0aa3c70ed74ae3cbd994b49c2f8a68df00ee8c2a2dc67b9bb796b4caf23387",
+        "sha256": "182f6c32be38074b16d378498c498b32cb51928178ee611485344972c35ec9c6",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/d3/90/01775245b976cec8255b78d699c90dab31667aca2c5c2a9db2a1b4dc195a/black-26.10.0-cp312-cp312-macosx_11_0_arm64.whl",
-        "version": "26.10.0"
+        "url": "https://files.pythonhosted.org/packages/a5/a2/4709110a7ca326ba7b4f81a669fbebc20653c79a972b0f8de4ba5b5c5e68/black-26.10.1-cp312-cp312-macosx_11_0_arm64.whl",
+        "version": "26.10.1"
       },
       "click": {
         "is_direct": false,
@@ -38,10 +38,10 @@
       },
       "platformdirs": {
         "is_direct": false,
-        "sha256": "080f3b39423b5abfca9a23d84c4e9795f54d395cd8459867a8ded44084fcd5f8",
+        "sha256": "78bfb9db2a8471ed7eebe3c3c932da413911042994e699b384fbb4493fa872d7",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/c5/9b/6ce1ead737fe496611bda600c263b9a11ae7bd8f41bb13f9bd7e0a2c37a4/platformdirs-4.12.3-py3-none-any.whl",
-        "version": "4.12.3"
+        "url": "https://files.pythonhosted.org/packages/f4/ba/223e00b885e960edd5d4b4d178c88acce019bd5b83786093681b8c393492/platformdirs-4.12.4-py3-none-any.whl",
+        "version": "4.12.4"
       },
       "pytokens": {
         "is_direct": false,
@@ -70,5 +70,5 @@
       }
     }
   },
-  "invalidationHash": "2fe79a27bdbb4828d01d5232d3b2e76bc1f186e0ca41d5049d434d51a590ff2d"
+  "invalidationHash": "7bf848e37db622dd82b361cb9b69ff4f840ca8fd64dc08b16d5ff4e1507d5363"
 }
