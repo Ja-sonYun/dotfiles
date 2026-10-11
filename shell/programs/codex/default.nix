@@ -1,16 +1,16 @@
 {
   programs.ai-agents.modelMap.codex = {
     xhigh = {
-      model = "gpt-6.1-sol";
+      model = "gpt-6-astra";
       reasoning_effort = "xhigh";
     };
     high = {
-      model = "gpt-6.1-sol";
-      reasoning_effort = "high";
+      model = "gpt-6-astra";
+      reasoning_effort = "medium";
     };
     middle = {
       model = "gpt-6.1-sol";
-      reasoning_effort = "medium";
+      reasoning_effort = "xhigh";
     };
     low = {
       model = "gpt-6-luna";
@@ -37,7 +37,7 @@
     };
 
     settings = {
-      model = "gpt-6.1-sol";
+      model = "gpt-6-astra";
       model_reasoning_effort = "high";
       plan_mode_reasoning_effort = "xhigh";
       model_verbosity = "low";
@@ -49,7 +49,7 @@
 
       file_opener = "none";
 
-      service_tier = "fast";
+      # service_tier = "fast";
 
       features = {
         unified_exec = true;

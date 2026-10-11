@@ -62,6 +62,7 @@ let
       "protonvpn"
       "autodesk-fusion"
       "macfuse"
+      "qlmarkdown"
     ]
     ++ lib.optionals (hostname == "Jays-MacBook-Pro-Server") [
       "jump-desktop-connect"
