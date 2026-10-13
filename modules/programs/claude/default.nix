@@ -104,10 +104,7 @@ let
 
   sharedFiles =
     home:
-    {
-      "${home}/settings.json".source = settingsFile;
-    }
-    // lib.optionalAttrs (cfg.context != null) {
+    lib.optionalAttrs (cfg.context != null) {
       "${home}/CLAUDE.md".text = cfg.context;
     }
     // lib.optionalAttrs (cfg.customInstructions != "") {
@@ -245,7 +242,39 @@ in
   };
 
   config = lib.mkMerge [
-    { programs.claude-code.finalPackage = wrappedPackage; }
+    {
+      programs.claude-code.finalPackage = wrappedPackage;
+
+      # Let Home Manager remove its settings symlink before writing a regular file.
+      home.activation.claudeSettingsMerge = lib.hm.dag.entryAfter [ "linkGeneration" ] (
+        let
+          homes =
+            if cfg.instances == { } then
+              [ ".claude" ]
+            else
+              lib.unique (lib.mapAttrsToList (_: instance: instance.home) cfg.instances);
+          fragment = if cfg.enable then settingsFile else jsonFormat.generate "claude-code-settings.json" { };
+        in
+        lib.concatMapStringsSep "\n" (
+          home:
+          let
+            instanceHome = "${config.home.homeDirectory}/${home}";
+            target = "${instanceHome}/settings.json";
+          in
+          ''
+            ${lib.optionalString cfg.enable ''
+              run ${pkgs.coreutils}/bin/mkdir -p ${lib.escapeShellArg instanceHome}
+            ''}
+            if ${
+              if cfg.enable then "true" else "false"
+            } || [[ -f ${lib.escapeShellArg target} && -f ${lib.escapeShellArg "${target}.nix-managed.json"} ]]; then
+              run ${pkgs.python3}/bin/python3 ${./merge-settings-json.py} \
+                ${lib.escapeShellArg target} ${fragment}
+            fi
+          ''
+        ) homes
+      );
+    }
 
     (lib.mkIf cfg.enable {
       programs.state.commands.claude = lib.mkIf (cfg.instances != { }) {

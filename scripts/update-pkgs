@@ -266,7 +266,7 @@ while IFS= read -r -u 3 file; do
 		printf 'Update failed: %s\n' "$file" >&2
 		failed_update=true
 	fi
-done 3<<<"$files_raw"
+done 3< <(printf '%s\n' "$files_raw")
 
 trap 'exit 130' INT
 trap 'exit 143' TERM

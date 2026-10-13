@@ -39,13 +39,11 @@ let
       ]);
   codexHooks = hooksFor "codex";
   claudeHooks = hooksFor "claude";
-  piCanonicalHooks = hooksFor "pi";
   invalidEventNames = lib.unique (
     lib.concatMap (hooks: lib.subtractLists eventNames (builtins.attrNames hooks)) [
       cfg.hooks
       cfg.hooksByAgent.codex
       cfg.hooksByAgent.claude
-      cfg.hooksByAgent.pi
     ]
   );
   codex = import ./adapters/codex.nix {
@@ -72,10 +70,6 @@ in
             default = { };
           };
           claude = lib.mkOption {
-            type = hookSetType;
-            default = { };
-          };
-          pi = lib.mkOption {
             type = hookSetType;
             default = { };
           };
@@ -116,10 +110,6 @@ in
 
       (lib.mkIf (claudeHooks != { } && config.programs.claude-code.enable) {
         programs.claude-code.settings.hooks = claudeCompatible "Claude" claudeHooks;
-      })
-
-      (lib.mkIf (piCanonicalHooks != { } && config.programs.pi.enable) {
-        programs.pi.hooks = claudeCompatible "Pi" piCanonicalHooks;
       })
     ]
   );

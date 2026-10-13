@@ -22,7 +22,7 @@ let
       context = "Shared AI tool instructions.";
       skills.review-code = ./fixtures/review-code;
       agentsDir = ./fixtures;
-      modelMap = lib.genAttrs [ "claude" "codex" "pi" ] (
+      modelMap = lib.genAttrs [ "claude" "codex" ] (
         client:
         lib.genAttrs [ "xhigh" "high" "middle" "low" ] (tier: {
           model = "test-${client}-${tier}";
@@ -89,7 +89,6 @@ let
       );
       Pi = homeFiles.generated [
         ".pi/agent/AGENTS.md"
-        ".pi/agent/agents"
         ".pi/agent/skills/review-code"
       ];
     };
@@ -103,7 +102,6 @@ let
       "~/.codex/config.toml" = managedFragment configuration;
       "~/.codex/skills/review-code/SKILL.md" = "${homeFiles.source ".codex/skills/review-code"}/SKILL.md";
       "~/.pi/agent/AGENTS.md" = homeFiles.materialized ".pi/agent/AGENTS.md";
-      "~/.pi/agent/agents/test-agent.md" = "${homeFiles.source ".pi/agent/agents"}/test-agent.md";
       "~/.pi/agent/skills/review-code/SKILL.md" =
         "${homeFiles.source ".pi/agent/skills/review-code"}/SKILL.md";
     };
@@ -122,7 +120,6 @@ let
       ];
       Pi = [
         "~/.pi/agent/AGENTS.md"
-        "~/.pi/agent/agents"
         "~/.pi/agent/skills/review-code"
       ];
     };
@@ -157,24 +154,12 @@ let
       };
       "~/.codex/skills/review-code/SKILL.md".sameAs = ./fixtures/review-code/SKILL.md;
       "~/.pi/agent/AGENTS.md".text = "Shared AI tool instructions.";
-      "~/.pi/agent/agents/test-agent.md".text = ''
-        ---
-        name: test-agent
-        description: Test agent fixture.
-        tools:
-        - mcp__docs
-        permissionMode: plan
-        ---
-
-        Follow the test agent instructions.
-      '';
       "~/.pi/agent/skills/review-code/SKILL.md".sameAs = ./fixtures/review-code/SKILL.md;
     };
   };
 in
 assert programs.codex.agentsDir == "${adaptedAgents}/codex";
 assert programs.claude-code.agentsDir == "${adaptedAgents}/claude";
-assert programs.pi.agentsDir == "${adaptedAgents}/pi";
 assert disabledPrograms.codex.context == null;
 assert disabledPrograms.codex.skills == { };
 assert disabledPrograms.codex.agentsDir == null;
@@ -183,7 +168,6 @@ assert disabledPrograms.claude-code.skills == { };
 assert disabledPrograms.claude-code.agentsDir == null;
 assert disabledPrograms.pi.context == null;
 assert disabledPrograms.pi.skills == { };
-assert disabledPrograms.pi.agentsDir == null;
 assert directPrograms.codex.context == "Codex-only instructions.";
 assert directPrograms.codex.agentsDir == ./fixtures;
 assert directPrograms.pi.context == "Pi-only instructions.";

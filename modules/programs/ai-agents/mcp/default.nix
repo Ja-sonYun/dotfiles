@@ -200,23 +200,17 @@ let
 
   piMcpServers = lib.mapAttrs (
     name: server:
-    let
-      enabled = lib.hm.mcp.resolveEnabled server;
-      transformed = lib.hm.mcp.transformMcpServer {
+    mkDefaultValue (
+      lib.hm.mcp.transformMcpServer {
         inherit server;
-        exclude = [
-          "enabled"
-          "instructions"
-          "type"
-        ];
+        exclude = [ "instructions" ];
         extraTransforms = [
           (wrapSecretEnvCommand name)
           (wrapInstructionsCommand name)
           stringifyCommand
         ];
-      };
-    in
-    mkDefaultValue (transformed // lib.optionalAttrs (enabled != null) { disabled = !enabled; })
+      }
+    )
   ) cfg.mcp.servers;
 
   disabledMcpServers = builtins.attrNames (

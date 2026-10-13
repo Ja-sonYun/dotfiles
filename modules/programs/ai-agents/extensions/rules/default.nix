@@ -147,6 +147,16 @@ let
 in
 {
   options.programs.ai-agents.extensions.rules = {
+    evaluatorCommand = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      readOnly = true;
+      default = [
+        "${package}/bin/ai-agent-rules-check"
+        "--rules"
+        "${rulesFile}"
+      ];
+      description = "Stateless JSON tool and code rule evaluator command.";
+    };
     enable = lib.mkEnableOption "AI agent rule checks";
     debugLog.enable = lib.mkEnableOption "raw rule debug logs with seven-day retention";
     rules = lib.genAttrs [ "code" "tool" "task" ] (

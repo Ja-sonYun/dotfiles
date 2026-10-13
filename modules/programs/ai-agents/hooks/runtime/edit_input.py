@@ -10,6 +10,18 @@ class EditTarget:
     after: Path
 
 
+def is_edit_tool(tool_name: str) -> bool:
+    return tool_name.rsplit(".", 1)[-1].lower() in {
+        "write",
+        "edit",
+        "multiedit",
+        "notebookedit",
+        "write_file",
+        "edit_file",
+        "apply_patch",
+    }
+
+
 def edit_targets(
     hook_input: HookInput, *, resolve_paths: bool = True
 ) -> list[EditTarget]:
@@ -22,14 +34,7 @@ def edit_targets(
         return []
 
     paths: list[tuple[str, str]] = []
-    if tool_name in {
-        "write",
-        "edit",
-        "multiedit",
-        "notebookedit",
-        "write_file",
-        "edit_file",
-    }:
+    if tool_name != "apply_patch" and is_edit_tool(tool_name):
         if isinstance(tool_input, dict):
             path = (
                 tool_input.get("notebook_path")

@@ -27,5 +27,7 @@ in
       rm -f "$out/bin/pi"
       makeWrapper "${pkgs.nodejs_22}/bin/node" "$out/bin/pi" \
         --add-flags "$appRoot/dist/cli.js" ${wrapperArgs}
+      makeWrapper "${pkgs.bash}/bin/bash" "$out/bin/pi-dev" \
+        --add-flags ${./dev/pi-dev}
     '';
   })

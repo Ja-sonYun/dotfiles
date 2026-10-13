@@ -9,19 +9,6 @@ let
     final: prev: {
       mcp-remote = final.writeShellScriptBin "mcp-remote" "exit 0";
       notifycmd = final.writeShellScriptBin "notifycmd" "exit 0";
-      pi-extensions = {
-        hooks =
-          hooks:
-          let
-            hooksJson = (final.formats.json { }).generate "pi-hooks.json" hooks;
-          in
-          final.runCommandLocal "pi-ext-hooks-test" { } ''
-            mkdir -p $out
-            touch $out/index.ts
-            cp ${hooksJson} $out/hooks.json
-          '';
-        mcp-adapter = final.writeTextDir "extension/index.ts" "";
-      };
       uv = prev.uv.overrideAttrs (previous: {
         passthru = (previous.passthru or { }) // {
           asPackage = { name, ... }: final.writeShellScriptBin name "exit 0";
@@ -157,7 +144,6 @@ in
 testPkgs.runCommand "ai-tools-tests"
   {
     nativeBuildInputs = [
-      testPkgs.nodejs
       testPython
     ];
   }
@@ -171,7 +157,6 @@ testPkgs.runCommand "ai-tools-tests"
     export AI_AGENTS_NOTIFICATION_HOOK=${lib.escapeShellArg (toString notificationHook)}
 
     "$test_python" ${codexModule}/test_merge_config_toml.py
-    node --test ${../../../../pkgs/ai-agents/pi/extensions/hooks}/src/index.test.ts
     "$test_python" ${./test_codex_hook_adapter.py}
     "$test_python" ${./test_hook_input.py}
     "$test_python" ${./test_notification_hook.py}

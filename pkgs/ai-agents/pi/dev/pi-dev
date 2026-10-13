@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PI_CODING_AGENT_DIR="$HOME/.pi/agent-dev"
+export PI_PROVIDERS_CONFIG="${PI_PROVIDERS_CONFIG:-$HOME/.pi/agent/extensions/providers/providers.json}"
+
+exec pi "$@"

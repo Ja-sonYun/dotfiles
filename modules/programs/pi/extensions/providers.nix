@@ -15,13 +15,13 @@ let
         type = nonEmptyString;
         description = "Provider display name.";
       };
-      baseUrlEnv = lib.mkOption {
-        type = nonEmptyString;
-        description = "Base URL environment variable.";
+      baseUrl = lib.mkOption {
+        type = lib.types.either nonEmptyString pkgs.tool.secretValue.type;
+        description = "Base URL; supports { _secret = path; }.";
       };
-      apiKeyEnv = lib.mkOption {
-        type = nonEmptyString;
-        description = "API key environment variable.";
+      apiKey = lib.mkOption {
+        type = lib.types.either lib.types.str pkgs.tool.secretValue.type;
+        description = "API key; supports { _secret = path; }.";
       };
       fallbackModels = lib.mkOption {
         type = lib.types.nonEmptyListOf nonEmptyString;

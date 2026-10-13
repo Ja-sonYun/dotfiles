@@ -159,6 +159,7 @@ async def evaluate(
     intent_halted: bool = False,
     session_handle: str | None = None,
     debug_log: bool = False,
+    require_complete_input: bool = False,
 ) -> Evaluation:
     result = Evaluation(0, [], [])
     targets = sorted({rule.definition.target for rule in rules})
@@ -288,6 +289,11 @@ async def evaluate(
                     payload = json.loads(masked)
                     if not isinstance(payload, dict):
                         raise TypeError("Redacted request is not an object.")
+                    if require_complete_input and payload != json.loads(request):
+                        result.errors.append(
+                            f"Masked evidence requires manual inspection: {names}."
+                        )
+                        continue
                     response = await api.post(
                         "https://api.typesafe.ai/v1/systemone",
                         json={**payload, "model": "jev-latest"},

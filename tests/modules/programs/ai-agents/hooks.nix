@@ -108,8 +108,6 @@ let
             type = "command";
           }
           // lib.optionalAttrs (client == "Codex") { timeout = 604; }
-          # the Pi module keeps its nullable timeout option in hooks.json
-          // lib.optionalAttrs (client == "Pi") { timeout = null; }
         )
       ];
     }
@@ -134,20 +132,16 @@ let
     generatedFiles = {
       Claude = homeFiles.generated [ ".claude/settings.json" ];
       Codex = lib.optional (lib.hasInfix "/.codex/config.toml" home.activation.codexConfigMerge.data) "~/.codex/config.toml";
-      Pi = homeFiles.generated [ ".pi/agent/extensions/hooks" ];
     };
     files = {
       "~/.claude/settings.json" = homeFiles.materialized ".claude/settings.json";
       "~/.codex/config.toml" = managedFragment configuration;
-      "~/.pi/agent/extensions/hooks/hooks.json" =
-        "${homeFiles.source ".pi/agent/extensions/hooks"}/hooks.json";
     };
   };
   expected = {
     generatedFiles = {
       Claude = [ "~/.claude/settings.json" ];
       Codex = [ "~/.codex/config.toml" ];
-      Pi = [ "~/.pi/agent/extensions/hooks" ];
     };
     files = {
       "~/.claude/settings.json".json = {
@@ -174,23 +168,12 @@ let
           };
         };
       };
-      "~/.pi/agent/extensions/hooks/hooks.json".json = {
-        keys = [
-          "PostCompact"
-          "SessionEnd"
-        ];
-        at = {
-          PostCompact.equals = commonHookExpectation "Pi";
-          SessionEnd.equals = sessionEndHookExpectation "Pi";
-        };
-      };
     };
   };
 in
 assert unsupportedEventFails;
 assert !(builtins.hasAttr "PreToolUse" idleNotificationPrograms.codex.settings.hooks);
 assert builtins.hasAttr "Notification" idleNotificationPrograms.claude-code.settings.hooks;
-assert builtins.hasAttr "Notification" idleNotificationPrograms.pi.hooks;
 {
   name = "AI agents hooks";
   inherit actual expected;

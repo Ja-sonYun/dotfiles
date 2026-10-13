@@ -43,10 +43,6 @@ in
               };
             hooksByAgent = {
               claude.StopFailure = [ (block 5) ];
-              pi = lib.genAttrs [
-                "StopFailure"
-                "SessionInfoChanged"
-              ] (_: [ (block 5) ]);
             };
           };
           claude-code.statusLine.observers.tmux = lib.mkIf config.programs.claude-code.enable "AI_AGENT_CLIENT=Claude ${lib.getExe package} --statusline";

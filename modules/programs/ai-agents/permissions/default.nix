@@ -123,16 +123,26 @@ in
             default = { };
             description = "Permissions by MCP server name.";
           };
+          mcp_readonly_tools = lib.mkOption {
+            type = lib.types.attrsOf (lib.types.listOf name);
+            default = { };
+            description = "Verified read-only MCP tools, by literal server and exact tool name.";
+          };
         };
       }
     );
     default = { };
-    description = "Shared Claude Code and Codex permissions.";
+    description = "Shared Claude Code, Codex and Pi permissions.";
   };
 
   config = lib.mkIf (cfg.enable && policy != null) (
     lib.mkMerge [
       {
+        programs.pi.settings.extensions.permissions.policy = {
+          inherit (policy) commands mcp mcp_readonly_tools;
+          files.rules = policy.files.rules ++ lib.concatMap (preset: preset.files or [ ]) selectedPresets;
+          defaultRead = policy.presets.defaults;
+        };
         assertions = [
           {
             assertion = builtins.length presetNames == builtins.length (lib.unique presetNames);
@@ -147,6 +157,10 @@ in
               server: name.check server && lib.all name.check (builtins.attrNames servers.${server}.tools)
             ) (builtins.attrNames servers);
             message = "AI agent MCP permissions require literal server and tool names, without selectors or wildcards.";
+          }
+          {
+            assertion = lib.all name.check (builtins.attrNames policy.mcp_readonly_tools);
+            message = "Read-only MCP tool lists require literal server names.";
           }
         ];
       }

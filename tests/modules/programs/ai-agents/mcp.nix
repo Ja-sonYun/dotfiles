@@ -112,25 +112,6 @@ let
       env.MODE = "secret";
     };
   };
-  piMcpServers = {
-    disabled-docs = {
-      command = "disabled-mcp";
-      disabled = true;
-    };
-    local-docs = {
-      args = [ "--stdio" ];
-      command = "test-mcp";
-      env.MODE = "test";
-    };
-    remote-docs = {
-      headers.X-Test = "value";
-      url = "https://example.invalid/mcp";
-    };
-    secret-docs = {
-      command = secretCommand;
-      env.MODE = "secret";
-    };
-  };
   actual = {
     generatedFiles = {
       Claude = homeFiles.generated [
@@ -139,10 +120,6 @@ let
         "Library/Application Support/Claude/claude_desktop_config.json"
       ];
       Codex = lib.optional (lib.hasInfix "/.codex/config.toml" home.activation.codexConfigMerge.data) "~/.codex/config.toml";
-      Pi = homeFiles.generated [
-        ".pi/agent/extensions/mcp-adapter"
-        ".pi/agent/mcp.json"
-      ];
     };
     files = {
       "~/.claude/settings.json" = homeFiles.materialized ".claude/settings.json";
@@ -152,9 +129,6 @@ let
         homeFiles.materialized "Library/Application Support/Claude/claude_desktop_config.json";
       "mcp remote bridge" = bridgeCommand;
       "~/.codex/config.toml" = managedFragment configuration;
-      "~/.pi/agent/extensions/mcp-adapter/index.ts" =
-        "${homeFiles.source ".pi/agent/extensions/mcp-adapter"}/index.ts";
-      "~/.pi/agent/mcp.json" = homeFiles.materialized ".pi/agent/mcp.json";
     };
   };
   expected = {
@@ -165,10 +139,6 @@ let
         "~/Library/Application Support/Claude/claude_desktop_config.json"
       ];
       Codex = [ "~/.codex/config.toml" ];
-      Pi = [
-        "~/.pi/agent/extensions/mcp-adapter"
-        "~/.pi/agent/mcp.json"
-      ];
     };
     files = {
       "~/.claude/settings.json".json.at.disabledMcpjsonServers.equals = [ "disabled-docs" ];
@@ -192,21 +162,13 @@ let
       # writeShellScript appends a trailing newline of its own
       + "\n";
       "~/.codex/config.toml".toml.equals.mcp_servers = codexMcpServers;
-      "~/.pi/agent/extensions/mcp-adapter/index.ts".sameAs =
-        "${programs.pi.mcp.package}/extension/index.ts";
-      "~/.pi/agent/mcp.json".json.equals = {
-        settings = { };
-        mcpServers = piMcpServers;
-      };
     };
   };
 in
 assert lib.hasInfix "mcp-secret-docs-wrapper" secretCommand;
 assert programs.claude-code.mcpServers.secret-docs.command == secretCommand;
-assert programs.pi.mcp.servers.secret-docs.command == secretCommand;
 assert !lib.hasInfix "test-token" (builtins.toJSON claudeMcpServers);
 assert !lib.hasInfix "test-token" (builtins.toJSON codexMcpServers);
-assert !lib.hasInfix "test-token" (builtins.toJSON piMcpServers);
 assert invalidServerFails { };
 assert invalidServerFails {
   command = "invalid-mcp";

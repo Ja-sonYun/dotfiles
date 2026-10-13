@@ -7,6 +7,7 @@ dependencies = ["httpx>=0.28,<1", "mcp>=1,<2", "pydantic>=2,<3"]
 [project.scripts]
 ai-agent-rules-server = "ai_agent_rules.server:main"
 ai-agent-rules-mcp = "ai_agent_rules.mcp_server:main"
+ai-agent-rules-check = "ai_agent_rules.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_agent_rules"]

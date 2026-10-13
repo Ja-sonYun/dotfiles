@@ -17,6 +17,20 @@ let
     ];
 
   configDir = ".pi/agent";
+  configDirs = [ configDir ] ++ lib.optional (cfg.dev.extensionsSource != null) ".pi/agent-dev";
+
+  nativeSettings =
+    agentDir:
+    removeAttrs cfg.settings [ "extensions" ]
+    // {
+      extensions = map (
+        extension:
+        if agentDir == ".pi/agent-dev" && extension ? devSource then
+          extension.devSource
+        else
+          extension.source
+      ) (lib.filter (extension: extension.enable) (lib.attrValues cfg.settings.extensions));
+    };
 
   basePackage =
     if cfg.extraPath == [ ] then cfg.package else cfg.package.override { inherit (cfg) extraPath; };
@@ -30,13 +44,18 @@ let
         mkdir -p $out/bin
         makeWrapper ${basePackage}/bin/pi $out/bin/pi \
           --run ${lib.escapeShellArg (pkgs.tool.shell.util.shellExports cfg.env)}
+        ln -s ${basePackage}/bin/pi-dev $out/bin/pi-dev
       '';
 in
 {
   imports = [
-    ./extensions/hooks.nix
-    ./extensions/mcp.nix
+    ./mcp.nix
     ./extensions/providers.nix
+    ./extensions/subagent.nix
+    ./extensions/permissions.nix
+    ./extensions/redact.nix
+    ./extensions/message-lines.nix
+    ./extensions/tool-summaries.nix
   ];
 
   options.programs.pi = {
@@ -69,7 +88,9 @@ in
     };
 
     settings = lib.mkOption {
-      inherit (jsonFormat) type;
+      type = lib.types.submodule {
+        freeformType = jsonFormat.type;
+      };
       default = { };
       description = "Pi settings.";
     };
@@ -98,42 +119,51 @@ in
       description = "Skill directories.";
     };
 
-    agentsDir = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
-      description = "Subagent directory.";
-    };
-
     extensions = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
       description = "Extension files and directories.";
+    };
+
+    dev.extensionsSource = lib.mkOption {
+      type = lib.types.nullOr sourceType;
+      default = null;
+      description = "Extension directory for the separate pi-dev profile.";
     };
   };
 
   config = lib.mkIf cfg.enable {
     home.packages = [ wrappedPackage ];
 
-    home.file = {
-      "${configDir}/settings.json".source = jsonFormat.generate "pi-settings.json" cfg.settings;
-    }
-    // lib.optionalAttrs (cfg.context != null) {
-      "${configDir}/AGENTS.md".text = cfg.context;
-    }
-    // lib.optionalAttrs (cfg.customInstructions != "") {
-      "${configDir}/APPEND_SYSTEM.md".text = cfg.customInstructions;
-    }
-    // lib.optionalAttrs (cfg.systemPrompt != null) {
-      "${configDir}/SYSTEM.md".text = cfg.systemPrompt;
-    }
-    // lib.mapAttrs' (
-      name: source: lib.nameValuePair "${configDir}/skills/${name}" { inherit source; }
-    ) cfg.skills
-    // lib.optionalAttrs (cfg.agentsDir != null) {
-      "${configDir}/agents".source = cfg.agentsDir;
-    }
-    // lib.mapAttrs' (
-      name: source: lib.nameValuePair "${configDir}/extensions/${name}" { inherit source; }
-    ) cfg.extensions;
+    home.file = lib.mkMerge (
+      map (
+        agentDir:
+        {
+          "${agentDir}/settings.json".source = jsonFormat.generate "pi-settings.json" (
+            nativeSettings agentDir
+          );
+        }
+        // lib.optionalAttrs (cfg.context != null) {
+          "${agentDir}/AGENTS.md".text = cfg.context;
+        }
+        // lib.optionalAttrs (cfg.customInstructions != "") {
+          "${agentDir}/APPEND_SYSTEM.md".text = cfg.customInstructions;
+        }
+        // lib.optionalAttrs (cfg.systemPrompt != null) {
+          "${agentDir}/SYSTEM.md".text = cfg.systemPrompt;
+        }
+        // lib.mapAttrs' (
+          name: source: lib.nameValuePair "${agentDir}/skills/${name}" { inherit source; }
+        ) cfg.skills
+      ) configDirs
+      ++ [
+        (lib.mapAttrs' (
+          name: source: lib.nameValuePair "${configDir}/extensions/${name}" { inherit source; }
+        ) cfg.extensions)
+        (lib.optionalAttrs (cfg.dev.extensionsSource != null) {
+          ".pi/agent-dev/extensions".source = cfg.dev.extensionsSource;
+        })
+      ]
+    );
   };
 }

@@ -62,25 +62,20 @@ let
   sharedCommand = commandFor programs.ai-agents.hooks;
   codexCommand = commandFor programs.codex.settings.hooks;
   claudeCommand = commandFor programs.claude-code.settings.hooks;
-  piCommand = commandFor programs.pi.hooks;
   actual = {
     generatedFiles = {
       Claude = homeFiles.generated [ ".claude/settings.json" ];
       Codex = lib.optional (lib.hasInfix "/.codex/config.toml" home.activation.codexConfigMerge.data) "~/.codex/config.toml";
-      Pi = homeFiles.generated [ ".pi/agent/extensions/hooks" ];
     };
     files = {
       "~/.claude/settings.json" = homeFiles.materialized ".claude/settings.json";
       "~/.codex/config.toml" = managedFragment configuration;
-      "~/.pi/agent/extensions/hooks/hooks.json" =
-        "${homeFiles.source ".pi/agent/extensions/hooks"}/hooks.json";
     };
   };
   expected = {
     generatedFiles = {
       Claude = [ "~/.claude/settings.json" ];
       Codex = [ "~/.codex/config.toml" ];
-      Pi = [ "~/.pi/agent/extensions/hooks" ];
     };
     files = {
       "~/.claude/settings.json".json = {
@@ -107,20 +102,6 @@ let
         "Stop"
         "UserPromptSubmit"
       ];
-      "~/.pi/agent/extensions/hooks/hooks.json".json = {
-        keys = [
-          "Notification"
-          "PostToolUse"
-          "PostToolUseFailure"
-          "PreToolUse"
-          "SessionEnd"
-          "SessionInfoChanged"
-          "SessionStart"
-          "Stop"
-          "StopFailure"
-          "UserPromptSubmit"
-        ];
-      };
     };
   };
 in
@@ -157,11 +138,6 @@ assert lib.hasInfix "Claude" claudeCommand;
 assert !lib.hasInfix "codex_adapter.py" claudeCommand;
 assert lib.all (hook: lib.hasInfix "AI_AGENT_CLIENT=Claude" hook.command) (
   allCommands programs.claude-code.settings.hooks
-);
-assert lib.hasInfix "Pi" piCommand;
-assert !lib.hasInfix "codex_adapter.py" piCommand;
-assert lib.all (hook: lib.hasInfix "AI_AGENT_CLIENT=Pi" hook.command) (
-  allCommands programs.pi.hooks
 );
 {
   name = "AI agent hook policy";

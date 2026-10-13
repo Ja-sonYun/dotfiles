@@ -1,5 +1,4 @@
 import argparse
-import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -313,32 +312,10 @@ def render_codex(
     }
 
 
-def pi_proxy_name(server: str) -> str:
-    # Match pi-mcp-adapter 2.34.0's formatServerNamespace in types.ts.
-    # https://github.com/nicobailon/pi-mcp-adapter/blob/v2.34.0/types.ts
-    normalized = server.replace("-", "_")
-    safe = re.fullmatch(r"[A-Za-z0-9_]*", normalized) is not None
-    safe = safe and not normalized.startswith("_mcpns_")
-    body = (
-        normalized
-        if safe
-        else "".join(
-            "__"
-            if character == "_"
-            else (
-                character
-                if re.fullmatch(r"[A-Za-z0-9]", character)
-                else f"_{ord(character):x}_"
-            )
-            for character in normalized
-        )
-    )
-    namespace = body if safe else f"_mcpns_{body}"
-    if len(namespace) > 59:
-        digest = hashlib.sha256(namespace.encode("ascii")).hexdigest()[:16]
-        hash_prefix = "_mcpns__h_"
-        head = body[: 59 - len(hash_prefix) - len(digest) - 1]
-        namespace = f"{hash_prefix}{head}_{digest}"
+def pi_namespace(server: str) -> str:
+    # Match native Pi MCP tool names before their per-tool length limit.
+    # https://github.com/earendil-works/pi/blob/v1.1.0/packages/coding-agent/src/extensions/mcp/tools.ts
+    namespace = re.sub(r"[^A-Za-z0-9_]", "_", server)
     return f"mcp__{namespace}"
 
 
@@ -346,9 +323,19 @@ def pi_tools(agent: Agent) -> list[str] | None:
     if agent.tools is None:
         return None
 
-    names: list[str] = []
+    # Shared tool declarations restrict MCP servers, not built-in tools.
+    names = [
+        "read",
+        "grep",
+        "find",
+        "ls",
+        "codemode",
+        "tool_search",
+    ]
+    if agent.permission_mode != "plan":
+        names.extend(["bash", "edit", "write"])
     for tool in agent.tools:
-        names.append(pi_proxy_name(tool.server))
+        names.append(f"{pi_namespace(tool.server)}__*")
     return list(dict.fromkeys(names))
 
 
@@ -385,7 +372,7 @@ def render_pi(
 def validate_pi_server_names(servers: tuple[str, ...]) -> None:
     names: dict[str, str] = {}
     for server in servers:
-        name = pi_proxy_name(server)
+        name = pi_namespace(server)
         if existing := names.get(name):
             raise ValueError(
                 f"MCP servers {existing!r} and {server!r} collide as Pi tool {name!r}"

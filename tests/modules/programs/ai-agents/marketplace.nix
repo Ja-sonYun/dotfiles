@@ -183,7 +183,6 @@ let
   preToolCommands = {
     Claude = commandsFor programs.claude-code.settings.hooks.PreToolUse;
     Codex = commandsFor programs.codex.settings.hooks.PreToolUse;
-    Pi = commandsFor programs.pi.hooks.PreToolUse;
   };
   invalidMarketplaceFails =
     source:
@@ -275,9 +274,6 @@ let
         ++ lib.optional (lib.hasInfix "/.codex/config.toml" home.activation.codexConfigMerge.data) "~/.codex/config.toml"
       );
       Pi = homeFiles.generated [
-        ".pi/agent/extensions/hooks"
-        ".pi/agent/extensions/mcp-adapter"
-        ".pi/agent/mcp.json"
         ".pi/agent/skills/inline-tools-check-docs"
         ".pi/agent/skills/inline-tools-review-code"
         ".pi/agent/skills/root-skill-root-helper"
@@ -303,8 +299,6 @@ let
         "${homeFiles.source ".codex/skills/root-skill-root-helper"}/SKILL.md";
       "~/.codex/skills/strict-entry-strict-skill/SKILL.md" =
         "${homeFiles.source ".codex/skills/strict-entry-strict-skill"}/SKILL.md";
-      "~/.pi/agent/extensions/hooks/hooks.json" =
-        "${homeFiles.source ".pi/agent/extensions/hooks"}/hooks.json";
       "~/.pi/agent/skills/inline-tools-check-docs/SKILL.md" =
         "${homeFiles.source ".pi/agent/skills/inline-tools-check-docs"}/SKILL.md";
       "~/.pi/agent/skills/inline-tools-review-code/SKILL.md" =
@@ -366,9 +360,6 @@ let
         "~/.codex/skills/strict-entry-strict-skill"
       ];
       Pi = [
-        "~/.pi/agent/extensions/hooks"
-        "~/.pi/agent/extensions/mcp-adapter"
-        "~/.pi/agent/mcp.json"
         "~/.pi/agent/skills/inline-tools-check-docs"
         "~/.pi/agent/skills/inline-tools-review-code"
         "~/.pi/agent/skills/root-skill-root-helper"
@@ -410,19 +401,6 @@ let
       "~/.codex/skills/inline-tools-review-code/SKILL.md".text = expectedSkill;
       "~/.codex/skills/root-skill-root-helper/SKILL.md".text = expectedRootSkill;
       "~/.codex/skills/strict-entry-strict-skill/SKILL.md".text = expectedStrictSkill;
-      "~/.pi/agent/extensions/hooks/hooks.json".json = {
-        at = {
-          PostCompact.contains = [ (normalizeBlock "Pi" entryHook) ];
-          PostToolUse.contains = [ (normalizeBlock "Pi" fileHook) ];
-          PreToolUse.contains = [
-            (normalizeBlock "Pi" manualHook)
-            (normalizeBlock "Pi" inlineHook)
-          ];
-          SessionEnd.contains = [ (normalizeBlock "Pi" defaultHook) ];
-          SessionStart.contains = [ (normalizeBlock "Pi" strictHook) ];
-          UserPromptSubmit.contains = [ (normalizeBlock "Pi" supplementHook) ];
-        };
-      };
       "~/.pi/agent/skills/inline-tools-check-docs/SKILL.md".text = expectedCustomSkill;
       "~/.pi/agent/skills/inline-tools-review-code/SKILL.md".text = expectedSkill;
       "~/.pi/agent/skills/root-skill-root-helper/SKILL.md".text = expectedRootSkill;
@@ -439,11 +417,6 @@ assert
   preToolCommands.Codex == [
     (normalizeCommand "Codex" (handlerFor manualHook))
     (normalizeCommand "Codex" (handlerFor inlineHook))
-  ];
-assert
-  preToolCommands.Pi == [
-    (normalizeCommand "Pi" (handlerFor manualHook))
-    (normalizeCommand "Pi" (handlerFor inlineHook))
   ];
 assert invalidMarketplaceFails ./fixtures/marketplaces/unsupported-event;
 assert invalidMarketplaceFails ./fixtures/marketplaces/unsupported-handler;

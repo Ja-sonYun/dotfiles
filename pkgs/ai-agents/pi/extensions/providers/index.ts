@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,10 +13,12 @@ type RawModel = {
   readonly max_tokens?: number;
 };
 
+type SecretValue = string | { readonly _secret: string };
+
 type ProviderDefinition = {
   readonly name: string;
-  readonly baseUrlEnv: string;
-  readonly apiKeyEnv: string;
+  readonly baseUrl: SecretValue;
+  readonly apiKey: SecretValue;
   readonly fallbackModels: ReadonlyArray<string>;
   readonly defaults: {
     readonly contextWindow: number;
@@ -26,6 +29,16 @@ type ProviderDefinition = {
 };
 
 type Providers = Readonly<Record<string, ProviderDefinition>>;
+
+const resolveSecret = (value: SecretValue): string =>
+  typeof value === "string"
+    ? value
+    : readFileSync(
+        execFileSync("/bin/sh", ["-c", `printf '%s' "${value._secret}"`], {
+          encoding: "utf8",
+        }),
+        "utf8",
+      ).replace(/[\r\n]+$/, "");
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -81,10 +94,9 @@ const readRawModels = (
   });
 };
 
-const configPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "providers.json",
-);
+const configPath =
+  process.env.PI_PROVIDERS_CONFIG ??
+  join(dirname(fileURLToPath(import.meta.url)), "providers.json");
 const providers = JSON.parse(readFileSync(configPath, "utf8")) as Providers;
 
 const toModel = (
@@ -106,15 +118,12 @@ const toModel = (
 
 export default function (pi: ExtensionAPI) {
   for (const [id, provider] of Object.entries(providers)) {
-    const base = process.env[provider.baseUrlEnv];
-    if (!base) continue;
-
-    const baseUrl = `${base}/v1`;
-    const key = process.env[provider.apiKeyEnv];
+    const baseUrl = `${resolveSecret(provider.baseUrl)}/v1`;
+    const key = resolveSecret(provider.apiKey);
     pi.registerProvider(id, {
       name: provider.name,
       baseUrl,
-      apiKey: `$${provider.apiKeyEnv}`,
+      apiKey: key,
       api: "openai-completions",
       models: provider.fallbackModels.map((id) => toModel({ id }, provider)),
       async refreshModels({ signal }) {
