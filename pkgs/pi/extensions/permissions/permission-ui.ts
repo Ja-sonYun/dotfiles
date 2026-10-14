@@ -17,12 +17,11 @@ export interface PermissionPrompt {
   reasons: string[];
   signal: AbortSignal;
   context: ExtensionContext;
-  reply: (choice: Promise<string | undefined>) => void;
 }
 
 export async function showPermission(
   request: PermissionPrompt,
-  summary: { text?: string; pending?: Promise<void> },
+  summary: { text?: string },
 ): Promise<string | undefined> {
   if (request.signal.aborted) {
     return undefined;
@@ -92,7 +91,6 @@ export async function showPermission(
         queueMicrotask(cancel);
       } else {
         update();
-        void summary.pending?.then(update);
       }
       return {
         render: (width) => content.render(width),

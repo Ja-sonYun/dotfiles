@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, lib, ... }:
 let
   sharedRootBindings = import ./shared-root.nix;
 in
@@ -85,6 +85,27 @@ in
       k = {
         command = "run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_id} #{q:window_id} #{q:client_name} #{q:pane_current_path}'";
       };
+
+      t =
+        lib.mkIf
+          (config.programs.tmux.extensions.shell.enable || config.programs.tmux.extensions.agent.enable)
+          {
+            cases =
+              lib.optionals config.programs.tmux.extensions.shell.enable [
+                {
+                  match = "test #{q:session_name} = main";
+                  command = ''
+                    run-shell -C 'display-popup -E -w 60% -h 40% -x C -y C ${config.programs.tmux.extensions.shell.pickerCommand} main #{q/a:client_name}'
+                  '';
+                }
+              ]
+              ++ lib.optionals config.programs.tmux.extensions.agent.enable [
+                {
+                  whenEnv = [ "TMUX_AGENT_STATUS" ];
+                  command = config.programs.tmux.extensions.agent.pickerAction;
+                }
+              ];
+          };
 
       B = {
         command = "display-message '#{cursor_x} #{cursor_y}'";

@@ -1,0 +1,41 @@
+[
+  {
+    "name": "defaults",
+    "default": true,
+    "description": "Allow file reads by default."
+  },
+  {
+    "name": "denyDotenv",
+    "default": false,
+    "description": "Block workspace dotenv files.",
+    "files": [
+      {
+        "path": "**/.env",
+        "read": "deny",
+        "write": "deny"
+      },
+      {
+        "path": "**/*.env",
+        "read": "deny",
+        "write": "deny"
+      },
+      {
+        "path": "**/*.env.*",
+        "read": "deny",
+        "write": "deny"
+      }
+    ]
+  },
+  {
+    "name": "denySsh",
+    "default": false,
+    "description": "Block ~/.ssh access.",
+    "files": [
+      {
+        "path": "~/.ssh/**",
+        "read": "deny",
+        "write": "deny"
+      }
+    ]
+  }
+]

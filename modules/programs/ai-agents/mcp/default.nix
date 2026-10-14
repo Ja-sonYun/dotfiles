@@ -198,21 +198,6 @@ let
   claudeMcpServers = mkClaudeMcpServers { bridgeRemote = false; };
   claudeDesktopMcpServers = mkClaudeMcpServers { bridgeRemote = true; };
 
-  piMcpServers = lib.mapAttrs (
-    name: server:
-    mkDefaultValue (
-      lib.hm.mcp.transformMcpServer {
-        inherit server;
-        exclude = [ "instructions" ];
-        extraTransforms = [
-          (wrapSecretEnvCommand name)
-          (wrapInstructionsCommand name)
-          stringifyCommand
-        ];
-      }
-    )
-  ) cfg.mcp.servers;
-
   disabledMcpServers = builtins.attrNames (
     lib.filterAttrs (
       _: server: server.enabled == false || (server.disabled or null) == true
@@ -268,10 +253,6 @@ in
 
       (lib.mkIf config.programs.claude-desktop.enable {
         programs.claude-desktop.settings.mcpServers = claudeDesktopMcpServers;
-      })
-
-      (lib.mkIf config.programs.pi.enable {
-        programs.pi.mcp.servers = piMcpServers;
       })
     ]
   );

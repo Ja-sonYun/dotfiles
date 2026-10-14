@@ -1,11 +1,24 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 let
   cfg = config.programs.tmux.extensions.shell;
   scripts = "${../..}/extensions/shell/scripts";
+  picker = pkgs.writeShellApplication {
+    name = "tmux-pane-picker";
+    runtimeInputs = [
+      config.programs.tmux.package
+      config.programs.fzf.package
+      pkgs.coreutils
+      pkgs.git
+    ];
+    text = ''
+      exec ${pkgs.bash}/bin/bash ${scripts}/picker "$@"
+    '';
+  };
 in
 {
   options.programs.tmux.extensions.shell = {
@@ -15,6 +28,15 @@ in
       readOnly = true;
       internal = true;
       default = scripts;
+    };
+    pickerCommand = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${picker}/bin/tmux-pane-picker";
+      description = ''
+        Select a pane by session and client, or use --stdin to read
+        tab-separated target/label rows and print the selected target.
+      '';
     };
   };
   config = lib.mkIf cfg.enable {

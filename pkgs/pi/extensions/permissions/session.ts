@@ -9,6 +9,7 @@ export interface RuleResult {
     message?: string;
   }[];
   errors: string[];
+  needs_summary?: boolean | null;
 }
 export interface Approval {
   call: Call;
@@ -16,6 +17,7 @@ export interface Approval {
   request: string;
   reasons: string[];
   sessionAllowed: boolean;
+  summary?: string;
 }
 export type Outcome = { block: true; reason: string } | undefined;
 export type Approve = (
@@ -49,6 +51,7 @@ export class PermissionSession {
     evaluate: (signal: AbortSignal) => Promise<RuleResult>,
     approve: Approve,
     signal?: AbortSignal,
+    prepare?: (rules: RuleResult, signal: AbortSignal) => Promise<void>,
   ): Promise<Outcome> {
     const generation = this.generation;
     const cancellation = AbortSignal.any([
@@ -100,6 +103,17 @@ export class PermissionSession {
           .map((rule) => `${rule.id}: ${rule.message ?? "Rule violation"}`)
           .join("\n"),
       };
+    try {
+      await prepare?.(rules, cancellation);
+    } catch {
+      return {
+        block: true,
+        reason:
+          "Tool explanation could not be prepared; the call was not executed",
+      };
+    }
+    if (cancellation.aborted || generation !== this.generation)
+      return { block: true, reason: "Permission context changed" };
     const uncertain =
       rules.errors.length > 0 ||
       rules.results.some((rule) => rule.verdict === "unclear");

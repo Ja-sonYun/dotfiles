@@ -49,13 +49,16 @@ let
 in
 {
   imports = [
+    ./agents
+    ./skills.nix
+    ./permissions
+    ./rules.nix
     ./mcp.nix
     ./extensions/providers.nix
     ./extensions/subagent.nix
     ./extensions/permissions.nix
     ./extensions/redact.nix
     ./extensions/message-lines.nix
-    ./extensions/tool-summaries.nix
   ];
 
   options.programs.pi = {

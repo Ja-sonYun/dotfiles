@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import {
   keyHint,
   type ExtensionAPI,
@@ -11,15 +10,28 @@ import {
   truncateToWidth,
   type Component,
 } from "@earendil-works/pi-tui";
-import { showPermission, type PermissionPrompt } from "./permission-ui.ts";
+import type { Call } from "./policy.ts";
+
+export interface SummaryConfiguration {
+  provider: string;
+  model: string;
+}
 
 interface Summary {
   text?: string;
+  ready?: boolean;
   pending?: Promise<void>;
   invalidate?: () => void;
 }
 
-class SummaryCall extends Container {
+function isKoreanSummary(text: string): boolean {
+  return (
+    /\p{Script=Hangul}/u.test(text) &&
+    !/\p{L}/u.test(text.replace(/[\p{Script=Hangul}\p{Script=Latin}]/gu, ""))
+  );
+}
+
+class SummaryView extends Container {
   constructor(
     readonly original: Component,
     display: Component,
@@ -29,14 +41,7 @@ class SummaryCall extends Container {
   }
 }
 
-export default function toolSummaries(pi: ExtensionAPI) {
-  const configPath = process.env.PI_TOOL_SUMMARIES_CONFIG;
-  if (!configPath) {
-    return;
-  }
-  const configuration: { provider: string; model: string } = JSON.parse(
-    readFileSync(configPath, "utf8"),
-  );
+export function toolSummaries(pi: ExtensionAPI) {
   const summaries = new Map<string, Summary>();
   let controller = new AbortController();
   let errorNotified = false;
@@ -47,6 +52,8 @@ export default function toolSummaries(pi: ExtensionAPI) {
     args: unknown,
     summary: Summary,
     context: ExtensionContext,
+    configuration: SummaryConfiguration,
+    signal: AbortSignal,
   ) {
     const sessionSignal = controller.signal;
     const sessionId = context.sessionManager.getSessionId();
@@ -85,6 +92,7 @@ export default function toolSummaries(pi: ExtensionAPI) {
             reasoning: "minimal",
             signal: AbortSignal.any([
               sessionSignal,
+              signal,
               AbortSignal.timeout(15000),
             ]),
           },
@@ -92,9 +100,10 @@ export default function toolSummaries(pi: ExtensionAPI) {
         .result();
       if (
         sessionSignal.aborted ||
+        signal.aborted ||
         context.sessionManager.getSessionId() !== sessionId
       ) {
-        return;
+        throw new Error("Summary cancelled");
       }
       if (
         response.stopReason === "error" ||
@@ -111,10 +120,11 @@ export default function toolSummaries(pi: ExtensionAPI) {
         .replace(/\s+/g, " ")
         .trim()
         .slice(0, 80);
-      if (!text) {
-        throw new Error("Summary response was empty");
+      if (!isKoreanSummary(text)) {
+        throw new Error("Summary response is not Korean text");
       }
       summary.text = text;
+      summary.ready = true;
       summary.invalidate?.();
       if (toolCallId) {
         try {
@@ -129,34 +139,50 @@ export default function toolSummaries(pi: ExtensionAPI) {
     } catch {
       if (
         !sessionSignal.aborted &&
+        !signal.aborted &&
         context.sessionManager.getSessionId() === sessionId &&
         !errorNotified
       ) {
         errorNotified = true;
         context.ui.notify(
-          `Tool summaries unavailable with ${configuration.provider}/${configuration.model}. Expand a tool call to see its arguments.`,
+          `Tool summaries unavailable with ${configuration.provider}/${configuration.model}. The call was blocked.`,
           "warning",
         );
       }
+      throw new Error("Required tool summary unavailable");
     }
   }
 
-  function requestSummary(
-    toolCallId: string | undefined,
-    toolName: string,
-    args: unknown,
+  async function prepare(
+    call: Call,
+    configuration: SummaryConfiguration,
     context: ExtensionContext,
+    signal: AbortSignal,
   ) {
-    const cacheKey = toolCallId ?? JSON.stringify({ toolName, args });
+    signal.throwIfAborted();
+    const cacheKey = call.toolCallId ?? JSON.stringify(call);
     const summary = summaries.get(cacheKey) ?? {};
     summaries.set(cacheKey, summary);
-    if (!summary.text && !summary.pending) {
-      summary.pending = summarize(toolCallId, toolName, args, summary, context);
+    if (!summary.ready && !summary.pending) {
+      summary.pending = summarize(
+        call.toolCallId,
+        call.toolName,
+        call.input,
+        summary,
+        context,
+        configuration,
+        signal,
+      );
     }
-    return summary;
+    await summary.pending;
+    signal.throwIfAborted();
+    if (!summary.ready || !summary.text) {
+      throw new Error("Required tool summary unavailable");
+    }
+    return summary.text;
   }
 
-  pi.on("session_start", (_event, context) => {
+  const reset = (_event: unknown, context: ExtensionContext) => {
     controller.abort();
     controller = new AbortController();
     summaries.clear();
@@ -171,42 +197,24 @@ export default function toolSummaries(pi: ExtensionAPI) {
       if (
         typeof saved?.toolCallId === "string" &&
         typeof saved.text === "string" &&
-        saved.text
+        isKoreanSummary(saved.text)
       ) {
-        summaries.set(saved.toolCallId, { text: saved.text });
+        summaries.set(saved.toolCallId, { text: saved.text, ready: true });
       }
     }
-  });
+  };
+  pi.on("session_start", reset);
+  pi.on("session_tree", reset);
   pi.on("session_shutdown", () => {
     controller.abort();
     summaries.clear();
   });
 
-  pi.on("tool_execution_start", (event, context) => {
-    if (!context.hasUI || event.parentToolCallId) {
-      return;
-    }
-    // Start display work without delaying execution or its UI events.
-    requestSummary(event.toolCallId, event.toolName, event.args, context);
-  });
-
-  pi.events.on("permissions:approval", (request: PermissionPrompt) => {
-    if (request.signal.aborted) {
-      request.reply(Promise.resolve(undefined));
-      return;
-    }
-    const summary = requestSummary(
-      request.call.toolCallId,
-      request.call.toolName,
-      request.call.input,
-      request.context,
-    );
-    request.reply(showPermission(request, summary));
-  });
-
   pi.registerToolRenderer((toolName, next) => {
     const renderers = next();
-    return {
+    if (toolName === "subagent") return renderers;
+
+    const decorated: NonNullable<ReturnType<typeof next>> = {
       ...renderers,
       renderCall(args, theme, context) {
         const original = renderers?.renderCall
@@ -214,7 +222,7 @@ export default function toolSummaries(pi: ExtensionAPI) {
               ...context,
               // Each decorator unwraps only the component that it owns.
               lastComponent:
-                context.lastComponent instanceof SummaryCall
+                context.lastComponent instanceof SummaryView
                   ? context.lastComponent.original
                   : context.lastComponent,
             })
@@ -233,14 +241,15 @@ export default function toolSummaries(pi: ExtensionAPI) {
         const summary = summaries.get(context.toolCallId) ?? {};
         summary.invalidate = context.invalidate;
         summaries.set(context.toolCallId, summary);
+        if (!summary.text) return original;
         const label =
           theme.fg("toolTitle", theme.bold(toolName)) +
           (summary.text ? theme.fg("muted", ` · ${summary.text}`) : "") +
           " " +
           keyHint("app.tools.expand", "details");
-        return new SummaryCall(
+        return new SummaryView(
           original,
-          context.expanded || !summary.text
+          context.expanded
             ? original
             : {
                 render: (width) => [truncateToWidth(label, width, "…")],
@@ -249,5 +258,74 @@ export default function toolSummaries(pi: ExtensionAPI) {
         );
       },
     };
+
+    if (toolName === "codemode" && renderers?.renderResult) {
+      const renderResult = renderers.renderResult;
+      decorated.renderResult = (result, options, theme, context) => {
+        const original = renderResult(result, options, theme, {
+          ...context,
+          lastComponent:
+            context.lastComponent instanceof SummaryView
+              ? context.lastComponent.original
+              : context.lastComponent,
+        });
+        const details = result.details as
+          | {
+              calls?: {
+                id: string;
+                name: string;
+                status: "running" | "ok" | "error" | "cancelled";
+                durationMs?: number;
+                error?: string;
+              }[];
+            }
+          | undefined;
+        if (
+          options.expanded ||
+          context.isError ||
+          !Array.isArray(details?.calls) ||
+          details.calls.length === 0
+        ) {
+          return new SummaryView(original, original);
+        }
+
+        const calls = details.calls;
+        const lines = calls.map((call, index) => {
+          const status = {
+            running: "실행 중",
+            ok: "완료",
+            error: "실패",
+            cancelled: "취소",
+          }[call.status];
+          const branch = index === calls.length - 1 ? "└─" : "├─";
+          const elapsed =
+            call.durationMs === undefined
+              ? ""
+              : ` · ${(call.durationMs / 1000).toFixed(1)}s`;
+          const error = call.error ? ` · ${call.error}` : "";
+          const summary = summaries.get(call.id)?.text;
+          const description = summary ? ` · ${summary}` : "";
+          return `${branch} ${call.name}${description} · ${status}${elapsed}${error}`;
+        });
+        if (result.content.length > 0) {
+          lines.push(
+            theme.fg("muted", keyHint("app.tools.expand", "결과 원문")),
+          );
+        }
+        return new SummaryView(original, {
+          render: (width) =>
+            lines.map((line) =>
+              truncateToWidth(
+                stripTerminalSequences(line).replace(/\s+/g, " "),
+                width,
+                "…",
+              ),
+            ),
+          invalidate() {},
+        });
+      };
+    }
+    return decorated;
   });
+  return { prepare };
 }

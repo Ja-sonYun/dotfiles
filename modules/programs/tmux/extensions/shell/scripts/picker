@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$script_dir/../../../scripts/lib/common"
+
+if [[ "${1:-}" == --stdin ]]; then
+	rows="$(cat)"
+else
+	session="$1"
+	client="$2"
+	format=$'#{pane_id}\x1f#{window_index}.#{pane_index}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_project_label}\x1f#{@pcmd}'
+	panes="$(tmux list-panes -s -t "=$session" -F "$format")"
+	rows=$(
+		while IFS=$'\x1f' read -r pane_id index pane_path command label stored_command; do
+			[[ -n "$pane_id" ]] || continue
+			if [[ -z "$label" ]]; then
+				label="$(basename "$(project_for_path "$pane_path")")"
+			fi
+			command="$(label_for_cmd "${stored_command:-$command}")"
+			printf '%s\t%s:%s [%s]\n' "$pane_id" "$label" "$command" "$index"
+		done <<<"$panes"
+	)
+fi
+
+if selected=$(
+	fzf --height=100% \
+		--layout=reverse \
+		--delimiter=$'\t' \
+		--with-nth=2.. \
+		--accept-nth=1 \
+		--no-multi \
+		--prompt='Pane> ' <<<"$rows"
+); then
+	[[ -n "$selected" ]] || exit 0
+	if [[ "${1:-}" == --stdin ]]; then
+		printf '%s\n' "$selected"
+	else
+		tmux switch-client -c "$client" -t "$selected"
+	fi
+else
+	status=$?
+	case "$status" in
+	1 | 130) exit 0 ;;
+	*) exit "$status" ;;
+	esac
+fi

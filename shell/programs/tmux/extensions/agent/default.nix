@@ -106,20 +106,21 @@ lib.mkIf agent.enable {
           "C-q".command = "switch-client -T all-agents-prefix";
           menuCtrlC = {
             key = "C-c";
-            command = "detach-client";
+            command = "{ ${agent.rememberOverviewAction}; detach-client }";
           };
           "C-d".command = "send-keys C-n";
         };
 
         all-agents-prefix = {
           "C-c".command = "send-keys C-c";
-          d.command = "detach-client";
-          f.command = "detach-client";
-          "C-f".command = "detach-client";
-          "C-r".command = "detach-client";
-          w.command = "detach-client";
-          s.command = "detach-client";
-          k.command = "run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_id} #{q:window_id} #{q:client_name} #{q:pane_current_path}'";
+          d.command = "{ ${agent.rememberOverviewAction}; detach-client }";
+          f.command = "{ ${agent.rememberOverviewAction}; detach-client }";
+          "C-f".command = "{ ${agent.rememberOverviewAction}; detach-client }";
+          "C-r".command = "{ ${agent.rememberOverviewAction}; detach-client }";
+          w.command = "{ ${agent.rememberOverviewAction}; detach-client }";
+          s.command = "{ ${agent.rememberOverviewAction}; detach-client }";
+          k.command = "{ ${agent.rememberOverviewAction}; run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_id} #{q:window_id} #{q:client_name} #{q:pane_current_path}' }";
+          t.command = "{ ${agent.pickerAction} }";
           n.command = "next-window";
           "C-n" = {
             repeat = true;

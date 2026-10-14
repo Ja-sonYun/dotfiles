@@ -87,10 +87,6 @@ in
         (lib.mkIf config.programs.claude-code.enable {
           programs.claude-code.skills = cfg.skills;
         })
-
-        (lib.mkIf config.programs.pi.enable {
-          programs.pi.skills = cfg.skills;
-        })
       ]
     ))
   ];

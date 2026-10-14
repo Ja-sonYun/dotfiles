@@ -69,7 +69,6 @@ class ClientEnable(BaseModel):
 
     codex: bool = True
     claude: bool = True
-    pi: bool = True
 
 
 class RuleDefinition(BaseModel):
@@ -170,7 +169,7 @@ def effective_rules(
             fallback = session.cwd
         elif cwd is None:
             raise ValueError("A working directory is required without a session.")
-        if client not in {"codex", "claude", "pi"}:
+        if client not in {"codex", "claude"}:
             raise ValueError("A supported agent client is required to select rules.")
     directory = rules_directory(project_root(cwd, fallback))
     project = parse_rules(read_rules(directory), "project", directory)

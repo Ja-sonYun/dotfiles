@@ -8,6 +8,17 @@ let
   cfg = config.programs.tmux.extensions.agent;
   tmuxRoot = ../..;
   scripts = "${tmuxRoot}/extensions/agent/scripts";
+  picker = pkgs.writeShellApplication {
+    name = "tmux-agent-picker";
+    runtimeInputs = [ config.programs.tmux.package ];
+    text = ''
+      exec ${pkgs.python3}/bin/python ${./picker.py} \
+        ${lib.escapeShellArg config.programs.tmux.extensions.shell.pickerCommand} "$@"
+    '';
+  };
+  # Resolve the client-specific option name before looking up its value.
+  # https://github.com/tmux/tmux/blob/3.7c/format.c
+  pickerResult = "#{E:##{@agent_picker_#{client_pid}#}}";
   stateNotify = pkgs.writeShellScript "tmux-agent-notify" ''
     [[ -n "''${TMUX_PANE:-}" ]] || exit 0
     exec ${scripts}/status init
@@ -153,6 +164,27 @@ in
       readOnly = true;
       internal = true;
       default = agentMenu;
+    };
+    pickerAction = lib.mkOption {
+      type = lib.types.lines;
+      readOnly = true;
+      description = "tmux command list opening the agent picker on the calling client.";
+      # The attached caller must select its private active pane.
+      # https://github.com/tmux/tmux/blob/3.7c/cmd-select-pane.c
+      default = ''
+        set-option -suq '@agent_picker_#{client_pid}'
+        run-shell -C 'display-popup -E -w 60% -h 40% -x C -y C ${picker}/bin/tmux-agent-picker #{q/a:session_id} @agent_picker_#{client_pid}'
+        if-shell -F '${pickerResult}' {
+          run-shell -C '${pickerResult}'
+        }
+        set-option -suq '@agent_picker_#{client_pid}'
+      '';
+    };
+    rememberOverviewAction = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      description = "tmux command saving the overview client's current window and pane before detaching.";
+      default = "set-option -sF @agent_overview_last '#{window_id}.#{pane_id}'";
     };
     countFormat = lib.mkOption {
       type = lib.types.str;

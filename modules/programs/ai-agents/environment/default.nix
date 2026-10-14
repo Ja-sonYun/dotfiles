@@ -22,10 +22,6 @@ in
       (lib.mkIf config.programs.claude-code.enable {
         programs.claude-code.extraPath = cfg.extraPath;
       })
-
-      (lib.mkIf config.programs.pi.enable {
-        programs.pi.extraPath = cfg.extraPath;
-      })
     ]
   );
 }

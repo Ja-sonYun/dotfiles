@@ -40,7 +40,7 @@ let
 in
 client: hooks:
 lib.mapAttrs (_: blocks: map (normalizeBlock client) blocks) (
-  lib.filterAttrs (event: _: client == "Pi" || event != "SessionInfoChanged") hooks
+  lib.filterAttrs (event: _: event != "SessionInfoChanged") hooks
 )
 // lib.optionalAttrs (hooks ? PostToolUse) {
   PostToolUseFailure = map (

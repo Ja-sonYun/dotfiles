@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-context7",
-    "version": "4.3.0",
+    "version": "4.4.1",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-context7",
-        "version": "4.3.0",
+        "version": "4.4.1",
         "dependencies": {
-          "@upstash/context7-mcp": "4.3.0"
+          "@upstash/context7-mcp": "4.4.1"
         }
       },
       "node_modules/@hono/node-server": {
@@ -350,9 +350,9 @@
         }
       },
       "node_modules/@upstash/context7-mcp": {
-        "version": "4.3.0",
-        "resolved": "https://registry.npmjs.org/@upstash/context7-mcp/-/context7-mcp-4.3.0.tgz",
-        "integrity": "sha512-fuDt5nWjE5JkAPLjU0m+m0LlJphxyegAvAmcwHoA5jrzAhKo/rVV0RFA8TOwODGdDVdt/nPxNslkxeDIDp/rPA==",
+        "version": "4.4.1",
+        "resolved": "https://registry.npmjs.org/@upstash/context7-mcp/-/context7-mcp-4.4.1.tgz",
+        "integrity": "sha512-HtFuzT7c88ycSzNRrkBRQD4nIYQD6AgQETs2TeKrofFDv6R9RqAYFspopfDq6/OuAnfGZJj5rGrX4whnXbHYLQ==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/node": "2.1.0",
@@ -1304,9 +1304,9 @@
         "license": "ISC"
       },
       "node_modules/zod": {
-        "version": "4.6.5",
-        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.5.tgz",
-        "integrity": "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==",
+        "version": "4.6.7",
+        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+        "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==",
         "license": "MIT",
         "funding": {
           "url": "https://github.com/sponsors/colinhacks"
@@ -1314,5 +1314,5 @@
       }
     }
   },
-  "invalidationHash": "b8474f992e2324f25c0985ae23b48ed650aababc26fa45ec7cf8a9b0ccd4b947"
+  "invalidationHash": "c704859adf7bbba4515ecde7ceb07bed7478d9a0b1b5cde438e764ef4c32f895"
 }

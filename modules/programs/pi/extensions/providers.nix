@@ -24,8 +24,13 @@ let
         description = "API key; supports { _secret = path; }.";
       };
       fallbackModels = lib.mkOption {
-        type = lib.types.nonEmptyListOf nonEmptyString;
+        type = lib.types.listOf nonEmptyString;
         description = "Initial model IDs.";
+      };
+      excludeOpenAIModels = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Exclude native OpenAI model IDs from initial and refreshed catalogs.";
       };
       defaults = lib.mkOption {
         type = lib.types.submodule {

@@ -26,13 +26,6 @@ in
 symlinkJoin {
   name = "ai-agent-rules";
   paths = [
-    (uv.asPackage (
-      arguments
-      // {
-        name = "ai-agent-rules-check";
-        entrypoint = "ai_agent_rules.cli:main";
-      }
-    ))
     (buildGoModule {
       pname = "ai-agent-rules-client";
       version = "0.1.0";

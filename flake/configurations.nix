@@ -63,6 +63,7 @@ let
     ]
     ++ nixpkgs.lib.optionals (hostConfig.hasTag hostname "ai") [
       agenix-secrets.homeManagerModules.ai-agents
+      agenix-secrets.homeManagerModules.pi
     ]
     ++ (
       if hosts.${hostname}.system == "aarch64-darwin" then

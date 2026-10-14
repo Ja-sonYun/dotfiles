@@ -37,7 +37,7 @@
     };
 
     settings = {
-      model = "gpt-6-astra";
+      model = "gpt-6.1-sol";
       model_reasoning_effort = "high";
       plan_mode_reasoning_effort = "xhigh";
       model_verbosity = "low";

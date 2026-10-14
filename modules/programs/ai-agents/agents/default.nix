@@ -8,11 +8,9 @@ let
   cfg = config.programs.ai-agents;
   jsonFormat = pkgs.formats.json { };
   python = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
-  piEnabled = config.programs.pi.enable && config.programs.pi.settings.extensions.subagent.enable;
   clients =
     lib.optional config.programs.claude-code.enable "claude"
-    ++ lib.optional config.programs.codex.enable "codex"
-    ++ lib.optional piEnabled "pi";
+    ++ lib.optional config.programs.codex.enable "codex";
   modelMapFile = jsonFormat.generate "ai-agent-model-map.json" (
     lib.filterAttrs (client: _: builtins.elem client clients) cfg.modelMap
   );
@@ -99,9 +97,6 @@ in
     {
       programs.ai-agents.adaptedAgents =
         if cfg.enable && cfg.agentsDir != null && clients != [ ] then adaptedAgents else null;
-      programs.pi.settings.extensions.subagent.agentsDir = lib.mkIf (
-        cfg.enable && cfg.adaptedAgents != null && piEnabled
-      ) "${cfg.adaptedAgents}/pi";
     }
 
     (lib.mkIf (cfg.enable && cfg.adaptedAgents != null) (

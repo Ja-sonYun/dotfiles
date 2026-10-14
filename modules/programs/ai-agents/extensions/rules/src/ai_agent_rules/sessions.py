@@ -22,11 +22,7 @@ class Session:
 def session_key(hook_input: HookInput) -> str | None:
     client = environment().get("AI_AGENT_CLIENT", "").lower()
     session = hook_input.get("session_id")
-    if (
-        client not in {"codex", "claude", "pi"}
-        or not isinstance(session, str)
-        or not session
-    ):
+    if client not in {"codex", "claude"} or not isinstance(session, str) or not session:
         return None
     return hashlib.sha256(json.dumps([client, session]).encode()).hexdigest()
 

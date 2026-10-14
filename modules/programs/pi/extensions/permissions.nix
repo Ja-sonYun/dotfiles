@@ -8,10 +8,10 @@ let
   cfg = config.programs.pi.settings.extensions.permissions;
   jsonFormat = pkgs.formats.json { };
   configFile = jsonFormat.generate "pi-permissions.json" {
-    inherit (cfg) policy;
+    inherit (cfg) policy summaries;
     parser = "${pkgs.shfmt}/bin/shfmt";
     search = "${pkgs.ripgrep}/bin/rg";
-    evaluator = config.programs.ai-agents.extensions.rules.evaluatorCommand;
+    evaluator = config.programs.pi.rules.evaluatorCommand;
   };
 in
 {
@@ -27,7 +27,25 @@ in
         policy = lib.mkOption {
           inherit (jsonFormat) type;
           internal = true;
-          description = "Runtime policy supplied by the common permissions module.";
+          description = "Runtime policy generated from Pi permissions.";
+        };
+        summaries = lib.mkOption {
+          type = lib.types.nullOr (
+            lib.types.submodule {
+              options = {
+                provider = lib.mkOption {
+                  type = lib.types.nonEmptyStr;
+                  description = "Registered Pi provider for tool summaries.";
+                };
+                model = lib.mkOption {
+                  type = lib.types.nonEmptyStr;
+                  description = "Model used when Jev determines a tool call needs explanation.";
+                };
+              };
+            }
+          );
+          default = null;
+          description = "Optional tool summaries, completed before approval or execution.";
         };
         source = lib.mkOption {
           type = lib.types.str;
@@ -55,12 +73,12 @@ in
     programs.pi.env.PI_PERMISSIONS_CONFIG = toString configFile;
     assertions = [
       {
-        assertion = config.programs.ai-agents.enable && config.programs.ai-agents.permissions != null;
-        message = "Pi permissions require the shared AI agent permission policy.";
+        assertion = config.programs.pi.permissions != null;
+        message = "Pi permissions require a Pi permission policy.";
       }
       {
-        assertion = config.programs.ai-agents.extensions.rules.enable;
-        message = "Pi permissions require the shared rule evaluator.";
+        assertion = config.programs.pi.rules.enable;
+        message = "Pi permissions require the Pi rule evaluator.";
       }
       {
         assertion = config.programs.pi.env ? TYPESAFE_API_KEY;

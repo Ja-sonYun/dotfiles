@@ -116,15 +116,12 @@ def find_owner(pid: int, client: str) -> psutil.Process:
                 executable = (
                     Path(name).name.lstrip(".").removesuffix("-wrapped").lower()
                 )
-                matches = (
-                    executable
-                    == {"Codex": "codex", "Claude": "claude", "Pi": "pi"}[client]
-                )
+                matches = executable == {"Codex": "codex", "Claude": "claude"}[client]
                 if executable == "node" and len(command_line) > 1:
                     matches = (
                         client == "Claude"
                         and "/@anthropic-ai/claude-code/" in command_line[1]
-                    ) or (client == "Pi" and "/pi-coding-agent/" in command_line[1])
+                    )
                 if matches and process.status() != psutil.STATUS_ZOMBIE:
                     return process
     except psutil.NoSuchProcess as error:
@@ -362,7 +359,7 @@ class Server:
                 or not request["configuration"]
             ):
                 raise ValueError("Missing rules server configuration.")
-            if request.get("client") not in ("Codex", "Claude", "Pi"):
+            if request.get("client") not in ("Codex", "Claude"):
                 raise ValueError("Unsupported rules client.")
             hook_input = request["input"]
             if not isinstance(hook_input, dict):
@@ -376,7 +373,7 @@ class Server:
             registering = request.get("register_only") is True
             details.update(
                 client=request.get("client")
-                if request.get("client") in ("Codex", "Claude", "Pi")
+                if request.get("client") in ("Codex", "Claude")
                 else None,
                 session_id=session_id,
                 hook_event=event,

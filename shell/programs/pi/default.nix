@@ -5,7 +5,7 @@
   ...
 }:
 {
-  programs.ai-agents.modelMap.pi =
+  programs.pi.agents.modelMap =
     lib.genAttrs
       [
         "xhigh"
@@ -20,26 +20,69 @@
 
   programs.pi = {
     enable = true;
-    extraPath = [ pkgs.nodejs_24 ];
+    # Keep Pi's execution tools available independently of the shared clients.
+    extraPath = with pkgs; [
+      nodejs_24
+      sed-readonly
+      aws-ro
+      gh-ro
+      jev
+      redact
+      dcf
+
+      uv
+      ruff
+      mypy
+      pyright
+
+      cargo
+      rustc
+      clippy
+      rustfmt
+      rust-analyzer
+      clang-tools
+      go
+      golangci-lint
+
+      shellcheck
+      shfmt
+      prettier
+      typescript
+      eslint
+
+      taplo
+      stylua
+      sqlfluff
+      google-java-format
+      ktfmt
+      rubyfmt
+
+      nixfmt
+      statix
+
+      terraform
+    ];
     dev.extensionsSource = config.lib.file.mkRepoSource {
-      path = "pkgs/ai-agents/pi/extensions";
+      path = "pkgs/pi/extensions";
       mode = "mutable";
     };
-    mcp.servers.rules.enabled = false;
 
     settings = {
-      extensions.subagent.enable = true;
-      extensions.permissions.enable = true;
-      extensions.redact.enable = true;
-      extensions.message-lines.enable = true;
-      extensions.tool-summaries = {
-        enable = true;
-        provider = "lmp";
-        model = "gpt-6-luna";
+      extensions = {
+        subagent.enable = true;
+        permissions = {
+          enable = true;
+          summaries = {
+            provider = "openai";
+            model = "gpt-6-luna";
+          };
+        };
+        redact.enable = true;
+        message-lines.enable = true;
       };
       quietStartup = true;
-      defaultProvider = "lmp";
-      defaultModel = "syn:large:text";
+      defaultProvider = "openai";
+      defaultModel = "gpt-6-astra";
       defaultThinkingLevel = "high";
       defaultTools = [
         "+codemode"
@@ -53,7 +96,8 @@
 
     providers.lmp = {
       name = "LMP";
-      fallbackModels = [ "gpt-5.4" ];
+      fallbackModels = [ ];
+      excludeOpenAIModels = true;
       defaults = {
         contextWindow = 256000;
         maxTokens = 32000;

@@ -70,7 +70,7 @@ func exchange(ctx context.Context, started time.Time, timeout int, server, cache
 	}
 	client := os.Getenv("AI_AGENT_CLIENT")
 	session := textField(payload, "session_id")
-	if session == "" || (client != "Codex" && client != "Claude" && client != "Pi") {
+	if session == "" || (client != "Codex" && client != "Claude") {
 		return 0, errors.New("missing client or session")
 	}
 	cache := os.Getenv("XDG_CACHE_HOME")

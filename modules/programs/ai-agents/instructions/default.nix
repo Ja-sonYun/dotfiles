@@ -43,17 +43,6 @@ in
           })
         ];
       })
-
-      (lib.mkIf config.programs.pi.enable {
-        programs.pi = lib.mkMerge [
-          (lib.mkIf (cfg.context != null) {
-            inherit (cfg) context;
-          })
-          (lib.mkIf (cfg.customInstructions != "") {
-            customInstructions = lib.mkBefore cfg.customInstructions;
-          })
-        ];
-      })
     ]
   );
 }

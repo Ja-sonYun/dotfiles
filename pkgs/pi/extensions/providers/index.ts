@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { getBuiltinModels } from "@earendil-works/pi-ai/providers/all";
 import type {
   ExtensionAPI,
   ProviderModelConfig,
@@ -20,6 +21,7 @@ type ProviderDefinition = {
   readonly baseUrl: SecretValue;
   readonly apiKey: SecretValue;
   readonly fallbackModels: ReadonlyArray<string>;
+  readonly excludeOpenAIModels: boolean;
   readonly defaults: {
     readonly contextWindow: number;
     readonly maxTokens: number;
@@ -117,6 +119,10 @@ const toModel = (
 });
 
 export default function (pi: ExtensionAPI) {
+  const openAIModelIds = new Set(
+    getBuiltinModels("openai").map((model) => model.id),
+  );
+
   for (const [id, provider] of Object.entries(providers)) {
     const baseUrl = `${resolveSecret(provider.baseUrl)}/v1`;
     const key = resolveSecret(provider.apiKey);
@@ -125,7 +131,11 @@ export default function (pi: ExtensionAPI) {
       baseUrl,
       apiKey: key,
       api: "openai-completions",
-      models: provider.fallbackModels.map((id) => toModel({ id }, provider)),
+      models: provider.fallbackModels
+        .filter(
+          (id) => !provider.excludeOpenAIModels || !openAIModelIds.has(id),
+        )
+        .map((id) => toModel({ id }, provider)),
       async refreshModels({ signal }) {
         const response = await fetch(`${baseUrl}/models`, {
           headers: key ? { Authorization: `Bearer ${key}` } : {},
@@ -138,9 +148,12 @@ export default function (pi: ExtensionAPI) {
         if (!isRecord(payload)) {
           throw new Error(`${id} model catalog must be an object`);
         }
-        return readRawModels(payload.data, `${id}.data`).map((model) =>
-          toModel(model, provider),
-        );
+        return readRawModels(payload.data, `${id}.data`)
+          .filter(
+            (model) =>
+              !provider.excludeOpenAIModels || !openAIModelIds.has(model.id),
+          )
+          .map((model) => toModel(model, provider));
       },
     });
   }

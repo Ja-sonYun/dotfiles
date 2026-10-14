@@ -8,7 +8,7 @@ from typing import Any
 import yaml
 
 AGENT_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-MODEL_CLIENTS = ("claude", "codex", "pi")
+MODEL_CLIENTS = ("claude", "codex")
 MODEL_TIERS = ("xhigh", "high", "middle", "low")
 CODEX_PREAMBLE = (
     "Treat references to CLAUDE.md as references to the nearest applicable "
@@ -312,74 +312,6 @@ def render_codex(
     }
 
 
-def pi_namespace(server: str) -> str:
-    # Match native Pi MCP tool names before their per-tool length limit.
-    # https://github.com/earendil-works/pi/blob/v1.1.0/packages/coding-agent/src/extensions/mcp/tools.ts
-    namespace = re.sub(r"[^A-Za-z0-9_]", "_", server)
-    return f"mcp__{namespace}"
-
-
-def pi_tools(agent: Agent) -> list[str] | None:
-    if agent.tools is None:
-        return None
-
-    # Shared tool declarations restrict MCP servers, not built-in tools.
-    names = [
-        "read",
-        "grep",
-        "find",
-        "ls",
-        "codemode",
-        "tool_search",
-    ]
-    if agent.permission_mode != "plan":
-        names.extend(["bash", "edit", "write"])
-    for tool in agent.tools:
-        names.append(f"{pi_namespace(tool.server)}__*")
-    return list(dict.fromkeys(names))
-
-
-def render_pi(
-    agent: Agent,
-    model_map: ModelMap,
-    output_dir: Path,
-) -> None:
-    frontmatter: dict[str, object] = {
-        "name": agent.name,
-        "description": agent.description,
-    }
-    if (model := resolve_model(agent, "pi", model_map)) is not None:
-        frontmatter["model"] = (
-            f"{model.model}:{model.reasoning_effort}"
-            if model.reasoning_effort is not None
-            else model.model
-        )
-    if (tools := pi_tools(agent)) is not None:
-        frontmatter["tools"] = tools
-    if agent.permission_mode is not None:
-        frontmatter["permissionMode"] = agent.permission_mode
-    rendered = yaml.safe_dump(
-        frontmatter,
-        allow_unicode=True,
-        sort_keys=False,
-    )
-    (output_dir / "pi" / agent.source.name).write_text(
-        f"---\n{rendered}---\n{agent.body}",
-        encoding="utf-8",
-    )
-
-
-def validate_pi_server_names(servers: tuple[str, ...]) -> None:
-    names: dict[str, str] = {}
-    for server in servers:
-        name = pi_namespace(server)
-        if existing := names.get(name):
-            raise ValueError(
-                f"MCP servers {existing!r} and {server!r} collide as Pi tool {name!r}"
-            )
-        names[name] = server
-
-
 def write_outputs(
     source_dir: Path,
     output_dir: Path,
@@ -388,8 +320,6 @@ def write_outputs(
     codex_servers: dict[str, dict[str, Any]],
     claude_plugin: str,
 ) -> None:
-    if "pi" in model_map:
-        validate_pi_server_names(servers)
     for directory in model_map:
         (output_dir / directory).mkdir(parents=True, exist_ok=True)
 
@@ -407,8 +337,6 @@ def write_outputs(
                 model_map,
                 output_dir,
             )
-        if "pi" in model_map:
-            render_pi(agent, model_map, output_dir)
 
     if "codex" in model_map:
         (output_dir / "codex" / "agents.json").write_text(

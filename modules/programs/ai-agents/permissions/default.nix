@@ -132,17 +132,12 @@ in
       }
     );
     default = { };
-    description = "Shared Claude Code, Codex and Pi permissions.";
+    description = "Shared Claude Code and Codex permissions.";
   };
 
   config = lib.mkIf (cfg.enable && policy != null) (
     lib.mkMerge [
       {
-        programs.pi.settings.extensions.permissions.policy = {
-          inherit (policy) commands mcp mcp_readonly_tools;
-          files.rules = policy.files.rules ++ lib.concatMap (preset: preset.files or [ ]) selectedPresets;
-          defaultRead = policy.presets.defaults;
-        };
         assertions = [
           {
             assertion = builtins.length presetNames == builtins.length (lib.unique presetNames);
