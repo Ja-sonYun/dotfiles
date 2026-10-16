@@ -20,13 +20,6 @@ import {
 
 type RenderContext = Parameters<NonNullable<ToolRenderers["renderCall"]>>[2];
 
-const lineColors = {
-  response: rgbColor(56, 189, 248),
-  pending: rgbColor(250, 204, 21),
-  success: rgbColor(74, 222, 128),
-  error: rgbColor(248, 113, 113),
-};
-
 class MessageLine extends Container {
   private readonly prefix: string;
   private readonly padding: number;
@@ -35,19 +28,17 @@ class MessageLine extends Container {
     readonly content: Component,
     theme: Theme,
     context: RenderContext,
+    display: Component = content,
+    color: "warning" | "error" | "dim" = context.isPartial
+      ? "warning"
+      : context.isError
+        ? "error"
+        : "dim",
   ) {
     super();
     this.padding = context.outputPad;
-    this.prefix =
-      " ".repeat(this.padding) +
-      theme.style("┃ ", {
-        fg: context.isPartial
-          ? lineColors.pending
-          : context.isError
-            ? lineColors.error
-            : lineColors.success,
-      });
-    this.addChild(content);
+    this.prefix = " ".repeat(this.padding) + theme.fg(color, "┃ ");
+    this.addChild(display);
   }
 
   render(width: number): string[] {
@@ -161,7 +152,7 @@ export default function messageLines(pi: ExtensionAPI) {
     const baseTheme = name ? context.ui.getTheme(name) : undefined;
     if (!baseTheme) {
       context.ui.notify(
-        "Cannot load the current theme for bold message lines.",
+        "Cannot load the current theme for transparent messages.",
         "error",
       );
       return;
@@ -171,9 +162,7 @@ export default function messageLines(pi: ExtensionAPI) {
     fixedTheme = Object.create(baseTheme) as Theme;
     fixedTheme.fg = (color, text) => {
       if (color === "mdQuoteBorder") {
-        return baseTheme.style(text.replaceAll("│", "┃"), {
-          fg: lineColors.response,
-        });
+        return baseTheme.fg(color, text.replaceAll("│", ">"));
       }
       if (name === "dark" && color === "thinkingText") {
         return baseTheme.style(text, {
@@ -186,7 +175,8 @@ export default function messageLines(pi: ExtensionAPI) {
       color === "userMessageBg" ||
       color === "toolPendingBg" ||
       color === "toolSuccessBg" ||
-      color === "toolErrorBg"
+      color === "toolErrorBg" ||
+      color === "customMessageBg"
         ? `\x1b[49m${text}`
         : baseTheme.bg(color, text);
     ui = context.ui;
@@ -198,8 +188,9 @@ export default function messageLines(pi: ExtensionAPI) {
   });
 
   pi.registerMarkdownTransformer((markdown, context) => {
+    // Reapply transparent backgrounds after theme reloads.
     scheduleTheme();
-    if (context.messageType === "user") {
+    if (context.messageType !== "user") {
       return markdown;
     }
     return markdown
@@ -256,7 +247,12 @@ export default function messageLines(pi: ExtensionAPI) {
           }
           content = new Text(text, 0, 0);
         }
-        return new MessageLine(content, theme, context);
+        return new MessageLine(
+          content,
+          theme,
+          context,
+          !context.isPartial && !context.expanded ? new Container() : content,
+        );
       },
       renderResult(result, options, theme, context) {
         const content = (renderers?.renderResult ?? renderFallbackResult)(
@@ -265,6 +261,114 @@ export default function messageLines(pi: ExtensionAPI) {
           theme,
           rendererContext(context),
         );
+        if (
+          toolName !== "subagent" &&
+          !context.isPartial &&
+          !options.expanded
+        ) {
+          const calls =
+            toolName === "codemode"
+              ? (
+                  result.details as
+                    | {
+                        calls?: {
+                          status: "running" | "ok" | "error" | "cancelled";
+                          error?: string;
+                        }[];
+                      }
+                    | undefined
+                )?.calls
+              : undefined;
+          // A script can catch a failed call and still return a successful result.
+          const failed =
+            context.isError || calls?.some((call) => call.status === "error");
+          const cancelled = calls?.some((call) => call.status === "cancelled");
+          const unfinished = calls?.some((call) => call.status === "running");
+          let summary: string | undefined;
+          pi.events.emit("tool-summaries:get", {
+            toolCallId: context.toolCallId,
+            reply: (text: string | undefined) => {
+              summary = text;
+            },
+          });
+          const name = stripTerminalSequences(summary ?? toolName).replace(
+            /\s+/g,
+            " ",
+          );
+          const elapsed =
+            context.durationMs !== undefined
+              ? ` · ${(context.durationMs / 1000).toFixed(1)}s`
+              : "";
+          if (!failed && !cancelled && !unfinished) {
+            const count = calls ? ` · ${calls.length} calls` : "";
+            const label =
+              theme.fg("success", "✓ ") +
+              theme.fg("text", name) +
+              theme.fg(
+                "muted",
+                `${count}${elapsed} ${keyHint("app.tools.expand", "details")}`,
+              );
+            return new MessageLine(content, theme, context, {
+              render: (width) => [truncateToWidth(label, width, "…")],
+              invalidate() {},
+            });
+          }
+
+          const counts = Object.entries({
+            ok: "completed",
+            error: "failed",
+            cancelled: "cancelled",
+            running: "incomplete",
+          })
+            .map(([status, label]) => {
+              const count =
+                calls?.filter((call) => call.status === status).length ?? 0;
+              return count ? `${count} ${label}` : "";
+            })
+            .filter(Boolean)
+            .join(", ");
+          const label =
+            theme.fg(failed ? "error" : "warning", `${failed ? "✗" : "■"} `) +
+            theme.fg("text", name) +
+            theme.fg(
+              failed ? "error" : "warning",
+              ` · ${failed ? "failed" : cancelled ? "cancelled" : "incomplete"}`,
+            ) +
+            theme.fg(
+              "muted",
+              `${counts ? ` · ${counts}` : ""}${elapsed} ${keyHint("app.tools.expand", "details")}`,
+            );
+          // Prefer the failed call's error over a generic script-output heading.
+          const diagnostic = stripTerminalSequences(
+            calls?.find((call) => call.status === "error" && call.error)
+              ?.error ??
+              result.content
+                .filter((block) => block.type === "text")
+                .map((block) => block.text)
+                .join("\n"),
+          )
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .find((line) => line && line !== "Script error:")
+            ?.replace(/\s+/g, " ");
+          const lines = [label];
+          if (diagnostic)
+            lines.push(theme.fg(failed ? "error" : "warning", diagnostic));
+          const display: Component = {
+            render: (width) =>
+              lines.map((line) =>
+                truncateToWidth(line, Math.max(1, Math.min(width, 120)), "…"),
+              ),
+            invalidate() {},
+          };
+          return new MessageLine(
+            content,
+            theme,
+            context,
+            display,
+            failed ? "error" : "warning",
+          );
+        }
         return new MessageLine(content, theme, context);
       },
     };

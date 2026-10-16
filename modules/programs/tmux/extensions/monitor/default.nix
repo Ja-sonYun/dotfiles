@@ -12,7 +12,10 @@ let
       mkdir -p "$out"
       cp -R ${./scripts}/. "$out/"
       chmod -R u+w "$out"
-      wrapProgram "$out/pane-monitor" --set PANE_MONITOR_PYTHON ${python}/bin/python
+      wrapProgram "$out/pane-monitor" \
+        --set PANE_MONITOR_PYTHON ${python}/bin/python \
+        --set TMUX_COMMON_LIB ${../../scripts/lib/common} \
+        --prefix PATH : ${lib.makeBinPath [ pkgs.flock ]}
     ''
   );
   afterCreate = pkgs.writeShellScript "tmux-monitor-after-create" (

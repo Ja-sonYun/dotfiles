@@ -15,7 +15,9 @@ in
       e cfg.fortunes=false
       e bin.cache=true
       e r2ghidra.sleighhome=${pkgs.r2ghidra}/lib/radare2/last/r2ghidra_sleigh
+      %OPENAI_API_KEY=`%CAPI_KEY`
       decai -e baseurl=`%LLM_DOMAIN`
+      decai -e model=`%ZDR_LLM_MODEL`
     '';
 
     plugins = {
@@ -24,7 +26,7 @@ in
     };
 
     env = {
-      OPENAI_API_KEY._secret = config.age.secrets."capi-key".path;
+      CAPI_KEY._secret = config.age.secrets."capi-key".path;
       LLM_DOMAIN._secret = config.age.secrets."llm-domain".path;
     };
 
@@ -32,7 +34,6 @@ in
       enable = true;
       settings = {
         api = "openai";
-        model = "syn:large:text";
         cmds = "pdd,pdg";
       };
     };

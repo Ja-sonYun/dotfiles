@@ -1,9 +1,17 @@
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { createHash } from "node:crypto";
-import { dirname, join, matchesGlob, resolve } from "node:path";
+import {
+  dirname,
+  isAbsolute,
+  join,
+  matchesGlob,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import type { ShellAnalysis } from "./bash.ts";
 
 export type Decision = "allow" | "ask" | "deny";
@@ -32,6 +40,7 @@ export interface Actor {
 export interface Assessment {
   decision: Decision;
   reasons: string[];
+  projectRead?: boolean;
 }
 
 export function mcpName(server: string, tool: string): string {
@@ -88,6 +97,17 @@ export function absolute(path: string, cwd: string): string {
       : path.startsWith("~/")
         ? join(homedir(), path.slice(2))
         : path,
+  );
+}
+
+function isProjectPath(path: string, projectRoot: string | undefined): boolean {
+  if (!projectRoot) return false;
+  // Resolve links before applying the project's standing read authorization.
+  const pathFromRoot = relative(canonical(projectRoot), canonical(path));
+  return (
+    !isAbsolute(pathFromRoot) &&
+    pathFromRoot !== ".." &&
+    !pathFromRoot.startsWith(`..${sep}`)
   );
 }
 
@@ -148,6 +168,7 @@ export async function assessSearch(
   call: Call,
   actor: Actor,
   search: string,
+  projectRoot?: string,
 ): Promise<Assessment> {
   // Match Pi's hidden-file, glob, ignore, and symlink selection without reading contents.
   // https://github.com/earendil-works/pi/blob/v1.1.0/packages/coding-agent/src/core/tools/grep.ts
@@ -175,12 +196,24 @@ export async function assessSearch(
   });
   const decisions: Decision[] = [];
   const reasons: string[] = [];
+  let projectRead =
+    isProjectPath(actor.cwd, projectRoot) &&
+    isProjectPath(
+      absolute(
+        typeof call.input.path === "string" ? call.input.path : ".",
+        actor.cwd,
+      ),
+      projectRoot,
+    );
   for (const file of files.split("\0").filter(Boolean)) {
     const decision = fileDecision(policy, file, actor.cwd, "read");
     decisions.push(decision);
+    projectRead &&=
+      decision === "allow" &&
+      isProjectPath(absolute(file, actor.cwd), projectRoot);
     if (decision !== "allow") reasons.push(`${decision}: search reads ${file}`);
   }
-  return { decision: strongest(decisions, "allow"), reasons };
+  return { decision: strongest(decisions, "allow"), reasons, projectRead };
 }
 
 export function assess(
@@ -188,9 +221,11 @@ export function assess(
   call: Call,
   actor: Actor,
   shell?: ShellAnalysis,
+  projectRoot?: string,
 ): Assessment {
   const reasons: string[] = [];
   const decisions: Decision[] = [];
+  let projectRead = false;
   const add = (decision: Decision, reason: string) => {
     decisions.push(decision);
     reasons.push(`${decision}: ${reason}`);
@@ -232,8 +267,21 @@ export function assess(
   if ([...readTools, "write", "edit"].includes(call.toolName)) {
     const access = readTools.includes(call.toolName) ? "read" : "write";
     const path = typeof call.input.path === "string" ? call.input.path : ".";
+    const fileAccess = fileDecision(policy, path, actor.cwd, access);
+    projectRead =
+      access === "read" &&
+      fileAccess === "allow" &&
+      isProjectPath(actor.cwd, projectRoot) &&
+      isProjectPath(absolute(path, actor.cwd), projectRoot);
+    if (projectRead && call.toolName === "ls") {
+      // Pi's ls stats each entry and follows links when checking directory types.
+      // https://github.com/earendil-works/pi/blob/main/packages/coding-agent/src/core/tools/ls.ts
+      projectRead = readdirSync(absolute(path, actor.cwd)).every((entry) =>
+        isProjectPath(join(absolute(path, actor.cwd), entry), projectRoot),
+      );
+    }
     add(
-      fileDecision(policy, path, actor.cwd, access),
+      fileAccess,
       `${access} ${path} -> ${canonical(absolute(path, actor.cwd))}`,
     );
   } else if (call.toolName === "bash" && shell) {
@@ -305,5 +353,10 @@ export function assess(
       "Tool discovery/orchestration; nested executions are checked separately",
     );
   }
-  return { decision: strongest(decisions), reasons };
+  const decision = strongest(decisions);
+  return {
+    decision,
+    reasons,
+    projectRead: projectRead && decision === "allow",
+  };
 }

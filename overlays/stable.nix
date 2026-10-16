@@ -17,11 +17,11 @@
     inherit (stable) direnv;
   };
 
-  # prev-packages = final: prev: rec {
-  #   prev = import inputs.nixpkgs-prev {
-  #     system = final.stdenv.hostPlatform.system;
-  #   };
+  prev-packages = final: _prev: rec {
+    prev = import inputs.nixpkgs-prev {
+      system = final.stdenv.hostPlatform.system;
+    };
 
-  #   direnv = prev.direnv;
-  # };
+    inherit (prev) atuin;
+  };
 }

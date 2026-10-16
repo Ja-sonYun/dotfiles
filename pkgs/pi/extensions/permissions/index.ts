@@ -151,12 +151,6 @@ export default function (pi: ExtensionAPI): void {
 
   const presentApproval: Approve = async (approval, signal) => {
     if (!context?.hasUI) return "deny";
-    const title = [
-      `Permission: ${approval.actor.name} (${approval.actor.mode})`,
-      `Working directory: ${approval.actor.cwd}`,
-      `${approval.call.toolName} ${JSON.stringify(approval.call.input)}`,
-      ...approval.reasons,
-    ].join("\n");
     const options = [
       "Deny",
       "Allow once",
@@ -166,7 +160,6 @@ export default function (pi: ExtensionAPI): void {
     ];
     const choice = await showPermission(
       {
-        title,
         options,
         call: approval.call,
         actor: approval.actor,
@@ -217,26 +210,32 @@ export default function (pi: ExtensionAPI): void {
       }
       const config: Configuration = JSON.parse(serialized);
       const summaryContext = context;
-      const checkSummary = Boolean(
-        config.summaries &&
-        summaryContext?.hasUI &&
-        call.toolName !== "subagent",
-      );
+      const checkSummary = Boolean(config.summaries && summaryContext?.hasUI);
       let summary: string | undefined;
       const shell =
         call.toolName === "bash" && typeof call.input.command === "string"
           ? await analyzeBash(call.input.command, config.parser)
           : undefined;
-      const assessment = assess(config.policy, call, actor, shell);
+      const assessment = assess(
+        config.policy,
+        call,
+        actor,
+        shell,
+        context?.cwd,
+      );
       if (call.toolName === "grep" && assessment.decision !== "deny") {
         const search = await assessSearch(
           config.policy,
           call,
           actor,
           config.search,
+          context?.cwd,
         );
         assessment.decision = strongest([assessment.decision, search.decision]);
         assessment.reasons.push(...search.reasons);
+        assessment.projectRead = Boolean(
+          assessment.projectRead && search.projectRead,
+        );
       }
       if (!current())
         return { block: true, reason: "Permission context changed" };
@@ -293,16 +292,13 @@ export default function (pi: ExtensionAPI): void {
           if (typeof rules.needs_summary !== "boolean") {
             throw new Error("Summary decision unavailable");
           }
-          if (rules.needs_summary && config.summaries && summaryContext) {
+          if (config.summaries && summaryContext) {
             summary = await summaries.prepare(
               call,
               config.summaries,
               summaryContext,
               cancellation,
             );
-            if (summary && (call.parentToolCallId || actor.name !== "main")) {
-              summaryContext.ui.notify(`${call.toolName} · ${summary}`, "info");
-            }
           }
         },
       );

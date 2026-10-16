@@ -20,8 +20,9 @@ async def request(
         api_key=os.environ.get("CAPI_KEY"),
     )
     response = await client.beta.chat.completions.parse(
-        model="gpt-5.3-codex-spark",
-        reasoning_effort="low",
+        model=os.environ["FAST_LLM_MODEL"],
+        reasoning_effort=os.environ["FAST_LLM_REASONING_EFFORT"],
+        service_tier=os.environ["FAST_LLM_SERVICE_TIER"],
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": input_text},

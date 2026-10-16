@@ -114,14 +114,24 @@ export class PermissionSession {
     }
     if (cancellation.aborted || generation !== this.generation)
       return { block: true, reason: "Permission context changed" };
-    const uncertain =
-      rules.errors.length > 0 ||
-      rules.results.some((rule) => rule.verdict === "unclear");
+    // Standing project-read authorization covers only request-scope uncertainty.
+    const unclearRules = rules.results.filter(
+      (rule) =>
+        rule.verdict === "unclear" &&
+        !(
+          assessment.decision === "allow" &&
+          assessment.projectRead &&
+          rule.id === "permission_request_scope"
+        ),
+    );
+    const uncertain = rules.errors.length > 0 || unclearRules.length > 0;
     reasons.push(
       ...rules.errors,
-      ...rules.results
-        .filter((rule) => rule.verdict !== "compliant")
-        .map((rule) => `${rule.id}: ${rule.verdict}`),
+      ...unclearRules.map((rule) =>
+        rule.id === "permission_request_scope"
+          ? "ask: Cannot confirm this call matches your request (permission_request_scope: unclear)"
+          : `ask: Cannot verify rule ${rule.id} (${rule.verdict})${rule.message ? `: ${rule.message}` : ""}`,
+      ),
     );
     if (assessment.decision === "allow" && !uncertain) return undefined;
     const key = fingerprint([

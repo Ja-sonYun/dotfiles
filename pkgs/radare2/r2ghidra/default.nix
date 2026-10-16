@@ -2,7 +2,6 @@
   lib,
   stdenv,
   fetchFromGitHub,
-  fetchurl,
   meson,
   ninja,
   pkg-config,
@@ -15,18 +14,8 @@ let
   ghidraNative = fetchFromGitHub {
     owner = "radareorg";
     repo = "ghidra-native";
-    rev = "0.6.4";
-    hash = "sha256-DFvHM/erGE9wFjcB3Dlyhv4oebzXwe2yGG+GzLaY7hU=";
-  };
-  pugixml = fetchFromGitHub {
-    owner = "zeux";
-    repo = "pugixml";
-    rev = "v1.15";
-    hash = "sha256-t/57lg32KgKPc7qRGQtO/GOwHRqoj78lllSaE/A8Z9Q=";
-  };
-  radare2ApiPatch = fetchurl {
-    url = "https://github.com/radareorg/r2ghidra/commit/e44f22704373630112035bd910e4969bdc9cbde3.patch";
-    hash = "sha256-gfVsrZl1Y4zfc9gKHS09ukCz3MMWCI96Oc60UuXNI3E=";
+    rev = "483ae94bcbc661a77667e52f1eff75928cb6aa2e";
+    hash = "sha256-3cig2WwnqUiDugyIKrX+hLGXt39J2P+YOM6/LHMDMyU=";
   };
   # exact diff_files from subprojects/ghidra-native.wrap (0022 is .disabled)
   patches = [
@@ -37,7 +26,6 @@ let
     "0010-null-subflow"
     "0020-Fix-double-free-crash-when-deinitializing-multiple-X"
     "0023-Undef-LoadImage-for-windows"
-    "0024-ignore-symbol-beyond-space"
     "0044-bad-unicode-codepoint"
     "0055-datatype-clone"
     "0056-nullderef-workaround"
@@ -46,19 +34,20 @@ let
     "0091-decompiler-xml-packer"
     "0092-badvar-segfault"
     "0093-no-virtual-destructor"
+    "0094-parse-64bit-integers"
     "0100-CHAR-windows"
     "ghidra-native"
   ];
 in
 stdenv.mkDerivation {
   pname = "r2ghidra";
-  version = "6.1.8";
+  version = "6.2.4";
 
   src = fetchFromGitHub {
     owner = "radareorg";
     repo = "r2ghidra";
-    rev = "6.1.8";
-    hash = "sha256-f5iohbAUYG524KJqSvL3PQCFnLQc055Ta02G3CRSO9I=";
+    rev = "6.2.4";
+    hash = "sha256-xjrYmvDx1bIFA9RafCsAVa+QJE4zpzCFbtMBC/eFWU8=";
   };
 
   nativeBuildInputs = [
@@ -74,8 +63,6 @@ stdenv.mkDerivation {
   ];
 
   postPatch = ''
-    patch -p1 < ${radare2ApiPatch}
-
     cp -r --no-preserve=mode ${ghidraNative}/. subprojects/ghidra-native
     cp -r --no-preserve=mode subprojects/packagefiles/ghidra-native/. subprojects/ghidra-native
     # case-insensitive APFS: the VERSION file shadows libc++ <version>
@@ -83,9 +70,6 @@ stdenv.mkDerivation {
     ${lib.concatMapStringsSep "\n" (
       p: "patch -p1 -d subprojects/ghidra-native < subprojects/ghidra-native/patches/${p}.patch"
     ) patches}
-
-    cp -r --no-preserve=mode ${pugixml}/. subprojects/pugixml
-    cp -r --no-preserve=mode subprojects/packagefiles/pugixml/. subprojects/pugixml
 
     # upstream installs into the read-only radare2 store path; redirect into $out
     substituteInPlace meson.build \

@@ -2,8 +2,11 @@ vim9script
 
 import autoload 'utils/curl.vim' as curl
 
-g:default_openai_endpoint = 'https://api.openai.com/v1'
-g:default_openai_api_key = getenv('OPENAI_API_KEY')
+g:default_openai_endpoint = substitute(getenv('LLM_DOMAIN'), '/\+$', '', '')
+if g:default_openai_endpoint !~# '/v1$'
+  g:default_openai_endpoint ..= '/v1'
+endif
+g:default_openai_api_key = getenv('CAPI_KEY')
 
 def BuildChatCompletionURL(): string
   const endpoint = get(g:, 'default_openai_endpoint', '')
@@ -53,7 +56,7 @@ def BuildHeaders(stream: bool = false): dict<string>
 
   var api_key = get(g:, 'default_openai_api_key', '')
   if api_key == ''
-    throw 'OpenAI API key is not set. Please set the OPENAI_API_KEY environment variable or g:default_openai_api_key.'
+    throw 'OpenAI API key is not set. Please set the CAPI_KEY environment variable or g:default_openai_api_key.'
   endif
   headers['Authorization'] = 'Bearer ' .. api_key
   return headers

@@ -3,8 +3,8 @@
 project_for_path() {
 	local path="$1" root superproject
 	case "$path" in
-		"~") path="$HOME" ;;
-		"~/"*) path="$HOME/${path#"~/"}" ;;
+	"~") path="$HOME" ;;
+	"~/"*) path="$HOME/${path#"~/"}" ;;
 	esac
 	if [[ -d "$path" ]]; then
 		root="${path%/}"
@@ -67,7 +67,7 @@ _TMUX_LOCK_FD=""
 
 tmux_lock() {
 	local name="$1" timeout_seconds="${2:-}" server_pid lock_dir lock_path
-	server_pid="$(tmux display-message -p '#{pid}' 2>/dev/null)" || return 1
+	server_pid="$("${TMUX_BIN:-tmux}" display-message -p '#{pid}' 2>/dev/null)" || return 1
 	[[ "$server_pid" =~ ^[0-9]+$ ]] || return 1
 	name="${name//[^[:alnum:]_.-]/_}"
 	lock_dir="${TMPDIR:-/tmp}/tmux-locks-$UID"
@@ -100,6 +100,13 @@ tmux_unlock() {
 	exec {_TMUX_LOCK_FD}>&-
 	_TMUX_LOCK_FD=""
 	trap - EXIT HUP INT TERM
+}
+
+# Close an inherited descriptor without releasing the parent's lock.
+tmux_lock_close() {
+	[[ "${_TMUX_LOCK_FD:-}" =~ ^[0-9]+$ ]] || return 0
+	exec {_TMUX_LOCK_FD}>&-
+	_TMUX_LOCK_FD=""
 }
 
 tmux_begin() {

@@ -33,6 +33,7 @@ import {
   type ExtensionContext,
   getAgentDir,
   getMarkdownTheme,
+  keyHint,
   withFileMutationQueue,
 } from "@earendil-works/pi-coding-agent";
 import {
@@ -194,6 +195,7 @@ interface SubagentDetails {
   agentScope: AgentScope;
   projectAgentsDir: string | null;
   results: SingleResult[];
+  summary?: string;
   background?: { id: string; state: BackgroundRun["state"] };
 }
 
@@ -238,6 +240,34 @@ function getResultOutput(result: SingleResult): string {
     );
   }
   return getFinalOutput(result.messages) || "(no output)";
+}
+
+function diagnosticLine(text: string): string {
+  return (
+    stripTerminalSequences(text)
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line && line !== "Script error:")
+      ?.replace(/\s+/g, " ") ?? ""
+  );
+}
+
+function resultCounts(results: SingleResult[]): string {
+  const counts = { completed: 0, failed: 0, cancelled: 0 };
+  for (const result of results) {
+    if (result.exitCode === -1) continue;
+    const status =
+      result.stopReason === "aborted"
+        ? "cancelled"
+        : isFailedResult(result)
+          ? "failed"
+          : "completed";
+    counts[status]++;
+  }
+  return Object.entries(counts)
+    .filter(([, count]) => count > 0)
+    .map(([status, count]) => `${count} ${status}`)
+    .join(", ");
 }
 
 function truncateParallelOutput(output: string): string {
@@ -674,54 +704,82 @@ export default function (pi: ExtensionAPI) {
   let context: ExtensionContext | undefined;
 
   const stateLabel = {
-    running: "실행 중",
-    completed: "완료",
-    failed: "실패",
-    cancelled: "취소",
-  };
+    running: "running",
+    completed: "completed",
+    failed: "failed",
+    cancelled: "cancelled",
+  } as const;
+  const stateColor = {
+    running: "warning",
+    completed: "success",
+    failed: "error",
+    cancelled: "warning",
+    pending: "muted",
+    "not run": "dim",
+  } as const;
 
   function refreshWidget() {
     if (!context?.hasUI) return;
-    if (runs.size === 0) {
+    if (![...runs.values()].some((run) => run.state === "running")) {
       context.ui.setWidget("subagents", undefined);
       return;
     }
     context.ui.setWidget("subagents", (_tui, theme) => ({
       render(width) {
         const lines = [
-          theme.fg("muted", "서브에이전트 · /agents 상태·결과·취소"),
+          theme.fg("accent", theme.bold("Subagents")) +
+            theme.fg("muted", " · /agents status · output · cancel"),
         ];
-        for (const run of [...runs.values()].filter(
-          (run, index, all) =>
-            run.state === "running" || index >= all.length - 3,
-        )) {
-          lines.push(`${run.id} · ${stateLabel[run.state]}`);
-          run.tasks.forEach((task, index) => {
-            const result = run.details.results[index];
-            const status = result
-              ? result.exitCode === -1
-                ? stateLabel[run.state]
-                : result.stopReason === "aborted"
-                  ? "취소"
-                  : isFailedResult(result)
-                    ? "실패"
-                    : "완료"
-              : run.state === "running"
-                ? "대기"
-                : "미실행";
-            const branch = index === run.tasks.length - 1 ? "└─" : "├─";
-            const activity = result?.activity ? ` · ${result.activity}` : "";
-            lines.push(
-              `  ${branch} ${task.agent} · ${status}${activity} · ${task.task}`,
-            );
-          });
+        const tasks = [...runs.values()]
+          .filter((run) => run.state === "running")
+          .flatMap((run) =>
+            run.tasks.map((task, index) => ({
+              run,
+              task,
+              index,
+              result: run.details.results[index],
+            })),
+          )
+          .filter(
+            ({ result }) =>
+              !result || result.exitCode === -1 || isFailedResult(result),
+          );
+        for (const { run, task, index, result } of tasks) {
+          const status = result
+            ? result.exitCode === -1
+              ? stateLabel[run.state]
+              : result.stopReason === "aborted"
+                ? "cancelled"
+                : isFailedResult(result)
+                  ? "failed"
+                  : "completed"
+            : run.state === "running"
+              ? "pending"
+              : "not run";
+          const activity = result?.activity
+            ? theme.fg(
+                "muted",
+                ` · ${stripTerminalSequences(result.activity).replace(/[\r\n\t]/g, " ")}`,
+              )
+            : "";
+          lines.push(
+            "  " +
+              theme.fg(
+                "accent",
+                theme.bold(
+                  stripTerminalSequences(task.agent).replace(/[\r\n\t]/g, " "),
+                ),
+              ) +
+              (tasks.filter((item) => item.task.agent === task.agent).length > 1
+                ? theme.fg("dim", ` [${run.id}/${index + 1}]`)
+                : "") +
+              theme.fg("dim", " · ") +
+              theme.fg(stateColor[status], status) +
+              activity,
+          );
         }
         return lines.map((line) =>
-          truncateToWidth(
-            stripTerminalSequences(line).replace(/[\r\n\t]/g, " "),
-            width,
-            "…",
-          ),
+          truncateToWidth(line, Math.max(1, Math.min(width, 120)), "…"),
         );
       },
       invalidate() {},
@@ -742,6 +800,62 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_before_tree", clearRuns);
   pi.on("session_shutdown", clearRuns);
 
+  pi.registerMessageRenderer<SubagentDetails>(
+    "subagent-background",
+    (message, { expanded, outputPad }, theme) => {
+      const background = message.details?.background;
+      if (!background) return undefined;
+      const text =
+        typeof message.content === "string"
+          ? message.content
+          : message.content
+              .filter((part) => part.type === "text")
+              .map((part) => part.text)
+              .join("\n\n");
+      if (expanded) {
+        return new Markdown(text, outputPad, 0, getMarkdownTheme());
+      }
+      const counts =
+        background.state === "completed"
+          ? ""
+          : resultCounts(message.details?.results ?? []);
+      const label =
+        theme.fg(
+          stateColor[background.state],
+          `${background.state === "completed" ? "✓" : background.state === "failed" ? "✗" : background.state === "cancelled" ? "■" : "…"} `,
+        ) +
+        theme.fg("text", message.details?.summary ?? background.id) +
+        theme.fg(
+          "muted",
+          ` · ${stateLabel[background.state]}${counts ? ` · ${counts}` : ""} ${keyHint("app.tools.expand", "details")}`,
+        );
+      const diagnostics =
+        background.state === "completed"
+          ? ""
+          : diagnosticLine(
+              message.details?.results
+                .filter((item) => item.exitCode !== -1 && isFailedResult(item))
+                .map(getResultOutput)
+                .join("\n\n") || text.split("\n").slice(2).join("\n"),
+            );
+      const lines = [label];
+      if (diagnostics) lines.push(theme.fg("toolOutput", diagnostics));
+      return {
+        render: (width) =>
+          lines.map(
+            (line) =>
+              " ".repeat(outputPad) +
+              truncateToWidth(
+                line,
+                Math.max(1, Math.min(width - outputPad * 2, 120)),
+                "…",
+              ),
+          ),
+        invalidate() {},
+      };
+    },
+  );
+
   pi.registerCommand("agents", {
     description:
       "List runs; /agents <runId> shows output; /agents cancel <runId> stops a run",
@@ -753,7 +867,7 @@ export default function (pi: ExtensionAPI) {
           `${run.id} · ${stateLabel[run.state]} · ${run.tasks.map((task) => task.agent).join(", ")}`,
       );
       if (choices.length === 0) {
-        ctx.ui.notify("백그라운드 작업이 없습니다.", "info");
+        ctx.ui.notify("No background runs.", "info");
         return;
       }
       if (!args.trim()) {
@@ -766,7 +880,7 @@ export default function (pi: ExtensionAPI) {
       const [action, id] = args.trim().split(/\s+/);
       const run = runs.get(action === "cancel" ? id : action);
       if (!run || run.sessionId !== ctx.sessionManager.getSessionId()) {
-        ctx.ui.notify("현재 세션에 해당 작업이 없습니다.", "warning");
+        ctx.ui.notify("Run not found in the current session.", "warning");
         return;
       }
       if (action === "cancel") {
@@ -779,7 +893,7 @@ export default function (pi: ExtensionAPI) {
             .map((part) => part.text)
             .join("\n\n") ||
           run.details.results.map(getResultOutput).join("\n\n") ||
-          "아직 출력이 없습니다.";
+          "No output yet.";
         ctx.ui.notify(
           `${run.id} · ${stateLabel[run.state]}\n${stripTerminalSequences(output)}`,
           "info",
@@ -808,6 +922,14 @@ export default function (pi: ExtensionAPI) {
       ctx,
     ): Promise<AgentToolResult<SubagentDetails | undefined>> {
       context = ctx;
+      // Retain the generated Korean summary for this dispatch and its completion message.
+      let summary: string | undefined;
+      pi.events.emit("tool-summaries:get", {
+        toolCallId: _toolCallId,
+        reply: (text: string | undefined) => {
+          summary = text;
+        },
+      });
       if (params.action === "status" || params.action === "cancel") {
         if (params.action === "status" && !params.runId) {
           return {
@@ -900,6 +1022,7 @@ export default function (pi: ExtensionAPI) {
           agentScope,
           projectAgentsDir: discovery.projectAgentsDir,
           results,
+          summary,
         });
 
       if (modeCount !== 1) {
@@ -1292,11 +1415,6 @@ export default function (pi: ExtensionAPI) {
         )
           return;
         refreshWidget();
-        if (ctx.hasUI)
-          ctx.ui.notify(
-            `${run.id} · ${stateLabel[run.state]}`,
-            run.state === "failed" ? "error" : "info",
-          );
         pi.sendMessage(
           {
             customType: "subagent-background",
@@ -1326,7 +1444,10 @@ export default function (pi: ExtensionAPI) {
       };
     },
 
-    renderCall(args, theme, _context) {
+    renderCall(args, theme, context) {
+      if (!context.isPartial && !context.expanded) {
+        return new Container();
+      }
       if (args.action && args.action !== "run") {
         return new Text(
           theme.fg("toolTitle", theme.bold("subagent ")) +
@@ -1387,26 +1508,62 @@ export default function (pi: ExtensionAPI) {
       return new Text(text, 0, 0);
     },
 
-    renderResult(result, { expanded }, theme, _context) {
+    renderResult(result, { expanded }, theme, context) {
       const details = result.details as SubagentDetails | undefined;
-      if (details?.background && !expanded) {
-        const lines = [
-          `${details.background.id} · ${stateLabel[details.background.state]}`,
-          ...details.results.map((item, index) => {
-            const branch = index === details.results.length - 1 ? "└─" : "├─";
-            const status =
-              item.exitCode === -1
-                ? "실행 중"
-                : item.stopReason === "aborted"
-                  ? "취소"
-                  : isFailedResult(item)
-                    ? "실패"
-                    : "완료";
-            return `${branch} ${item.agent} · ${status}`;
-          }),
-          " /agents · Ctrl+O 상세보기",
-        ];
-        return new Text(lines.join("\n"), 0, 0);
+      if (!expanded && (details?.background || !context.isPartial)) {
+        let summary = details?.summary;
+        pi.events.emit("tool-summaries:get", {
+          toolCallId: context.toolCallId,
+          reply: (text: string | undefined) => {
+            if (text) summary = text;
+          },
+        });
+        const state =
+          details?.background?.state ??
+          (context.isPartial
+            ? "running"
+            : details?.results.some((item) => item.stopReason === "aborted")
+              ? "cancelled"
+              : context.isError || details?.results.some(isFailedResult)
+                ? "failed"
+                : "completed");
+        const counts =
+          state === "failed" || state === "cancelled"
+            ? resultCounts(details?.results ?? [])
+            : "";
+        const label =
+          theme.fg(
+            stateColor[state],
+            `${state === "completed" ? "✓" : state === "failed" ? "✗" : state === "cancelled" ? "■" : "…"} `,
+          ) +
+          theme.fg("text", summary ?? "subagent") +
+          theme.fg(
+            "muted",
+            `${details?.background ? " · background" : ""}${counts ? ` · ${counts}` : ""}${context.durationMs === undefined ? "" : ` · ${(context.durationMs / 1000).toFixed(1)}s`} ${keyHint("app.tools.expand", "details")}`,
+          );
+        const lines = [label];
+        if (state === "failed" || state === "cancelled") {
+          const diagnostics = diagnosticLine(
+            details?.results
+              .filter((item) => item.exitCode !== -1 && isFailedResult(item))
+              .map(getResultOutput)
+              .join("\n\n") ||
+              result.content
+                .filter((part) => part.type === "text")
+                .map((part) => part.text)
+                .join("\n\n"),
+          );
+          if (diagnostics) {
+            lines.push(theme.fg("toolOutput", diagnostics));
+          }
+        }
+        return {
+          render: (width) =>
+            lines.map((line) =>
+              truncateToWidth(line, Math.max(1, Math.min(width, 120)), "…"),
+            ),
+          invalidate() {},
+        };
       }
       if (!details || details.results.length === 0) {
         const text = result.content[0];

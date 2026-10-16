@@ -11,7 +11,7 @@
     self.submodules = true;
 
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nixpkgs-prev.url = "github:NixOS/nixpkgs/4724d5647207377bede08da3212f809cbd94a648";
+    nixpkgs-prev.url = "github:NixOS/nixpkgs/8edc0c72e3a38faf5434e40d1f19431125fe4b30";
     nixpkgs-stable.url = "github:NixOS/nixpkgs/release-25.05";
 
     dream2nix.url = "github:nix-community/dream2nix";
