@@ -7,7 +7,14 @@
 let
   cfg = config.services.applicationInputSources;
   script = pkgs.replaceVars ./script.lua {
-    rulesJson = builtins.toJSON cfg.rules;
+    configurationJson = builtins.toJSON (
+      {
+        rules = lib.concatMapAttrs (source: apps: lib.genAttrs apps (_: source)) cfg.rules;
+      }
+      // lib.optionalAttrs (cfg.defaultSource != null) {
+        inherit (cfg) defaultSource;
+      }
+    );
   };
 in
 {
@@ -15,9 +22,15 @@ in
     enable = lib.mkEnableOption "per-application input sources";
 
     rules = lib.mkOption {
-      type = lib.types.attrsOf lib.types.nonEmptyStr;
+      type = lib.types.attrsOf (lib.types.listOf lib.types.nonEmptyStr);
       default = { };
-      description = "Input source IDs keyed by application name.";
+      description = "Application names grouped by input source ID.";
+    };
+
+    defaultSource = lib.mkOption {
+      type = lib.types.nullOr lib.types.nonEmptyStr;
+      default = null;
+      description = "Input source ID for applications without a rule; null leaves them unchanged.";
     };
   };
 

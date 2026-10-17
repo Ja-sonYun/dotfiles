@@ -2,7 +2,7 @@
   "registry": "npm",
   "name": "firecrawl-mcp",
   "versions": {
-    "aarch64-darwin": "3.30.2",
+    "aarch64-darwin": "3.30.3",
     "x86_64-linux": "3.24.0"
   }
 }

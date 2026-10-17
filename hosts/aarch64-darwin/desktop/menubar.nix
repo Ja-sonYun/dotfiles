@@ -26,9 +26,8 @@ _: {
           "NSStatusItem VisibleCC WiFi" = 1;
         };
 
-        "com.apple.TextInputMenuAgent" = {
-          # Keep the input source menu visible.
-          "NSStatusItem VisibleCC Item-0" = 1;
+        "com.apple.TextInputMenu" = {
+          visible = false;
         };
       };
     };

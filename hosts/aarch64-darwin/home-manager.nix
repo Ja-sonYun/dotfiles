@@ -12,6 +12,7 @@
     ./desktop/finder-sidebar.nix
   ]
   ++ lib.optionals (hasTag "gui") [
+    ./desktop/seamtype.nix
     ./programs/freecad
   ];
 

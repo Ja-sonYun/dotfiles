@@ -9,8 +9,8 @@
       url = "github:yegappan/lsp";
       flake = false;
     };
-    vim-eskk = {
-      url = "github:vim-skk/eskk.vim";
+    seamtype-vim = {
+      url = "github:aimdevlee/seamtype/v0.1.13";
       flake = false;
     };
 
@@ -74,7 +74,6 @@
             "USE_VIM"
             "USE_AWK"
             "USE_AMBER"
-            "USE_SKK"
           ];
           hasVal = key: builtins.getEnv key != "";
         in
@@ -102,7 +101,6 @@
             useVim = boolEnv "USE_VIM" false;
             useAwk = boolEnv "USE_AWK" false;
             useAmber = boolEnv "USE_AMBER" false;
-            useSkk = boolEnv "USE_SKK" false;
           }
         else
           {
@@ -125,7 +123,6 @@
             useVim = true;
             useAwk = true;
             useAmber = true;
-            useSkk = true;
           };
       mkPkgs =
         system:

@@ -279,13 +279,23 @@ async def evaluate(
             }
             if debug_log:
                 requests.append(capture)
+            stage = "Request redaction"
             try:
                 async with asyncio.timeout(timeout):
-                    status, masked, _ = await run_process(
+                    status, masked, diagnostics = await run_process(
                         ["redact"], cwd, timeout, input_text=request
                     )
                     if status:
-                        raise RuntimeError("Request redaction failed.")
+                        reason = f"Request redaction failed (exit status {status})"
+                        capture["error"] = reason
+                        if debug_log:
+                            capture["stderr"] = diagnostics
+                        result.errors.append(
+                            f"{reason}: {names}; no retry was attempted."
+                        )
+                        result.halted = True
+                        continue
+                    stage = "Redacted request parsing"
                     payload = json.loads(masked)
                     if not isinstance(payload, dict):
                         raise TypeError("Redacted request is not an object.")
@@ -294,6 +304,7 @@ async def evaluate(
                             f"Masked evidence requires manual inspection: {names}."
                         )
                         continue
+                    stage = "Jev API request"
                     response = await api.post(
                         "https://api.typesafe.ai/v1/systemone",
                         json={**payload, "model": "jev-latest"},
@@ -304,6 +315,7 @@ async def evaluate(
                     response.raise_for_status()
                     if debug_log:
                         capture["stdout"] = response.text
+                    stage = "Jev response validation"
                     result.results.extend(response_results(response.text, batch))
             except (
                 TimeoutError,
@@ -314,11 +326,15 @@ async def evaluate(
                 httpx.HTTPError,
             ) as error:
                 if isinstance(error, (TimeoutError, httpx.TimeoutException)):
-                    reason = "Timed out"
-                elif isinstance(error, (OSError, RuntimeError, httpx.HTTPError)):
-                    reason = "Request failed"
+                    reason = f"{stage} timed out ({type(error).__name__})"
+                elif isinstance(error, httpx.HTTPStatusError):
+                    reason = f"{stage} failed (HTTP {error.response.status_code})"
+                elif isinstance(error, OSError):
+                    reason = (
+                        f"{stage} failed ({type(error).__name__}, errno={error.errno})"
+                    )
                 else:
-                    reason = "Invalid response"
+                    reason = f"{stage} failed ({type(error).__name__})"
                 capture["error"] = traceback.format_exc()
                 result.errors.append(f"{reason}: {names}; no retry was attempted.")
                 result.halted = True

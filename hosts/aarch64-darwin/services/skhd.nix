@@ -1,9 +1,12 @@
-{ pkgs, ... }:
+{
+  pkgs,
+  ...
+}:
 
 let
   yabai = "${pkgs.yabai}/bin/yabai";
   jq = "${pkgs.jq}/bin/jq";
-  selectInputSource = "${pkgs.select-input-source}/bin/select-input-source";
+  selectInputSource = "${pkgs.macism}/bin/macism";
   skhd = "${pkgs.skhd}/bin/skhd";
   focusedDisplaySpace =
     number:
@@ -79,11 +82,6 @@ in
       "ctrl + cmd - f" = "${yabai} -m window --toggle zoom-fullscreen";
       "shift + rcmd - f" = "${yabai} -m window --toggle native-fullscreen";
 
-      "rcmd - q" = "${selectInputSource} \"com.apple.keylayout.ABC\"";
-      "rcmd - e" = "${selectInputSource} \"com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese\"";
-      "rcmd - r" = "${selectInputSource} \"com.apple.inputmethod.Korean.2SetKorean\"";
-      "ctrl - space" =
-        "${pkgs.rotate-input-source}/bin/rotate-input-source com.apple.keylayout.ABC com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese com.apple.inputmethod.Korean.2SetKorean";
       "cmd - space ->" = "${selectInputSource} \"com.apple.keylayout.ABC\"";
 
       "rcmd - w" = "${skhd} -k \"ctrl - up\"";

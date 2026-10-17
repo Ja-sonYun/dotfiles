@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-firecrawl-mcp",
-    "version": "3.30.2",
+    "version": "3.30.3",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-firecrawl-mcp",
-        "version": "3.30.2",
+        "version": "3.30.3",
         "dependencies": {
-          "firecrawl-mcp": "3.30.2"
+          "firecrawl-mcp": "3.30.3"
         }
       },
       "node_modules/@borewit/text-codec": {
@@ -913,9 +913,9 @@
         }
       },
       "node_modules/firecrawl-mcp": {
-        "version": "3.30.2",
-        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.30.2.tgz",
-        "integrity": "sha512-05YPum0IRetzW7UV3nQGKMzuGCDDMYvAxkNk6299P9b67gg080tUO5QzI1luo8RqK1Qmeci+1IbG0axXg7W52A==",
+        "version": "3.30.3",
+        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.30.3.tgz",
+        "integrity": "sha512-+2azzxc+DeIgVQHVYxN9ihMnrF8JWj+AOFozhxcbUoPUFEeD9mMASBcnsfoEFuUZjWo4b8IQmhnoAiZ7eBRzZw==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/sdk": "^1.29.0",
@@ -2452,5 +2452,5 @@
       }
     }
   },
-  "invalidationHash": "6f220e6a9e3f0f22691dbb03b6d73fec14613223585d507985be06426322492f"
+  "invalidationHash": "2316561c2e4b0d45a5122a1c224d9d663cc7b64ccb8aed3956c9443806b51dc5"
 }

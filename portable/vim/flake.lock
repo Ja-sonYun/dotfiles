@@ -55,11 +55,11 @@
     },
     "nixpkgs-unstable": {
       "locked": {
-        "lastModified": 1791966044,
-        "narHash": "sha256-t1hT8UW97rFCWCJO7/pClvu0AhLN5V3uir2M0ic4w/Q=",
+        "lastModified": 1792116957,
+        "narHash": "sha256-EjZqHKObBfIOeHZnMRVV87HB3pPq/WBkmRJWyFxmZu8=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "319e4cebef10cbb636c6ea392137b52ad105336a",
+        "rev": "f20cd90e28fe0403873f473b29e42662cd86e8c4",
         "type": "github"
       },
       "original": {
@@ -74,23 +74,24 @@
         "git-hooks": "git-hooks",
         "nixpkgs": "nixpkgs",
         "nixpkgs-unstable": "nixpkgs-unstable",
-        "vim-eskk": "vim-eskk",
+        "seamtype-vim": "seamtype-vim",
         "vim-lsp": "vim-lsp"
       }
     },
-    "vim-eskk": {
+    "seamtype-vim": {
       "flake": false,
       "locked": {
-        "lastModified": 1778495889,
-        "narHash": "sha256-1R/ChmsdtSXMEMMtKuyXgX7oe7ZE0a8gdx3sC9s6wp0=",
-        "owner": "vim-skk",
-        "repo": "eskk.vim",
-        "rev": "131a290d5305b9bf06426cfe32065f97e23d471c",
+        "lastModified": 1792079768,
+        "narHash": "sha256-ZaPr0iIz6KzLYT38ABDB52qMSpRmn0sbfWVIQ86whMM=",
+        "owner": "aimdevlee",
+        "repo": "seamtype",
+        "rev": "cb22ee7972cee9ab730708c3ec57f4021b02004b",
         "type": "github"
       },
       "original": {
-        "owner": "vim-skk",
-        "repo": "eskk.vim",
+        "owner": "aimdevlee",
+        "ref": "v0.1.13",
+        "repo": "seamtype",
         "type": "github"
       }
     },

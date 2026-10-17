@@ -34,8 +34,7 @@
     macism = final.callPackage ../pkgs/darwin/macism { };
     macnotesapp = final.callPackage ../pkgs/darwin/macnotesapp { };
     notifycmd = final.callPackage ../pkgs/darwin/notifycmd { };
-    rotate-input-source = final.callPackage ../pkgs/darwin/rotate-input-source { };
-    select-input-source = final.callPackage ../pkgs/darwin/select-input-source { };
+    seamtype = final.callPackage ../pkgs/darwin/seamtype { };
     yabai = final.callPackage ../pkgs/darwin/yabai { };
 
     local-fonts = final.callPackage ../pkgs/fonts/local-fonts { };

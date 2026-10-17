@@ -18,7 +18,6 @@
     useCopilot = false;
     useHarper = false;
     useAmber = false;
-    useSkk = false;
   },
 }:
 final: prev:
@@ -59,6 +58,19 @@ let
         };
       });
 
+  seamtypePlugin = unstable.vimUtils.buildVimPlugin {
+    pname = "seamtype-vim";
+    version = "0.1.13";
+    src = inputs.seamtype-vim;
+    doCheck = false;
+    installPhase = ''
+      runHook preInstall
+      install -Dm644 scripts/vim/seamtype.vim "$out/plugin/seamtype.vim"
+      install -Dm644 LICENSE "$out/LICENSE"
+      runHook postInstall
+    '';
+  };
+
   allPlugins =
     with unstable.vimPlugins;
     [
@@ -81,8 +93,8 @@ let
     ++ [
       # Plugins from flake inputs
       (mkVimPlugin inputs.vim-lsp "vim-lsp")
-      (mkVimPlugin inputs.vim-eskk "vim-eskk")
     ]
+    ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ seamtypePlugin ]
     ++ pkgs.lib.optionals config.useCopilot [
       copilot-vim
     ]
@@ -125,13 +137,6 @@ let
     with pkgs;
     [
       amber-lang
-    ]
-  );
-
-  skkPackagesOpt = pkgs.lib.optionals config.useSkk (
-    with pkgs;
-    [
-      skkDictionaries.l
     ]
   );
 
@@ -273,7 +278,6 @@ let
   extraPackages = pkgs.lib.concatLists [
     commonPackages
     amberPackagesOpt
-    skkPackagesOpt
     nodePackagesOpt
     pythonPackagesOpt
     luaPackagesOpt
@@ -307,15 +311,6 @@ let
       " Optional development packpath for local plugins
       ${pkgs.lib.optionalString dev ''
         set packpath^=~/.config/vim-plugins/site
-      ''}
-
-      " Optional ekk dictionary path
-      ${pkgs.lib.optionalString config.useSkk ''
-        let g:eskk#large_dictionary = {
-        \   'path': expand('${pkgs.skkDictionaries.l}/share/skk/SKK-JISYO.L'),
-        \   'sorted': 1,
-        \   'encoding': 'euc-jp',
-        \}
       ''}
     '';
 

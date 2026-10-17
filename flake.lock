@@ -42,11 +42,11 @@
     "brew-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1792110603,
-        "narHash": "sha256-1rop53O6PKflwIagNW2I1IL+LGUEQ2unKY8DtPIW+Fk=",
+        "lastModified": 1792141080,
+        "narHash": "sha256-HZGtKPQXms6tgsW/f0dbOheNfy26kxGtMp/RrowBieY=",
         "owner": "Homebrew",
         "repo": "brew",
-        "rev": "dbdc9b534eead3bbc7c741956e8893fac4b6914e",
+        "rev": "19fe946b9a257cb41ebb5cef5c592ba7923d1f3b",
         "type": "github"
       },
       "original": {
@@ -348,11 +348,11 @@
     "homebrew-cask": {
       "flake": false,
       "locked": {
-        "lastModified": 1792114108,
-        "narHash": "sha256-6n/W29NPBx4EaAHyVNZGWPIWJ0nU3YQsTofCYPbPduY=",
+        "lastModified": 1792218232,
+        "narHash": "sha256-ahcr1J3MN77y6Y38B7ahlQkXvYbxNtVyEDcGTbw9t3s=",
         "owner": "homebrew",
         "repo": "homebrew-cask",
-        "rev": "7b1a4d5e5a3be3934ea40d427ace5a96348e402e",
+        "rev": "e567c56c6f7894c344ed3592c7aec732dffdda10",
         "type": "github"
       },
       "original": {
@@ -364,11 +364,11 @@
     "homebrew-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1792107407,
-        "narHash": "sha256-evWOIUg5zwth5FhoEMFK8uMdNqJpuS86GSmy9GY5/Wk=",
+        "lastModified": 1792217840,
+        "narHash": "sha256-3hzK9cOHZOs8aqlDwMjPO/ozF3WAt+qLGvKSY6+4dEo=",
         "owner": "homebrew",
         "repo": "homebrew-core",
-        "rev": "33f30f4b6ce0386f7c84d5ca0079dccd231d8a93",
+        "rev": "f7a52b61be62aafb5491b62f6d62d01bf4b47b8f",
         "type": "github"
       },
       "original": {
@@ -479,11 +479,11 @@
     },
     "nixpkgs-unstable": {
       "locked": {
-        "lastModified": 1791966044,
-        "narHash": "sha256-t1hT8UW97rFCWCJO7/pClvu0AhLN5V3uir2M0ic4w/Q=",
+        "lastModified": 1792116957,
+        "narHash": "sha256-EjZqHKObBfIOeHZnMRVV87HB3pPq/WBkmRJWyFxmZu8=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "319e4cebef10cbb636c6ea392137b52ad105336a",
+        "rev": "f20cd90e28fe0403873f473b29e42662cd86e8c4",
         "type": "github"
       },
       "original": {
@@ -495,11 +495,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1791966044,
-        "narHash": "sha256-t1hT8UW97rFCWCJO7/pClvu0AhLN5V3uir2M0ic4w/Q=",
+        "lastModified": 1792116957,
+        "narHash": "sha256-EjZqHKObBfIOeHZnMRVV87HB3pPq/WBkmRJWyFxmZu8=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "319e4cebef10cbb636c6ea392137b52ad105336a",
+        "rev": "f20cd90e28fe0403873f473b29e42662cd86e8c4",
         "type": "github"
       },
       "original": {
@@ -624,6 +624,23 @@
         "vim": "vim"
       }
     },
+    "seamtype-vim": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792079768,
+        "narHash": "sha256-ZaPr0iIz6KzLYT38ABDB52qMSpRmn0sbfWVIQ86whMM=",
+        "owner": "aimdevlee",
+        "repo": "seamtype",
+        "rev": "cb22ee7972cee9ab730708c3ec57f4021b02004b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "aimdevlee",
+        "ref": "v0.1.13",
+        "repo": "seamtype",
+        "type": "github"
+      }
+    },
     "server": {
       "flake": false,
       "locked": {
@@ -668,11 +685,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791981146,
-        "narHash": "sha256-PeENT3Fu7a7YrX5zIHjdxai8GzPcxpKn+nQsgByhwNo=",
+        "lastModified": 1792151315,
+        "narHash": "sha256-PMtgvHuGijoIAtPtrBm7kJOI6fxzX4LYPAIK+QVGY+Y=",
         "owner": "pyproject-nix",
         "repo": "uv2nix",
-        "rev": "a541fda20d6784d88789cfcb221638b7c25a23dd",
+        "rev": "7aba73a3d85454f1118f8cf9de97979b4d26bcac",
         "type": "github"
       },
       "original": {
@@ -688,7 +705,7 @@
           "nixpkgs"
         ],
         "nixpkgs-unstable": "nixpkgs-unstable",
-        "vim-eskk": "vim-eskk",
+        "seamtype-vim": "seamtype-vim",
         "vim-lsp": "vim-lsp"
       },
       "locked": {
@@ -700,22 +717,6 @@
         "type": "path"
       },
       "parent": []
-    },
-    "vim-eskk": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1778495889,
-        "narHash": "sha256-1R/ChmsdtSXMEMMtKuyXgX7oe7ZE0a8gdx3sC9s6wp0=",
-        "owner": "vim-skk",
-        "repo": "eskk.vim",
-        "rev": "131a290d5305b9bf06426cfe32065f97e23d471c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "vim-skk",
-        "repo": "eskk.vim",
-        "type": "github"
-      }
     },
     "vim-lsp": {
       "flake": false,
