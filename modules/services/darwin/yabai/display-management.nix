@@ -31,7 +31,11 @@ let
     name = "yabai-reconcile-spaces";
     text = ''
       lock_file="''${TMPDIR:-/tmp}/yabai-reconcile-spaces-$UID.lock"
-      exec /usr/bin/lockf -k "$lock_file" ${reconcileSpacesWorker}/bin/yabai-reconcile-spaces-worker "$lock_file"
+      printf '%s\n' "$$" >"$lock_file.request.$$"
+      /bin/mv -f "$lock_file.request.$$" "$lock_file.request"
+
+      /bin/sleep 2
+      exec /usr/bin/lockf -k "$lock_file" ${reconcileSpacesWorker}/bin/yabai-reconcile-spaces-worker "$lock_file" "$$"
     '';
   };
 

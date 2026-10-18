@@ -1,0 +1,178 @@
+Bound native-fullscreen polling on yabai's serial event loop.
+
+Base: https://github.com/asmvik/yabai/commit/dd845723416f5fe92af49fad5ebab00369e07edd
+Apply after macos-27.patch, whose fullscreen code comes from:
+https://github.com/AhsanFazal/yabai/commit/ad0a12d63f639534a296a1d065b0d04979f1b4db
+
+Use one five-second monotonic deadline for focus and transition polling.
+Wait for the target display's fullscreen Space on entry and a user Space on
+exit. Propagate AX failures and timeouts to command clients, and do not tile
+an exiting window before the transition completes.
+
+--- a/src/window_manager.c
++++ b/src/window_manager.c
+@@ -2256,48 +2256,46 @@
+     }
+ }
+ 
+-void window_manager_wait_for_native_fullscreen_transition(struct window *window)
++bool window_manager_wait_for_native_fullscreen_transition(struct window *window, bool fullscreen, uint64_t deadline)
+ {
+     TIME_FUNCTION;
+ 
++    uint32_t did = window_display_id(window->id);
++
+     if (workspace_is_macos_monterey() ||
+         workspace_is_macos_ventura() ||
+         workspace_is_macos_sonoma() ||
+         workspace_is_macos_sequoia() ||
+         (workspace_is_macos_tahoe() || workspace_is_macos_goldengate())) {
+-        while (!space_is_user(space_manager_active_space())) {
+-
+-            //
+-            // NOTE(asmvik): Window has exited native-fullscreen mode.
+-            // We need to spin lock until the display is finished animating
+-            // because we are not actually able to interact with the window.
+-            //
+-            // The display_manager API does not work on macOS Monterey.
+-            //
+-
++        // The animation API is unavailable here, so wait for the target Space type.
++        while (read_os_timer() < deadline) {
++            uint64_t sid = display_space_id(did);
++            if (sid && (fullscreen ? space_is_fullscreen(sid) && window_space(window->id) == sid
++                                   : space_is_user(sid))) {
++                return true;
++            }
+             usleep(100000);
+         }
+     } else {
+-        uint32_t did = window_display_id(window->id);
+-
+         do {
+-
+-            //
+-            // NOTE(asmvik): Window has exited native-fullscreen mode.
+-            // We need to spin lock until the display is finished animating
+-            // because we are not actually able to interact with the window.
+-            //
+-
++            if (read_os_timer() >= deadline) {
++                return false;
++            }
+             usleep(100000);
+         } while (display_manager_display_is_animating(did));
++
++        return true;
+     }
++
++    return false;
+ }
+ 
+-void window_manager_toggle_window_native_fullscreen(struct window *window)
++enum window_op_error window_manager_toggle_window_native_fullscreen(struct window *window)
+ {
+     TIME_FUNCTION;
+ 
+-    uint32_t sid = window_space(window->id);
++    uint64_t sid = window_space(window->id);
++    uint64_t deadline = read_os_timer() + 5 * read_os_freq();
+ 
+     //
+     // NOTE(asmvik): The window must become the focused window
+@@ -2306,21 +2304,24 @@
+     //
+ 
+     window_manager_focus_window_with_raise(&window->application->psn, window->id, window->ref);
+-    while (sid != space_manager_active_space()) { usleep(100000); }
++    while (sid != space_manager_active_space()) {
++        if (read_os_timer() >= deadline) {
++            return WINDOW_OP_ERROR_FULLSCREEN_TIMEOUT;
++        }
++        usleep(100000);
++    }
+ 
++    bool fullscreen = !window_is_fullscreen(window);
++    if (AXUIElementSetAttributeValue(window->ref, kAXFullscreenAttribute,
++                                    fullscreen ? kCFBooleanTrue : kCFBooleanFalse) != kAXErrorSuccess) {
++        return WINDOW_OP_ERROR_FULLSCREEN_FAILED;
++    }
+ 
+-    if (!window_is_fullscreen(window)) {
+-        AXUIElementSetAttributeValue(window->ref, kAXFullscreenAttribute, kCFBooleanTrue);
+-    } else {
+-        AXUIElementSetAttributeValue(window->ref, kAXFullscreenAttribute, kCFBooleanFalse);
++    if (!window_manager_wait_for_native_fullscreen_transition(window, fullscreen, deadline)) {
++        return WINDOW_OP_ERROR_FULLSCREEN_TIMEOUT;
+     }
+ 
+-    //
+-    // NOTE(asmvik): We toggled the fullscreen attribute and must
+-    // now spin lock until the post-exit space animation has finished.
+-    //
+-
+-    window_manager_wait_for_native_fullscreen_transition(window);
++    return WINDOW_OP_ERROR_SUCCESS;
+ }
+ 
+ void window_manager_toggle_window_zoom_parent(struct window_manager *wm, struct window *window)
+--- a/src/window_manager.h
++++ b/src/window_manager.h
+@@ -21,6 +21,8 @@
+     WINDOW_OP_ERROR_DEMINIMIZE_FAILED,
+     WINDOW_OP_ERROR_MAX_STACK,
+     WINDOW_OP_ERROR_SAME_STACK,
++    WINDOW_OP_ERROR_FULLSCREEN_FAILED,
++    WINDOW_OP_ERROR_FULLSCREEN_TIMEOUT,
+ };
+ 
+ enum purify_mode
+@@ -198,7 +200,7 @@
+ void window_manager_toggle_window_zoom_parent(struct window_manager *wm, struct window *window);
+ void window_manager_toggle_window_zoom_fullscreen(struct window_manager *wm, struct window *window);
+ void window_manager_toggle_window_windowed_fullscreen(struct window *window);
+-void window_manager_toggle_window_native_fullscreen(struct window *window);
++enum window_op_error window_manager_toggle_window_native_fullscreen(struct window *window);
+ void window_manager_toggle_window_expose(struct window *window);
+ void window_manager_toggle_window_pip(struct space_manager *sm, struct window *window);
+ bool window_manager_toggle_scratchpad_window_by_label(struct window_manager *wm, char *label);
+@@ -206,7 +208,7 @@
+ bool window_manager_set_scratchpad_for_window(struct window_manager *wm, struct window *window, char *label);
+ bool window_manager_remove_scratchpad_for_window(struct window_manager *wm, struct window *window, bool unfloat);
+ void window_manager_scratchpad_recover_windows(void);
+-void window_manager_wait_for_native_fullscreen_transition(struct window *window);
++bool window_manager_wait_for_native_fullscreen_transition(struct window *window, bool fullscreen, uint64_t deadline);
+ void window_manager_validate_and_check_for_windows_on_space(struct space_manager *sm, struct window_manager *wm, uint64_t sid);
+ void window_manager_correct_for_mission_control_changes(struct space_manager *sm, struct window_manager *wm);
+ void window_manager_handle_display_add_and_remove(struct space_manager *sm, struct window_manager *wm, uint32_t did);
+--- a/src/message.c
++++ b/src/message.c
+@@ -2313,7 +2313,12 @@
+                 }
+             } else if (token_equals(value, ARGUMENT_WINDOW_TOGGLE_NATIVE)) {
+                 if (acting_window) {
+-                    window_manager_toggle_window_native_fullscreen(acting_window);
++                    enum window_op_error result = window_manager_toggle_window_native_fullscreen(acting_window);
++                    if (result == WINDOW_OP_ERROR_FULLSCREEN_FAILED) {
++                        daemon_fail(rsp, "could not change the native-fullscreen state of the window!\n");
++                    } else if (result == WINDOW_OP_ERROR_FULLSCREEN_TIMEOUT) {
++                        daemon_fail(rsp, "timed out waiting for the native-fullscreen transition!\n");
++                    }
+                 } else {
+                     daemon_fail(rsp, "could not locate the window to act on!\n");
+                 }
+--- a/src/event_loop.c
++++ b/src/event_loop.c
+@@ -787,7 +787,11 @@
+             window_manager_purify_window(&g_window_manager, window);
+         }
+     } else if (was_fullscreen && !is_fullscreen) {
+-        window_manager_wait_for_native_fullscreen_transition(window);
++        if (!window_manager_wait_for_native_fullscreen_transition(window, false, read_os_timer() + 5 * read_os_freq())) {
++            // Let the Space-change handler reconcile a late fullscreen exit.
++            warn("native-fullscreen exit timed out for window %u; skipping tiling.\n", window->id);
++            return;
++        }
+ 
+         if (window_manager_should_manage_window(window) && !window_manager_find_managed_window(&g_window_manager, window)) {
+             struct view *view = space_manager_tile_window_on_space(&g_space_manager, window, window_space(window->id));

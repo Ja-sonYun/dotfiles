@@ -158,7 +158,7 @@ run = function(opts)
 			forceRedraw = false
 		end
 		finish(applied and "applied" or "apply-error")
-	end, { "-m", "query", "--windows" })
+	end, { "-m", "query", "--windows", "id,display,space,frame,stack-index" })
 	request.timeout = hs.timer.doAfter(5, function()
 		if active ~= request then
 			return

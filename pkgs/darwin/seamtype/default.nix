@@ -5,11 +5,11 @@
 }:
 stdenvNoCC.mkDerivation {
   pname = "seamtype";
-  version = "0.1.13";
+  version = "0.1.15";
 
   src = fetchurl {
-    url = "https://github.com/aimdevlee/seamtype/releases/download/v0.1.13/Seamtype-0.1.13.zip";
-    hash = "sha256-FKq6hGiuJLo/w2ZONofY3g4T1cixA36JFtm0Nm5Tmts=";
+    url = "https://github.com/aimdevlee/seamtype/releases/download/v0.1.15/Seamtype-0.1.15.zip";
+    hash = "sha256-/DjDWol0hnDUkIiGPHlFac3G+LLpWLp9AZOvj8H6G84=";
   };
 
   dontUnpack = true;

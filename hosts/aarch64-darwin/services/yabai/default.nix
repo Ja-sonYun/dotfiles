@@ -28,6 +28,8 @@ let
 
 in
 {
+  imports = [ ./keybindings.nix ];
+
   services.yabai = {
     enable = true;
     stackline.enable = true;

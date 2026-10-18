@@ -1,6 +1,12 @@
-printf '%s\n' "$$" >"$1"
+# shellcheck shell=bash
+# The Nix wrapper supplies the desktop count and spacing values.
+# shellcheck disable=SC2154
+# Skip requests superseded while settling or waiting for the lock.
+if [[ "$(<"$1.request")" != "$2" ]]; then
+	exit 0
+fi
 
-/bin/sleep 2
+printf '%s\n' "$$" >"$1"
 
 current_spaces=$(yabai -m query --spaces)
 displays=$(jq -r '[.[] | select(."is-native-fullscreen" == false) | .display] | unique[]' <<<"$current_spaces")

@@ -15,11 +15,18 @@ stdenv.mkDerivation {
   version = "7.1.25";
 
   src = fetchFromGitHub {
-    owner = "AhsanFazal";
+    owner = "asmvik";
     repo = "yabai";
-    rev = "ad0a12d63f639534a296a1d065b0d04979f1b4db";
-    hash = "sha256-CFC9KuBw7oyOjL5t8D+JIdk6/cdSh91J/K/8XA3v3aE=";
+    rev = "dd845723416f5fe92af49fad5ebab00369e07edd";
+    hash = "sha256-RPiGAuJS+tGsexekIzwgKYf/v+kA3lVn0+qMVIMC2Vk=";
   };
+
+  patches = [
+    ./patches/macos-27.patch
+    ./patches/sa-response-deadline.patch
+    ./patches/fullscreen-transition-waits.patch
+    ./patches/ax-geometry-errors.patch
+  ];
 
   __structuredAttrs = true;
   strictDeps = true;
@@ -34,6 +41,8 @@ stdenv.mkDerivation {
   ];
 
   enableParallelBuilding = false;
+  # The upstream install target builds the release binary without installing it.
+  buildFlags = [ "install" ];
 
   installPhase = ''
     runHook preInstall
@@ -75,8 +84,8 @@ stdenv.mkDerivation {
 
   meta = {
     description = "Tiling window manager for macOS based on binary space partitioning";
-    homepage = "https://github.com/AhsanFazal/yabai";
-    changelog = "https://github.com/AhsanFazal/yabai/blob/ad0a12d63f639534a296a1d065b0d04979f1b4db/CHANGELOG.md";
+    homepage = "https://github.com/asmvik/yabai";
+    changelog = "https://github.com/asmvik/yabai/blob/dd845723416f5fe92af49fad5ebab00369e07edd/CHANGELOG.md";
     license = lib.licenses.mit;
     platforms = lib.platforms.darwin;
     mainProgram = "yabai";

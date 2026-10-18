@@ -13,6 +13,8 @@ local height = barHeight + paddingY * 2
 local outlineWidth = 0.5
 
 local function query(domain, callback)
+	local properties = domain == "--spaces" and "id,index,display"
+		or "role,subrole,display,space,is-hidden,is-minimized,is-sticky"
 	local request = {
 		stdoutBytes = 0,
 		stderrBytes = 0,
@@ -60,7 +62,7 @@ local function query(domain, callback)
 		else
 			finish(nil, "invalid-json")
 		end
-	end, { "-m", "query", domain })
+	end, { "-m", "query", domain, properties })
 	request.timeout = hs.timer.doAfter(5, function()
 		if module.query ~= request then
 			return
@@ -310,8 +312,26 @@ local function refreshOccupancy()
 	local function finish(occupancy)
 		module.refreshing = false
 		if revision == module.revision and occupancy then
+			local changed = false
+			for space, occupied in pairs(occupancy) do
+				if module.occupancy[space] ~= occupied then
+					changed = true
+					break
+				end
+			end
+			if not changed then
+				for space, occupied in pairs(module.occupancy) do
+					if occupancy[space] ~= occupied then
+						changed = true
+						break
+					end
+				end
+			end
+
 			module.occupancy = occupancy
-			refreshSafely()
+			if changed then
+				refreshSafely()
+			end
 		end
 	end
 	query("--spaces", function(spaces)
@@ -345,7 +365,7 @@ end
 
 module.spaceWatcher = hs.spaces.watcher.new(spacesChanged):start()
 module.screenWatcher = hs.screen.watcher.new(spacesChanged):start()
-module.refreshTimer = hs.timer.doEvery(1, refreshAll)
+module.refreshTimer = hs.timer.doEvery(3, refreshAll)
 refreshAll()
 
 return module

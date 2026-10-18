@@ -36,6 +36,7 @@
     notifycmd = final.callPackage ../pkgs/darwin/notifycmd { };
     seamtype = final.callPackage ../pkgs/darwin/seamtype { };
     yabai = final.callPackage ../pkgs/darwin/yabai { };
+    yabai-controller = final.callPackage ../pkgs/darwin/yabai-controller { };
 
     local-fonts = final.callPackage ../pkgs/fonts/local-fonts { };
 

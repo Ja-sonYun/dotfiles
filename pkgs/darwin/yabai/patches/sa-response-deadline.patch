@@ -1,0 +1,188 @@
+Bound scripting-addition IPC so a stalled Dock cannot block yabai indefinitely.
+
+Base: https://github.com/asmvik/yabai/commit/dd845723416f5fe92af49fad5ebab00369e07edd
+Apply after macos-27.patch.
+
+Use nonblocking connect, complete writes, and a two-second monotonic deadline
+shared by connection, request transmission, and completion acknowledgement.
+Only use gesture fallback when no connection was established; a request whose
+completion is unknown must not trigger a second Space transition.
+
+--- a/src/sa.h
++++ b/src/sa.h
+@@ -9,9 +9,16 @@
+ int scripting_addition_load(void);
+ int scripting_addition_uninstall(void);
+ 
++enum scripting_addition_result
++{
++    SA_RESULT_SUCCESS,
++    SA_RESULT_UNAVAILABLE,
++    SA_RESULT_FAILURE
++};
++
+ bool scripting_addition_create_space(uint64_t sid);
+ bool scripting_addition_destroy_space(uint64_t sid);
+-bool scripting_addition_focus_space(uint64_t sid);
++enum scripting_addition_result scripting_addition_focus_space(uint64_t sid);
+ bool scripting_addition_move_space_to_display(uint64_t src_sid, uint64_t dst_sid, uint64_t src_prev_sid, bool focus);
+ bool scripting_addition_move_space_after_space(uint64_t src_sid, uint64_t dst_sid, bool focus);
+ bool scripting_addition_move_window(uint32_t wid, int x, int y);
+--- a/src/sa.m
++++ b/src/sa.m
+@@ -417,33 +417,102 @@
+ 
+ #define sa_payload_init() char bytes[SA_SOCKET_BUFF_LEN]; int16_t length = 1+sizeof(length)
+ #define pack(v) memcpy(bytes+length, &v, sizeof(v)); length += sizeof(v)
+-#define sa_payload_send(op) *(int16_t*)bytes = length-sizeof(length), bytes[sizeof(length)] = op, scripting_addition_send_bytes(bytes, length)
++#define sa_payload_send(op) *(int16_t*)bytes = length-sizeof(length), bytes[sizeof(length)] = op, scripting_addition_send_bytes(bytes, length) == SA_RESULT_SUCCESS
+ 
+-static bool scripting_addition_send_bytes(char *bytes, int length)
++static bool scripting_addition_wait_for_socket(int sockfd, short events, uint64_t deadline)
+ {
+-    int sockfd;
+-    char dummy;
+-    bool result = false;
++    for (;;) {
++        uint64_t now = read_os_timer();
++        if (now >= deadline) {
++            errno = ETIMEDOUT;
++            return false;
++        }
+ 
+-    if (socket_open(&sockfd)) {
+-        if (socket_connect(sockfd, g_sa_socket_file)) {
+-            if (send(sockfd, bytes, length, 0) != -1) {
+-                recv(sockfd, &dummy, 1, 0);
+-                result = true;
++        struct pollfd descriptor = { .fd = sockfd, .events = events };
++        int timeout = (int) ((deadline - now + 999999) / 1000000);
++        int ready = poll(&descriptor, 1, timeout);
++        if (ready > 0) {
++            if (descriptor.revents & POLLNVAL) {
++                errno = EBADF;
++                return false;
+             }
++            return true;
+         }
++        if (ready == 0) {
++            errno = ETIMEDOUT;
++            return false;
++        }
++        if (errno != EINTR) return false;
++    }
++}
+ 
+-        socket_close(sockfd);
++static enum scripting_addition_result scripting_addition_send_bytes(char *bytes, int length)
++{
++    int sockfd;
++    if (!socket_open(&sockfd)) return SA_RESULT_UNAVAILABLE;
++
++    int saved_errno;
++    enum scripting_addition_result result = SA_RESULT_UNAVAILABLE;
++    uint64_t deadline = read_os_timer() + 2 * read_os_freq();
++    if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1) goto out;
++
++    if (!socket_connect(sockfd, g_sa_socket_file)) {
++        if (errno != EINPROGRESS && errno != EWOULDBLOCK) goto out;
++        if (!scripting_addition_wait_for_socket(sockfd, POLLOUT, deadline)) goto out;
++
++        int socket_error = 0;
++        socklen_t error_length = sizeof(socket_error);
++        if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &socket_error, &error_length) == -1) goto out;
++        if (socket_error) {
++            errno = socket_error;
++            goto out;
++        }
+     }
+ 
++    // A connected request may execute even if its completion cannot be confirmed.
++    result = SA_RESULT_FAILURE;
++    for (int sent = 0; sent < length;) {
++        if (!scripting_addition_wait_for_socket(sockfd, POLLOUT, deadline)) goto out;
++        ssize_t count = send(sockfd, bytes + sent, length - sent, 0);
++        if (count > 0) {
++            sent += (int) count;
++        } else if (count == 0) {
++            errno = EIO;
++            goto out;
++        } else if (errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK) {
++            goto out;
++        }
++    }
++
++    for (;;) {
++        if (!scripting_addition_wait_for_socket(sockfd, POLLIN, deadline)) goto out;
++        char reply;
++        ssize_t count = recv(sockfd, &reply, 1, 0);
++        // The payload acknowledges completion by closing the connection.
++        if (count >= 0) {
++            result = SA_RESULT_SUCCESS;
++            break;
++        }
++        if (errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK) goto out;
++    }
++
++out:
++    saved_errno = errno;
++    socket_close(sockfd);
++    if (result == SA_RESULT_FAILURE) {
++        warn("yabai: scripting-addition command completion was not confirmed: %s\n", strerror(saved_errno));
++    }
++
+     return result;
+ }
+ 
+-bool scripting_addition_focus_space(uint64_t sid)
++enum scripting_addition_result scripting_addition_focus_space(uint64_t sid)
+ {
+     sa_payload_init();
+     pack(sid);
+-    return sa_payload_send(SA_OPCODE_SPACE_FOCUS);
++    *(int16_t*)bytes = length-sizeof(length);
++    bytes[sizeof(length)] = SA_OPCODE_SPACE_FOCUS;
++    return scripting_addition_send_bytes(bytes, length);
+ }
+ 
+ bool scripting_addition_create_space(uint64_t sid)
+--- a/src/space_manager.c
++++ b/src/space_manager.c
+@@ -997,12 +997,15 @@
+     bool is_animating = display_manager_display_is_animating(new_did);
+     if (is_animating) return SPACE_OP_ERROR_DISPLAY_IS_ANIMATING;
+ 
+-    if (scripting_addition_focus_space(sid)) {
++    enum scripting_addition_result result = scripting_addition_focus_space(sid);
++    if (result == SA_RESULT_SUCCESS) {
+         if (focus_display) {
+             display_manager_focus_display(new_did, sid);
+         }
+-    } else {
++    } else if (result == SA_RESULT_UNAVAILABLE) {
+         space_manager_focus_space_using_gesture(new_did, sid);
++    } else {
++        return SPACE_OP_ERROR_SCRIPTING_ADDITION;
+     }
+ 
+     return SPACE_OP_ERROR_SUCCESS;
+@@ -1031,7 +1034,7 @@
+         return SPACE_OP_ERROR_SUCCESS;
+     }
+ 
+-    return scripting_addition_focus_space(sid) ? SPACE_OP_ERROR_SUCCESS : SPACE_OP_ERROR_SCRIPTING_ADDITION;
++    return scripting_addition_focus_space(sid) == SA_RESULT_SUCCESS ? SPACE_OP_ERROR_SUCCESS : SPACE_OP_ERROR_SCRIPTING_ADDITION;
+ }
+ 
+ enum space_op_error space_manager_destroy_space(uint64_t sid)
+--- a/src/display_manager.c
++++ b/src/display_manager.c
+@@ -491,7 +491,7 @@
+     uint32_t space_did = space_display_id(sid);
+     if (space_did != did) return SPACE_OP_ERROR_SAME_DISPLAY;
+ 
+-    return scripting_addition_focus_space(sid) ? SPACE_OP_ERROR_SUCCESS : SPACE_OP_ERROR_SCRIPTING_ADDITION;
++    return scripting_addition_focus_space(sid) == SA_RESULT_SUCCESS ? SPACE_OP_ERROR_SUCCESS : SPACE_OP_ERROR_SCRIPTING_ADDITION;
+ }
+ 
+ bool display_manager_begin(struct display_manager *dm)

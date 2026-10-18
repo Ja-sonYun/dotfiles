@@ -25,7 +25,6 @@
     ./services/core/code-signing.nix
     ./services/core/hammerspoon.nix
     ./services/yabai
-    ./services/skhd.nix
   ]
   ++ lib.optionals (hasTag "meeting") [
     ./services/meeting-recorder.nix

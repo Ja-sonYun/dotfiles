@@ -4,12 +4,13 @@ log.i("Loading module: window")
 local Window = {}
 
 function Window:new(hsWin) -- {{{
-	local stackIdResult = self:makeStackId(hsWin)
+	local frame = hsWin:frame()
+	local stackIdResult = self:makeStackId(frame)
 	local ws = {
 		title = hsWin:title(), -- window title
 		app = hsWin:application():name(), -- app name (string)
 		id = hsWin:id(), -- window id (string) NOTE: HS win.id == yabai win.id
-		frame = hsWin:frame(), -- x,y,w,h of window (table)
+		frame = frame, -- x,y,w,h of window (table)
 		stackId = stackIdResult.stackId, -- "{{x}|{y}|{w}|{h}" e.g., "35|63|1185|741" (string)
 		topLeft = stackIdResult.topLeft, -- "{{x}|{y}" e.g., "35|63" (string)
 		stackIdFzy = stackIdResult.fzyFrame, -- "{{x}|{y}" e.g., "35|63" (string)
@@ -174,13 +175,11 @@ function Window:getShadowAttrs() -- {{{
 	}
 end -- }}}
 
-function Window:makeStackId(hsWin) -- {{{
-	local frame = hsWin:frame():floor()
-
-	local x = frame.x
-	local y = frame.y
-	local w = frame.w
-	local h = frame.h
+function Window:makeStackId(frame) -- {{{
+	local x = math.floor(frame.x)
+	local y = math.floor(frame.y)
+	local w = math.floor(frame.w)
+	local h = math.floor(frame.h)
 
 	local fuzzFactor = stackline.config:get("features.fzyFrameDetect.fuzzFactor")
 	local roundToFuzzFactor = u.partial(u.roundToNearest, fuzzFactor)

@@ -5,7 +5,6 @@
     ./meeting-recorder
     ./nixos-container
     ./sharing
-    ./skhd
     ./yabai
   ];
 }

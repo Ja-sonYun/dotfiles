@@ -1,0 +1,210 @@
+Subject: Preserve cached window geometry when Accessibility queries fail
+
+AX position and size queries previously returned zero-filled geometry on failure.
+Return a status separately and update existing frames only after all required AX
+queries and value conversions succeed. Relative resize commands report a failed
+query instead of resizing from zero coordinates.
+
+Resize events still synchronize fullscreen state when geometry is unavailable.
+A failed fullscreen query preserves the cached state. Geometry-dependent signals,
+frame updates, and resize correction require a successful frame query.
+Read fullscreen state before geometry debounce so a later event can recover from
+a failed state query even when the frame has already been updated.
+
+New windows use WindowServer bounds when their initial AX query fails. If both
+queries fail, preserve the existing zero-initialized creation behavior so the
+window remains observed instead of being dropped without a guaranteed retry.
+
+Base: https://github.com/asmvik/yabai/commit/dd845723416f5fe92af49fad5ebab00369e07edd
+Source: https://github.com/asmvik/yabai/blob/dd845723416f5fe92af49fad5ebab00369e07edd/src/window.c#L736
+Applies after macos-27.patch.
+
+--- a/src/event_loop.c
++++ b/src/event_loop.c
+@@ -688,7 +688,8 @@
+         return;
+     }
+ 
+-    CGPoint new_origin = window_ax_origin(window);
++    CGPoint new_origin;
++    if (!window_ax_origin(window, &new_origin)) return;
+     if (CGPointEqualToPoint(new_origin, window->frame.origin)) {
+         debug("%s:DEBOUNCED %s %d\n", __FUNCTION__, window->application->name, window->id);
+         return;
+@@ -738,18 +739,27 @@
+         return;
+     }
+ 
+-    CGRect new_frame = window_ax_frame(window);
+-    if (CGRectEqualToRect(new_frame, window->frame)) {
++    CGRect new_frame;
++    bool has_frame = window_ax_frame(window, &new_frame);
++    bool was_fullscreen = window_check_flag(window, WINDOW_FULLSCREEN);
++
++    // Preserve fullscreen state when its AX query fails independently of geometry.
++    bool is_fullscreen = was_fullscreen;
++    CFTypeRef fullscreen_ref = NULL;
++    AXError fullscreen_error = AXUIElementCopyAttributeValue(window->ref, kAXFullscreenAttribute, &fullscreen_ref);
++    if (fullscreen_error == kAXErrorSuccess && fullscreen_ref) {
++        is_fullscreen = CFBooleanGetValue(fullscreen_ref);
++    }
++    if (fullscreen_ref) CFRelease(fullscreen_ref);
++
++    if (has_frame && CGRectEqualToRect(new_frame, window->frame) && was_fullscreen == is_fullscreen) {
+         debug("%s:DEBOUNCED %s %d\n", __FUNCTION__, window->application->name, window->id);
+         return;
+     }
+ 
+     debug("%s: %s %d\n", __FUNCTION__, window->application->name, window->id);
+-    event_signal_push(SIGNAL_WINDOW_RESIZED, window);
+-
+-    bool was_fullscreen = window_check_flag(window, WINDOW_FULLSCREEN);
++    if (has_frame) event_signal_push(SIGNAL_WINDOW_RESIZED, window);
+ 
+-    bool is_fullscreen = window_is_fullscreen(window);
+     if (is_fullscreen) {
+         window_set_flag(window, WINDOW_FULLSCREEN);
+     } else {
+@@ -777,7 +787,7 @@
+     }
+ 
+     bool windowed_fullscreen = CGRectEqualToRect(window->windowed_frame, window->frame);
+-    window->frame = new_frame;
++    if (has_frame) window->frame = new_frame;
+ 
+     if (!was_fullscreen && is_fullscreen) {
+         struct view *view = window_manager_find_managed_window(&g_window_manager, window);
+@@ -793,7 +803,7 @@
+             struct view *view = space_manager_tile_window_on_space(&g_space_manager, window, window_space(window->id));
+             window_manager_add_managed_window(&g_window_manager, window, view);
+         }
+-    } else if (!was_fullscreen == !is_fullscreen) {
++    } else if (has_frame) {
+         if (g_mouse_state.current_action == MOUSE_MODE_MOVE && g_mouse_state.window == window) {
+             g_mouse_state.window_frame.size = g_mouse_state.window->frame.size;
+         }
+--- a/src/message.c
++++ b/src/message.c
+@@ -2249,6 +2249,8 @@
+                     daemon_fail(rsp, "cannot locate a bsp node fence.\n");
+                 } else if (result == WINDOW_OP_ERROR_INVALID_OPERATION) {
+                     daemon_fail(rsp, "cannot use absolute resizing on a managed window.\n");
++                } else if (result == WINDOW_OP_ERROR_AX_FAILURE) {
++                    daemon_fail(rsp, "could not retrieve the window frame from Accessibility.\n");
+                 }
+             } else {
+                 daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+--- a/src/window.c
++++ b/src/window.c
+@@ -733,41 +733,32 @@
+     return value;
+ }
+ 
+-CGPoint window_ax_origin(struct window *window)
++bool window_ax_origin(struct window *window, CGPoint *origin)
+ {
+-    CGPoint origin = {0};
++    CGPoint value;
+     CFTypeRef position_ref = NULL;
+-
+-    AXUIElementCopyAttributeValue(window->ref, kAXPositionAttribute, &position_ref);
+-
+-    if (position_ref) {
+-        AXValueGetValue(position_ref, kAXValueTypeCGPoint, &origin);
+-        CFRelease(position_ref);
+-    }
++    AXError error = AXUIElementCopyAttributeValue(window->ref, kAXPositionAttribute, &position_ref);
++    bool success = error == kAXErrorSuccess && position_ref &&
++                   AXValueGetValue(position_ref, kAXValueTypeCGPoint, &value);
++    if (position_ref) CFRelease(position_ref);
+ 
+-    return origin;
++    if (success) *origin = value;
++    return success;
+ }
+ 
+-CGRect window_ax_frame(struct window *window)
++bool window_ax_frame(struct window *window, CGRect *frame)
+ {
+-    CGRect frame = {0};
+-    CFTypeRef position_ref = NULL;
+-    CFTypeRef size_ref = NULL;
++    CGRect value;
++    if (!window_ax_origin(window, &value.origin)) return false;
+ 
+-    AXUIElementCopyAttributeValue(window->ref, kAXPositionAttribute, &position_ref);
+-    AXUIElementCopyAttributeValue(window->ref, kAXSizeAttribute, &size_ref);
+-
+-    if (position_ref) {
+-        AXValueGetValue(position_ref, kAXValueTypeCGPoint, &frame.origin);
+-        CFRelease(position_ref);
+-    }
+-
+-    if (size_ref) {
+-        AXValueGetValue(size_ref, kAXValueTypeCGSize, &frame.size);
+-        CFRelease(size_ref);
+-    }
++    CFTypeRef size_ref = NULL;
++    AXError error = AXUIElementCopyAttributeValue(window->ref, kAXSizeAttribute, &size_ref);
++    bool success = error == kAXErrorSuccess && size_ref &&
++                   AXValueGetValue(size_ref, kAXValueTypeCGSize, &value.size);
++    if (size_ref) CFRelease(size_ref);
+ 
+-    return frame;
++    if (success) *frame = value;
++    return success;
+ }
+ 
+ bool window_ax_can_move(struct window *window)
+@@ -1099,7 +1090,13 @@
+     window->ref = window_ref;
+     window->id = window_id;
+     window->id_ptr = &window->id;
+-    window->frame = window_ax_frame(window);
++    if (!window_ax_frame(window, &window->frame)) {
++        // Keep tracking new windows when their AX geometry is temporarily unavailable.
++        CGRect frame;
++        if (SLSGetWindowBounds(g_connection, window_id, &frame) == kCGErrorSuccess) {
++            window->frame = frame;
++        }
++    }
+     window->role = window_ax_role(window);
+     window->subrole = window_ax_subrole(window);
+     window->title = window_title(window);
+--- a/src/window.h
++++ b/src/window.h
+@@ -149,8 +149,8 @@
+ int window_sub_level(uint32_t wid);
+ uint64_t window_tags(uint32_t wid);
+ bool window_is_sticky(uint32_t wid);
+-CGPoint window_ax_origin(struct window *window);
+-CGRect window_ax_frame(struct window *window);
++bool window_ax_origin(struct window *window, CGPoint *origin);
++bool window_ax_frame(struct window *window, CGRect *frame);
+ CFStringRef window_ax_role(struct window *window);
+ CFStringRef window_role(struct window *window);
+ char *window_role_ts(struct window *window);
+--- a/src/window_manager.c
++++ b/src/window_manager.c
+@@ -405,7 +405,9 @@
+                 AX_ENHANCED_UI_WORKAROUND(window->application->ref, { window_manager_resize_window(window, dx, dy); });
+             }
+         } else {
+-            window_manager_resize_window_relative_internal(window, window_ax_frame(window), direction, dx, dy, animate);
++            CGRect frame;
++            if (!window_ax_frame(window, &frame)) return WINDOW_OP_ERROR_AX_FAILURE;
++            window_manager_resize_window_relative_internal(window, frame, direction, dx, dy, animate);
+         }
+     }
+ 
+--- a/src/window_manager.h
++++ b/src/window_manager.h
+@@ -13,6 +13,7 @@
+     WINDOW_OP_ERROR_INVALID_DST_VIEW,
+     WINDOW_OP_ERROR_INVALID_DST_NODE,
+     WINDOW_OP_ERROR_INVALID_OPERATION,
++    WINDOW_OP_ERROR_AX_FAILURE,
+     WINDOW_OP_ERROR_SAME_WINDOW,
+     WINDOW_OP_ERROR_CANT_MINIMIZE,
+     WINDOW_OP_ERROR_ALREADY_MINIMIZED,
+

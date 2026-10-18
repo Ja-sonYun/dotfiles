@@ -38,6 +38,7 @@ in
 {
   imports = [
     ./stackline
+    ./extensions/controller.nix
     ./extensions/desktop-indicator
   ];
 
