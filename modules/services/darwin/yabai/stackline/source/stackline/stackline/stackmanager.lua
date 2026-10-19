@@ -1,4 +1,5 @@
 local log = hs.logger.new("stackmanager", "info")
+local logger = require("logging").new("stackline-manager")
 
 local Stackmanager = {}
 
@@ -21,15 +22,16 @@ function Stackmanager:init() -- {{{
 		self:settleGeometry()
 	end)
 	self.focusSequence = 0
+	self.focusRevision = 0
 	self.lastFocusedByWindowId = {}
 	self.focusedWindowId = nil
+	self.visibleWindowIds = {}
 	self.__index = self
 	self:syncFocus()
 	return self
 end -- }}}
 
 function Stackmanager:update(opts) -- {{{
-	log.i("Running update()")
 	self.query.run(opts) -- calls Stack:ingest when ready
 	return self
 end -- }}}
@@ -148,10 +150,19 @@ function Stackmanager:settleGeometry()
 	end
 end
 
-function Stackmanager:completeGeometry()
+function Stackmanager:completeGeometry(stacks)
 	if mouseButtonsDown() then
-		return
+		return true
 	end
+	-- Use this query's window objects even when stack membership is unchanged.
+	local currentWindows = {}
+	for _, windows in pairs(stacks) do
+		for _, win in ipairs(windows) do
+			currentWindows[win.id] = win._win
+		end
+	end
+
+	local completeAll = true
 	local settled = {}
 	for id, motion in pairs(self.motionByWindowId) do
 		if motion.ready then
@@ -160,10 +171,6 @@ function Stackmanager:completeGeometry()
 		end
 	end
 
-	local visible = {}
-	for _, win in ipairs(stackline.wf:getWindows()) do
-		visible[win:id()] = win
-	end
 	self:eachStack(function(stack)
 		if not stack.motionHidden or self:isStackMoving(stack) then
 			return
@@ -171,16 +178,24 @@ function Stackmanager:completeGeometry()
 		local anchor
 		local complete = true
 		for _, win in ipairs(stack.windows) do
-			complete = complete and hs.window.get(win.id) ~= nil
-			if visible[win.id] and (not anchor or settled[win.id] == win.id) then
-				anchor = visible[win.id]
+			local hsWin = currentWindows[win.id]
+			complete = complete and hsWin ~= nil
+			if hsWin and self.visibleWindowIds[win.id] and (not anchor or settled[win.id] == win.id) then
+				anchor = hsWin
 			end
 		end
 		if complete and anchor and anchor:screen() then
 			stack:updateGeometry(anchor)
 			stack:setMotionHidden(false)
+		else
+			completeAll = false
+			logger:w("stack_reveal_deferred", {
+				stack = stack.id,
+				reason = not complete and "missing-window" or "missing-visible-anchor",
+			})
 		end
 	end)
+	return completeAll
 end
 
 function Stackmanager:pruneFocusHistory(windows)
@@ -197,13 +212,7 @@ function Stackmanager:pruneFocusHistory(windows)
 end
 
 function Stackmanager:syncFocus()
-	local focusedWindow = hs.window.focusedWindow()
-	local focusedId = focusedWindow and focusedWindow:id()
-	if focusedId and (focusedId ~= self.focusedWindowId or not self.lastFocusedByWindowId[focusedId]) then
-		self.focusSequence = self.focusSequence + 1
-		self.lastFocusedByWindowId[focusedId] = self.focusSequence
-	end
-	self.focusedWindowId = focusedId
+	local focusedId = self.focusedWindowId
 
 	self:eachStack(function(stack)
 		local stackFocused = false

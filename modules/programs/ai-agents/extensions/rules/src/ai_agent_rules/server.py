@@ -19,7 +19,6 @@ import psutil
 
 from ai_agent_rules.context import HookContext, current
 from ai_agent_rules.hooks import process_event
-from ai_agent_rules.sessions import reset_sessions
 
 Owner = tuple[int, float]
 SessionKey = tuple[str, str, Owner]
@@ -64,30 +63,6 @@ def write_log(directory: Path, record: dict[str, object]) -> None:
             print("[Rules log] Cannot write server log.", file=sys.stderr)
         except OSError:
             pass
-
-
-def reset_database(directory: Path, configuration: str, reason: str) -> None:
-    """Log each reset, aborting startup but allowing shutdown on storage failure."""
-    error_type: str | None = None
-    try:
-        reset_sessions()
-    except OSError as error:
-        error_type = type(error).__name__
-        if reason == "startup":
-            raise
-    finally:
-        write_log(
-            directory,
-            {
-                "time": datetime.now(UTC).isoformat(timespec="milliseconds"),
-                "pid": os.getpid(),
-                "configuration": configuration,
-                "event": "database_reset",
-                "reason": reason,
-                "success": error_type is None,
-                "error_type": error_type,
-            },
-        )
 
 
 def detach_stderr() -> None:
@@ -575,7 +550,6 @@ def main() -> int:
         (args.directory / "server.sock").unlink(missing_ok=True)
         (args.directory / "server.pid").unlink(missing_ok=True)
         # Keep the lease until asyncio.run has also drained its worker threads.
-        reset_database(args.directory.parent, args.configuration, "startup")
         try:
             asyncio.run(
                 Server(args.rules, args.configuration, args.debug_log).serve(
@@ -583,11 +557,8 @@ def main() -> int:
                 )
             )
         finally:
-            try:
-                (args.directory / "server.sock").unlink(missing_ok=True)
-                (args.directory / "server.pid").unlink(missing_ok=True)
-            finally:
-                reset_database(args.directory.parent, args.configuration, "shutdown")
+            (args.directory / "server.sock").unlink(missing_ok=True)
+            (args.directory / "server.pid").unlink(missing_ok=True)
     return 0
 
 

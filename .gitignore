@@ -12,3 +12,4 @@ node_modules/
 .pycache
 __pycache__
 .pre-commit-config.yaml
+!portable/pi/redaction/words.txt.gz

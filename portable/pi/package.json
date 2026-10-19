@@ -1,0 +1,21 @@
+{
+  "name": "dotfiles-pi-resources",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "js-tiktoken": "1.0.21",
+    "re2js": "2.8.6"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/context/index.ts",
+      "./extensions/mcp/index.ts",
+      "./extensions/providers/index.ts",
+      "./extensions/permissions/index.ts",
+      "./extensions/redact/index.ts",
+      "./extensions/subagent/index.ts",
+      "./extensions/message-lines/index.ts"
+    ]
+  }
+}

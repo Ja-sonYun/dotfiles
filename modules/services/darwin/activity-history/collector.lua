@@ -21,8 +21,6 @@ local activityPath, activityDay, context, lastLocation, lastState, state
 local schedule, syncContext, restoreAccessibility
 logger.context.run_id = recorder.runID
 logger:i("collector_starting", { paused = recorder.paused, locked = recorder.locked })
-local emittedCount = 0
-local lastCountLog = hs.timer.secondsSinceEpoch()
 
 local function cancelLocation()
 	if recorder.cancelLocation then
@@ -106,13 +104,6 @@ local function emit(kind, fields)
 	fields.source = "hammerspoon"
 	fields.collector_run_id = recorder.runID
 	write(activityPath, hs.json.encode(fields) .. "\n", "a")
-	emittedCount = emittedCount + 1
-	local now = hs.timer.secondsSinceEpoch()
-	if now - lastCountLog >= 30 then
-		logger:i("activity_saved", { count = emittedCount, elapsed_seconds = now - lastCountLog })
-		emittedCount = 0
-		lastCountLog = now
-	end
 end
 
 local function safe(fn)
@@ -150,14 +141,16 @@ local function isExcluded(bundle)
 	return false
 end
 
-local function foreground()
+local function foreground(window)
 	local app = hs.application.frontmostApplication()
 	local pid = app and app:pid()
 	if not pid or pid <= 0 then
 		return nil
 	end
-	local window = hs.window.frontmostWindow()
-	if window and (not window:application() or window:application():pid() ~= pid) then
+	-- Avoid frontmostWindow's full window scan when no window has focus.
+	window = window or hs.window.focusedWindow()
+	local windowApp = window and window:application()
+	if window and (not windowApp or windowApp:pid() ~= pid) then
 		window = nil
 	end
 	return {
@@ -187,9 +180,12 @@ local function recordIdle()
 	end
 end
 
-local function saveState(reason, force)
+local function saveState(reason, force, current)
 	local now = hs.timer.secondsSinceEpoch()
-	local current = foreground()
+	-- Reuse this callback's snapshot; false means no foreground application.
+	if current == nil then
+		current = foreground()
+	end
 	local blocked = not recorder.running and "stopped"
 		or recorder.paused and "paused"
 		or recorder.locked and "locked"
@@ -242,8 +238,8 @@ local function saveState(reason, force)
 	return allowed and current or nil
 end
 
-syncContext = function(reason, force)
-	local current = saveState(reason, force)
+syncContext = function(reason, force, current)
+	current = saveState(reason, force, current)
 	if not current then
 		return nil
 	end
@@ -335,7 +331,7 @@ local function ready(current)
 		})
 	end
 	if now < entry.readyAt then
-		schedule("accessibility_ready", entry.readyAt - now)
+		schedule("accessibility_ready", entry.readyAt - now, current)
 		return false
 	end
 	return true
@@ -499,16 +495,17 @@ local function locationIdentity(value)
 end
 
 local function allowsLocation(current)
-	return current ~= nil and supportedApps[current.app_id] ~= nil
+	return current and current.window_id > 0 and supportedApps[current.app_id] ~= nil
 end
 
-local function capture(reason)
-	local current = syncContext(reason)
+local function capture(reason, current)
+	current = current or syncContext(reason)
 	if not allowsLocation(current) or not ready(current) then
 		return
 	end
 	local key, id = context.key, context.id
 	local function record(result)
+		-- Recheck focus and privacy after extraction, including asynchronous results.
 		local latest = saveState(reason)
 		if
 			not latest
@@ -537,7 +534,7 @@ local function capture(reason)
 	end
 end
 
-schedule = function(reason, delay)
+schedule = function(reason, delay, current)
 	cancelLocation()
 	if recorder.pending then
 		recorder.pending:stop()
@@ -545,7 +542,10 @@ schedule = function(reason, delay)
 	if not state or not state.allowed then
 		return
 	end
-	if not allowsLocation(foreground()) then
+	if current == nil then
+		current = foreground()
+	end
+	if not allowsLocation(current) then
 		return
 	end
 	local seconds = delay or cfg.capture.debounceMilliseconds / 1000
@@ -557,14 +557,11 @@ schedule = function(reason, delay)
 	)
 end
 
-local function changed()
+local function changed(current)
 	local oldKey, oldTitle = context and context.key, context and context.title
-	if
-		syncContext("context_change")
-		and cfg.capture.onContextChange
-		and (context.key ~= oldKey or context.title ~= oldTitle)
-	then
-		schedule("context_change")
+	current = syncContext("context_change", nil, current)
+	if current and cfg.capture.onContextChange and (context.key ~= oldKey or context.title ~= oldTitle) then
+		schedule("context_change", nil, current)
 	end
 end
 
@@ -579,8 +576,8 @@ local function rememberApplication(app)
 	return fields
 end
 
-local function recordLifecycle(kind, metadata)
-	if not recorder.initialized or not saveState(kind) or isExcluded(metadata.app_id) then
+local function recordLifecycle(kind, metadata, current)
+	if not recorder.initialized or not saveState(kind, nil, current) or isExcluded(metadata.app_id) then
 		return
 	end
 	local fields = {}
@@ -591,20 +588,21 @@ local function recordLifecycle(kind, metadata)
 end
 
 local function applicationChanged(name, event, app)
+	local current = foreground() or false
 	local pid = app and app:pid()
 	if pid and pid > 0 then
 		if event == hs.application.watcher.terminated then
 			local fields = recorder.applications[pid] or { app_id = "", app_name = name or "", pid = pid }
-			recordLifecycle("app_terminated", fields)
+			recordLifecycle("app_terminated", fields, current)
 			recorder.applications[pid] = nil
 		else
 			local fields = rememberApplication(app)
 			if fields and event == hs.application.watcher.launched then
-				recordLifecycle("app_launched", fields)
+				recordLifecycle("app_launched", fields, current)
 			end
 		end
 	end
-	changed()
+	changed(current)
 end
 
 local function rememberWindow(window)
@@ -672,9 +670,9 @@ function recorder.control(action)
 	safe(function()
 		recorder.paused = action == "pause"
 		recorder.error = nil
-		syncContext(recorder.paused and "paused" or "started", true)
+		local current = syncContext(recorder.paused and "paused" or "started", true)
 		if not recorder.paused then
-			schedule("started")
+			schedule("started", nil, current or false)
 		end
 	end)()
 	assert(not recorder.error, recorder.error)
@@ -687,12 +685,16 @@ safe(function()
 		rememberApplication(app)
 	end
 	recorder.appWatcher = hs.application.watcher.new(safe(applicationChanged)):start()
+	local filter = hs.window.filter
 	recorder.windowFilter = hs.window.filter.new()
 	recorder.windowFilter:subscribe(
-		{ hs.window.filter.windowFocused, hs.window.filter.windowTitleChanged },
-		safe(changed)
+		{ filter.windowFocused, filter.windowTitleChanged },
+		safe(function(window, _, event)
+			-- Title notifications can belong to another window of the same app.
+			local current = foreground(event == filter.windowFocused and window or nil)
+			changed(current or false)
+		end)
 	)
-	local filter = hs.window.filter
 	recorder.lifecycleFilter = filter.new(false):setDefaultFilter({ allowRoles = "AXStandardWindow" })
 	recorder.lifecycleFilter:subscribe({
 		filter.windowCreated,
@@ -725,8 +727,9 @@ safe(function()
 						end
 						reason = "enter"
 					end
-					if syncContext(reason) then
-						schedule(reason)
+					local current = syncContext(reason)
+					if current then
+						schedule(reason, nil, current)
 					end
 				end)()
 				return false
@@ -747,8 +750,8 @@ safe(function()
 			else
 				return
 			end
-			syncContext("session_state", true)
-			schedule("session_state")
+			local current = syncContext("session_state", true)
+			schedule("session_state", nil, current or false)
 		end))
 		:start()
 	recorder.timer = hs.timer.doEvery(
@@ -757,11 +760,12 @@ safe(function()
 			if recorder.tap and not recorder.tap:isEnabled() then
 				recorder.tap:start()
 			end
-			if syncContext("periodic", true) then
+			local current = syncContext("periodic", true)
+			if current then
 				if recorder.pending then
 					recorder.pending:stop()
 				end
-				capture("periodic")
+				capture("periodic", current)
 				if
 					cfg.integrations.tmux.enable
 					and state.terminal_front
@@ -773,15 +777,15 @@ safe(function()
 			end
 		end)
 	)
-	syncContext("startup", true)
-	schedule("startup")
+	local current = syncContext("startup", true)
+	schedule("startup", nil, current or false)
 	recorder.initialized = true
 	logger:i("collector_started", { interval_seconds = cfg.capture.intervalSeconds })
 end)()
 
 local previousShutdown = hs.shutdownCallback
 hs.shutdownCallback = function()
-	logger:i("collector_stopping", { unsummarized_saved_count = emittedCount })
+	logger:i("collector_stopping")
 	recorder.running = false
 	cancelLocation()
 	if recorder.pending then

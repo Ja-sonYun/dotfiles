@@ -15,7 +15,12 @@ from ai_agent_rules.edit_context import capture_context
 from ai_agent_rules.feedback import emit_feedback
 from ai_agent_rules.guidance import RULES_GUIDANCE
 from ai_agent_rules.rules import effective_rules
-from ai_agent_rules.sessions import end_session, record_rejection, register_session
+from ai_agent_rules.sessions import (
+    consume_approval,
+    end_session,
+    record_rejection,
+    register_session,
+)
 
 
 def is_rules_tool(hook_input: HookInput) -> bool:
@@ -26,7 +31,7 @@ def is_rules_tool(hook_input: HookInput) -> bool:
     return any(
         isinstance(name, str)
         and re.search(
-            r"(?:^|[._])(?:rules_(?:list|check)|project_rules_(?:upsert|list|remove))$",
+            r"(?:^|[._])(?:rules_(?:list|check|request_approval)|project_rules_(?:upsert|list|remove))$",
             name,
         )
         for name in names
@@ -140,6 +145,22 @@ async def handle_event(
         return None
 
     if event == "PreToolUse":
+        if handle is not None:
+            try:
+                approved = await asyncio.to_thread(consume_approval, handle, hook_input)
+            except (OSError, TypeError, ValueError) as error:
+                notes.append(f"[Rules approval unavailable] {error}")
+            else:
+                if approved is not None:
+                    context = current.get()
+                    if context is not None:
+                        context.rules_decision = "overridden"
+                    notes.append(
+                        f"[Rules approval consumed] {approved}. "
+                        "A rule exception was consumed for this exact request once; "
+                        "other permission checks still apply."
+                    )
+                    return None
         if is_rules_tool(hook_input):
             return None
         violated = False
@@ -184,35 +205,41 @@ async def handle_event(
             )
             notes.extend(feedback)
             violated = violated or code_violated
-        if violated:
-            repeated = False
+        if violated or any(
+            note.startswith(("[Rules unclear]", "[Rules not checked]"))
+            for note in notes
+        ):
+            request_id = None
             if handle is not None:
                 try:
-                    repeated = await asyncio.to_thread(
-                        record_rejection, handle, hook_input
+                    request_id = await asyncio.to_thread(
+                        record_rejection, handle, hook_input, "\n\n".join(notes)
                     )
                 except (OSError, TypeError, ValueError) as error:
                     notes.append(
-                        f"[Rules retry unavailable] Cannot record this request ({error})"
+                        f"[Rules approval unavailable] Cannot record this request ({error})"
                     )
             else:
                 notes.append(
-                    "[Rules retry unavailable] Session storage is unavailable."
+                    "[Rules approval unavailable] Session storage is unavailable."
                 )
             context = current.get()
-            if context is not None:
-                context.rules_decision = "retry_allowed" if repeated else "deny"
-            if not repeated:
-                return (
-                    "Rules rejected this request. Review the feedback before "
-                    "retrying. An identical retry in this session bypasses this "
-                    "rules rejection when the rejection was recorded."
+            if context is not None and violated:
+                context.rules_decision = "deny"
+            if request_id is not None:
+                approval_note = (
+                    f"Request ID: {request_id}. "
+                    "Call rules_request_approval with the hook's session_handle "
+                    "and this request_id to record a one-time rule exception. "
+                    "Retry the exact request only if that tool returns approved."
                 )
-            notes.append(
-                "[Rules retry] This identical request was already rejected in this "
-                "session. Rules will not block it again; other permission "
-                "checks still apply."
-            )
+                if violated:
+                    return f"Rules rejected this request. {approval_note}"
+                notes.append(f"[Rules approval available] {approval_note}")
+            if violated:
+                return (
+                    "Rules rejected this request. Review the feedback before retrying."
+                )
     return None
 
 

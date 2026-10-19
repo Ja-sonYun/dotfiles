@@ -3,6 +3,7 @@ local logger = require("logging").new("keybindings")
 local bindings = assert(hs.json.read("@bindings@"), "Cannot read Hammerspoon keybindings")
 local activeTasks = {}
 local sockets = {}
+local socketSubscribers = {}
 local requestID = 0
 local pressed = {}
 local stopping = false
@@ -21,6 +22,11 @@ local keyAliases = {
 	period = ".",
 	semicolon = ";",
 }
+
+function module.subscribeSocket(path, name, callback)
+	socketSubscribers[path] = socketSubscribers[path] or {}
+	socketSubscribers[path][name] = callback
+end
 
 local function keyCode(key)
 	if key:match("^0x[%da-fA-F]+$") then
@@ -103,7 +109,17 @@ local function stopSocketTimer(state)
 end
 
 local function failSocket(state, message)
-	local binding = state.active and state.active.binding or state.queue[1]
+	local request = state.active or state.queue[1]
+	local binding = request and request.binding
+	local dropped = {}
+	for _, queued in ipairs(state.queue) do
+		dropped[#dropped + 1] = queued.id
+	end
+	logger:e("socket_requests_aborted", {
+		request = request and request.id,
+		queued = dropped,
+		error = message,
+	})
 	stopSocketTimer(state)
 	local socket = state.socket
 	state.socket = nil
@@ -152,11 +168,21 @@ local function connectSocket(state)
 		state.active = nil
 		if not reply.ok then
 			logger:e("socket_action_failed", {
+				request = active.id,
 				binding = active.binding.name,
-				error = tostring(reply.error or "Socket action rejected"),
+				error = reply.error,
 			})
 		end
 		pumpSocket(state)
+		for name, callback in pairs(socketSubscribers[state.path] or {}) do
+			local ok, err = xpcall(callback, debug.traceback, reply, {
+				id = active.id,
+				payload = active.binding.socket.payload,
+			})
+			if not ok then
+				logger:e("socket_subscriber_failed", { subscriber = name, request = active.id, error = err })
+			end
+		end
 	end)
 	state.socket = socket
 	state.connecting = true
@@ -189,9 +215,9 @@ pumpSocket = function(state)
 		return
 	end
 
-	local binding = table.remove(state.queue, 1)
-	requestID = requestID + 1
-	state.active = { id = requestID, binding = binding }
+	local request = table.remove(state.queue, 1)
+	local binding = request.binding
+	state.active = request
 	state.timer = hs.timer.doAfter(15, function()
 		failSocket(state, "Socket response timed out; execution is unknown")
 	end)
@@ -201,7 +227,7 @@ pumpSocket = function(state)
 		if not state.socket:read("\n") then
 			return false
 		end
-		return state.socket:write(hs.json.encode({ id = requestID, payload = binding.socket.payload }) .. "\n")
+		return state.socket:write(hs.json.encode({ id = request.id, payload = binding.socket.payload }) .. "\n")
 	end)
 	if not ok or not result then
 		failSocket(state, "Socket write failed; execution is unknown")
@@ -250,7 +276,11 @@ module.keyWatcher = hs.eventtap
 			binding.callback()
 			return not binding.passthrough
 		elseif binding.socket then
-			table.insert(binding.socketState.queue, binding)
+			requestID = requestID + 1
+			table.insert(binding.socketState.queue, {
+				id = requestID,
+				binding = binding,
+			})
 			pumpSocket(binding.socketState)
 			return not binding.passthrough
 		end

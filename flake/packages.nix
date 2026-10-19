@@ -45,7 +45,15 @@ in
         path: (builtins.fromJSON (builtins.readFile (path + "/package-spec.json"))).versions ? ${system}
       ) directories;
     in
-    builtins.listToAttrs (
+    {
+      inherit (pkgs)
+        pi
+        pi-runtime
+        pi-resources
+        ;
+      pi-lock = pkgs.pi-runtime.lock;
+    }
+    // builtins.listToAttrs (
       lib.concatMap (
         path:
         let

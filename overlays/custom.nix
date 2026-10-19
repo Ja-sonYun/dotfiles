@@ -4,8 +4,6 @@
 
     claude-code = final.callPackage ../pkgs/ai-agents/claude-code { };
     codex = final.callPackage ../pkgs/ai-agents/codex { };
-    pi = final.callPackage ../pkgs/pi { };
-    pi-extensions = import ../pkgs/pi/extensions.nix { pkgs = final; };
 
     aws-ro = final.callPackage ../pkgs/ai-tools/aws-ro { };
     dcf = final.callPackage ../pkgs/ai-tools/dcf { };

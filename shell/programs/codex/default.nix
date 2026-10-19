@@ -37,9 +37,9 @@
     };
 
     settings = {
-      model = "gpt-6.1-sol";
-      model_reasoning_effort = "high";
-      plan_mode_reasoning_effort = "xhigh";
+      model = "gpt-6-astra";
+      model_reasoning_effort = "medium";
+      plan_mode_reasoning_effort = "high";
       model_verbosity = "low";
 
       approval_policy = "on-request";

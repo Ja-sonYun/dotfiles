@@ -91,6 +91,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    pi = {
+      url = ./portable/pi;
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.dream2nix.follows = "dream2nix";
+    };
+
     server = {
       url = ./infra;
       flake = false;

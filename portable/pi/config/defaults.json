@@ -1,0 +1,27 @@
+{
+  "settings": {
+    "quietStartup": true,
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-6-astra",
+    "defaultThinkingLevel": "high",
+    "defaultTools": ["+codemode", "+tool_search"],
+    "enabledModels": ["lmp/**", "openai/**"]
+  },
+  "summaries": {
+    "provider": "openai",
+    "model": "gpt-6-luna"
+  },
+  "providers": {
+    "lmp": {
+      "name": "LMP",
+      "fallbackModels": [],
+      "excludeOpenAIModels": true,
+      "defaults": {
+        "contextWindow": 256000,
+        "maxTokens": 32000
+      },
+      "imageModelMarkers": ["vision", "image"],
+      "nonReasoningModelMarkers": ["image"]
+    }
+  }
+}

@@ -1,0 +1,3109 @@
+{
+  "version": "1.9.0",
+  "source": "https://github.com/betterleaks/betterleaks/tree/v1.9.0",
+  "filter": "(matchesAny(finding[\"secret\"], [\n  `(?i)^true|false|null$`,\n  `^(?i:a+|b+|c+|d+|e+|f+|g+|h+|i+|j+|k+|l+|m+|n+|o+|p+|q+|r+|s+|t+|u+|v+|w+|x+|y+|z+|\\*+|\\.+)$`,\n  `^\\$(?:\\d+|{\\d+})$`,\n  `^\\$(?:[A-Z_]+|[a-z_]+)$`,\n  `^\\${(?:[A-Z_]+|[a-z_]+)}$`,\n  `^\\{\\{[ \\t]*[\\w ().|]+[ \\t]*}}$`,\n  `^\\$\\{\\{[ \\t]*(?:(?:env|github|secrets|vars)(?:\\.[A-Za-z]\\w+)+[\\w \"'&./=|]*)[ \\t]*}}$`,\n  `^%(?:[A-Z_]+|[a-z_]+)%$`,\n  `^%[+\\-# 0]?[bcdeEfFgGoOpqstTUvxX]$`,\n  `^\\{\\d{0,2}}$`,\n  `^@(?:[A-Z_]+|[a-z_]+)@$`,\n  `^/Users/(?i)[a-z0-9]+/[\\w .-/]+$`,\n  `^/(?:bin|etc|home|opt|tmp|usr|var)/[\\w ./-]+$`\n]) || containsAny(finding[\"secret\"], [\n  \"abcdefghijklmnopqrstuvwxyz\",\n  \"014df517-39d1-4453-b7b3-9930c563627c\"\n]))\n\n",
+  "rules": [
+    {
+      "id": "1password-secret-key",
+      "regex": "\\bA3-[A-Z0-9]{6}-(?:(?:[A-Z0-9]{11})|(?:[A-Z0-9]{6}-[A-Z0-9]{5}))-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}\\b",
+      "keywords": ["a3-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.8\n"
+    },
+    {
+      "id": "1password-service-account-token",
+      "regex": "ops_eyJ[a-zA-Z0-9+/]{250,}={0,3}",
+      "keywords": ["ops_eyj"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "abuseipdb-api-key.1",
+      "regex": "(?i)(?:abuseipdb)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{80})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["abuseipdb"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "adafruit-api-key",
+      "regex": "(?i)(?:adafruit)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9_-]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["adafruit"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "adobe-client-id",
+      "regex": "(?i)(?:adobe)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["adobe"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "adobe-client-secret",
+      "regex": "\\b(p8e-(?i)[a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["p8e-"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "age-secret-key",
+      "regex": "AGE-SECRET-KEY-1[QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]{58}",
+      "keywords": ["age-secret-key-1"]
+    },
+    {
+      "id": "aikido-ci-token",
+      "regex": "\\b(AIK_CI_[A-Za-z0-9]{20,44})\\b",
+      "keywords": ["aik_ci_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "aikido-client-id",
+      "regex": "\\b(AIK_CLIENT_[A-Za-z0-9]{24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["aik_client_"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "aikido-client-secret",
+      "regex": "\\b(AIK_SECRET_[A-Za-z0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["aik_secret_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "aikido-client-id"
+        }
+      ]
+    },
+    {
+      "id": "airtable-api-key",
+      "regex": "(?i)(?:airtable)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{17})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["airtable"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "airtable-oauth-token",
+      "regex": "(?i)(?:airtable)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Z0-9]+\\.v1\\.[A-Z0-9_-]+\\.[a-f0-9]+)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["airtable"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "airtable-personnal-access-token",
+      "regex": "\\b(pat[[:alnum:]]{14}\\.[a-f0-9]{64})\\b",
+      "keywords": ["airtable"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "aiven-auth-token",
+      "regex": "(?i:aiven)[\\s\\S]{0,32}?\\b([A-Za-z0-9/+=]{372})(?:[^A-Za-z0-9/+=]|$)",
+      "keywords": ["aiven"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 4.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "algolia-api-key",
+      "regex": "(?i)(?:algolia)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["algolia"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n",
+      "components": [
+        {
+          "id": "algolia-application-id"
+        }
+      ]
+    },
+    {
+      "id": "algolia-application-id",
+      "regex": "(?i)(?:algolia)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{10})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["algolia"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 2.75 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "alibaba-access-key-id",
+      "regex": "\\b(LTAI[A-Za-z0-9]{17,21})\\b",
+      "keywords": ["ltai"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "alibaba-secret-key",
+      "regex": "(?i)(?:alibaba|aliyun|secret|key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9]{30})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["alibaba", "aliyun"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n",
+      "components": [
+        {
+          "id": "alibaba-access-key-id",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "alibaba-sts-access-key-id",
+      "regex": "\\b(STS\\.[A-Za-z0-9]{16,64})\\b",
+      "keywords": ["sts."],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "alibaba-sts-access-key-secret",
+      "regex": "(?i)(?:alibaba|aliyun|secret|key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9]{30,64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["alibaba", "aliyun"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n",
+      "components": [
+        {
+          "id": "alibaba-sts-access-key-id",
+          "within": "10L"
+        },
+        {
+          "id": "alibaba-sts-security-token",
+          "within": "10L"
+        }
+      ]
+    },
+    {
+      "id": "alibaba-sts-security-token",
+      "regex": "(?i)(?:alibaba|aliyun|secret|key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(CAIS[A-Za-z0-9+/_=-]{20,1000}[A-Za-z0-9+/_=-]{0,24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["alibaba", "aliyun", "cais"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "amplitude-secret-key",
+      "regex": "(?i)\\bamplitude(?:.|[\\n\\r]){0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|AUTHORIZATION)(?:.|[\\n\\r]){0,16}?\\b([a-f0-9]{32})\\b",
+      "keywords": ["amplitude"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "anthropic-admin-api-key",
+      "regex": "\\b(sk-ant-admin01-[a-zA-Z0-9_\\-]{93}AA)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sk-ant-admin01"]
+    },
+    {
+      "id": "anthropic-api-key",
+      "regex": "\\b(sk-ant-api03-[a-zA-Z0-9_\\-]{93}AA)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sk-ant-api03"]
+    },
+    {
+      "id": "apify-api-token",
+      "regex": "\\b(apify_api_[A-Za-z0-9]{34,38})\\b",
+      "keywords": ["apify_api_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "apollo-api-key.1",
+      "regex": "(?i:(?:apollo)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_-]{22})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["apollo"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "artifactory-api-key",
+      "regex": "\\bAKCp[A-Za-z0-9]{68,70}\\b",
+      "keywords": ["akcp"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "artifactory-jfrog-url"
+        }
+      ]
+    },
+    {
+      "id": "artifactory-jfrog-url",
+      "regex": "(?i)(?:^|[^a-z0-9-])([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.jfrog\\.io)(?:$|[^a-z0-9-])",
+      "keywords": ["jfrog.io"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 2.5\n"
+    },
+    {
+      "id": "artifactory-reference-token",
+      "regex": "\\bcmVmd[A-Za-z0-9]{59}\\b",
+      "keywords": ["cmvmd"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "artifactory-jfrog-url"
+        }
+      ]
+    },
+    {
+      "id": "asaas-api-token",
+      "regex": "(?:^|[^A-Za-z0-9_-])(\\$aact_(?:prod|hmlg)_[A-Za-z0-9_-]{20,100})(?:[^A-Za-z0-9_-]|$)",
+      "keywords": ["$aact_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "asana-client-id",
+      "regex": "(?i)(?:asana)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["asana"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 2.75\n"
+    },
+    {
+      "id": "asana-client-secret",
+      "regex": "(?i)(?:asana)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["asana"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "assemblyai-api-key",
+      "regex": "(?i)(?:assemblyai)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["assemblyai"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "atlassian-api-token",
+      "regex": "\\b(ATAT[A-Za-z0-9_\\-=]{100,})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["atat"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "auth0-client-id.1",
+      "regex": "(?i:(?:auth0[_.-]?(?:client[_.-]?)?(?:id|identifier))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_-]{32,60})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["auth0"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "auth0-client-secret.1",
+      "regex": "(?i:(?:auth0[_.-]?(?:client[_.-]?)?(?:secret|private|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_-]{64,128})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["auth0"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "auth0-client-id.1",
+          "within": "10L"
+        },
+        {
+          "id": "auth0-domain.1",
+          "within": "10L"
+        }
+      ]
+    },
+    {
+      "id": "auth0-domain.1",
+      "regex": "(?i)\\b((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+auth0\\.com)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["auth0.com"],
+      "skipReport": true
+    },
+    {
+      "id": "authress-service-client-access-key",
+      "regex": "(?i)\\b((?:sc|ext|scauth|authress)_[a-z0-9]{5,30}\\.[a-z0-9]{4,6}\\.acc[_-][a-z0-9-]{10,32}\\.[a-z0-9+/_=-]{30,120})\\b",
+      "keywords": [".acc_", ".acc-"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 4.0\n"
+    },
+    {
+      "id": "aws-access-token",
+      "regex": "\\b((?:A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA)[A-Z2-7]{16})\\b",
+      "keywords": ["a3t", "akia", "asia", "abia", "acca"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n|| matchesAny(finding[\"secret\"], [`.+EXAMPLE$`])\n",
+      "components": [
+        {
+          "id": "aws-secret-access-key",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "aws-amazon-bedrock-api-key-long-lived",
+      "regex": "\\b(ABSK[A-Za-z0-9+/]{109,269}={0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["absk"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "aws-amazon-bedrock-api-key-short-lived",
+      "regex": "bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29t",
+      "keywords": ["bedrock-api-key-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "aws-secret-access-key",
+      "regex": "(?i:(?:secret|access|key|token)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9/+=]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["secret", "access", "key", "token"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "azure-ad-client-secret",
+      "regex": "(?:^|[\\\\'\"\\x60\\s>=:(,)])([a-zA-Z0-9_~.]{3}\\dQ~[a-zA-Z0-9_~.-]{31,34})(?:$|[\\\\'\"\\x60\\s<),])",
+      "keywords": [
+        "0q~",
+        "1q~",
+        "2q~",
+        "3q~",
+        "4q~",
+        "5q~",
+        "6q~",
+        "7q~",
+        "8q~",
+        "9q~"
+      ],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n",
+      "components": [
+        {
+          "id": "azure-tenant-id",
+          "within": "8L"
+        },
+        {
+          "id": "azure-client-id",
+          "within": "8L"
+        }
+      ]
+    },
+    {
+      "id": "azure-app-configuration-connection-string",
+      "regex": "(?i)Endpoint=(?P<azure_appconfig_endpoint>https://[a-z0-9-]+\\.azconfig\\.io);Id=(?P<azure_appconfig_id>[^;\\s'\"]{4,80});Secret=([A-Za-z0-9+/]{36,100}={0,2})",
+      "secretGroup": 3,
+      "keywords": ["azconfig.io", "endpoint=", "secret="],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "azure-client-id",
+      "regex": "(?i)\\b(?:client[_\\s.-]*id|AZURE_CLIENT_ID)\\b(?s:.{0,24}?)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\b",
+      "keywords": ["client"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 2.5\n"
+    },
+    {
+      "id": "azure-servicebus-connection-string",
+      "regex": "(?i)(Endpoint=sb://[a-z0-9-]+\\.servicebus\\.windows\\.net/;SharedAccessKeyName=[^;=\\s'\"]{1,128};SharedAccessKey=[A-Za-z0-9+/]{32,100}={0,2}(?:;EntityPath=[^;\\s'\"]{1,128})?)",
+      "keywords": ["endpoint=sb://", "sharedaccesskey"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "azure-storage-account-key",
+      "regex": "(?i)\\b(?:AccountKey|(?:azure[_\\s.-]*)?(?:storage[_\\s.-]*)?(?:account[_\\s.-]*)?(?:access[_\\s.-]*)?key)\\b(?s:.{0,24}?)([A-Za-z0-9+/]{86}==)",
+      "keywords": [
+        "accountkey",
+        "storage",
+        "accesskey",
+        "access_key",
+        "access-key"
+      ],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n",
+      "components": [
+        {
+          "id": "azure-storage-account-name",
+          "within": "8L"
+        }
+      ]
+    },
+    {
+      "id": "azure-storage-account-name",
+      "regex": "(?i)(?:\\bAccountName\\s*=\\s*([a-z0-9]{3,24})\\b|https://([a-z0-9]{3,24})\\.blob\\.core\\.windows\\.net\\b|\\b(?:azure[_\\s.-]*storage[_\\s.-]*(?:account[_\\s.-]*)?name|storage[_\\s.-]*account[_\\s.-]*name)\\b(?s:.{0,24}?)([a-z0-9]{3,24})\\b)",
+      "keywords": ["accountname", "blob.core.windows.net", "storage"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 1.5\n"
+    },
+    {
+      "id": "azure-tenant-id",
+      "regex": "(?i)\\b(?:tenant[_\\s.-]*(?:id)?|AZURE_TENANT_ID)\\b(?s:.{0,24}?)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\b",
+      "keywords": ["tenant"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 2.5\n"
+    },
+    {
+      "id": "beamer-api-token",
+      "regex": "(?i)(?:beamer)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(b_[a-z0-9=_\\-]{44})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["beamer"]
+    },
+    {
+      "id": "bitbucket-client-id",
+      "regex": "(?i)(?:bitbucket)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["bitbucket"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "bitbucket-client-secret",
+      "regex": "(?i)(?:bitbucket)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9=_\\-]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["bitbucket"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "bitbucket-data-center-token",
+      "regex": "\\b(BBDC-[A-Za-z0-9+/=]{32,})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["bbdc"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "bitly-access-token",
+      "regex": "(?i)\\bbitly(?:.|[\\n\\r]){0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)(?:.|[\\n\\r]){0,32}?([a-f0-9]{40})\\b",
+      "keywords": ["bitly"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "bitrise-access-token",
+      "regex": "(?i:(?:bitrise(?:[ _-]*(?:personal|workspace))?(?:[ _-]*(?:access|api))?[ _-]*token)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_-]{60,120})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["bitrise"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "bittrex-access-key",
+      "regex": "(?i)(?:bittrex)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["bittrex"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "bittrex-secret-key",
+      "regex": "(?i)(?:bittrex)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["bittrex"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "box-api-access-token",
+      "regex": "(?i)(?:box)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["box_", "box-", "boxt", "boxk", "boxa"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "brave-search-api-key",
+      "regex": "\\b(BSA[A-Za-z0-9_-]{24,40})\\b",
+      "keywords": ["bsa"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.2\n"
+    },
+    {
+      "id": "browserstack-access-key.1",
+      "regex": "(?i:(?:browserstack[_.-]?(?:access[_.-]?)?(?:key|secret|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9]{20})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["browserstack"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n",
+      "components": [
+        {
+          "id": "browserstack-username.1",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "browserstack-username.1",
+      "regex": "(?i:(?:browserstack[_.-]?(?:username|user))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9][A-Za-z0-9._-]{2,39})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["browserstack"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 2.0\n"
+    },
+    {
+      "id": "buildkite-service-token",
+      "regex": "\\b(bkaa_[A-Za-z0-9_-]{75}|bkaj_[A-Za-z0-9_-]{333}|bkar_[A-Za-z0-9_-]{73}|bkct_[A-Za-z0-9_-]{73}|bkpt_[A-Za-z0-9_-]{199}|bkpat_[A-Za-z0-9_-]{54}|bkps_[A-Za-z0-9_-]{64})(?:$|[^A-Za-z0-9_-])",
+      "keywords": [
+        "bkaa_",
+        "bkaj_",
+        "bkar_",
+        "bkct_",
+        "bkpt_",
+        "bkpat_",
+        "bkps_"
+      ],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "buildkite-user-access-token",
+      "regex": "\\b(bkua_(?:[a-z0-9]{40}|[a-z0-9]{53}))\\b",
+      "keywords": ["bkua_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "canadian-digital-service-notify-api-key",
+      "regex": "(?i:\\b(ApiKey-v1\\s+gcntfy-[a-z0-9_]+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\b)",
+      "keywords": ["gcntfy-"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "canva-client-id",
+      "regex": "(?i)\\b(?:canva|CANVA_CLIENT_ID)(?:.|[\\n\\r]){0,32}?(?:client[_\\s-]*id|app[_\\s-]*id)(?:.|[\\n\\r]){0,16}?\\b(OC-[A-Za-z0-9_-]{8,16})\\b",
+      "keywords": ["canva"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 2.5\n"
+    },
+    {
+      "id": "canva-client-secret",
+      "regex": "\\b(cnvca[a-zA-Z0-9_-]{51})\\b",
+      "keywords": ["cnvca"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "canva-client-id"
+        }
+      ]
+    },
+    {
+      "id": "cartesia-api-key.1",
+      "regex": "\\b(sk_car_[A-Za-z0-9_]{20})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sk_car_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "cerebras-api-key",
+      "regex": "(?i)\\b(csk-[a-z0-9]{48})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["csk-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "checkout-secret-key",
+      "regex": "(?i)(?:checkout)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(sk_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["checkout"]
+    },
+    {
+      "id": "circleci-personal-token",
+      "regex": "\\b(CCIPAT_[a-zA-Z0-9]{22}_[a-z0-9]{40})",
+      "keywords": ["ccipat_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "circleci-project-token",
+      "regex": "(?i)(?:circleci)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["circleci"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "cisco-meraki-api-key",
+      "regex": "(?i:(?:(?-i:[Mm]eraki|MERAKI))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["meraki"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "civo-api-key",
+      "regex": "(?i)(?:civo)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{50})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["civo"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "clerk-secret-key",
+      "regex": "(?i)(?:clerk)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(sk_(?:test|live)_[A-Za-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["clerk"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3\n"
+    },
+    {
+      "id": "clickhouse-cloud-api-secret-key",
+      "regex": "\\b(4b1d[A-Za-z0-9]{38})\\b",
+      "keywords": ["4b1d"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "clickhouse-cloud-key-id"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-cloud-key-id",
+      "regex": "(?i)\\bclickhouse(?:.|[\\n\\r]){0,16}?(?:ID|USER)(?:.|[\\n\\r]){0,16}?([a-z0-9]{20})",
+      "keywords": ["clickhouse"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "clickup-personal-api-token",
+      "regex": "(?i)(?:clickup)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(pk_[0-9]{8,9}_[a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["clickup"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "clojars-api-token",
+      "regex": "(?i)CLOJARS_[a-z0-9]{60}",
+      "keywords": ["clojars_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "cloudflare-api-key",
+      "regex": "(?i)(?:cloudflare)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9_-]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["cloudflare"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "cloudflare-global-api-key",
+      "regex": "(?i)(?:cloudflare)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{37})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["cloudflare"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "cloudflare-origin-ca-key",
+      "regex": "\\b(v1\\.0-[a-f0-9]{24}-[a-f0-9]{146})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["cloudflare", "v1.0-"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "cloudinary-api-key",
+      "regex": "(?i)\\bcloudinary(?:.|[\\n\\r]){0,32}?(?:API[_\\s]?KEY|KEY)(?:.|[\\n\\r]){0,16}?\\b([0-9]{15})\\b",
+      "keywords": ["cloudinary"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 2.75\n"
+    },
+    {
+      "id": "cloudinary-api-secret",
+      "regex": "(?i)\\bcloudinary(?:.|[\\n\\r]){0,32}?(?:SECRET|PRIVATE|API[_\\s]?SECRET)(?:.|[\\n\\r]){0,32}?\\b([A-Za-z0-9]{32})\\b",
+      "keywords": ["cloudinary"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n",
+      "components": [
+        {
+          "id": "cloudinary-api-key"
+        },
+        {
+          "id": "cloudinary-cloud-name"
+        }
+      ]
+    },
+    {
+      "id": "cloudinary-cloud-name",
+      "regex": "(?i)\\bcloudinary(?:.|[\\n\\r]){0,32}?(?:CLOUD[_\\s]?NAME|CLOUD)(?:.|[\\n\\r]){0,16}?\\b([a-z0-9_-]{3,32})\\b",
+      "keywords": ["cloudinary"],
+      "skipReport": true
+    },
+    {
+      "id": "cloudsmith-api-key",
+      "regex": "\\b(csa_[a-f0-9]{30}[A-Za-z0-9]{6})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["csa_"]
+    },
+    {
+      "id": "cockroachlabs-cloud-api-key",
+      "regex": "\\b(CCDB1_[A-Za-z0-9]{22}_[A-Za-z0-9]{40})\\b",
+      "keywords": ["ccdb1_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "codecov-access-token",
+      "regex": "(?i)(?:codecov)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Z0-9-]{36})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["codecov"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "cohere-api-token",
+      "regex": "(?i:(?:cohere|CO_API_KEY)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-zA-Z0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["cohere", "co_api_key"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 4.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "coinbase-access-token",
+      "regex": "(?i)(?:coinbase)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9_-]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["coinbase"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "configcat-sdk-key",
+      "regex": "(?i)(?:configcat)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_-]{22}/[A-Za-z0-9_-]{22})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["configcat"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "configcat-sdk-key-extended",
+      "regex": "\\b(configcat-sdk-1/[A-Za-z0-9_-]{22}/[A-Za-z0-9_-]{22})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["configcat-sdk-1"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "confluent-access-token",
+      "regex": "(?i)(?:confluent)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["confluent"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "confluent-secret-key",
+      "regex": "(?i)(?:confluent)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["confluent"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "contentful-delivery-api-token",
+      "regex": "(?i)(?:contentful)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9=_\\-]{43})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["contentful"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "couchbase-capella-api-key",
+      "regex": "(?i)\\b(?:couchbase|capella)(?:.|[\\n\\r]){0,32}?(?:api(?:.|[\\n\\r]){0,12}?(?:key|secret)|key(?:.|[\\n\\r]){0,12}?secret)(?:.|[\\n\\r]){0,32}?\\b([A-Za-z0-9+/]{60,120}={0,2})\\b",
+      "keywords": ["couchbase", "capella"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 4.0\n"
+    },
+    {
+      "id": "coveralls-personal-api-token",
+      "regex": "(?i)(?:coveralls)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9-]{37})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["coveralls"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "crates-io-api-key",
+      "regex": "(?i)(?:crates(?:[_.-]?io)?)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(cio[A-Za-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["crates"]
+    },
+    {
+      "id": "curl-auth-header",
+      "regex": "\\bcurl\\b(?:.*?|.*?(?:[\\r\\n]{1,2}.*?){1,5})[ \\t\\n\\r](?:-H|--header)(?:=|[ \\t]{0,5})(?:\"(?i)(?:Authorization:[ \\t]{0,5}(?:Basic[ \\t]([a-z0-9+/]{8,}={0,3})|(?:Bearer|(?:Api-)?Token)[ \\t]([\\w=~@.+/-]{8,})|([\\w=~@.+/-]{8,}))|(?:(?:X-(?:[a-z]+-)?)?(?:Api-?)?(?:Key|Token)):[ \\t]{0,5}([\\w=~@.+/-]{8,}))\"|'(?i)(?:Authorization:[ \\t]{0,5}(?:Basic[ \\t]([a-z0-9+/]{8,}={0,3})|(?:Bearer|(?:Api-)?Token)[ \\t]([\\w=~@.+/-]{8,})|([\\w=~@.+/-]{8,}))|(?:(?:X-(?:[a-z]+-)?)?(?:Api-?)?(?:Key|Token)):[ \\t]{0,5}([\\w=~@.+/-]{8,}))')(?:\\B|\\s|\\z)",
+      "keywords": ["curl"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.75\n"
+    },
+    {
+      "id": "curl-auth-user",
+      "regex": "\\bcurl\\b(?:.*|.*(?:[\\r\\n]{1,2}.*){1,5})[ \\t\\n\\r](?:-u|--user)(?:=|[ \\t]{0,5})(\"(:[^\"]{3,}|[^:\"]{3,}:|[^:\"]{3,}:[^\"]{3,})\"|'([^:']{3,}:[^']{3,})'|((?:\"[^\"]{3,}\"|'[^']{3,}'|[\\w$@.-]+):(?:\"[^\"]{3,}\"|'[^']{3,}'|[\\w${}@.-]+)))(?:\\s|\\z)",
+      "keywords": ["curl"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n|| matchesAny(finding[\"secret\"], [\n  `[^:]+:(?:change(?:it|me)|pass(?:word)?|pwd|test|token|\\*+|x+)`,\n  `['\"]?<[^>]+>['\"]?:['\"]?<[^>]+>|<[^:]+:[^>]+>['\"]?`,\n  `[^:]+:\\[[^]]+]`,\n  `['\"]?[^:]+['\"]?:['\"]?\\$(?:\\d|\\w+|\\{(?:\\d|\\w+)})['\"]?`,\n  `['\"]?\\$\\{(?:[^{}]|\\{[^}]*\\})*\\}['\"]?:['\"]?\\$\\{(?:[^{}]|\\{[^}]*\\})*\\}['\"]?`,\n  `\\$\\([^)]+\\):\\$\\([^)]+\\)`,\n  `['\"]?\\$?{{[^}]+}}['\"]?:['\"]?\\$?{{[^}]+}}['\"]?`\n])\n"
+    },
+    {
+      "id": "cursor-api-key",
+      "regex": "(?i)(?:cursor)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(key_[0-9a-f]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["cursor"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "databento-api-key",
+      "regex": "(?i)(?:databento)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(db-[A-Za-z0-9]{29})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["databento"]
+    },
+    {
+      "id": "databricks-api-token",
+      "regex": "\\b(dapi[a-f0-9]{32}(?:-\\d)?)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["dapi"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "datadog-api-key",
+      "regex": "(?i)(?:datadog)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["datadog"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "datadog-application-key",
+      "regex": "(?i)(?:datadog)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9-]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["datadog"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "datagov-api-key",
+      "regex": "(?i)(?:data\\.gov)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["data.gov"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "datastax-astra-application-token",
+      "regex": "\\b(AstraCS:[A-Za-z0-9]{20,})",
+      "keywords": ["astracs:"],
+      "filter": "entropy(finding[\"secret\"]) < 4.0\n"
+    },
+    {
+      "id": "deepgram-api-key",
+      "regex": "(?i)(?:deepgram)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["deepgram"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "deepseek-api-key",
+      "regex": "(?i)(?:deepseek)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(sk-[a-f0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["deepseek"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "defined-networking-api-token",
+      "regex": "(?i)(?:dnkey)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(dnkey-[a-z0-9=_\\-]{26}-[a-z0-9=_\\-]{52})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["dnkey"]
+    },
+    {
+      "id": "deno-account-token",
+      "regex": "\\b(ddp_[A-Za-z0-9]{36})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ddp_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "devcycle-client-sdk-key",
+      "regex": "\\b(dvc_client_[A-Za-z0-9]{8,32})",
+      "keywords": ["dvc_client_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "devcycle-mobile-sdk-key",
+      "regex": "\\b(dvc_mobile_[A-Za-z0-9]{8,32})",
+      "keywords": ["dvc_mobile_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "devcycle-server-sdk-key",
+      "regex": "\\b(dvc_server_[A-Za-z0-9]{8,32})",
+      "keywords": ["dvc_server_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "devin-personal-api-key",
+      "regex": "\\b(apk_user_[A-Za-z0-9+/]{120,180}={0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["apk_user_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "devin-service-api-key",
+      "regex": "\\b(apk_[A-Za-z0-9+/]{80,100}={0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["apk_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "devin-service-user-token",
+      "regex": "\\b(cog_[a-z2-7]{52})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["cog_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "digitalocean-access-token",
+      "regex": "\\b(doo_v1_[a-f0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["doo_v1_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "digitalocean-pat",
+      "regex": "\\b(dop_v1_[a-f0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["dop_v1_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "digitalocean-refresh-token",
+      "regex": "(?i)\\b(dor_v1_[a-f0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["dor_v1_"]
+    },
+    {
+      "id": "discord-api-token",
+      "regex": "(?i)(?:discord)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["discord"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "discord-client-id",
+      "regex": "(?i)(?:discord)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9]{18})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["discord"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 2.75\n"
+    },
+    {
+      "id": "discord-client-secret",
+      "regex": "(?i)(?:discord)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9=_\\-]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["discord"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "disqus-api-key",
+      "regex": "(?i)(?:disqus)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["disqus"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "docker-swarm-join-token",
+      "regex": "\\b(SWMTKN-1-[a-z0-9]{50,60}-[a-z0-9]{24,30})",
+      "keywords": ["swmtkn-1-"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "docker-swarm-unlock-key",
+      "regex": "\\b(SWMKEY-1-[A-Za-z0-9+/]{40,50})",
+      "keywords": ["swmkey-1-"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "dockerhub-organization-access-token",
+      "regex": "\\b(dckr_oat_[A-Za-z0-9_-]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["dckr_oat_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "dockerhub-personal-access-token",
+      "regex": "\\b(dckr_pat_[A-Za-z0-9_-]{27})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["dckr_pat_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "doppler-api-token",
+      "regex": "dp\\.pt\\.(?i)[a-z0-9]{43}",
+      "keywords": ["dp.pt."],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "droneci-access-token",
+      "regex": "(?i)(?:droneci)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["droneci"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "dropbox-api-token",
+      "regex": "(?i)(?:dropbox)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{15})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["dropbox"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "dropbox-long-lived-api-token",
+      "regex": "(?i)(?:dropbox)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{11}(AAAAAAAAAA)[a-z0-9\\-_=]{43})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["dropbox"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "dropbox-short-lived-api-token",
+      "regex": "(?i)(?:dropbox)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(sl\\.[a-z0-9\\-=_]{135})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["dropbox"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "duffel-api-token",
+      "regex": "duffel_(?:test|live)_(?i)[a-z0-9_\\-=]{43}",
+      "keywords": ["duffel_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "dynatrace-api-token",
+      "regex": "dt0c01\\.(?i)[a-z0-9]{24}\\.[a-z0-9]{64}",
+      "keywords": ["dt0c01."],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "easypost-api-token",
+      "regex": "\\bEZAK(?i)[a-z0-9]{54}\\b",
+      "keywords": ["ezak"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "easypost-test-api-token",
+      "regex": "\\bEZTK(?i)[a-z0-9]{54}\\b",
+      "keywords": ["eztk"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "ebay-client-id",
+      "regex": "\\b([a-zA-Z0-9_-]+-[a-zA-Z0-9_-]+-PRD-[a-f0-9]{8,12}-[a-f0-9]{8,12})",
+      "keywords": ["-prd-"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "ebay-client-secret",
+      "regex": "(?i:(?:ebay(?:[_. -]*(?:client|api))?[_. -]*(?:secret|key))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(PRD-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4,12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ebay"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n",
+      "components": [
+        {
+          "id": "ebay-client-id"
+        }
+      ]
+    },
+    {
+      "id": "elastic-cloud-api-key",
+      "regex": "\\b(essu_[A-Za-z0-9_\\-]{60,200}={0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["essu_"]
+    },
+    {
+      "id": "elevenlabs-api-key",
+      "regex": "(?i)(?:elevenlabs)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(sk_[0-9a-f]{48})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["elevenlabs"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "endorlabs-api-key",
+      "regex": "(?i)(?:endor(?:labs)?|key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(endr\\+[A-Za-z0-9-]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["endr+"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "endorlabs-api-secret",
+      "regex": "(?i)(?:endor(?:labs)?|secret)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(endr\\+[A-Za-z0-9-]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["endr+"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "etsy-open-api-key",
+      "regex": "(?i)(?:etsy|x-api-key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{24}:[a-z0-9]{10,64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["etsy", "x-api-key"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "exoscale-api-key",
+      "regex": "\\b(EXO[a-zA-Z0-9]{24,30})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["exo"],
+      "components": [
+        {
+          "id": "exoscale-api-secret",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "exoscale-api-secret",
+      "regex": "(?i)(?:exoscale)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_\\-]{40,60})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["exoscale"],
+      "skipReport": true
+    },
+    {
+      "id": "facebook-access-token",
+      "regex": "(?i)\\b(\\d{15,16}(\\||%)[0-9a-z\\-_]{27,40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["facebook"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "facebook-page-access-token",
+      "regex": "\\b(EAA[MC](?i)[a-z0-9]{100,})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["eaam", "eaac"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 4.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "facebook-secret",
+      "regex": "(?i)(?:facebook)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["facebook"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "fal-api-key.1",
+      "regex": "(?i:(?:falai|fal_ai|fal-ai|fal.ai|fal-api|fal_api|fal_key|fal-key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:[a-f0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": [
+        "falai",
+        "fal_ai",
+        "fal-ai",
+        "fal.ai",
+        "fal-api",
+        "fal_api",
+        "fal_key",
+        "fal-key"
+      ],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "fastly-api-token",
+      "regex": "(?i)(?:fastly)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9_-]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["fastly"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "figma-personal-access-header-token",
+      "regex": "(?i)(?:x-figma-token|xfigmatoken|x_figma_token)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9A-F]{4}-[0-9A-F]{8}(?:-[0-9A-F]{4}){3}-[0-9A-F]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["x-figma-token", "xfigmatoken", "x_figma_token"]
+    },
+    {
+      "id": "figma-personal-access-token",
+      "regex": "(?i)\\b(figd_[A-Z0-9_-]{38,42})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["figd_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "finicity-api-token",
+      "regex": "(?i)(?:finicity)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["finicity"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "finicity-client-secret",
+      "regex": "(?i)(?:finicity)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{20})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["finicity"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "finnhub-access-token",
+      "regex": "(?i)(?:finnhub)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{20})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["finnhub"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "flickr-access-token",
+      "regex": "(?i)(?:flickr)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["flickr"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "flutterwave-encryption-key",
+      "regex": "FLWSECK_TEST-(?i)[a-h0-9]{12}",
+      "keywords": ["flwseck_test"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "flutterwave-public-key",
+      "regex": "FLWPUBK_TEST-(?i)[a-h0-9]{32}-X",
+      "keywords": ["flwpubk_test"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "flutterwave-secret-key",
+      "regex": "FLWSECK_TEST-(?i)[a-h0-9]{32}-X",
+      "keywords": ["flwseck_test"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "flyio-access-token",
+      "regex": "\\b(FlyV1\\s[A-Za-z0-9=_\\-,/+]{100,})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["flyv1"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "frameio-api-token",
+      "regex": "fio-u-(?i)[a-z0-9\\-_=]{64}",
+      "keywords": ["fio-u-"],
+      "filter": "entropy(finding[\"secret\"]) < 3.3\n"
+    },
+    {
+      "id": "freemius-secret-key",
+      "regex": "(?i)[\"']secret_key[\"']\\s*=>\\s*[\"'](sk_[\\S]{29})[\"']",
+      "path": "(?i)\\.php$",
+      "keywords": ["secret_key"]
+    },
+    {
+      "id": "freshbooks-access-token",
+      "regex": "(?i)(?:freshbooks)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["freshbooks"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "fullstory-api-key",
+      "regex": "(?i)(?:(?:fullstory|fs_api|fullstory_api))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((?:na1|eu1)\\.[A-Za-z0-9]{20,})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["fullstory", "fs_api"],
+      "filter": "entropy(finding[\"secret\"]) < 3.3\n"
+    },
+    {
+      "id": "gcp-api-key",
+      "regex": "\\b(AIza[\\w-]{35})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["aiza"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n|| matchesAny(finding[\"secret\"], [\n  `AIzaSyabcdefghijklmnopqrstuvwxyz1234567`,\n  `AIzaSyAnLA7NfeLquW1tJFpx_eQCxoX-oo6YyIs`,\n  `AIzaSyCkEhVjf3pduRDt6d1yKOMitrUEke8agEM`,\n  `AIzaSyDMAScliyLx7F0NPDEJi1QmyCgHIAODrlU`,\n  `AIzaSyD3asb-2pEZVqMkmL6M9N6nHZRR_znhrh0`,\n  `AIzayDNSXIbFmlXbIE6mCzDLQAqITYefhixbX4A`,\n  `AIzaSyAdOS2zB6NCsk1pCdZ4-P6GBdi_UUPwX7c`,\n  `AIzaSyASWm6HmTMdYWpgMnjRBjxcQ9CKctWmLd4`,\n  `AIzaSyANUvH9H9BsUccjsu2pCmEkOPjjaXeDQgY`,\n  `AIzaSyA5_iVawFQ8ABuTZNUdcwERLJv_a_p4wtM`,\n  `AIzaSyA4UrcGxgwQFTfaI3no3t7Lt1sjmdnP5sQ`,\n  `AIzaSyDSb51JiIcB6OJpwwMicseKRhhrOq1cS7g`,\n  `AIzaSyBF2RrAIm4a0mO64EShQfqfd2AFnzAvvuU`,\n  `AIzaSyBcE-OOIbhjyR83gm4r2MFCu4MJmprNXsw`,\n  `AIzaSyB8qGxt4ec15vitgn44duC5ucxaOi4FmqE`,\n  `AIzaSyA8vmApnrHNFE0bApF4hoZ11srVL_n0nvY`\n])\n"
+    },
+    {
+      "id": "gcp-application-default-credentials",
+      "regex": "\\{[^{]+(?:(?:\"client_secret\"\\s*:\\s*\"[^\"]+\"[^}]+\"refresh_token\"\\s*:\\s*\"[^\"]+\")|(?:\"refresh_token\"\\s*:\\s*\"[^\"]+\"[^}]+\"client_secret\"\\s*:\\s*\"[^\"]+\"))[^}]+\\}",
+      "keywords": [".apps.googleusercontent.com"]
+    },
+    {
+      "id": "gcp-gemini-api",
+      "regex": "\\b(AQ\\.Ab8RN6[A-Za-z0-9_-]{44})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["aq.ab8rn6"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "gcp-service-account",
+      "regex": "\\{[^{]+(?:(?:\"private_key\"\\s*:\\s*\"-----BEGIN (?:RSA )?PRIVATE KEY-----[^}]+auth_provider_x509_cert_url)|(?:auth_provider_x509_cert_url[^}]+\"private_key\"\\s*:\\s*\"-----BEGIN (?:RSA )?PRIVATE KEY-----))[^}]+\\}",
+      "keywords": ["provider_x509"],
+      "filter": "containsAny(finding[\"secret\"], [\"image-pulling@authenticated-image-pulling.iam.gserviceaccount.com\"])\n"
+    },
+    {
+      "id": "generic-api-key",
+      "regex": "(?i)(?:access|auth|(?-i:[Aa]pi|API)|credential|creds|key|secret|token)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([\\w.=-]{10,150}|[a-z0-9][a-z0-9+/]{11,}={0,3})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "specificity": 0,
+      "keywords": [
+        "access",
+        "api",
+        "auth",
+        "key",
+        "credential",
+        "creds",
+        "secret",
+        "token"
+      ],
+      "filter": "// Provider checks use a fixed window around the match, clamped to its line.\nlet providerMatchContext = finding[\"fragment_raw\"][\n  max(finding[\"match_start_idx\"] - 150, finding[\"match_line_start_idx\"]):\n  min(finding[\"match_end_idx\"] + 50, finding[\"match_line_end_idx\"])\n];\n\n// Recreate the generic rule's former [\\w.-]{0,50} preamble. Only the\n// contiguous word, dot, and hyphen suffix immediately before the match counts.\nlet genericMatchPrefix = filter.findMatch(\n  finding[\"fragment_raw\"][\n    max(finding[\"match_start_idx\"] - 50, finding[\"match_line_start_idx\"]):\n    finding[\"match_start_idx\"]\n  ],\n  `[\\w.-]{0,50}$`\n);\n\n// Recreate the generic rule's former regex which includes the [\\w.-]{0,50} preamble.\nlet genericMatchContext =\n  genericMatchPrefix +\n  finding[\"fragment_raw\"][finding[\"match_start_idx\"]:finding[\"match_end_idx\"]];\n\nlet level = filter.matchesAny(genericMatchContext, [\n  `(?i)\\b[a-z0-9]+[_.-]+token\\b`\n]) ? \"medium\" : \"low\";\nlet _ = filter.setConfidence(level);\n\n// big ol expression to filter out FPs\nentropy(finding[\"secret\"]) <= 3.5\n|| filter.failsTokenEfficiency(finding[\"secret\"])\n|| matchesAny(finding[\"secret\"], [`^[a-zA-Z_.-]+$`])\n|| (containsAny(finding[\"secret\"], [\n  \"000000\",\n  \"aaaaaa\",\n  \"about\",\n  \"abstract\",\n  \"academy\",\n  \"acces\",\n  \"account\",\n  \"act-\",\n  \"act.\",\n  \"act_\",\n  \"action\",\n  \"active\",\n  \"actively\",\n  \"activity\",\n  \"adapter\",\n  \"add-\",\n  \"add.\",\n  \"add_\",\n  \"add-on\",\n  \"addon\",\n  \"addres\",\n  \"admin\",\n  \"adobe\",\n  \"advanced\",\n  \"adventure\",\n  \"agent\",\n  \"agile\",\n  \"air-\",\n  \"air.\",\n  \"air_\",\n  \"ajax\",\n  \"akka\",\n  \"alert\",\n  \"alfred\",\n  \"algorithm\",\n  \"all-\",\n  \"all.\",\n  \"all_\",\n  \"alloy\",\n  \"alpha\",\n  \"amazon\",\n  \"amqp\",\n  \"analysi\",\n  \"analytic\",\n  \"analyzer\",\n  \"android\",\n  \"angular\",\n  \"angularj\",\n  \"animate\",\n  \"animation\",\n  \"another\",\n  \"ansible\",\n  \"answer\",\n  \"ant-\",\n  \"ant.\",\n  \"ant_\",\n  \"any-\",\n  \"any.\",\n  \"any_\",\n  \"apache\",\n  \"app-\",\n  \"app.\",\n  \"app_\",\n  \"apple\",\n  \"arch\",\n  \"archive\",\n  \"archived\",\n  \"arduino\",\n  \"array\",\n  \"art-\",\n  \"art.\",\n  \"art_\",\n  \"article\",\n  \"asp-\",\n  \"asp.\",\n  \"asp_\",\n  \"asset\",\n  \"async\",\n  \"atom\",\n  \"attention\",\n  \"audio\",\n  \"audit\",\n  \"aura\",\n  \"auth\",\n  \"author\",\n  \"authorize\",\n  \"auto\",\n  \"automated\",\n  \"automatic\",\n  \"awesome\",\n  \"aws_\",\n  \"azure\",\n  \"back\",\n  \"backbone\",\n  \"backend\",\n  \"backup\",\n  \"bar-\",\n  \"bar.\",\n  \"bar_\",\n  \"base\",\n  \"based\",\n  \"bash\",\n  \"basic\",\n  \"batch\",\n  \"been\",\n  \"beer\",\n  \"behavior\",\n  \"being\",\n  \"benchmark\",\n  \"best\",\n  \"beta\",\n  \"better\",\n  \"big-\",\n  \"big.\",\n  \"big_\",\n  \"binary\",\n  \"binding\",\n  \"bit-\",\n  \"bit.\",\n  \"bit_\",\n  \"bitcoin\",\n  \"block\",\n  \"blog\",\n  \"board\",\n  \"book\",\n  \"bookmark\",\n  \"boost\",\n  \"boot\",\n  \"bootstrap\",\n  \"bosh\",\n  \"bot-\",\n  \"bot.\",\n  \"bot_\",\n  \"bower\",\n  \"box-\",\n  \"box.\",\n  \"box_\",\n  \"boxen\",\n  \"bracket\",\n  \"branch\",\n  \"bridge\",\n  \"browser\",\n  \"brunch\",\n  \"buffer\",\n  \"bug-\",\n  \"bug.\",\n  \"bug_\",\n  \"build\",\n  \"builder\",\n  \"building\",\n  \"buildout\",\n  \"buildpack\",\n  \"built\",\n  \"bundle\",\n  \"busines\",\n  \"but-\",\n  \"but.\",\n  \"but_\",\n  \"button\",\n  \"cache\",\n  \"caching\",\n  \"cakephp\",\n  \"calendar\",\n  \"call\",\n  \"camera\",\n  \"campfire\",\n  \"can-\",\n  \"can.\",\n  \"can_\",\n  \"canva\",\n  \"captcha\",\n  \"capture\",\n  \"card\",\n  \"carousel\",\n  \"case\",\n  \"cassandra\",\n  \"cat-\",\n  \"cat.\",\n  \"cat_\",\n  \"category\",\n  \"center\",\n  \"cento\",\n  \"challenge\",\n  \"change\",\n  \"changelog\",\n  \"channel\",\n  \"chart\",\n  \"chat\",\n  \"cheat\",\n  \"check\",\n  \"checker\",\n  \"chef\",\n  \"ches\",\n  \"chinese\",\n  \"chosen\",\n  \"chrome\",\n  \"ckeditor\",\n  \"clas\",\n  \"classe\",\n  \"classic\",\n  \"clean\",\n  \"cli-\",\n  \"cli.\",\n  \"cli_\",\n  \"client\",\n  \"clojure\",\n  \"clone\",\n  \"closure\",\n  \"cloud\",\n  \"club\",\n  \"cluster\",\n  \"cms-\",\n  \"cms_\",\n  \"coco\",\n  \"code\",\n  \"coding\",\n  \"coffee\",\n  \"color\",\n  \"combination\",\n  \"combo\",\n  \"command\",\n  \"commander\",\n  \"comment\",\n  \"commit\",\n  \"common\",\n  \"community\",\n  \"compas\",\n  \"compiler\",\n  \"complete\",\n  \"component\",\n  \"composer\",\n  \"computer\",\n  \"computing\",\n  \"con-\",\n  \"con.\",\n  \"con_\",\n  \"concept\",\n  \"conf\",\n  \"config\",\n  \"connect\",\n  \"connector\",\n  \"console\",\n  \"contact\",\n  \"container\",\n  \"contao\",\n  \"content\",\n  \"contest\",\n  \"context\",\n  \"control\",\n  \"convert\",\n  \"converter\",\n  \"conway'\",\n  \"cookbook\",\n  \"cookie\",\n  \"cool\",\n  \"copy\",\n  \"cordova\",\n  \"core\",\n  \"couchbase\",\n  \"couchdb\",\n  \"countdown\",\n  \"counter\",\n  \"course\",\n  \"craft\",\n  \"crawler\",\n  \"create\",\n  \"creating\",\n  \"creator\",\n  \"credential\",\n  \"crm-\",\n  \"crm.\",\n  \"crm_\",\n  \"cros\",\n  \"crud\",\n  \"csv-\",\n  \"csv.\",\n  \"csv_\",\n  \"cube\",\n  \"cucumber\",\n  \"cuda\",\n  \"current\",\n  \"currently\",\n  \"custom\",\n  \"daemon\",\n  \"dark\",\n  \"dart\",\n  \"dash\",\n  \"dashboard\",\n  \"data\",\n  \"database\",\n  \"date\",\n  \"day-\",\n  \"day.\",\n  \"day_\",\n  \"dead\",\n  \"debian\",\n  \"debug\",\n  \"debugger\",\n  \"deck\",\n  \"define\",\n  \"del-\",\n  \"del.\",\n  \"del_\",\n  \"delete\",\n  \"demo\",\n  \"deploy\",\n  \"design\",\n  \"designer\",\n  \"desktop\",\n  \"detection\",\n  \"detector\",\n  \"dev-\",\n  \"dev.\",\n  \"dev_\",\n  \"develop\",\n  \"developer\",\n  \"device\",\n  \"devise\",\n  \"diff\",\n  \"digital\",\n  \"directive\",\n  \"directory\",\n  \"discovery\",\n  \"display\",\n  \"django\",\n  \"dns-\",\n  \"dns_\",\n  \"doc-\",\n  \"doc.\",\n  \"doc_\",\n  \"docker\",\n  \"docpad\",\n  \"doctrine\",\n  \"document\",\n  \"doe-\",\n  \"doe.\",\n  \"doe_\",\n  \"dojo\",\n  \"dom-\",\n  \"dom.\",\n  \"dom_\",\n  \"domain\",\n  \"done\",\n  \"don't\",\n  \"dot-\",\n  \"dot.\",\n  \"dot_\",\n  \"dotfile\",\n  \"download\",\n  \"draft\",\n  \"drag\",\n  \"drill\",\n  \"drive\",\n  \"driven\",\n  \"driver\",\n  \"drop\",\n  \"dropbox\",\n  \"drupal\",\n  \"dsl-\",\n  \"dsl.\",\n  \"dsl_\",\n  \"dynamic\",\n  \"easy\",\n  \"_ec2_\",\n  \"ecdsa\",\n  \"eclipse\",\n  \"edit\",\n  \"editing\",\n  \"edition\",\n  \"editor\",\n  \"element\",\n  \"emac\",\n  \"email\",\n  \"embed\",\n  \"embedded\",\n  \"ember\",\n  \"emitter\",\n  \"emulator\",\n  \"encoding\",\n  \"endpoint\",\n  \"engine\",\n  \"english\",\n  \"enhanced\",\n  \"entity\",\n  \"entry\",\n  \"env_\",\n  \"episode\",\n  \"erlang\",\n  \"error\",\n  \"espresso\",\n  \"event\",\n  \"evented\",\n  \"example\",\n  \"exchange\",\n  \"exercise\",\n  \"experiment\",\n  \"expire\",\n  \"exploit\",\n  \"explorer\",\n  \"export\",\n  \"exporter\",\n  \"expres\",\n  \"ext-\",\n  \"ext.\",\n  \"ext_\",\n  \"extended\",\n  \"extension\",\n  \"external\",\n  \"extra\",\n  \"extractor\",\n  \"fabric\",\n  \"facebook\",\n  \"factory\",\n  \"fake\",\n  \"fast\",\n  \"feature\",\n  \"feed\",\n  \"fewfwef\",\n  \"ffmpeg\",\n  \"field\",\n  \"file\",\n  \"filter\",\n  \"find\",\n  \"finder\",\n  \"firefox\",\n  \"firmware\",\n  \"first\",\n  \"fish\",\n  \"fix-\",\n  \"fix_\",\n  \"flash\",\n  \"flask\",\n  \"flat\",\n  \"flex\",\n  \"flexible\",\n  \"flickr\",\n  \"flow\",\n  \"fluent\",\n  \"fluentd\",\n  \"fluid\",\n  \"folder\",\n  \"font\",\n  \"force\",\n  \"foreman\",\n  \"fork\",\n  \"form\",\n  \"format\",\n  \"formatter\",\n  \"forum\",\n  \"foundry\",\n  \"framework\",\n  \"free\",\n  \"friend\",\n  \"friendly\",\n  \"front-end\",\n  \"frontend\",\n  \"ftp-\",\n  \"ftp.\",\n  \"ftp_\",\n  \"fuel\",\n  \"full\",\n  \"fun-\",\n  \"fun.\",\n  \"fun_\",\n  \"func\",\n  \"future\",\n  \"gaia\",\n  \"gallery\",\n  \"game\",\n  \"gateway\",\n  \"gem-\",\n  \"gem.\",\n  \"gem_\",\n  \"gen-\",\n  \"gen.\",\n  \"gen_\",\n  \"general\",\n  \"generator\",\n  \"generic\",\n  \"genetic\",\n  \"get-\",\n  \"get.\",\n  \"get_\",\n  \"getenv\",\n  \"getting\",\n  \"ghost\",\n  \"gist\",\n  \"git-\",\n  \"git.\",\n  \"git_\",\n  \"github\",\n  \"gitignore\",\n  \"gitlab\",\n  \"glas\",\n  \"gmail\",\n  \"gnome\",\n  \"gnu-\",\n  \"gnu.\",\n  \"gnu_\",\n  \"goal\",\n  \"golang\",\n  \"gollum\",\n  \"good\",\n  \"google\",\n  \"gpu-\",\n  \"gpu.\",\n  \"gpu_\",\n  \"gradle\",\n  \"grail\",\n  \"graph\",\n  \"graphic\",\n  \"great\",\n  \"grid\",\n  \"groovy\",\n  \"group\",\n  \"grunt\",\n  \"guard\",\n  \"gui-\",\n  \"gui.\",\n  \"gui_\",\n  \"guide\",\n  \"guideline\",\n  \"gulp\",\n  \"gwt-\",\n  \"gwt.\",\n  \"gwt_\",\n  \"hack\",\n  \"hackathon\",\n  \"hacker\",\n  \"hacking\",\n  \"hadoop\",\n  \"haml\",\n  \"handler\",\n  \"hardware\",\n  \"has-\",\n  \"has_\",\n  \"hash\",\n  \"haskell\",\n  \"have\",\n  \"haxe\",\n  \"hello\",\n  \"help\",\n  \"helper\",\n  \"here\",\n  \"hero\",\n  \"heroku\",\n  \"high\",\n  \"hipchat\",\n  \"history\",\n  \"home\",\n  \"homebrew\",\n  \"homepage\",\n  \"hook\",\n  \"host\",\n  \"hosting\",\n  \"hot-\",\n  \"hot.\",\n  \"hot_\",\n  \"house\",\n  \"how-\",\n  \"how.\",\n  \"how_\",\n  \"html\",\n  \"http\",\n  \"hub-\",\n  \"hub.\",\n  \"hub_\",\n  \"hubot\",\n  \"human\",\n  \"icon\",\n  \"ide-\",\n  \"ide.\",\n  \"ide_\",\n  \"idea\",\n  \"identity\",\n  \"idiomatic\",\n  \"image\",\n  \"impact\",\n  \"import\",\n  \"important\",\n  \"importer\",\n  \"impres\",\n  \"index\",\n  \"infinite\",\n  \"info\",\n  \"injection\",\n  \"inline\",\n  \"input\",\n  \"inside\",\n  \"inspector\",\n  \"instagram\",\n  \"install\",\n  \"installer\",\n  \"instant\",\n  \"intellij\",\n  \"interface\",\n  \"internet\",\n  \"interview\",\n  \"into\",\n  \"intro\",\n  \"ionic\",\n  \"iphone\",\n  \"ipython\",\n  \"irc-\",\n  \"irc_\",\n  \"iso-\",\n  \"iso.\",\n  \"iso_\",\n  \"issue\",\n  \"jade\",\n  \"jasmine\",\n  \"java\",\n  \"jbos\",\n  \"jekyll\",\n  \"jenkin\",\n  \"jetbrains\",\n  \"job-\",\n  \"job.\",\n  \"job_\",\n  \"joomla\",\n  \"jpa-\",\n  \"jpa.\",\n  \"jpa_\",\n  \"jquery\",\n  \"json\",\n  \"just\",\n  \"kafka\",\n  \"karma\",\n  \"kata\",\n  \"kernel\",\n  \"keyboard\",\n  \"kindle\",\n  \"kit-\",\n  \"kit.\",\n  \"kit_\",\n  \"kitchen\",\n  \"knife\",\n  \"koan\",\n  \"kohana\",\n  \"lab-\",\n  \"lab.\",\n  \"lab_\",\n  \"lambda\",\n  \"lamp\",\n  \"language\",\n  \"laravel\",\n  \"last\",\n  \"latest\",\n  \"latex\",\n  \"launcher\",\n  \"layer\",\n  \"layout\",\n  \"lazy\",\n  \"ldap\",\n  \"leaflet\",\n  \"league\",\n  \"learn\",\n  \"learning\",\n  \"led-\",\n  \"led.\",\n  \"led_\",\n  \"leetcode\",\n  \"les-\",\n  \"les.\",\n  \"les_\",\n  \"level\",\n  \"leveldb\",\n  \"lib-\",\n  \"lib.\",\n  \"lib_\",\n  \"librarie\",\n  \"library\",\n  \"license\",\n  \"life\",\n  \"liferay\",\n  \"light\",\n  \"lightbox\",\n  \"like\",\n  \"line\",\n  \"link\",\n  \"linked\",\n  \"linkedin\",\n  \"linux\",\n  \"lisp\",\n  \"list\",\n  \"lite\",\n  \"little\",\n  \"load\",\n  \"loader\",\n  \"local\",\n  \"location\",\n  \"lock\",\n  \"log-\",\n  \"log.\",\n  \"log_\",\n  \"logger\",\n  \"logging\",\n  \"logic\",\n  \"login\",\n  \"logstash\",\n  \"longer\",\n  \"look\",\n  \"love\",\n  \"lua-\",\n  \"lua.\",\n  \"lua_\",\n  \"mac-\",\n  \"mac.\",\n  \"mac_\",\n  \"machine\",\n  \"made\",\n  \"magento\",\n  \"magic\",\n  \"mail\",\n  \"make\",\n  \"maker\",\n  \"making\",\n  \"man-\",\n  \"man.\",\n  \"man_\",\n  \"manage\",\n  \"manager\",\n  \"manifest\",\n  \"manual\",\n  \"map-\",\n  \"map.\",\n  \"map_\",\n  \"mapper\",\n  \"mapping\",\n  \"markdown\",\n  \"markup\",\n  \"master\",\n  \"math\",\n  \"matrix\",\n  \"maven\",\n  \"md5\",\n  \"mean\",\n  \"media\",\n  \"mediawiki\",\n  \"meetup\",\n  \"memcached\",\n  \"memory\",\n  \"menu\",\n  \"merchant\",\n  \"message\",\n  \"messaging\",\n  \"meta\",\n  \"metadata\",\n  \"meteor\",\n  \"method\",\n  \"metric\",\n  \"micro\",\n  \"middleman\",\n  \"migration\",\n  \"minecraft\",\n  \"miner\",\n  \"mini\",\n  \"minimal\",\n  \"mirror\",\n  \"mit-\",\n  \"mit.\",\n  \"mit_\",\n  \"mobile\",\n  \"mocha\",\n  \"mock\",\n  \"mod-\",\n  \"mod.\",\n  \"mod_\",\n  \"mode\",\n  \"model\",\n  \"modern\",\n  \"modular\",\n  \"module\",\n  \"modx\",\n  \"money\",\n  \"mongo\",\n  \"mongodb\",\n  \"mongoid\",\n  \"mongoose\",\n  \"monitor\",\n  \"monkey\",\n  \"more\",\n  \"motion\",\n  \"moved\",\n  \"movie\",\n  \"mozilla\",\n  \"mqtt\",\n  \"mule\",\n  \"multi\",\n  \"multiple\",\n  \"music\",\n  \"mustache\",\n  \"mvc-\",\n  \"mvc.\",\n  \"mvc_\",\n  \"mysql\",\n  \"nagio\",\n  \"name\",\n  \"native\",\n  \"need\",\n  \"neo-\",\n  \"neo.\",\n  \"neo_\",\n  \"nest\",\n  \"nested\",\n  \"net-\",\n  \"net.\",\n  \"net_\",\n  \"nette\",\n  \"network\",\n  \"new-\",\n  \"new.\",\n  \"new_\",\n  \"next\",\n  \"nginx\",\n  \"ninja\",\n  \"nlp-\",\n  \"nlp.\",\n  \"nlp_\",\n  \"node\",\n  \"nodej\",\n  \"nosql\",\n  \"not-\",\n  \"not.\",\n  \"not_\",\n  \"note\",\n  \"notebook\",\n  \"notepad\",\n  \"notice\",\n  \"notifier\",\n  \"now-\",\n  \"now.\",\n  \"now_\",\n  \"number\",\n  \"oauth\",\n  \"object\",\n  \"objective\",\n  \"obsolete\",\n  \"ocaml\",\n  \"octopres\",\n  \"official\",\n  \"old-\",\n  \"old.\",\n  \"old_\",\n  \"onboard\",\n  \"online\",\n  \"only\",\n  \"open\",\n  \"opencv\",\n  \"opengl\",\n  \"openshift\",\n  \"openwrt\",\n  \"option\",\n  \"oracle\",\n  \"org-\",\n  \"org.\",\n  \"org_\",\n  \"origin\",\n  \"original\",\n  \"orm-\",\n  \"orm.\",\n  \"orm_\",\n  \"osx-\",\n  \"osx_\",\n  \"our-\",\n  \"our.\",\n  \"our_\",\n  \"out-\",\n  \"out.\",\n  \"out_\",\n  \"output\",\n  \"over\",\n  \"overview\",\n  \"own-\",\n  \"own.\",\n  \"own_\",\n  \"pack\",\n  \"package\",\n  \"packet\",\n  \"page\",\n  \"panel\",\n  \"paper\",\n  \"paperclip\",\n  \"para\",\n  \"parallax\",\n  \"parallel\",\n  \"parse\",\n  \"parser\",\n  \"parsing\",\n  \"particle\",\n  \"party\",\n  \"password\",\n  \"patch\",\n  \"path\",\n  \"pattern\",\n  \"payment\",\n  \"paypal\",\n  \"pdf-\",\n  \"pdf.\",\n  \"pdf_\",\n  \"pebble\",\n  \"people\",\n  \"perl\",\n  \"personal\",\n  \"phalcon\",\n  \"phoenix\",\n  \"phone\",\n  \"phonegap\",\n  \"photo\",\n  \"php-\",\n  \"php.\",\n  \"php_\",\n  \"physic\",\n  \"picker\",\n  \"pipeline\",\n  \"platform\",\n  \"play\",\n  \"player\",\n  \"please\",\n  \"plu-\",\n  \"plu.\",\n  \"plu_\",\n  \"plug-in\",\n  \"plugin\",\n  \"plupload\",\n  \"png-\",\n  \"png.\",\n  \"png_\",\n  \"poker\",\n  \"polyfill\",\n  \"polymer\",\n  \"pool\",\n  \"pop-\",\n  \"pop.\",\n  \"pop_\",\n  \"popcorn\",\n  \"popup\",\n  \"port\",\n  \"portable\",\n  \"portal\",\n  \"portfolio\",\n  \"post\",\n  \"power\",\n  \"powered\",\n  \"powerful\",\n  \"prelude\",\n  \"pretty\",\n  \"preview\",\n  \"principle\",\n  \"print\",\n  \"pro-\",\n  \"pro.\",\n  \"pro_\",\n  \"problem\",\n  \"proc\",\n  \"product\",\n  \"profile\",\n  \"profiler\",\n  \"program\",\n  \"progres\",\n  \"project\",\n  \"protocol\",\n  \"prototype\",\n  \"provider\",\n  \"proxy\",\n  \"public\",\n  \"pull\",\n  \"puppet\",\n  \"pure\",\n  \"purpose\",\n  \"push\",\n  \"pusher\",\n  \"pyramid\",\n  \"python\",\n  \"quality\",\n  \"query\",\n  \"queue\",\n  \"quick\",\n  \"rabbitmq\",\n  \"rack\",\n  \"radio\",\n  \"rail\",\n  \"railscast\",\n  \"random\",\n  \"range\",\n  \"raspberry\",\n  \"rdf-\",\n  \"rdf.\",\n  \"rdf_\",\n  \"react\",\n  \"reactive\",\n  \"read\",\n  \"reader\",\n  \"readme\",\n  \"ready\",\n  \"real\",\n  \"reality\",\n  \"real-time\",\n  \"realtime\",\n  \"recipe\",\n  \"recorder\",\n  \"red-\",\n  \"red.\",\n  \"red_\",\n  \"reddit\",\n  \"redi\",\n  \"redmine\",\n  \"reference\",\n  \"refinery\",\n  \"refresh\",\n  \"registry\",\n  \"related\",\n  \"release\",\n  \"remote\",\n  \"rendering\",\n  \"repo\",\n  \"report\",\n  \"request\",\n  \"require\",\n  \"required\",\n  \"requirej\",\n  \"research\",\n  \"resource\",\n  \"response\",\n  \"resque\",\n  \"rest\",\n  \"restful\",\n  \"resume\",\n  \"reveal\",\n  \"reverse\",\n  \"review\",\n  \"riak\",\n  \"rich\",\n  \"right\",\n  \"ring\",\n  \"robot\",\n  \"role\",\n  \"room\",\n  \"router\",\n  \"routing\",\n  \"rpc-\",\n  \"rpc.\",\n  \"rpc_\",\n  \"rpg-\",\n  \"rpg.\",\n  \"rpg_\",\n  \"rspec\",\n  \"ruby-\",\n  \"ruby.\",\n  \"ruby_\",\n  \"rule\",\n  \"run-\",\n  \"run.\",\n  \"run_\",\n  \"runner\",\n  \"running\",\n  \"runtime\",\n  \"rust\",\n  \"rvm-\",\n  \"rvm.\",\n  \"rvm_\",\n  \"salt\",\n  \"sample\",\n  \"sandbox\",\n  \"sas-\",\n  \"sas.\",\n  \"sas_\",\n  \"sbt-\",\n  \"sbt.\",\n  \"sbt_\",\n  \"scala\",\n  \"scalable\",\n  \"scanner\",\n  \"schema\",\n  \"scheme\",\n  \"school\",\n  \"science\",\n  \"scraper\",\n  \"scratch\",\n  \"screen\",\n  \"script\",\n  \"scroll\",\n  \"scs-\",\n  \"scs.\",\n  \"scs_\",\n  \"sdk-\",\n  \"sdk.\",\n  \"sdk_\",\n  \"sdl-\",\n  \"sdl.\",\n  \"sdl_\",\n  \"search\",\n  \"secure\",\n  \"security\",\n  \"see-\",\n  \"see.\",\n  \"see_\",\n  \"seed\",\n  \"select\",\n  \"selector\",\n  \"selenium\",\n  \"semantic\",\n  \"sencha\",\n  \"send\",\n  \"sentiment\",\n  \"serie\",\n  \"server\",\n  \"service\",\n  \"session\",\n  \"set-\",\n  \"set.\",\n  \"set_\",\n  \"setting\",\n  \"setup\",\n  \"sha1\",\n  \"sha2\",\n  \"sha256\",\n  \"share\",\n  \"shared\",\n  \"sharing\",\n  \"sheet\",\n  \"shell\",\n  \"shield\",\n  \"shipping\",\n  \"shop\",\n  \"shopify\",\n  \"shortener\",\n  \"should\",\n  \"show\",\n  \"showcase\",\n  \"side\",\n  \"silex\",\n  \"simple\",\n  \"simulator\",\n  \"single\",\n  \"site\",\n  \"skeleton\",\n  \"sketch\",\n  \"skin\",\n  \"slack\",\n  \"slide\",\n  \"slider\",\n  \"slim\",\n  \"small\",\n  \"smart\",\n  \"smtp\",\n  \"snake\",\n  \"snapshot\",\n  \"snippet\",\n  \"soap\",\n  \"social\",\n  \"socket\",\n  \"software\",\n  \"solarized\",\n  \"solr\",\n  \"solution\",\n  \"solver\",\n  \"some\",\n  \"soon\",\n  \"source\",\n  \"space\",\n  \"spark\",\n  \"spatial\",\n  \"spec\",\n  \"sphinx\",\n  \"spine\",\n  \"spotify\",\n  \"spree\",\n  \"spring\",\n  \"sprite\",\n  \"sql-\",\n  \"sql.\",\n  \"sql_\",\n  \"sqlite\",\n  \"ssh-\",\n  \"ssh.\",\n  \"ssh_\",\n  \"stack\",\n  \"staging\",\n  \"standard\",\n  \"stanford\",\n  \"start\",\n  \"started\",\n  \"starter\",\n  \"startup\",\n  \"stat\",\n  \"statamic\",\n  \"state\",\n  \"static\",\n  \"statistic\",\n  \"statsd\",\n  \"statu\",\n  \"steam\",\n  \"step\",\n  \"still\",\n  \"stm-\",\n  \"stm.\",\n  \"stm_\",\n  \"storage\",\n  \"store\",\n  \"storm\",\n  \"story\",\n  \"strategy\",\n  \"stream\",\n  \"streaming\",\n  \"string\",\n  \"stripe\",\n  \"structure\",\n  \"studio\",\n  \"study\",\n  \"stuff\",\n  \"style\",\n  \"sublime\",\n  \"sugar\",\n  \"suite\",\n  \"summary\",\n  \"super\",\n  \"support\",\n  \"supported\",\n  \"svg-\",\n  \"svg.\",\n  \"svg_\",\n  \"svn-\",\n  \"svn.\",\n  \"svn_\",\n  \"swagger\",\n  \"swift\",\n  \"switch\",\n  \"switcher\",\n  \"symfony\",\n  \"symphony\",\n  \"sync\",\n  \"synopsi\",\n  \"syntax\",\n  \"system\",\n  \"tab-\",\n  \"tab.\",\n  \"tab_\",\n  \"table\",\n  \"tag-\",\n  \"tag.\",\n  \"tag_\",\n  \"talk\",\n  \"target\",\n  \"task\",\n  \"tcp-\",\n  \"tcp.\",\n  \"tcp_\",\n  \"tdd-\",\n  \"tdd.\",\n  \"tdd_\",\n  \"team\",\n  \"tech\",\n  \"template\",\n  \"term\",\n  \"terminal\",\n  \"testing\",\n  \"tetri\",\n  \"text\",\n  \"textmate\",\n  \"theme\",\n  \"theory\",\n  \"three\",\n  \"thrift\",\n  \"time\",\n  \"timeline\",\n  \"timer\",\n  \"tiny\",\n  \"tinymce\",\n  \"tip-\",\n  \"tip.\",\n  \"tip_\",\n  \"title\",\n  \"todo\",\n  \"todomvc\",\n  \"token\",\n  \"tool\",\n  \"toolbox\",\n  \"toolkit\",\n  \"top-\",\n  \"top.\",\n  \"top_\",\n  \"tornado\",\n  \"touch\",\n  \"tower\",\n  \"tracker\",\n  \"tracking\",\n  \"traffic\",\n  \"training\",\n  \"transfer\",\n  \"translate\",\n  \"transport\",\n  \"tree\",\n  \"trello\",\n  \"try-\",\n  \"try.\",\n  \"try_\",\n  \"tumblr\",\n  \"tut-\",\n  \"tut.\",\n  \"tut_\",\n  \"tutorial\",\n  \"tweet\",\n  \"twig\",\n  \"twitter\",\n  \"type\",\n  \"typo\",\n  \"ubuntu\",\n  \"uiview\",\n  \"ultimate\",\n  \"under\",\n  \"unit\",\n  \"unity\",\n  \"universal\",\n  \"unix\",\n  \"update\",\n  \"updated\",\n  \"upgrade\",\n  \"upload\",\n  \"uploader\",\n  \"uri-\",\n  \"uri.\",\n  \"uri_\",\n  \"url-\",\n  \"url.\",\n  \"url_\",\n  \"usage\",\n  \"usb-\",\n  \"usb.\",\n  \"usb_\",\n  \"use-\",\n  \"use.\",\n  \"use_\",\n  \"used\",\n  \"useful\",\n  \"user\",\n  \"using\",\n  \"util\",\n  \"utilitie\",\n  \"utility\",\n  \"vagrant\",\n  \"validator\",\n  \"value\",\n  \"variou\",\n  \"varnish\",\n  \"version\",\n  \"via-\",\n  \"via.\",\n  \"via_\",\n  \"video\",\n  \"view\",\n  \"viewer\",\n  \"vim-\",\n  \"vim.\",\n  \"vim_\",\n  \"vimrc\",\n  \"virtual\",\n  \"vision\",\n  \"visual\",\n  \"vpn\",\n  \"want\",\n  \"warning\",\n  \"watch\",\n  \"watcher\",\n  \"wave\",\n  \"way-\",\n  \"way.\",\n  \"way_\",\n  \"weather\",\n  \"web-\",\n  \"web_\",\n  \"webapp\",\n  \"webgl\",\n  \"webhook\",\n  \"webkit\",\n  \"webrtc\",\n  \"website\",\n  \"websocket\",\n  \"welcome\",\n  \"what\",\n  \"what'\",\n  \"when\",\n  \"where\",\n  \"which\",\n  \"why-\",\n  \"why.\",\n  \"why_\",\n  \"widget\",\n  \"wifi\",\n  \"wiki\",\n  \"win-\",\n  \"win.\",\n  \"win_\",\n  \"window\",\n  \"wip-\",\n  \"wip.\",\n  \"wip_\",\n  \"within\",\n  \"without\",\n  \"wizard\",\n  \"word\",\n  \"wordpres\",\n  \"work\",\n  \"worker\",\n  \"workflow\",\n  \"working\",\n  \"workshop\",\n  \"world\",\n  \"wrapper\",\n  \"write\",\n  \"writer\",\n  \"writing\",\n  \"written\",\n  \"www-\",\n  \"www.\",\n  \"www_\",\n  \"xamarin\",\n  \"xcode\",\n  \"xml-\",\n  \"xml.\",\n  \"xml_\",\n  \"xmpp\",\n  \"xxxxxx\",\n  \"yahoo\",\n  \"yaml\",\n  \"yandex\",\n  \"yeoman\",\n  \"yet-\",\n  \"yet.\",\n  \"yet_\",\n  \"yii-\",\n  \"yii.\",\n  \"yii_\",\n  \"youtube\",\n  \"yui-\",\n  \"yui.\",\n  \"yui_\",\n  \"zend\",\n  \"zero\",\n  \"zip-\",\n  \"zip.\",\n  \"zip_\",\n  \"zsh-\",\n  \"zsh.\",\n  \"zsh_\",\n  \"6fe4476ee5a1832882e326b506d14126\"\n]) || filter.matchesAny(genericMatchContext, [`(?i)(?:access(?:ibility|or)|access[_.-]?id|random[_.-]?access|api[_.-]?(?:id|name|version)|rapid|capital|[a-z0-9-]*?api[a-z0-9-]*?:jar:|author|X-MS-Exchange-Organization-Auth|Authentication-Results|(?:credentials?[_.-]?id|withCredentials)|(?:bucket|foreign|hot|idx|natural|primary|pub(?:lic)?|schema|sequence)[_.-]?key|(?:turkey)|key[_.-]?(?:alias|board|code|frame|id|length|mesh|name|pair|press(?:ed)?|ring|selector|signature|size|stone|storetype|word|up|down|left|right)|key[_.-]?vault[_.-]?(?:id|name)|keyVaultToStoreSecrets|key(?:store|tab)[_.-]?(?:file|path)|issuerkeyhash|(?-i:[DdMm]onkey|[DM]ONKEY)|keying|(?:secret)[_.-]?(?:length|name|size)|UserSecretsId|(?:csrf)[_.-]?token|(?:io\\.jsonwebtoken[ \\t]?:[ \\t]?[\\w-]+)|(?:api|credentials|token)[_.-]?(?:endpoint|ur[il])|public[_.-]?token|(?:key|token)[_.-]?file|(?-i:(?:[A-Z_]+=\\n[A-Z_]+=|[a-z_]+=\\n[a-z_]+=)(?:\\n|\\z))|(?-i:(?:[A-Z.]+=\\n[A-Z.]+=|[a-z.]+=\\n[a-z.]+=)(?:\\n|\\z)))`]))\n|| matchesAny(finding[\"line\"], [\n  `--mount=type=secret,`,\n  `import[ \\t]+{[ \\t\\w,]+}[ \\t]+from[ \\t]+['\"][^'\"]+['\"]`\n])\n|| (matchesAny(attributes[\"path\"], [\n  `\\.bb$`,\n  `\\.bbappend$`,\n  `\\.bbclass$`,\n  `\\.inc$`\n]) && matchesAny(finding[\"line\"], [\n  `LICENSE[^=]*=\\s*\"[^\"]+`,\n  `LIC_FILES_CHKSUM[^=]*=\\s*\"[^\"]+`,\n  `SRC[^=]*=\\s*\"[a-zA-Z0-9]+`\n]))\n|| matchesAny(finding[\"secret\"], [\n  `^sb_publishable_[A-Za-z0-9_-]{31}$`,\n  `^0x4AAAAAA[A-Za-z0-9_-]{15}$`,\n  `^FCM[a-zA-Z0-9]{13}$`,\n  `^ysc1_[A-Za-z0-9_-]{48}$`,\n  `^phc_[A-Za-z0-9_-]{43,44}$`,\n  `^APP_USR-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^access-(sandbox|development)-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^asset-report-(sandbox|development)-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^public-(sandbox|development|production)-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^link-(sandbox|development)-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^hbp_[0-9a-zA-Z]{36}$`,\n  `^woos-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^(https://)?[0-9a-zA-Z]{32}\\@sentry\\.io$`,\n  `^sub-c-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^pub-c-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^hc[a-z]ik_([a-z0-9]{26,58})$`,\n  `^mob-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^public-token-test-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^public-token-live-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,\n  `^pdl_sdbx_apikey_[a-z\\d]{26}_[a-zA-Z\\d]{22}_[a-zA-Z\\d]{3}$`,\n  `^8c6803164dbc395fb7131c9d54843627$`\n])\n|| (matchesAny(finding[\"secret\"], [`^pk_test_[A-Za-z0-9]{24}(?:[A-Za-z0-9]{10})?(?:[A-Za-z0-9]{65})?$`]) && filter.containsAny(providerMatchContext, [\"stripe\", \"woo\", \"wcm\"]))\n|| (matchesAny(finding[\"secret\"], [`^rk_test_[A-Za-z0-9]{24}(?:[A-Za-z0-9]{10})?(?:[A-Za-z0-9]{65})?$`]) && filter.containsAny(providerMatchContext, [\"stripe\"]))\n|| (matchesAny(finding[\"secret\"], [`^pk_live_[A-Za-z0-9]{24}(?:[A-Za-z0-9]{10})?(?:[A-Za-z0-9]{65})?$`]) && filter.containsAny(providerMatchContext, [\"stripe\", \"woo\", \"wcm\"]))\n|| (matchesAny(finding[\"secret\"], [`^pk_test_[A-Za-z0-9_-]{40}$`]) && filter.containsAny(providerMatchContext, [\"paystack\"]))\n|| (matchesAny(finding[\"secret\"], [`^pk_live_[A-Za-z0-9_-]{40}$`]) && filter.containsAny(providerMatchContext, [\"paystack\"]))\n|| (matchesAny(finding[\"secret\"], [`^sandbox_[A-Za-z0-9]{8}_[A-Za-z0-9_-]{16}$`]) && filter.containsAny(providerMatchContext, [\"braintree\"]))\n|| (matchesAny(finding[\"secret\"], [`^production_[A-Za-z0-9]{8}_[A-Za-z0-9_-]{16}$`]) && filter.containsAny(providerMatchContext, [\"braintree\"]))\n|| (matchesAny(finding[\"secret\"], [`^test_[0-9a-zA-Z]{32}$`]) && filter.containsAny(providerMatchContext, [\"adyen\"]))\n|| (matchesAny(finding[\"secret\"], [`^live_[0-9a-zA-Z]{32}$`]) && filter.containsAny(providerMatchContext, [\"adyen\"]))\n|| (matchesAny(finding[\"secret\"], [`^[A-Za-z0-9]{32}$`]) && filter.containsAny(providerMatchContext, [\"bugsnag\"]))\n|| (matchesAny(finding[\"secret\"], [`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`]) && filter.containsAny(providerMatchContext, [\"hcaptcha\", \"site_key\", \"sitekey\"]))\n|| (matchesAny(finding[\"secret\"], [`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`]) && filter.containsAny(providerMatchContext, [\"pendo\"]))\n|| (matchesAny(finding[\"secret\"], [`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`]) && filter.containsAny(providerMatchContext, [\"instrumentation\"]))\n|| (matchesAny(finding[\"secret\"], [`^TEST-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`]) && filter.containsAny(providerMatchContext, [\"mercado\"]))\n|| (matchesAny(finding[\"secret\"], [`^[0-9a-fA-F]{32}$`]) && filter.containsAny(providerMatchContext, [\"mixpanel\"]))\n|| (matchesAny(finding[\"secret\"], [`^[0-9a-z]{6}\\/[a-z_-]{2,100}$`]) && filter.containsAny(providerMatchContext, [\"logrocket\"]))\n|| (len(finding[\"secret\"]) == 8 && matchesAny(finding[\"secret\"], [`^[0-9a-f]{8}$`]) && filter.containsAny(providerMatchContext, [\"honeybadger\"]))\n|| ((len(finding[\"secret\"]) >= 21 && len(finding[\"secret\"]) <= 24) && matchesAny(finding[\"secret\"], [`^[a-zA-Z0-9=+]{21,24}$`]) && filter.containsAny(providerMatchContext, [\"raygun\"]))\n|| (matchesAny(finding[\"secret\"], [`^key_live_[0-9a-zA-Z]{32}$`]) && filter.containsAny(providerMatchContext, [\"branch\"]))\n|| (matchesAny(finding[\"secret\"], [`^key_test_[0-9a-zA-Z]{32}$`]) && filter.containsAny(providerMatchContext, [\"branch\"]))\n|| (matchesAny(finding[\"secret\"], [`^pub[0-9a-zA-Z]{32}$`]) && filter.containsAny(providerMatchContext, [\"datadog\", \"dd\"]))\n|| (len(finding[\"secret\"]) == 6 && matchesAny(finding[\"secret\"], [`^[0-9a-zA-Z]{6}$`]) && filter.containsAny(providerMatchContext, [\"klaviyo\"]))\n|| (matchesAny(finding[\"secret\"], [`^[0-9a-zA-Z]{32}$`]) && filter.containsAny(providerMatchContext, [\"storefront\"]))\n|| (matchesAny(finding[\"secret\"], [`^search-[0-9a-zA-Z_-]{24}$`]) && filter.containsAny(providerMatchContext, [\"swiftype\"]))\n|| (len(finding[\"secret\"]) == 20 && matchesAny(finding[\"secret\"], [`^[0-9a-zA-Z_-]{20}$`]) && filter.containsAny(providerMatchContext, [\"swiftype\"]))\n|| (matchesAny(finding[\"secret\"], [`^pk.eyJ1Ijoi[0-9a-zA-Z_-]{1,}\\.[0-9a-zA-Z-_]{1,}$`]) && filter.containsAny(providerMatchContext, [\"map\"]))\n|| (matchesAny(finding[\"secret\"], [`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`]) && filter.containsAny(providerMatchContext, [\"crisp\"]))\n|| (matchesAny(finding[\"secret\"], [`^client-[a-zA-Z0-9]{43}$`]) && filter.containsAny(providerMatchContext, [\"statsdig\"]))\n|| (matchesAny(finding[\"secret\"], [`^sdk-[a-zA-Z0-9]{15,16}$`]) && filter.containsAny(providerMatchContext, [\"growthbook\"]))\n|| (len(finding[\"secret\"]) == 24 && matchesAny(finding[\"secret\"], [`^[a-zA-Z0-9\\/=]{24}$`]) && filter.containsAny(providerMatchContext, [\"growthbook\"]))\n|| ((len(finding[\"secret\"]) >= 21 && len(finding[\"secret\"]) <= 22) && matchesAny(finding[\"secret\"], [`^[a-zA-Z0-9]{21,22}$`]) && filter.containsAny(providerMatchContext, [\"optimizely\"]))\n|| (len(finding[\"secret\"]) == 24 && matchesAny(finding[\"secret\"], [`^[0-9a-fA-F]{24}$`]) && filter.containsAny(providerMatchContext, [\"launchdarkly\"]))\n|| (matchesAny(finding[\"secret\"], [`^pk_test_[0-9a-zA-Z]{20,70}$`]) && filter.containsAny(providerMatchContext, [\"clerk\"]))\n|| (matchesAny(finding[\"secret\"], [`^pk_live_[0-9a-zA-Z]{20,70}$`]) && filter.containsAny(providerMatchContext, [\"clerk\"]))\n|| (len(finding[\"secret\"]) == 40 && matchesAny(finding[\"secret\"], [`^[0-9a-zA-Z]{40}$`]) && filter.containsAny(providerMatchContext, [\"smartlook\"]))\n|| ((len(finding[\"secret\"]) >= 5 && len(finding[\"secret\"]) <= 6) && matchesAny(finding[\"secret\"], [`^[0-9A-Z]{5,6}$`]) && filter.containsAny(providerMatchContext, [\"fullstory\"]))\n|| (matchesAny(finding[\"secret\"], [`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`]) && filter.containsAny(providerMatchContext, [\"zendesk\", \"zdassets.com\"]))\n|| (len(finding[\"secret\"]) == 27 && matchesAny(finding[\"secret\"], [`^[0-9a-zA-Z]{27}$`]) && filter.containsAny(providerMatchContext, [\"rudderstack\"]))\n|| (matchesAny(finding[\"secret\"], [`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`]) && filter.containsAny(providerMatchContext, [\"web3forms\"]))\n|| (len(finding[\"secret\"]) == 12 && matchesAny(finding[\"secret\"], [`^[0-9]{12}$`]) && filter.containsAny(providerMatchContext, [\"2checkout\", \"twocheckout\"]))\n|| (matchesAny(finding[\"secret\"], [`^test_[a-zA-Z0-9]{27}$`]) && filter.containsAny(providerMatchContext, [\"paddle\"]))\n|| (matchesAny(finding[\"secret\"], [`^live_[a-zA-Z0-9]{27}$`]) && filter.containsAny(providerMatchContext, [\"paddle\"]))\n|| (matchesAny(finding[\"secret\"], [`^pk_live_[0-9A-F]{16}$`]) && filter.containsAny(providerMatchContext, [\"magic\"]))\n"
+    },
+    {
+      "id": "generic-credential-uri",
+      "regex": "(?i)\\b(?P<uri>(?P<scheme>https?|postgres(?:ql)?|mysql|mariadb|mongodb(?:\\+srv)?|rediss?|amqps?|ldaps?|smtps?|ftps?|ssh)://(?P<username>[^:/@\\s'\"\\x60]{0,128}):(?P<password>[^/@\\s'\"\\x60]{1,256})@(?P<host>(?:\\[[0-9a-f:.%]+\\]|[a-z0-9][a-z0-9._-]{0,252}))(?::[0-9]{1,5})?(?:,(?:\\[[0-9a-f:.%]+\\]|[a-z0-9][a-z0-9._-]{0,252})(?::[0-9]{1,5})?)*(?:[/?][a-z0-9._~!$&(*+,;=:@%/?-]*)?)(?:[\\s'\"\\x60#<>{}\\[\\],;)]|\\\\[nr]|$)",
+      "secretGroup": 4,
+      "specificity": 30,
+      "keywords": [
+        "http://",
+        "https://",
+        "postgres://",
+        "postgresql://",
+        "mysql://",
+        "mariadb://",
+        "mongodb://",
+        "mongodb+srv://",
+        "redis://",
+        "rediss://",
+        "amqp://",
+        "amqps://",
+        "ldap://",
+        "ldaps://",
+        "smtp://",
+        "smtps://",
+        "ftp://",
+        "ftps://",
+        "ssh://"
+      ],
+      "filter": "let isExampleValue = filter.matchesAny(finding[\"secret\"], [\n  `(?i)^(?:(?:(?:an?|my)(?:[ _.-]|%(?:20|2d|5f))*)?example(?:(?:[ _.-]|%(?:20|2d|5f))*(?:password|passwd|pwd))?|(?:password|passwd|pwd)(?:[ _.-]|%(?:20|2d|5f))*example)(?:(?:[ _.-]|%(?:20|2d|5f))*[0-9]{1,4})?[!?.]*$`\n]);\nlet isInstructionalPlaceholder = filter.matchesAny(finding[\"secret\"], [\n  `(?i)^(?:[a-z0-9]+[_.-])?(?:your[_.-]?(?:password|passwd|pwd)|(?:password|passwd|pwd)[_.-]goes[_.-]?here|replace[_.-]?me|insert[_.-].*[_.-]here|placeholder)$`\n]);\nlet isSyntheticExampleURI = filter.matchesAny(finding[\"match\"], [\n  `(?i)^[a-z][a-z0-9+.-]*://(?:foo|user(?:name)?|example(?:[_.-]?user)?):(?:bar|pass(?:word)?|passwd|pwd|example(?:[_.-]?(?:password|passwd|pwd))?)@(?:(?:example|test)\\.(?:com|org|net)|example\\.invalid)(?::[0-9]{1,5})?(?:[/\\s'\"\\x60#]|$)`\n]);\nlet isSyntheticCredentialTuple = filter.matchesAny(finding[\"match\"], [\n  `(?i)^[a-z][a-z0-9+.-]*://(?:foo|test|user(?:name)?|example(?:[_.-]?user)?)[0-9]{0,4}:(?:bar|test|pass(?:word)?|passwd|pwd|token|secret)[0-9]{0,4}[!?.]?@`\n]);\nlet isTestOrDocumentationSource = filter.matchesAny(attributes[\"path\"], [\n  `(?i)(?:^|[/\\\\])(?:__tests__|tests?|testdata|specs?|fixtures?|mocks?|examples?|samples?|demos?|tutorials?|templates?|qa|e2e|documentation|docs?(?:[-_][a-z0-9-]+)?)(?:[/\\\\]|$)`,\n  `(?i)(?:^|[/\\\\])readme(?:\\.[^/\\\\]+)?$`,\n  `(?i)(?:^|[/\\\\])[^/\\\\]*(?:[_.-](?:test|spec)|(?:test|spec)[_.-])[^/\\\\]*\\.[^/\\\\]+$`,\n  `(?i)\\.(?:example|sample|template)(?:\\.[^/\\\\]+)?$`,\n  `(?i)\\.(?:md|mdx|rst|adoc|asciidoc)$`\n]);\nlet hasIgnoredHost = filter.matchesAny(finding[\"match\"], [\n  `(?i)^[a-z][a-z0-9+.-]*://[^@\\s]+@(?:[a-z0-9_-]+\\.)*example(?:\\.(?:com|org|net))?\\.?(?::[0-9]{1,5})?(?:,(?:[a-z0-9_-]+\\.)*example(?:\\.(?:com|org|net))?\\.?(?::[0-9]{1,5})?)*(?:[/?\\s'\"\\x60#<>{}\\[\\];)]|,?$)`\n]);\nlet hasLowConfidenceHost = filter.matchesAny(finding[\"match\"], [\n  `(?i)^[a-z][a-z0-9+.-]*://[^@\\s]+@(?:(?:[a-z0-9_-]+\\.)*example(?:\\.(?:com|org|net))?|(?:[a-z0-9_-]+\\.)*(?:invalid|test|localhost))\\.?(?::[0-9]{1,5})?(?:,(?:(?:[a-z0-9_-]+\\.)*example(?:\\.(?:com|org|net))?|(?:[a-z0-9_-]+\\.)*(?:invalid|test|localhost))\\.?(?::[0-9]{1,5})?)*(?:[/?\\s'\"\\x60#<>{}\\[\\];)]|,?$)`\n]);\nlet level = (\n  isExampleValue\n  || isSyntheticCredentialTuple\n  || isTestOrDocumentationSource\n  || hasLowConfidenceHost\n) ? \"low\" : \"medium\";\nlet _ = filter.setConfidence(level);\n\n// Discard mechanically non-literal credentials. Weak and default passwords\n// remain reportable because the URI establishes their credential role.\nisInstructionalPlaceholder\n|| isSyntheticExampleURI\n|| hasIgnoredHost\n|| filter.matchesAny(finding[\"secret\"], [\n  `^\\*+$`,\n  `^\\.+$`,\n  `(?i)^x{4,}$`,\n  `^•+$`,\n  `(?i)^\\[?(?:redacted|masked|filtered)\\]?$`,\n  `^\\$\\{.*}$`,\n  `^\\$\\([^\\r\\n]+\\)$`,\n  `^#\\{[^}\\r\\n]+}$`,\n  `^\\{\\{[ \\t]*.+[ \\t]*}}$`,\n  `^%\\{[^}]+}$`,\n  `^\\$[A-Za-z_][A-Za-z0-9_]*$`,\n  `(?i)^\\$env:[A-Za-z_][A-Za-z0-9_]*$`,\n  `^%[A-Za-z_][A-Za-z0-9_]*%$`,\n  `^<[^>]+>$`,\n  `^\\[[A-Za-z_][A-Za-z0-9_.-]*]$`,\n  `^\\{[^}]+}$`,\n  `(?:\\$\\{|#\\{|\\{\\{|%\\{)`\n])\n"
+    },
+    {
+      "id": "generic-password",
+      "regex": "(?i)(?:(?:passw(?:or)?d|psw|[_.-]pw)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]{0,5}(?:\"((?:\\\\.|[^\"\\\\\\r\\n]){5,250})\"|'((?:\\\\.|[^'\\\\\\r\\n]){5,250})'|\\x60((?:\\\\.|[^\\x60\\\\\\r\\n]){5,250})\\x60|([^:=\\s'\"\\x60,;][^\\s'\"\\x60,;]{4,249}))(?:[ \\t]*[,;)}\\]\\r\\n]|[ \\t]+(?:#|//|/\\*|--)|[ \\t]*$|\\\\[nr])|\\b(?:login|log_in|authenticate)\\b[ \\t]*\\([ \\t]*[^,()\\r\\n]{1,250}[ \\t]*,[ \\t]*(?:\"((?:\\\\.|[^\"\\\\\\r\\n]){4,250})\"|'((?:\\\\.|[^'\\\\\\r\\n]){4,250})'|\\x60((?:\\\\.|[^\\x60\\\\\\r\\n]){4,250})\\x60)[ \\t]*\\))",
+      "specificity": 20,
+      "keywords": [
+        "passw",
+        "psw",
+        "_pw",
+        "-pw",
+        ".pw",
+        "login(",
+        "login (",
+        "log_in(",
+        "log_in (",
+        "authenticate(",
+        "authenticate ("
+      ],
+      "filter": "// Restrict nearby evidence to the password's line and the\n// six lines on either side. The password key itself is intentionally excluded\n// from the evidence patterns below.\nlet raw = finding[\"fragment_raw\"];\nlet beforeLines = split(raw[\n  max(finding[\"match_start_idx\"] - 8192, 0):finding[\"match_start_idx\"]\n], \"\\n\");\nlet afterLines = split(raw[\n  finding[\"match_end_idx\"]:min(finding[\"match_end_idx\"] + 8192, len(raw))\n], \"\\n\");\nlet nearbyContext =\n  join(beforeLines[max(len(beforeLines) - 7, 0):], \"\\n\")\n  + \"\\n\"\n  + join(afterLines[:min(len(afterLines), 7)], \"\\n\");\nlet linePrefix = beforeLines[len(beforeLines) - 1];\n\nlet hasAuthContext = filter.matchesAny(nearbyContext, [\n  // Authentication and connection calls.\n  `(?i)(?:^|[^a-z0-9])(?:auth(?:enticate|entication)?|login|log[_.-]?in|sign[_.-]?in|connect(?:ion)?|open[_.-]?(?:connection|session)|create[_.-]?(?:connection|session)|bind)\\b[ \\t]*\\(`,\n  // Credential and connection configuration containers.\n  `(?i)(?:^|[^a-z0-9])(?:basic[_.-]?auth|auth(?:entication)?[_.-]?(?:config|options|params)|credentials?|login[_.-]?(?:config|options|params)|connection[_.-]?(?:string|config|options|params)|data[_.-]?source|dsn)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:|\\{|\\()`,\n  // Assets commonly paired with credentials.\n  `(?i)(?:^|[^a-z0-9])(?:host(?:name)?|server|endpoint|database|db[_.-]?(?:name|host|url)?|port|jdbc[_.-]?url|connection[_.-]?url)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]{0,5}(?:\"[^\"\\r\\n]+\"|'[^'\\r\\n]+'|\\x60[^\\x60\\r\\n]+\\x60|[^\\s,;)}\\]]+)`,\n  // Nearby connection URI or service context.\n  `(?i)\\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\\+srv)?|redis|amqps?|ldaps?|smtps?|ftps?|ssh)://`\n]);\nlet hasIdentityFieldContext = filter.matchesAny(nearbyContext, [\n  `(?im)(?:^|[^a-z0-9])(?:username|user|login(?:[_.-]?name)?|email(?:[_.-]?address)?|uid|account(?:[_.-]?name)?|client(?:[_.-]?(?:id|name))?)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)`\n]);\nlet isDirectAuthArgument = filter.matchesAny(finding[\"match\"], [\n  `(?i)^(?:login|log_in)\\b[ \\t]*\\(`,\n  `(?i)^authenticate\\b[ \\t]*\\([ \\t]*[^,\\r\\n]*(?:user(?:name)?|account|email|login|uid)[^,\\r\\n]*,`\n]);\nlet isCommented = filter.matchesAny(linePrefix, [\n  `(?:^[ \\t]*(?:#|//|/\\*|\\*|--|;|<!--)|[ \\t](?:#|//|/\\*|--|<!--)[ \\t]*)`\n]);\nlet isInstructionalPlaceholder = filter.matchesAny(finding[\"secret\"], [\n  `^(?:PGPASSWORD|[A-Z][A-Z0-9_]*_(?:PASSWORD|PASSWD|PWD)(?:_[A-Z0-9]+)*|(?:PASSWORD|PASSWD|PWD)_[A-Z0-9_]+)$`,\n  `(?i)^(?:(?:(?:an?|my)[ _.-]*)?example(?:[ _.-]*(?:password|passwd|pwd))?|(?:password|passwd|pwd)[ _.-]*example)(?:[ _.-]*[0-9]{1,4})?[!?.]*$`,\n  `(?i)^(?:password|passwd|pwd)?[ _-]?(?:goes[ _-]?here|replace[ _-]?me|insert[ _-].*here|not[ _-]?set)$`\n]);\nlet isCodeFile = filter.matchesAny(attributes[\"path\"], [\n  `(?i)\\.(?:c|cc|cpp|cxx|h|hh|hpp|cs|dart|ex|exs|fs|fsx|go|gemspec|groovy|java|js|jsx|mjs|cjs|kt|kts|lua|m|mm|php|pl|pm|py|pyw|r|rake|rb|rs|scala|sql|swift|tf|tfvars|ts|tsx|vb|vue)(?:\\.(?:example|sample|template))?$`\n]);\nlet isUnquotedAssignment = filter.matchesAny(finding[\"match\"], [\n  `^(?i:passw(?:or)?d|psw|[_.-]pw)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]*[^\\x22\\x27\\x60 \\t\\r\\n]`\n]);\nlet isUnquotedCodeValue = isCodeFile && isUnquotedAssignment;\nlet isUnquotedExpression = isUnquotedAssignment && filter.matchesAny(finding[\"secret\"], [\n  `^[A-Za-z_][A-Za-z0-9_-]*:\\[[^]\\r\\n]+\\]$`,\n  `^[A-Za-z_][A-Za-z0-9_]*[)}\\]]+(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*(?:\\([^)]*\\))?)*$`\n]);\nlet hasNonPlaintextPasswordContext = filter.matchesAny(linePrefix + finding[\"match\"], [\n  `(?i)(?:^|[^a-z0-9])(?:enc|encrypt(?:ed|ion)?|hash(?:ed)?|encod(?:e|ed|ing)|cipher(?:text)?|seal(?:ed)?|vault(?:ed)?)(?:[_.-][a-z0-9]+){0,5}[_.-]?password\\b`,\n  `(?i)(?:^|[^a-z0-9])password[_.-]?(?:cipher(?:text)?|hash|digest|algorithm|scheme|encoding|format)\\b`\n]);\nlet hasNestedUnquotedAssignment = filter.matchesAny(finding[\"match\"], [\n  `^(?i:passw(?:or)?d|psw|[_.-]pw)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]{0,5}[^\"'\\x60\\r\\n]*[.,][A-Za-z_][A-Za-z0-9_-]*=`\n]);\nlet isEncryptedValue = filter.matchesAny(finding[\"secret\"], [\n  // Serialized encryption envelopes and armored ciphertext.\n  `(?i)^ENC\\[[A-Z0-9][A-Z0-9_.+/-]*(?:,|\\]|$)`,\n  `(?i)^ENC\\([A-Z0-9+/=_:.,-]{8,}\\)$`,\n  `(?i)^\\{cipher\\}.{4,}$`,\n  `^\\$ANSIBLE_VAULT(?:;|$)`,\n  `(?i)^!vault$`,\n  `^age-encryption\\.org/v[0-9]+$`,\n  `^-----BEGIN (?:AGE ENCRYPTED FILE|PGP MESSAGE|ENCRYPTED PRIVATE KEY)-----$`,\n  // OpenSSL salted output, HashiCorp Vault transit ciphertext, and Fernet.\n  `^U2FsdGVkX1[A-Za-z0-9+/=]{8,}$`,\n  `^vault:v[0-9]+:[A-Za-z0-9+/=_-]{8,}$`,\n  `^gAAAAA[A-Za-z0-9_-]{70,}={0,2}$`,\n  // Compact JWE and encrypted PASETO (local-purpose) tokens.\n  `^[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]*\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}$`,\n  `^v[124]\\.local\\.[A-Za-z0-9_-]{32,}(?:\\.[A-Za-z0-9_-]+)?$`,\n  // Windows DPAPI blobs in Base64 or exported SecureString hex form.\n  `^AQAAANCMnd8BFdERjHoAwE/Cl\\+sBA[A-Za-z0-9+/=]{16,}$`,\n  `(?i)^01000000d08c9ddf0115d1118c7a00c04fc297eb01[0-9a-f]{16,}$`\n]);\nlet isCryptographicAlgorithm = filter.matchesAny(finding[\"secret\"], [\n  // Common block ciphers with key sizes and/or modes.\n  `(?i)^(?:AES|RIJNDAEL|ARIA|CAMELLIA)[-_/]?(?:128|192|256)(?:[-_/](?:ECB|CBC(?:[-_/]HMAC[-_/]SHA[-_]?(?:256|384|512))?|PCBC|CFB(?:8|64|128)?|OFB(?:8|64|128)?|CTR|CTS|CCM|GCM|GMAC|EAX|OCB|SIV|GCM[-_]?SIV|XTS|KW|KWP))?$`,\n  `(?i)^(?:AES|RIJNDAEL|ARIA|CAMELLIA)[-_/]?(?:ECB|CBC|PCBC|CFB(?:8|64|128)?|OFB(?:8|64|128)?|CTR|CTS|CCM|GCM|GMAC|EAX|OCB|SIV|GCM[-_]?SIV|XTS|KW|KWP)$`,\n  `(?i)^(?:(?:RIJNDAEL|ARIA|CAMELLIA|DES(?:[-_]?(?:EDE3?|3|X))?|DESEDE|3DES|TRIPLE[-_]?DES|BLOWFISH|BF|TWOFISH|SERPENT|CAST(?:5|128|256)?|IDEA|SEED|SM4|RC[2456]|ARCFOUR)[-_/](?:ECB|CBC|PCBC|CFB(?:8|64|128)?|OFB(?:8|64|128)?|CTR|CTS|CCM|GCM|GMAC|EAX|OCB|SIV|GCM[-_]?SIV|XTS|KW|KWP)|X?(?:CHACHA20|SALSA20)[-_/]POLY1305|AESWRAP(?:[-_]?(?:128|192|256))?|DESEDEWRAP)$`,\n  // Java Cryptography Architecture transformations and PBE names.\n  `(?i)^(?:AES(?:[-_]?(?:128|192|256))?|ARIA(?:[-_]?(?:128|192|256))?|CAMELLIA(?:[-_]?(?:128|192|256))?|BLOWFISH|DES|DESEDE|RC2|RSA)/(?:ECB|CBC|PCBC|CFB(?:8|64|128)?|OFB(?:8|64|128)?|CTR|CTS|CCM|GCM)/(?:NO|PKCS[157]|ISO10126|OAEPWITH(?:MD5|SHA[-_]?(?:1|224|256|384|512))ANDMGF1)PADDING$`,\n  `(?i)^PBEWITH(?:HMAC)?(?:MD5|SHA(?:1|224|256|384|512))AND(?:AES(?:[-_]?(?:128|256))?|DES(?:EDE)?|TRIPLEDES|RC[24](?:[-_]?(?:40|128))?)$`,\n  // JOSE/JWE key-management and content-encryption identifiers.\n  `(?i)^(?:RSA1_5|RSA-OAEP(?:-(?:256|384|512))?|ECDH-ES(?:\\+A(?:128|192|256)(?:GCM)?KW)?|A(?:128|192|256)(?:KW|GCMKW|GCM|CBC-HS(?:256|384|512))|PBES2-HS(?:256|384|512)\\+A(?:128|192|256)KW)$`,\n  // Other explicit asymmetric encryption and key-wrapping descriptors.\n  `(?i)^(?:RSA(?:ES)?[-_/](?:OAEP(?:[-_/](?:MD5|SHA[-_]?(?:1|224|256|384|512)))?|PKCS1(?:[-_]?V?1[_.]5)?|NO[-_]?PADDING)|ECIES(?:[-_/](?:P(?:256|384|521)|SECP(?:256K1|256R1|384R1|521R1)))?|ELGAMAL[-_/](?:ECB|OAEP|PKCS1)|SM2[-_/](?:C1C2C3|C1C3C2))$`,\n  // Composite hash, MAC, signature, and password-derivation identifiers.\n  `(?i)^(?:HMAC[-_]?(?:MD5|SHA[-_]?(?:1|224|256|384|512)|SHA3[-_]?(?:224|256|384|512))|PBKDF2[-_/](?:HMAC[-_]?)?(?:SHA[-_]?(?:1|224|256|384|512))|HKDF[-_/]SHA[-_]?(?:1|224|256|384|512)|(?:RSA|DSA|ECDSA|ED25519)[-_/](?:MD5|SHA[-_]?(?:1|224|256|384|512)|SHA3[-_]?(?:224|256|384|512))|(?:MD5|SHA[-_]?(?:1|224|256|384|512)|SHA3[-_]?(?:224|256|384|512))[-_/](?:RSA|DSA|ECDSA|ED25519))$`,\n  // TLS and OpenSSH cipher-suite identifiers.\n  `(?i)^TLS_(?:(?:AES_(?:128|256)_GCM|CHACHA20_POLY1305)_SHA(?:256|384)|[A-Z0-9]+(?:_[A-Z0-9]+)*_WITH_[A-Z0-9]+(?:_[A-Z0-9]+)*)$`,\n  `(?i)^(?:AES(?:128|192|256)-(?:CBC|CTR|GCM)|CHACHA20-POLY1305)@OPENSSH\\.COM$`\n]);\nlet isContextualAlgorithmName = hasNonPlaintextPasswordContext && filter.matchesAny(finding[\"secret\"], [\n  // A field name can disambiguate an exact algorithm name, but cannot by\n  // itself prove that an arbitrary value is encrypted or hashed.\n  `(?i)^(?:AES|RIJNDAEL|ARIA|CAMELLIA|CHACHA20|XCHACHA20|SALSA20|XSALSA20|DES|DESEDE|3DES|TRIPLE[-_]?DES|TWOFISH|SERPENT|CAST(?:5|128|256)|IDEA|SEED|SM4|RC[2456]|ARCFOUR|RSA|ECIES|ELGAMAL|SM2|MD5|SHA[-_]?(?:1|224|256|384|512)|SHA3[-_]?(?:224|256|384|512)|BLAKE2[BS](?:[-_]?(?:256|512))?|BLAKE3|RIPEMD[-_]?(?:128|160|256|320)|WHIRLPOOL|SM3|PBKDF2|SCRYPT|BCRYPT|ARGON2(?:D|I|ID)?|HKDF|YESCRYPT)$`\n]);\nlet level = (\n  (\n    isDirectAuthArgument\n    || (hasAuthContext && hasIdentityFieldContext)\n  )\n  && !isCommented\n  && !isInstructionalPlaceholder\n) ? \"medium\" : \"low\";\nlet _ = filter.setConfidence(level);\n\nfilter.matchesAny(finding[\"secret\"], [\n  `^\\*+$`,\n  `^\\.+$`,\n  `(?i)^x{4,}$`,\n  `(?i)^\\[?(?:redacted|masked|filtered)\\]?$`,\n  `^•+$`,\n  `^\\$\\{.*}$`,\n  `^\\$\\([^\\r\\n]+\\)$`,\n  `^#\\{[^}\\r\\n]+}$`,\n  `^\\{\\{[ \\t]*.+[ \\t]*}}$`,\n  `^%\\{[^}]+}$`,\n  `^\\$[A-Za-z_][A-Za-z0-9_]*$`,\n  `(?i)^\\$env:[A-Za-z_][A-Za-z0-9_]*$`,\n  `^%[A-Za-z_][A-Za-z0-9_]*%$`,\n  `^<[^>]+>$`,\n  `^<[^>\\s]+$`,\n  `^\\{[^}]+}$`,\n  `(?i)^(?:your[_-]?password|placeholder|forbidden_value)$`,\n  `^\\([A-Za-z_][A-Za-z0-9_.]*(?:[ \\t]+[A-Za-z_][A-Za-z0-9_.]*)*\\)$`,\n  `^\\$\\(`,\n  `(?:\\$\\{|#\\{|\\{\\{|%\\{)`,\n  `%\\([A-Za-z_][A-Za-z0-9_]*\\)[#0 +\\-]?[0-9.]*(?:[diouxXeEfFgGcrs%])`,\n  `(?i)^--?passw(?:or)?d$`,\n  `^\\$2[abxy]\\$[0-9]{2}\\$[./A-Za-z0-9]{7,}$`,\n  `(?i)^\\$pbkdf2[-_][^$]+\\$.*$`,\n  `(?i)^(?:pbkdf2_(?:sha1|sha256)|bcrypt_sha256|argon2|scrypt|sha1|md5|crypt)\\$`,\n  `(?i)^\\$(?:1|5|6|7|y|gy|argon2(?:d|i|id)|scrypt|pbkdf2(?:[-_]sha(?:1|224|256|384|512))?|apr1)\\$`,\n  `^\\$[PH]\\$[./A-Za-z0-9]{20,}$`,\n  `(?i)^\\{(?:SSHA(?:256|384|512)?|SHA(?:256|384|512)?|MD5|CRYPT|BCRYPT|PBKDF2)}`,\n  `(?i)^SCRAM-SHA-(?:1|256|512)\\$`,\n  `(?i)^md5[0-9a-f]{32}$`,\n  `^\\*[0-9A-F]{40}$`\n])\n|| isEncryptedValue\n|| isCryptographicAlgorithm\n|| isContextualAlgorithmName\n|| isUnquotedCodeValue\n|| isUnquotedExpression\n|| hasNestedUnquotedAssignment\n|| filter.matchesAny(finding[\"match\"], [\n  `^(?i:passw(?:or)?d|psw|[_.-]pw)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]*(?i:nil|null|none|undefined|true|false|string|str|text|integer|int|number|boolean|bool|object)(?:[ \\t]*[,;)}\\]\\r\\n]|[ \\t]*$|\\\\[nr])`,\n  `^(?i:passw(?:or)?d|psw|[_.-]pw)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]*(?:[$@][A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*|\\[[^]\\r\\n]+\\]|\\([^,\\r\\n)]*\\)?)*|:[A-Za-z_][A-Za-z0-9_]*|(?:::)?[A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*)*::[A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*)*|(?i:process\\.env|config|settings|credentials?|secrets?|var|local|module|data)(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*|\\[[^]\\r\\n]+\\])+|[A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*)*(?:\\[[^]\\r\\n]+\\]|\\([^,\\r\\n)]*\\)?)(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*|\\[[^]\\r\\n]+\\]|\\([^,\\r\\n)]*\\)?)*|[A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*)*\\.(?i:(?:[a-z0-9]+_)*(?:passw(?:or)?d|psw|token|secret|hex)))[)}\\]]*\\\\?(?:[ \\t]*[,;)}\\]\\r\\n]|[ \\t]*$|\\\\[nr])`\n])\n",
+      "components": [
+        {
+          "id": "generic-username",
+          "optional": true,
+          "within": "7L,200C"
+        }
+      ]
+    },
+    {
+      "id": "generic-username",
+      "regex": "(?m)(?:^|[^a-zA-Z0-9])(?i:username|user|login(?:[_.-]?name)?|email(?:[_.-]?address)?|uid|account(?:[_.-]?name)?|client(?:[_.-]?(?:id|name))?)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]{0,5}(?:\"((?:\\\\.|[^\"\\\\\\r\\n]){3,250})\"|'((?:\\\\.|[^'\\\\\\r\\n]){3,250})'|\\x60((?:\\\\.|[^\\x60\\\\\\r\\n]){3,250})\\x60|([^:=\\s'\"\\x60,;][^\\s'\"\\x60,;]{2,249}))(?:[ \\t]*[,;)}\\]\\r\\n]|[ \\t]*$|\\\\[nr])",
+      "keywords": ["user", "login", "email", "uid", "account", "client"],
+      "skipReport": true,
+      "filter": "// An unquoted value is an ambiguous scalar in configuration, but\n// not a string literal in the source languages recognized below.\nlet isCodeFile = filter.matchesAny(attributes[\"path\"], [\n  `(?i)\\.(?:c|cc|cpp|cxx|h|hh|hpp|cs|dart|ex|exs|fs|fsx|go|gemspec|groovy|java|js|jsx|mjs|cjs|kt|kts|lua|m|mm|php|pl|pm|py|pyw|r|rake|rb|rs|scala|sql|swift|tf|tfvars|ts|tsx|vb|vue)(?:\\.(?:example|sample|template))?$`\n]);\nlet isUnquotedCodeValue = isCodeFile && filter.matchesAny(finding[\"match\"], [\n  `^(?:[^a-zA-Z0-9])?(?i:username|user|login(?:[_.-]?name)?|email(?:[_.-]?address)?|uid|account(?:[_.-]?name)?|client(?:[_.-]?(?:id|name))?)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]*[^\\x22\\x27\\x60 \\t\\r\\n]`\n]);\n\nisUnquotedCodeValue\n|| filter.matchesAny(finding[\"secret\"], [\n  `^\\*+$`,\n  `^\\.+$`,\n  `(?i)^x{4,}$`,\n  `^•+$`,\n  `^\\$\\{.*}$`,\n  `^\\$\\([^\\r\\n]+\\)$`,\n  `^#\\{[^}\\r\\n]+}$`,\n  `^\\{\\{[ \\t]*.+[ \\t]*}}$`,\n  `^%\\{[^}]+}$`,\n  `^<[^>]+>$`,\n  `^<[^>\\s]+$`,\n  `^\\{[^}]+}$`,\n  `(?i)^\\[?(?:redacted|masked|filtered)\\]?$`,\n  `^(?:USERNAME|USER_NAME|USER|LOGIN|LOGIN_NAME|ACCOUNT_NAME|EMAIL|EMAIL_ADDRESS|UID|CLIENT|CLIENT_ID|CLIENT_NAME)$`,\n  `(?i)^(?:your|example)[_-]?(?:username|user_name|user|login|login_name|account_name|email|email_address|uid|client(?:_id|_name)?)$`\n])\n|| filter.matchesAny(finding[\"match\"], [\n  `^(?:[^a-zA-Z0-9])?(?i:username|user|login(?:[_.-]?name)?|email(?:[_.-]?address)?|uid|account(?:[_.-]name)?|client(?:[_.-]?(?:id|name))?)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]*(?i:nil|null|none|undefined|true|false|string|str|text|integer|int|number|boolean|bool|object)(?:[ \\t]*[,;)}\\]\\r\\n]|[ \\t]*$|\\\\[nr])`,\n  `^(?:[^a-zA-Z0-9])?(?i:username|user|login(?:[_.-]?name)?|email(?:[_.-]?address)?|uid|account(?:[_.-]name)?|client(?:[_.-]?(?:id|name))?)\\b[ \\t'\"\\\\]{0,3}(?:=>|:=|=|:)[ \\t]*(?:[$@][A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*|\\[[^]\\r\\n]+\\]|\\([^,\\r\\n)]*\\)?)*|:[A-Za-z_][A-Za-z0-9_]*|(?:::)?[A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*)*::[A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*)*|(?i:process\\.env|config|settings|credentials?|secrets?|var|local|module|data)(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*|\\[[^]\\r\\n]+\\])+|[A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*)*(?:\\[[^]\\r\\n]+\\]|\\([^,\\r\\n)]*\\)?)(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*|\\[[^]\\r\\n]+\\]|\\([^,\\r\\n)]*\\)?)*|[A-Za-z_][A-Za-z0-9_]*(?:(?:\\.|::)[A-Za-z_][A-Za-z0-9_]*)*\\.(?i:(?:[a-z0-9]+_)*(?:username|user|login(?:_name)?|email(?:_address)?|uid|account(?:_name)?|client(?:_(?:id|name))?|id)))[)}\\]]*\\\\?(?:[ \\t]*[,;)}\\]\\r\\n]|[ \\t]*$|\\\\[nr])`\n])\n"
+    },
+    {
+      "id": "gitea-access-token",
+      "regex": "(?i)(?:gitea[_.-]?(?:token|key|secret|access))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["gitea"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "github-app-token",
+      "regex": "(?:ghu|ghs)_[0-9a-zA-Z]{36}",
+      "keywords": ["ghu_", "ghs_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n|| matchesAny(attributes[\"path\"], [`(?:^|/)@octokit/auth-token/README\\.md$`])\n"
+    },
+    {
+      "id": "github-fine-grained-pat",
+      "regex": "github_pat_\\w{82}",
+      "keywords": ["github_pat_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "github-oauth",
+      "regex": "gho_[0-9a-zA-Z]{36}",
+      "keywords": ["gho_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "github-pat",
+      "regex": "ghp_[0-9a-zA-Z]{36}",
+      "keywords": ["ghp_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n|| matchesAny(attributes[\"path\"], [`(?:^|/)@octokit/auth-token/README\\.md$`])\n"
+    },
+    {
+      "id": "github-refresh-token",
+      "regex": "ghr_[0-9a-zA-Z]{36}",
+      "keywords": ["ghr_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-cicd-job-token",
+      "regex": "glcbt-[0-9a-zA-Z]{1,5}_[0-9a-zA-Z_-]{20}",
+      "keywords": ["glcbt-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-deploy-token",
+      "regex": "gldt-[0-9a-zA-Z_\\-]{20}",
+      "keywords": ["gldt-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-feature-flag-client-token",
+      "regex": "glffct-[0-9a-zA-Z_\\-]{20}",
+      "keywords": ["glffct-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-feed-token",
+      "regex": "glft-[0-9a-zA-Z_\\-]{20}",
+      "keywords": ["glft-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-incoming-mail-address-token",
+      "regex": "incoming\\+(?:[A-Za-z0-9._-]+-)?\\d+-([A-Za-z0-9_-]+)-(?:issue(?:-\\d+)?|merge-request)@",
+      "specificity": 50,
+      "keywords": ["incoming+"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-incoming-mail-token",
+      "regex": "glimt-[0-9a-zA-Z_\\-]{25}",
+      "keywords": ["glimt-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-kubernetes-agent-token",
+      "regex": "glagent-[0-9a-zA-Z_\\-]{50}",
+      "keywords": ["glagent-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-oauth-app-secret",
+      "regex": "gloas-[0-9a-zA-Z_\\-]{64}",
+      "keywords": ["gloas-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-pat",
+      "regex": "glpat-[\\w-]{20}",
+      "keywords": ["glpat-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-pat-routable",
+      "regex": "\\bglpat-[0-9a-zA-Z_-]{27,300}\\.[0-9a-z]{2}[0-9a-z]{7}\\b",
+      "keywords": ["glpat-"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "gitlab-pat-routable-versioned",
+      "regex": "\\bglpat-[0-9a-zA-Z_-]{27,300}\\.[0-9a-z]{2}\\.[0-9a-z]{9}\\b",
+      "keywords": ["glpat-"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "gitlab-ptt",
+      "regex": "glptt-[0-9a-f]{40}",
+      "keywords": ["glptt-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-rrt",
+      "regex": "GR1348941[\\w-]{20}",
+      "keywords": ["gr1348941"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-runner-authentication-token",
+      "regex": "glrt-[0-9a-zA-Z_\\-]{20}",
+      "keywords": ["glrt-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-runner-authentication-token-routable",
+      "regex": "\\bglrt-t\\d_[0-9a-zA-Z_\\-]{27,300}\\.[0-9a-z]{2}[0-9a-z]{7}\\b",
+      "keywords": ["glrt-"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "gitlab-scim-token",
+      "regex": "glsoat-[0-9a-zA-Z_\\-]{20}",
+      "keywords": ["glsoat-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitlab-session-cookie",
+      "regex": "_gitlab_session=[0-9a-z]{32}",
+      "keywords": ["_gitlab_session="],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "gitter-access-token",
+      "regex": "(?i)(?:gitter)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9_-]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["gitter"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "gocardless-api-token",
+      "regex": "(?i)(?:gocardless)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(live_(?i)[a-z0-9\\-_=]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["live_", "gocardless"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "grafana-api-key",
+      "regex": "\\b(eyJrIjoi[A-Za-z0-9+/]{40,380}={0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["eyjrijoi"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "grafana-cloud-api-token",
+      "regex": "\\b(glc_[A-Za-z0-9+/]{40,150}={0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["glc_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "grafana-service-account-token",
+      "regex": "\\b(glsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["glsa_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "greptile-api-key",
+      "regex": "(?i)(?:greptile)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-zA-Z0-9+/]{48})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["greptile"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "groq-api-key",
+      "regex": "(?i)\\b(gsk_[A-Z0-9]{52})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["gsk_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "gumroad-access-token",
+      "regex": "(?i)(?:gumroad)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((?:[a-f0-9]{64}|[A-Za-z0-9-]{43}))(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["gumroad"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "harness-api-key",
+      "regex": "(?:pat|sat)\\.[a-zA-Z0-9_-]{22}\\.[0-9a-f]{24}\\.[a-zA-Z0-9]{20}",
+      "keywords": ["pat.", "sat."],
+      "filter": "entropy(finding[\"secret\"]) <= 3.4\n"
+    },
+    {
+      "id": "hashicorp-tf-api-token",
+      "regex": "(?i)[a-z0-9]{14}\\.(?-i:atlasv1)\\.[a-z0-9\\-_=]{60,70}",
+      "keywords": ["atlasv1"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "hashicorp-tf-password",
+      "regex": "(?i)(?:administrator_login_password|password)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(\"[a-z0-9=_\\-]{8,20}\")(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "path": "(?i)\\.(?:tf|hcl)$",
+      "keywords": ["administrator_login_password", "password"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "heroku-api-key",
+      "regex": "(?i)(?:heroku)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["heroku"]
+    },
+    {
+      "id": "heroku-api-key-v2",
+      "regex": "\\b((HRKU-AA[0-9a-zA-Z_-]{58}))(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["hrku-aa"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "highnote-secret-live-key",
+      "regex": "(?i:(?:highnote(?:[_. -]*(?:api))?[_. -]*(?:secret|key|token|sk[_. -]*live))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(sk_live_a2V5Xz[A-Za-z0-9+/]{69}={0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["highnote"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "honeycomb-api-key",
+      "regex": "(?i)(?:honeycomb)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((?:[a-f0-9]{32}|[a-z0-9]{22}))(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["honeycomb"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "hubspot-api-key",
+      "regex": "(?i)(?:hubspot)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["hubspot"]
+    },
+    {
+      "id": "huggingface-access-token",
+      "regex": "\\b(hf_(?i:[a-z]{34}))(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["hf_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "huggingface-organization-api-token",
+      "regex": "\\b(api_org_(?i:[a-z]{34}))(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["api_org_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "hunter-api-key.1",
+      "regex": "(?i:(?:hunter)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["hunter"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "ibm-cloud-user-api-key",
+      "regex": "(?i)(?:ibm(?:cloud)?|bx)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9_-]{42,44})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ibm"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "influxdb-api-token",
+      "regex": "(?i)(?:\\binflux(?:db)?\\b(?:.|[\\n\\r]){0,64}?\\b(?:token|api[_-]?key)\\b(?:.|[\\n\\r]){0,32}?)[=:\"'\\s]{1,8}([A-Za-z0-9+/=_-]{88,})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["influx"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 4.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "infomaniak-api-token",
+      "regex": "(?i)(?:infomaniak)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_\\-]{60,100})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["infomaniak"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 4.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "infracost-api-token",
+      "regex": "\\b(ico-[a-zA-Z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ico-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "instantly-api-key.1",
+      "regex": "(?i:(?:instantly)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9+/]{66}==)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["instantly"],
+      "filter": "entropy(finding[\"secret\"]) < 3.3\n"
+    },
+    {
+      "id": "intercom-api-key",
+      "regex": "(?i)(?:intercom)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9=_\\-]{60})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["intercom"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "intra42-client-secret",
+      "regex": "\\b(s-s4t2(?:ud|af)-(?i)[abcdef0123456789]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["intra", "s-s4t2ud-", "s-s4t2af-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "ionic-personal-access-token",
+      "regex": "\\b(ion_[A-Za-z0-9]{42})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ionic"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "jumpcloud-api-key",
+      "regex": "(?i)(?:jumpcloud)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["jumpcloud"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "jwt",
+      "regex": "\\b(ey[a-zA-Z0-9]{17,}\\.ey[a-zA-Z0-9\\/\\\\_-]{17,}\\.(?:[a-zA-Z0-9\\/\\\\_-]{10,}={0,2})?)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["eyj"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "jwt-base64",
+      "regex": "\\bZXlK(?:(?P<alg>aGJHY2lPaU)|(?P<apu>aGNIVWlPaU)|(?P<apv>aGNIWWlPaU)|(?P<aud>aGRXUWlPaU)|(?P<b64>aU5qUWlP)|(?P<crit>amNtbDBJanBi)|(?P<cty>amRIa2lPaU)|(?P<epk>bGNHc2lPbn)|(?P<enc>bGJtTWlPaU)|(?P<jku>cWEzVWlPaU)|(?P<jwk>cWQyc2lPb)|(?P<iss>cGMzTWlPaU)|(?P<iv>cGRpSTZJ)|(?P<kid>cmFXUWlP)|(?P<key_ops>clpYbGZiM0J6SWpwY)|(?P<kty>cmRIa2lPaUp)|(?P<nonce>dWIyNWpaU0k2)|(?P<p2c>d01tTWlP)|(?P<p2s>d01uTWlPaU)|(?P<ppt>d2NIUWlPaU)|(?P<sub>emRXSWlPaU)|(?P<svt>emRuUWlP)|(?P<tag>MFlXY2lPaU)|(?P<typ>MGVYQWlPaUp)|(?P<url>MWNtd2l)|(?P<use>MWMyVWlPaUp)|(?P<ver>MlpYSWlPaU)|(?P<version>MlpYSnphVzl1SWpv)|(?P<x>NElqb2)|(?P<x5c>NE5XTWlP)|(?P<x5t>NE5YUWlPaU)|(?P<x5ts256>NE5YUWpVekkxTmlJNkl)|(?P<x5u>NE5YVWlPaU)|(?P<zip>NmFYQWlPaU))[a-zA-Z0-9\\/\\\\_+\\-\\r\\n]{40,}={0,2}",
+      "keywords": ["zxlk"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "kagi-api-key",
+      "regex": "(?i)(?:kagi)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9_-]{11}\\.[a-z0-9_-]{43})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["kagi"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "kimi-api-key",
+      "regex": "(?i)(?:kimi|moonshot)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(sk-[A-Za-z0-9_-]{48})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["kimi", "moonshot"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "klaviyo-api-key",
+      "regex": "(?i)(?:klaviyo)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(pk_[a-z0-9]{34})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["klaviyo"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "kraken-access-token",
+      "regex": "(?i)(?:kraken)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9\\/=_\\+\\-]{80,90})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["kraken"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 4.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "kubernetes-secret-yaml",
+      "regex": "(?i)(?:\\bkind:[ \\t]*[\"']?\\bsecret\\b[\"']?(?s:.){0,1000}?\\bdata:(?s:.){0,100}?\\s+([\\w.-]+:(?:[ \\t]*(?:\\||>[-+]?)\\s+)?[ \\t]*(?:[\"']?[a-z0-9+/]{10,}={0,3}[\"']?|\\{\\{[ \\t\\w\"|$:=,.-]+}}|\"\"|''))|\\bdata:(?s:.){0,100}?\\s+([\\w.-]+:(?:[ \\t]*(?:\\||>[-+]?)\\s+)?[ \\t]*(?:[\"']?[a-z0-9+/]{10,}={0,3}[\"']?|\\{\\{[ \\t\\w\"|$:=,.-]+}}|\"\"|''))(?s:.){0,1000}?\\bkind:[ \\t]*[\"']?\\bsecret\\b[\"']?)",
+      "path": "(?i)\\.ya?ml$",
+      "keywords": ["secret"],
+      "filter": "matchesAny(finding[\"secret\"], [`[\\w.-]+:(?:[ \\t]*(?:\\||>[-+]?)\\s+)?[ \\t]*(?:\\{\\{[ \\t\\w\"|$:=,.-]+}}|\"\"|'')`])\n|| matchesAny(finding[\"match\"], [`(kind:(?s:.)+\\n---\\n(?s:.)+\\bdata:|data:(?s:.)+\\n---\\n(?s:.)+\\bkind:)`])\n"
+    },
+    {
+      "id": "kucoin-access-token",
+      "regex": "(?i)(?:kucoin)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["kucoin"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "kucoin-secret-key",
+      "regex": "(?i)(?:kucoin)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["kucoin"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "langchain-langsmith-personal-access-token",
+      "regex": "\\b(lsv2_pt_[0-9a-fA-F]{32}_[0-9a-fA-F]{10})",
+      "keywords": ["lsv2_pt_"],
+      "filter": "entropy(finding[\"secret\"]) < 4.0\n"
+    },
+    {
+      "id": "langchain-langsmith-service-key",
+      "regex": "\\b(lsv2_sk_[0-9a-fA-F]{32}_[0-9a-fA-F]{10})",
+      "keywords": ["lsv2_sk_"],
+      "filter": "entropy(finding[\"secret\"]) < 4.0\n"
+    },
+    {
+      "id": "langfuse-public-key.1",
+      "regex": "\\b(pk-lf-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pk-lf-"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "langfuse-secret-key.1",
+      "regex": "\\b(sk-lf-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sk-lf-"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n",
+      "components": [
+        {
+          "id": "langfuse-public-key.1",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "lark-app-id",
+      "regex": "\\b(cli_[A-Za-z0-9]{16})",
+      "keywords": ["cli_"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "lark-app-secret",
+      "regex": "(?i)(?:lark|larksuite)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["lark"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n",
+      "components": [
+        {
+          "id": "lark-app-id"
+        }
+      ]
+    },
+    {
+      "id": "launchdarkly-access-token",
+      "regex": "(?i)(?:launchdarkly)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9=_\\-]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["launchdarkly"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "lichess-personal-access-token",
+      "regex": "\\b(lip_[A-Za-z0-9_]{16,60})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["lip_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "lighton-paradigm-api-key",
+      "regex": "(?i)(?:lighton|paradigm)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_\\-]{40,80})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["lighton", "paradigm"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "linear-api-key",
+      "regex": "lin_api_(?i)[a-z0-9]{40}",
+      "keywords": ["lin_api_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "linear-client-secret",
+      "regex": "(?i)(?:linear)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["linear"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "linkedin-client-id",
+      "regex": "(?i)(?:linked[_-]?in)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{14})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["linkedin", "linked_in", "linked-in"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "linkedin-client-secret",
+      "regex": "(?i)(?:linked[_-]?in)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["linkedin", "linked_in", "linked-in"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "llama-cloud-api-key.1",
+      "regex": "\\b(llx-[A-Za-z0-9]{44,52})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["llx-"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "lob-api-key",
+      "regex": "(?i)(?:lob)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((live|test)_[a-f0-9]{35})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["test_", "live_"]
+    },
+    {
+      "id": "lob-pub-api-key",
+      "regex": "(?i)(?:lob)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((test|live)_pub_[a-f0-9]{31})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["test_pub_", "live_pub_"]
+    },
+    {
+      "id": "looker-client-id",
+      "regex": "(?i)(?:looker)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{20})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["looker"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "looker-client-secret",
+      "regex": "(?i)(?:looker)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["looker"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "mailchimp-api-key",
+      "regex": "(?i)(?:MailchimpSDK.initialize|mailchimp)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{32}-us\\d\\d)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mailchimp"]
+    },
+    {
+      "id": "mailersend-api-token",
+      "regex": "\\b(mlsn\\.[A-Za-z0-9]{30,100})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mlsn."],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "mailgun-private-api-token",
+      "regex": "(?i)(?:mailgun)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(key-[a-f0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mailgun"]
+    },
+    {
+      "id": "mailgun-pub-key",
+      "regex": "(?i)(?:mailgun)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(pubkey-[a-f0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mailgun"]
+    },
+    {
+      "id": "mailgun-signing-key",
+      "regex": "(?i)(?:mailgun)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-h0-9]{32}-[a-h0-9]{8}-[a-h0-9]{8})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mailgun"]
+    },
+    {
+      "id": "mapbox-api-token",
+      "regex": "(?i)(?:mapbox)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(pk\\.[a-z0-9]{60}\\.[a-z0-9]{22})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mapbox"]
+    },
+    {
+      "id": "mattermost-access-token",
+      "regex": "(?i)(?:mattermost)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{26})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mattermost"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "maxmind-license-key",
+      "regex": "\\b([A-Za-z0-9]{6}_[A-Za-z0-9]{29}_mmk)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["_mmk"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "mem0-api-key.1",
+      "regex": "(?i:(?:mem0)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(m0-[A-Za-z0-9]{24,44})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mem0"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "mercury-production-api-token",
+      "regex": "\\b(mercury_production_[a-z]{3,6}_[A-Za-z0-9]{40,50}_yrucrem)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mercury_production_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "mergify-application-key",
+      "regex": "\\b(mergify_application_key_[A-Za-z0-9_-]{40,200})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mergify_application_key_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.2\n"
+    },
+    {
+      "id": "messagebird-api-token",
+      "regex": "(?i)(?:message[_-]?bird)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{25})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["messagebird", "message-bird", "message_bird"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "messagebird-client-id",
+      "regex": "(?i)(?:message[_-]?bird)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["messagebird", "message-bird", "message_bird"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "microsoft-teams-webhook",
+      "regex": "https://[a-z0-9]+\\.webhook\\.office\\.com/webhookb2/[a-z0-9]{8}-([a-z0-9]{4}-){3}[a-z0-9]{12}@[a-z0-9]{8}-([a-z0-9]{4}-){3}[a-z0-9]{12}/IncomingWebhook/[a-z0-9]{32}/[a-z0-9]{8}-([a-z0-9]{4}-){3}[a-z0-9]{12}",
+      "keywords": ["webhook.office.com", "webhookb2", "incomingwebhook"]
+    },
+    {
+      "id": "midtrans-production-server-client-key",
+      "regex": "(?i)(?:midtrans|mid[_-]?)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(Mid-(?:server|client)-[A-Za-z0-9_]{10,20})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mid-server-", "mid-client-"],
+      "filter": "entropy(finding[\"secret\"]) < 2.8\n"
+    },
+    {
+      "id": "minimax-api-key",
+      "regex": "(?i)\\b(sk-api-[A-Za-z0-9_-]{119})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sk-api-", "minimax"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "miro-access-token",
+      "regex": "\\b(eyJtaXJv[A-Za-z0-9-]{10,64}_[A-Za-z0-9_-]{20,64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["miro"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "miro-client-id",
+      "regex": "(?i)(?:miro[_. -]*client[_. -]*id)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9]{15,21})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["miro"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 2.5\n"
+    },
+    {
+      "id": "miro-client-secret",
+      "regex": "(?i)(?:miro)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["miro"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "miro-client-id",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "mistral-api-key",
+      "regex": "(?i)(?:mistral)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mistral"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "monday-api-token.1",
+      "regex": "(?i:(?:monday)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(eyJ[A-Za-z0-9_-]{10,200}\\.eyJ[A-Za-z0-9_-]{50,1000}\\.[A-Za-z0-9_-]{20,500})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "specificity": 110,
+      "keywords": ["monday"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "mongodb-atlas-service-account-id",
+      "regex": "\\b(mdb_sa_id_[a-f0-9]{24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mdb_sa_id_"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "mongodb-atlas-service-account-secret",
+      "regex": "\\b(mdb_sa_sk_[A-Za-z0-9_-]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mdb_sa_sk_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n|| matchesAny(finding[\"secret\"], [`^mdb_sa_sk_[0-9]{40}$`])\n",
+      "components": [
+        {
+          "id": "mongodb-atlas-service-account-id"
+        }
+      ]
+    },
+    {
+      "id": "mongodb-connection-string",
+      "regex": "\\b(mongodb(?:\\+srv)?://(?P<username>[!-9;-~]{3,50}):(?P<password>[!-?A-~]{3,88})@(?P<host>(?:[a-zA-Z0-9][\\w.-]+|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})(?::\\d{1,5})?(?:,(?:[a-zA-Z0-9][\\w.-]+|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})(?::\\d{1,5})?)*)/?(?:(?P<authdb>[\\w-]+)?(?P<options>\\?\\w+=[\\w@/.$-]+(?:&(?:amp;)?\\w+=[\\w@/.$-]+)*)?)?)(?:['\"\\s;\\x60]|\\\\[nr]|\\b|$)",
+      "keywords": ["mongodb://", "mongodb+srv://"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n|| matchesAny(finding[\"secret\"], [\n  `(?i)\\bmongodb(?:\\+srv)?:\\/\\/(?:user(?:name)?|foo):(?:pass(?:word)?|bar)(?:[^@\\/]*)?@`,\n  `(?i)\\bmongodb(?:\\+srv)?:\\/\\/[^\\s'\"\\x60]*(?:\\$\\{\\{[^}]+}}|\\$\\{[^}]+}|\\$[A-Za-z_][A-Za-z0-9_]*|{{[^}]+}}|<[^>]+>|\\[[^]]+])[^\\s'\"\\x60]*`\n])\n"
+    },
+    {
+      "id": "mux-access-token-id.1",
+      "regex": "(?i)(?:mux[_.-]?(?:access[_.-]?)?token[_.-]?(?:id|identifier))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mux"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "mux-access-token-secret.1",
+      "regex": "(?i:(?:mux[_.-]?(?:access[_.-]?)?token[_.-]?(?:secret|private|key))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9+/]{75})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["mux"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "mux-access-token-id.1",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "neon-api-key",
+      "regex": "\\b(napi_[A-Za-z0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["napi_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "netlify-access-token",
+      "regex": "(?i)(?:netlify)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9=_\\-]{40,46})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["netlify"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "new-relic-browser-api-token",
+      "regex": "(?i)(?:new-relic|newrelic|new_relic)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(NRJS-[a-f0-9]{19})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["nrjs-"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "new-relic-insert-key",
+      "regex": "(?i)(?:new-relic|newrelic|new_relic)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(NRII-[a-z0-9-]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["nrii-"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "new-relic-user-api-id",
+      "regex": "(?i)(?:new-relic|newrelic|new_relic)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["new-relic", "newrelic", "new_relic"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "new-relic-user-api-key",
+      "regex": "(?i)(?:new-relic|newrelic|new_relic)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(NRAK-[a-z0-9]{27})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["nrak"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "ngrok-api-key.1",
+      "regex": "(?i:(?:ngrok[_. -]*(?:(?:api|agent)[_. -]*)?(?:secret|key|token|authtoken))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(2[A-Za-z0-9]{26}_[0-9][A-Za-z0-9]{20})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ngrok"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "notion-api-token",
+      "regex": "\\b(ntn_[0-9]{11}[A-Za-z0-9]{32}[A-Za-z0-9]{3})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ntn_"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "npm-access-token",
+      "regex": "(?i)\\b(npm_[a-z0-9]{36})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["npm_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "nuget-config-password",
+      "regex": "(?i)<add key=\\\"(?:(?:ClearText)?Password)\\\"\\s*value=\\\"(.{8,})\\\"\\s*/>",
+      "path": "(?i)nuget\\.config$",
+      "keywords": ["<add key="],
+      "filter": "entropy(finding[\"secret\"]) <= 1.0\n|| matchesAny(finding[\"secret\"], [\n  `33f!!lloppa`,\n  `hal\\+9ooo_da!sY`,\n  `^\\%\\S.*\\%$`\n])\n"
+    },
+    {
+      "id": "nvidia-api-key",
+      "regex": "(?i)\\b(nvapi-[A-Z0-9_-]{60,70})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["nvapi-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "nylas-api-key.1",
+      "regex": "\\b(nyk_[A-Za-z0-9]{67})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["nyk_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "nytimes-access-token",
+      "regex": "(?i)(?:nytimes|new-york-times|newyorktimes)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9=_\\-]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["nytimes", "new-york-times", "newyorktimes"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "octopus-deploy-api-key",
+      "regex": "\\b(API-[A-Z0-9]{26})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["api-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "okta-access-token",
+      "regex": "(?i:(?:(?-i:[Oo]kta|OKTA))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(00[\\w=\\-]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["okta"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "ollama-api-key",
+      "regex": "(?i)(?:ollama)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{32}\\.[a-zA-Z0-9_-]{24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ollama"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "onesignal-rich-authentication-token",
+      "regex": "\\b(os_v2_(?:app|org)_[a-z2-7]{103})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["os_v2_app_", "os_v2_org_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "onfido-live-api-token-ca",
+      "regex": "\\b(api_live_ca\\.[A-Za-z0-9_-]{20,80})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["api_live_ca."],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "onfido-live-api-token-eu",
+      "regex": "\\b(api_live\\.[A-Za-z0-9_-]{20,80})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["api_live."],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "onfido-live-api-token-us",
+      "regex": "\\b(api_live_us\\.[A-Za-z0-9_-]{20,80})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["api_live_us."],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "openai-api-key",
+      "regex": "\\b(sk-(?:proj|svcacct|admin)-(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58}|[A-Za-z0-9_-]{20})T3BlbkFJ(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58}|[A-Za-z0-9_-]{20})\\b|sk-[a-zA-Z0-9]{20}T3BlbkFJ[a-zA-Z0-9]{20})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["t3blbkfj"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "openrouter-api-key",
+      "regex": "(?i)\\b(sk-or-v1-[0-9a-f]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sk-or-v1-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "openshift-user-token",
+      "regex": "\\b(sha256~[\\w-]{43})(?:[^\\w-]|\\z)",
+      "keywords": ["sha256~"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "openweather-api-key",
+      "regex": "(?i:(?:openweather|pyowm)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["openweather", "pyowm"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "opsgenie-api-key.1",
+      "regex": "(?i)(?:opsgenie)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["opsgenie"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "ovh-application-key",
+      "regex": "(?i)(?:app(?:lication)?[_.-]{0,1}key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9-]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ovh"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "ovh-application-secret",
+      "regex": "(?i)(?:app(?:lication)?[_.-]{0,1}secret)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9-]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ovh"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n",
+      "components": [
+        {
+          "id": "ovh-application-key",
+          "within": "20L"
+        },
+        {
+          "id": "ovh-consumer-key",
+          "within": "20L"
+        }
+      ]
+    },
+    {
+      "id": "ovh-consumer-key",
+      "regex": "(?i)(?:consumer[_.-]{0,1}key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9-]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ovh"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "paddle-live-api-key",
+      "regex": "\\b(pdl_live_apikey_[a-z0-9]{26}_[A-Za-z0-9]{22}_[A-Za-z0-9]{3})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pdl_live_apikey_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "pagerduty-authorization-token.1",
+      "regex": "(?i:(?:pagerduty)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(u\\+[A-Za-z0-9_+-]{18})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pagerduty"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "paypal-client-id.1",
+      "regex": "(?i:(?:paypal[_.-]?(?:client[_.-]?)?(?:id|user))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(A[A-Za-z0-9_-]{78,99})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["paypal"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "paypal-client-secret.1",
+      "regex": "(?i:(?:paypal[_.-]?(?:client[_.-]?)?(?:secret|private|access|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_.-]{78,120})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["paypal"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "paypal-client-id.1",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "perplexity-api-key",
+      "regex": "\\b(pplx-[a-zA-Z0-9]{48})(?:[\\x60'\"\\s;]|\\\\[nr]|$|\\b)",
+      "keywords": ["pplx-"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "persona-production-api-key",
+      "regex": "\\b(persona_production_[a-z0-9_-]{20,80})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["persona_production_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "pinecone-api-key.1",
+      "regex": "(?i:(?:pinecone(?:[_. -]*(?:api))?[_. -]*(?:secret|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pinecone"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "pinecone-api-key.2",
+      "regex": "\\b(pcsk_[A-Za-z0-9]{5,6}_[A-Za-z0-9]{63})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pcsk_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "pinterest-access-token",
+      "regex": "\\b(pina_[A-Za-z0-9_-]{20,200})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pina_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "pkcs12-file",
+      "path": "(?i)(?:^|\\/)[^\\/]+\\.p(?:12|fx)$"
+    },
+    {
+      "id": "plaid-api-token",
+      "regex": "(?i)(?:plaid)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(access-(?:sandbox|development|production)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["plaid"]
+    },
+    {
+      "id": "plaid-client-id",
+      "regex": "(?i)(?:plaid)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["plaid"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "plaid-secret-key",
+      "regex": "(?i)(?:plaid)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{30})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["plaid"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "planetscale-api-token",
+      "regex": "\\b(pscale_tkn_(?i)[\\w=\\.-]{32,64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pscale_tkn_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n",
+      "components": [
+        {
+          "id": "planetscale-id"
+        }
+      ]
+    },
+    {
+      "id": "planetscale-id",
+      "regex": "(?i)(?:pscale|planetscale)(?:.|[\\n\\r]){0,16}?(?:USER|ID|NAME)(?:.|[\\n\\r]){0,16}?([a-z0-9]{12})",
+      "keywords": ["pscale", "planetscale"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "planetscale-oauth-token",
+      "regex": "\\b(pscale_oauth_[\\w=\\.-]{32,64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pscale_oauth_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "planetscale-password",
+      "regex": "(?i)\\b(pscale_pw_(?i)[\\w=\\.-]{32,64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pscale_pw_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "plivo-auth-id",
+      "regex": "(?i)(?:plivo(?:[_. -]*(?:auth|account))?[_. -]*(?:id|sid))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(MA[A-Z0-9]{18})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["plivo"],
+      "skipReport": true,
+      "filter": "filter.entropy(finding[\"secret\"]) < 2.8 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "plivo-auth-token",
+      "regex": "(?i:(?:plivo(?:[_. -]*(?:auth))?[_. -]*(?:secret|token|key))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_-]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["plivo"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n",
+      "components": [
+        {
+          "id": "plivo-auth-id"
+        }
+      ]
+    },
+    {
+      "id": "polar-oauth-access-token",
+      "regex": "\\b(polar_at_[A-Za-z0-9_-]{20,100})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["polar_at_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "polar-organization-access-token",
+      "regex": "\\b(polar_oat_[A-Za-z0-9_-]{20,100})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["polar_oat_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "polar-personal-access-token",
+      "regex": "\\b(polar_pat_[A-Za-z0-9_-]{20,100})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["polar_pat_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "polymarket-address",
+      "regex": "(?i:(?:poly.{0,20}address)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(0x[a-fA-F0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["poly"],
+      "skipReport": true
+    },
+    {
+      "id": "polymarket-api-key",
+      "regex": "(?i:(?:poly.{0,20}key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["poly"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n",
+      "components": [
+        {
+          "id": "polymarket-api-secret",
+          "within": "20L"
+        },
+        {
+          "id": "polymarket-passphrase",
+          "within": "20L"
+        }
+      ]
+    },
+    {
+      "id": "polymarket-api-secret",
+      "regex": "(?i:(?:poly.{0,20}secret)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-zA-Z0-9+/]{40,}={0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["poly"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "polymarket-passphrase",
+      "regex": "(?i:(?:poly.{0,20}passphrase)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-zA-Z0-9_]{8,128})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["poly"],
+      "skipReport": true
+    },
+    {
+      "id": "polymarket-private-key",
+      "regex": "(?i:(?:poly.{0,20}private.{0,20}key)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(0x[a-fA-F0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["poly"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "posthog-personal-api-key",
+      "regex": "(?i)\\b(phx_[a-zA-Z0-9_\\-]{41,49})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["phx_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "posthog-project-api-key",
+      "regex": "(?i)\\b(phc_[a-zA-Z0-9_\\-]{41,44})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["phc_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "postman-api-token",
+      "regex": "\\b(PMAK-(?i)[a-f0-9]{24}\\-[a-f0-9]{34})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pmak-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "postmark-api-token.1",
+      "regex": "(?i)(?:postmark)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["postmark"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "prefect-api-token",
+      "regex": "\\b(pnu_[a-zA-Z0-9]{36})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pnu_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "private-key",
+      "regex": "(?i)-----BEGIN[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----[\\s\\S-]{64,}?KEY(?: BLOCK)?-----",
+      "keywords": ["-----begin"]
+    },
+    {
+      "id": "privateai-api-token",
+      "regex": "(?i:(?:private[_-]?ai)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["privateai", "private_ai", "private-ai"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "proof-full-access-api-key",
+      "regex": "\\b(prf_(?:cli_)?[A-Za-z0-9_-]{20,80})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["prf_"],
+      "filter": "filter.matchesAny(finding[\"secret\"], [\"^prf_(?:cli_)?test_\"])\n|| entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "pulumi-api-token",
+      "regex": "\\b(pul-[a-f0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["pul-"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "pypi-upload-token",
+      "regex": "pypi-AgEIcHlwaS5vcmc[\\w-]{50,1000}",
+      "keywords": ["pypi-ageichlwas5vcmc"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "rainforest-pay-production-api-key",
+      "regex": "(?i:(?:rainforest(?:[_. -]*pay)?(?:[_. -]*(?:api))?[_. -]*(?:secret|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(apikey_[a-f0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["rainforest"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "ramp-client-id",
+      "regex": "\\b(ramp_id_[A-Za-z0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ramp_id_"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "ramp-client-secret",
+      "regex": "\\b(ramp_sec_[A-Za-z0-9]{48})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ramp_sec_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "ramp-client-id"
+        }
+      ]
+    },
+    {
+      "id": "rapidapi-access-token",
+      "regex": "(?i)(?:rapidapi)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9_-]{50})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["rapidapi"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "razorpay-key-id.1",
+      "regex": "\\b(rzp_(?:live|test)_[A-Za-z0-9]{14})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["rzp_live_", "rzp_test_"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "razorpay-key-secret.1",
+      "regex": "(?i:(?:razorpay[_.-]?(?:(?:api|key)[_.-]?)?(?:secret|private|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9]{24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["razorpay"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n",
+      "components": [
+        {
+          "id": "razorpay-key-id.1",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "readme-api-token",
+      "regex": "\\b(rdme_[a-z0-9]{70})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["rdme_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "redirect-pizza-api-token.1",
+      "regex": "\\b(rpa_[A-Za-z0-9]{30})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["rpa_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "render-api-key",
+      "regex": "\\b(rnd_[A-Za-z0-9]{28})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["rnd_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "replicate-api-token",
+      "regex": "(?i)\\b(r8_[A-Za-z0-9]{37})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["r8_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "resend-api-key.1",
+      "regex": "\\b(re_[1-9A-HJ-NP-Za-km-z]{8}_[1-9A-HJ-NP-Za-km-z]{24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["resend"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "retell-api-key.1",
+      "regex": "(?i:(?:retell)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(key_[a-f0-9]{28})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["retell"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "rootly-api-key.1",
+      "regex": "\\b(rootly_[a-f0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["rootly_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "rubygems-api-token",
+      "regex": "\\b(rubygems_[a-f0-9]{48})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["rubygems_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "runpod-api-key.1",
+      "regex": "\\b(rpa_[A-Z0-9]{40}[A-Za-z0-9]{6})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["rpa_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "salesforce-access-token.1",
+      "regex": "\\b(00[A-Za-z0-9]{13}![A-Za-z0-9._-]{80,260})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["salesforce.com"],
+      "filter": "entropy(finding[\"secret\"]) < 3.3\n",
+      "components": [
+        {
+          "id": "salesforce-instance-url.1",
+          "within": "30L"
+        }
+      ]
+    },
+    {
+      "id": "salesforce-instance-url.1",
+      "regex": "(?i)(?:^|[^a-z0-9.-])(?:https?://)?((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?){0,4}\\.my\\.salesforce\\.com|[a-z]{2,8}[0-9]{1,4}\\.salesforce\\.com))(?:[^a-z0-9.-]|$)",
+      "keywords": ["salesforce.com"],
+      "skipReport": true
+    },
+    {
+      "id": "samsara-api-token.1",
+      "regex": "\\b(samsara_api_[A-Za-z0-9]{26,32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["samsara_api_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "scaleway-secret-key",
+      "regex": "(?i)(?:(?:scaleway|scw).{0,20}?(?:secret|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["scaleway", "scw"]
+    },
+    {
+      "id": "scalingo-api-token",
+      "regex": "\\b(tk-us-[\\w-]{48})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["tk-us-"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "scalr-api-access-token.1",
+      "regex": "(?i:(?:scalr(?:[_. -]*(?:api|access))?[_. -]*(?:secret|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\\.eyJpc3MiOiJ1c2VyIiwianRpIjoiYXQt[A-Za-z0-9_-]{20,40}\\.[A-Za-z0-9_-]{43})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["scalr"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "segment-public-api-token.1",
+      "regex": "\\b(sgp_[A-Za-z0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sgp_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.3\n"
+    },
+    {
+      "id": "sendbird-access-id",
+      "regex": "(?i)(?:sendbird)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sendbird"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "sendbird-access-token",
+      "regex": "(?i)(?:sendbird)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sendbird"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "sendgrid-api-token",
+      "regex": "\\b(SG\\.(?i)[a-z0-9=_\\-\\.]{66})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sg."],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "sendinblue-api-token",
+      "regex": "\\b(xkeysib-[a-fA-F0-9]{64}-[a-zA-Z0-9]{16})\\b",
+      "keywords": ["xkeysib-"],
+      "filter": "entropy(finding[\"secret\"]) < 3.2\n"
+    },
+    {
+      "id": "sentry-access-token",
+      "regex": "(?i)(?:sentry)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sentry"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "sentry-org-token",
+      "regex": "\\bsntrys_eyJpYXQiO[a-zA-Z0-9+/]{10,200}(?:LCJyZWdpb25fdXJs|InJlZ2lvbl91cmwi|cmVnaW9uX3VybCI6)[a-zA-Z0-9+/]{10,200}={0,2}_[a-zA-Z0-9+/]{43}(?:[^a-zA-Z0-9+/]|\\z)",
+      "keywords": ["sntrys_eyjpyxqio"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 4.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "sentry-user-token",
+      "regex": "\\b(sntryu_[a-f0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sntryu_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "settlemint-application-access-token",
+      "regex": "\\b(sm_aat_[a-zA-Z0-9]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sm_aat"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "settlemint-personal-access-token",
+      "regex": "\\b(sm_pat_[a-zA-Z0-9]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sm_pat"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "settlemint-service-access-token",
+      "regex": "\\b(sm_sat_[a-zA-Z0-9]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sm_sat"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "shippo-api-token",
+      "regex": "\\b(shippo_(?:live|test)_[a-fA-F0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["shippo_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "shopify-access-token",
+      "regex": "shpat_[a-fA-F0-9]{32}",
+      "keywords": ["shpat_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "shopify-custom-access-token",
+      "regex": "shpca_[a-fA-F0-9]{32}",
+      "keywords": ["shpca_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "shopify-private-app-access-token",
+      "regex": "shppa_[a-fA-F0-9]{32}",
+      "keywords": ["shppa_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "shopify-shared-secret",
+      "regex": "shpss_[a-fA-F0-9]{32}",
+      "keywords": ["shpss_"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "sidekiq-secret",
+      "regex": "(?i)(?:BUNDLE_ENTERPRISE__CONTRIBSYS__COM|BUNDLE_GEMS__CONTRIBSYS__COM)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{8}:[a-f0-9]{8})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": [
+        "bundle_enterprise__contribsys__com",
+        "bundle_gems__contribsys__com"
+      ]
+    },
+    {
+      "id": "sidekiq-sensitive-url",
+      "regex": "(?i)\\bhttps?://([a-f0-9]{8}:[a-f0-9]{8})@(?:gems.contribsys.com|enterprise.contribsys.com)(?:[\\/|\\#|\\?|:]|$)",
+      "keywords": ["gems.contribsys.com", "enterprise.contribsys.com"]
+    },
+    {
+      "id": "slack-app-token",
+      "regex": "(?i)xapp-\\d-[A-Z0-9]+-\\d+-[a-z0-9]+",
+      "keywords": ["xapp"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "slack-bot-token",
+      "regex": "xoxb-[0-9]{10,13}-[0-9]{10,13}[a-zA-Z0-9-]*",
+      "keywords": ["xoxb"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "slack-config-access-token",
+      "regex": "(?i)xoxe.xox[bp]-\\d-[A-Z0-9]{163,166}",
+      "keywords": ["xoxe.xoxb-", "xoxe.xoxp-"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "slack-config-refresh-token",
+      "regex": "(?i)xoxe-\\d-[A-Z0-9]{146}",
+      "keywords": ["xoxe-"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "slack-legacy-bot-token",
+      "regex": "xoxb-[0-9]{8,14}-[a-zA-Z0-9]{18,26}",
+      "keywords": ["xoxb"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "slack-legacy-token",
+      "regex": "xox[os]-\\d+-\\d+-\\d+-[a-fA-F\\d]+",
+      "keywords": ["xoxo", "xoxs"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "slack-legacy-workspace-token",
+      "regex": "xox[ar]-(?:\\d-)?[0-9a-zA-Z]{8,48}",
+      "keywords": ["xoxa", "xoxr"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "slack-session-cookie",
+      "regex": "(xoxd-[\\w\\/\\\\+-]{100,}={0,2})(?:[^\\w\\/+=-]|\\z)",
+      "keywords": ["xoxd-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "slack-session-token",
+      "regex": "xoxc-\\d{9,15}-\\d{9,15}-\\d{9,15}-[a-f0-9]{64}\\b",
+      "keywords": ["xoxc-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "slack-user-token",
+      "regex": "xox[pe](?:-[0-9]{10,13}){3}-[a-zA-Z0-9-]{28,34}",
+      "keywords": ["xoxp-", "xoxe-"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "slack-webhook-url",
+      "regex": "(?:https?://)?hooks.slack.com/(?:services|workflows|triggers)/[A-Za-z0-9+/]{43,56}",
+      "keywords": ["hooks.slack.com"]
+    },
+    {
+      "id": "snowflake-account-host.1",
+      "regex": "(?i)\\b([a-z0-9_-]+(?:\\.[a-z0-9_-]+)*\\.snowflakecomputing\\.com)\\b",
+      "keywords": ["snowflakecomputing.com"],
+      "skipReport": true
+    },
+    {
+      "id": "snowflake-programmatic-access-token.1",
+      "regex": "(?i:(?:(?:snowflake[_. -]*(?:programmatic[_. -]*)?(?:access[_. -]*)?token|sf[_. -]*token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9_-]{100,500})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["snowflake", "sf_token"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n",
+      "components": [
+        {
+          "id": "snowflake-account-host.1",
+          "within": "30L"
+        }
+      ]
+    },
+    {
+      "id": "snyk-api-token",
+      "regex": "(?i)(?:snyk[_.-]?(?:(?:api|oauth)[_.-]?)?(?:key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["snyk"]
+    },
+    {
+      "id": "sonar-api-token",
+      "regex": "(?i)(?:sonar[_.-]?(login|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((?:squ_|sqp_|sqa_)?[a-z0-9=_\\-]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "secretGroup": 2,
+      "keywords": ["sonar"]
+    },
+    {
+      "id": "sourcegraph-access-token",
+      "regex": "(?i)\\b(sgp_(?:[a-fA-F0-9]{16}|local)_[a-fA-F0-9]{40}|sgp_[a-fA-F0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sgp_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "square-access-token",
+      "regex": "\\b((?:EAAA|sq0atp-)[\\w-]{22,60})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sq0atp-", "eaaa"],
+      "filter": "entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "squarespace-access-token",
+      "regex": "(?i)(?:squarespace)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["squarespace"]
+    },
+    {
+      "id": "sslmate-api-key.1",
+      "regex": "(?i:(?:sslmate(?:[_. -]*(?:api))?[_. -]*(?:secret|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9]{36})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sslmate"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "stability-ai-api-key",
+      "regex": "(?i)(?:stability)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(sk-[A-Za-z0-9]{48})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["stability"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "stripe-access-token",
+      "regex": "\\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": [
+        "sk_test",
+        "sk_live",
+        "sk_prod",
+        "rk_test",
+        "rk_live",
+        "rk_prod"
+      ],
+      "filter": "filter.matchesAny(finding[\"secret\"], [\"^sk_live_a2V5Xz\"])\n|| entropy(finding[\"secret\"]) <= 2.0\n"
+    },
+    {
+      "id": "sumologic-access-id",
+      "regex": "(?i)(?:(?-i:[Ss]umo|SUMO))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((?-i:su)[a-zA-Z0-9]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sumo"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "sumologic-access-token",
+      "regex": "(?i)(?:(?-i:[Ss]umo|SUMO))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sumo"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "supabase-management-token",
+      "regex": "\\b(sbp_[a-z0-9_-]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sbp_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n|| !matchesAny(finding[\"secret\"], [`^sbp_[a-z0-9_-]*[0-9][a-z0-9_-]*[0-9][a-z0-9_-]*$`])\n"
+    },
+    {
+      "id": "supabase-project-api-key",
+      "regex": "\\b(sb_secret_[A-Za-z0-9_-]{31})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["sb_secret_"],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n",
+      "components": [
+        {
+          "id": "supabase-project-url"
+        }
+      ]
+    },
+    {
+      "id": "supabase-project-url",
+      "regex": "\\b(https://[a-z0-9]{16,32}\\.supabase\\.co)\\b",
+      "keywords": ["supabase.co"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "tableau-personal-access-token-name.1",
+      "regex": "(?i:(?:tableau(?:[_. -]*(?:personal[_. -]*access|pat))?[_. -]*(?:token[_. -]*)?name)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z][A-Za-z0-9_-]{2,50})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["tableau"],
+      "skipReport": true
+    },
+    {
+      "id": "tableau-personal-access-token.1",
+      "regex": "\\b([A-Za-z0-9+/]{22}==:[A-Za-z0-9]{32})\\b",
+      "keywords": ["tableau"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "tableau-personal-access-token-name.1",
+          "within": "20L"
+        },
+        {
+          "id": "tableau-server-host.1",
+          "within": "20L"
+        }
+      ]
+    },
+    {
+      "id": "tableau-server-host.1",
+      "regex": "(?i)\\b([a-z0-9-]+\\.online\\.tableau\\.com)\\b",
+      "keywords": ["online.tableau.com"],
+      "skipReport": true
+    },
+    {
+      "id": "tailscale-api-key.1",
+      "regex": "\\b(tskey-api-[A-Za-z0-9_-]{20,36})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["tskey-api-"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "telegram-bot-api-token",
+      "regex": "(?i)(?:telegr)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9]{5,16}:(?-i:A)[a-z0-9_\\-]{34})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["telegr"]
+    },
+    {
+      "id": "telnyx-api-v2-key.1",
+      "regex": "(?i:(?:telnyx(?:[_. -]*(?:api))?[_. -]*(?:secret|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(KEY[0-9A-Za-z_-]{55})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["telnyx"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "temporal-cloud-api-key.1",
+      "regex": "\\b(eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]*Y2NvdW50X2lk[A-Za-z0-9_-]*InRlbXBvcmFsLmlv[A-Za-z0-9_-]*(?:ICJrZXlfaWQiOi|a2V5X2lk|rZXlfaWQi)[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]{20,})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["inrlbxbvcmfslmlv"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.2\n|| !filter.matchesAny(finding[\"secret\"], [\"^(?:[^0-9]*[0-9]){3}\"])\n"
+    },
+    {
+      "id": "thunderstore-api-token.1",
+      "regex": "\\b(tss_[A-Za-z0-9_-]{20,80})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["tss_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n|| !filter.matchesAny(finding[\"secret\"], [\"^(?:[^0-9]*[0-9]){2}\"])\n"
+    },
+    {
+      "id": "togetherai-api-key",
+      "regex": "(?i)\\b(tgp_v1_[A-Za-z0-9_-]{43})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["tgp_v1_"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "travisci-access-token",
+      "regex": "(?i)(?:travis)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{22})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["travis"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "twilio-api-key",
+      "regex": "SK[0-9a-fA-F]{32}",
+      "keywords": ["twilio"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.0\n"
+    },
+    {
+      "id": "twitch-api-token",
+      "regex": "(?i)(?:twitch)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{30})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["twitch"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "twitter-access-secret",
+      "regex": "(?i)(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{45})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["twitter"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "twitter-access-token",
+      "regex": "(?i)(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9]{15,25}-[a-zA-Z0-9]{20,40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["twitter"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "twitter-api-key",
+      "regex": "(?i)(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{25})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["twitter"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "twitter-api-secret",
+      "regex": "(?i)(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{50})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["twitter"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "twitter-bearer-token",
+      "regex": "(?i)(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(A{22}[a-zA-Z0-9%]{80,100})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["twitter"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.0 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "typeform-api-token",
+      "regex": "(?i)(?:typeform)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(tfp_[a-z0-9\\-_\\.=]{59})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["tfp_"]
+    },
+    {
+      "id": "unkey-root-key.1",
+      "regex": "\\b(unkey_[A-Za-z0-9]{20,32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["unkey_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n|| !filter.matchesAny(finding[\"secret\"], [\"[0-9]\"])\n|| !filter.matchesAny(finding[\"secret\"], [\"[A-Z]\"])\n|| !filter.matchesAny(finding[\"secret\"], [\"[a-z]\"])\n"
+    },
+    {
+      "id": "upcloud-api-token",
+      "regex": "\\b(ucat_[0-9A-Za-z]{24,32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["ucat_"]
+    },
+    {
+      "id": "upstage-api-key",
+      "regex": "(?i)(?:upstage)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9]{40,50})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["upstage"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "upstash-redis-rest-token.1",
+      "regex": "(?i:(?:upstash)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((?:[A-Za-z0-9]{32,48}|AYNgAS[A-Za-z0-9+/_-]{26,90}={0,2}))(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["upstash"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "upstash-redis-rest-url.1",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "upstash-redis-rest-url.1",
+      "regex": "(?i)\\b(https://[a-z0-9][a-z0-9-]{2,63}\\.upstash\\.io)(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["upstash.io"],
+      "skipReport": true
+    },
+    {
+      "id": "val-town-api-token.1",
+      "regex": "\\b(vtwn_[A-Za-z0-9_-]{20,80})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["vtwn_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n|| !filter.matchesAny(finding[\"secret\"], [\"^(?:[^0-9]*[0-9]){2}\"])\n"
+    },
+    {
+      "id": "vault-batch-token",
+      "regex": "\\b(hvb\\.[\\w-]{138,300})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["hvb."],
+      "filter": "entropy(finding[\"secret\"]) <= 4.0\n"
+    },
+    {
+      "id": "vault-service-token",
+      "regex": "\\b((?:hvs\\.[\\w-]{90,120}|s\\.(?i:[a-z0-9]{24})))(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["hvs.", "vault"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n|| matchesAny(finding[\"secret\"], [`s\\.[A-Za-z]{24}`])\n"
+    },
+    {
+      "id": "vercel-ai-gateway-key",
+      "regex": "(?i)\\b(vck_[A-Za-z0-9_-]{56})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["vck_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "vercel-api-token",
+      "regex": "(?i)(?:vercel)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Z0-9]{24})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["vercel"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "vercel-app-access-token",
+      "regex": "(?i)\\b(vca_[A-Za-z0-9_-]{56})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["vca_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "vercel-app-refresh-token",
+      "regex": "(?i)\\b(vcr_[A-Za-z0-9_-]{56})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["vcr_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "vercel-integration-token",
+      "regex": "(?i)\\b(vci_[A-Za-z0-9_-]{56})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["vci_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "vercel-personal-access-token",
+      "regex": "(?i)\\b(vcp_[A-Za-z0-9_-]{56})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["vcp_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "virustotal-api-key.1",
+      "regex": "(?i)(?:virustotal)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["virustotal"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "voyageai-api-key",
+      "regex": "(?i:(?:voyage)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((?:pa|al)-[A-Za-z0-9_-]{43})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["voyage"],
+      "filter": "entropy(finding[\"secret\"]) < 4.0\n"
+    },
+    {
+      "id": "vultr-api-key.1",
+      "regex": "(?i)(?:vultr)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{36})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["vultr"],
+      "filter": "entropy(finding[\"secret\"]) < 3.4\n"
+    },
+    {
+      "id": "wakatime-api-key.1",
+      "regex": "(?i:(?:waka[_. -]?time(?:[_. -]*(?:api))?[_. -]*(?:secret|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": [
+        "wakatime",
+        "waka_time",
+        "waka-time",
+        "waka time",
+        "waka.time"
+      ],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "wakatime-api-key.2",
+      "regex": "(?i)\\b(waka_[a-z0-9]{36,64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["waka_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "weatherstack-api-key.1",
+      "regex": "(?i:(?:weatherstack(?:[_. -]*(?:api))?[_. -]*(?:secret|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([0-9a-z]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["weatherstack"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.3 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "weights-and-biases-api-key",
+      "regex": "(?i)(?:wandb|weightsandbiases)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["wandb", "weightsandbiases"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "weights-and-biases-api-key-v1",
+      "regex": "(?i)\\b(wandb_v1_[A-Za-z0-9_]{77})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["wandb_v1_"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "wiz-client-id.1",
+      "regex": "(?i:(?:wiz)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9]{53,56})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["wiz"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 4.0\n"
+    },
+    {
+      "id": "wiz-client-secret.1",
+      "regex": "(?i:(?:wiz)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([A-Za-z0-9]{64})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["wiz"],
+      "filter": "entropy(finding[\"secret\"]) < 4.0\n",
+      "components": [
+        {
+          "id": "wiz-client-id.1",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "woocommerce-consumer-secret.1",
+      "regex": "(?i)(?:woo)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(cs_[a-f0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["wooc", "woo-", "woo_", "cs_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "workato-developer-api-token.1",
+      "regex": "\\b(wrka(?:[a-z]{2})?-eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{64,})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["wrka"],
+      "filter": "entropy(finding[\"secret\"]) < 4.0\n"
+    },
+    {
+      "id": "workos-production-api-key.1",
+      "regex": "(?i:(?:workos(?:[_. -]*(?:api))?[_. -]*(?:secret|key|token))(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(sk_live_a2V5Xz[A-Za-z0-9+/]{69}={0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["workos"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5\n|| filter.matchesAny(finding[\"secret\"], [\"(?i)example\"])\n"
+    },
+    {
+      "id": "xai-api-key",
+      "regex": "(?i)\\b(xai-[A-Za-z0-9_-]{70,120})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["xai-"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "xendit-production-api-key.1",
+      "regex": "\\b(xnd_production_[A-Za-z0-9]{56,72})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["xnd_production_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "yandex-access-token",
+      "regex": "(?i)(?:yandex)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(t1\\.[A-Z0-9a-z_-]+[=]{0,2}\\.[A-Z0-9a-z_-]{86}[=]{0,2})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["yandex"]
+    },
+    {
+      "id": "yandex-api-key",
+      "regex": "(?i)(?:yandex)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(AQVN[A-Za-z0-9_\\-]{35,38})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["yandex"]
+    },
+    {
+      "id": "yandex-aws-access-token",
+      "regex": "(?i)(?:yandex)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(YC[a-zA-Z0-9_\\-]{38})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["yandex"]
+    },
+    {
+      "id": "zai-api-key",
+      "regex": "(?i)(?:zai|z_ai|z\\.ai|glm|zlm)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{32}\\.[a-z0-9]{16})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["zai", "z_ai", "z.ai", "glm", "zlm"],
+      "filter": "entropy(finding[\"secret\"]) <= 3.5\n"
+    },
+    {
+      "id": "zendesk-secret-key",
+      "regex": "(?i)(?:zendesk)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-z0-9]{40})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["zendesk"],
+      "filter": "filter.entropy(finding[\"secret\"]) < 3.5 || filter.tokenRatio(finding[\"secret\"]) >= 2.5\n"
+    },
+    {
+      "id": "zoho-client-id.1",
+      "regex": "(?i)(?:zoho)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(1000\\.[a-z0-9]{30})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["zoho"],
+      "skipReport": true,
+      "filter": "entropy(finding[\"secret\"]) < 3.0\n"
+    },
+    {
+      "id": "zoho-client-secret.1",
+      "regex": "(?i)(?:zoho)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}([a-f0-9]{42})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["zoho"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n",
+      "components": [
+        {
+          "id": "zoho-client-id.1",
+          "within": "5L"
+        }
+      ]
+    },
+    {
+      "id": "zoho-oauth-token.1",
+      "regex": "(?i)(?:zoho)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}(1000\\.[a-f0-9]{32}\\.[a-f0-9]{32})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["zoho"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "zoho-zapi-key.1",
+      "regex": "(?i)(?:zoho)(?:[ \\t\\w.-]{0,20})[\\s'\"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60'\"\\s=]{0,5}((?:1001\\.[a-f0-9]{32}\\.[a-f0-9]{32}(?:-d)?|1003\\.[a-f0-9]{32,64}))(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["zoho"],
+      "filter": "entropy(finding[\"secret\"]) < 3.5\n"
+    },
+    {
+      "id": "zuplo-consumer-api-key.1",
+      "regex": "\\b(zpka_[a-z0-9]{32}_[0-9a-f]{8})(?:\\\\?['\"\\x60]|[\\s;]|\\\\[nr]|$)",
+      "keywords": ["zpka_"],
+      "filter": "entropy(finding[\"secret\"]) < 3.3\n"
+    }
+  ]
+}

@@ -1,6 +1,5 @@
 {
   gh,
-  lib,
   uv,
 }:
 let

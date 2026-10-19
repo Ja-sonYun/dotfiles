@@ -43,7 +43,7 @@ resolve_session_id() {
 detect_agent() {
 	local word base mapping pattern display_name
 	local -a mappings
-	read -r -a mappings <<< "$(tmux show-option -gqv @agent_command_map)"
+	read -r -a mappings < <(printf '%s\n' "$(tmux show-option -gqv @agent_command_map)")
 	for word in "$@"; do
 		for word in $word; do
 			base="${word##*/}"

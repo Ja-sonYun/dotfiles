@@ -62,7 +62,7 @@ func sendYabai(ctx context.Context, socket string, args ...string) ([]byte, erro
 
 	response, err := io.ReadAll(conn)
 	if err != nil {
-		return nil, fmt.Errorf("read from yabai; execution is unknown: %w", err)
+		return response, fmt.Errorf("read from yabai; execution is unknown: %w", err)
 	}
 	if len(response) > 0 && response[0] == 0x07 {
 		return nil, yabaiError(strings.TrimSpace(string(response[1:])))

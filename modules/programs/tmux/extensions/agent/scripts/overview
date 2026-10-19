@@ -76,7 +76,7 @@ default_width="${default_width:-75%}"
 default_height="${default_height:-70%}"
 geom="$(tmux show-options -gqv @popup_geom__popup_all_agents)"
 if [[ -n "$geom" ]]; then
-	read -r x y w h <<<"$geom"
+	read -r x y w h < <(printf '%s\n' "$geom")
 else
 	x=C
 	y=C

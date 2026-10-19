@@ -20,7 +20,7 @@ else
 			fi
 			command="$(label_for_cmd "${stored_command:-$command}")"
 			printf '%s\t%s:%s [%s]\n' "$pane_id" "$label" "$command" "$index"
-		done <<<"$panes"
+		done < <(printf '%s\n' "$panes")
 	)
 fi
 
@@ -31,7 +31,7 @@ if selected=$(
 		--with-nth=2.. \
 		--accept-nth=1 \
 		--no-multi \
-		--prompt='Pane> ' <<<"$rows"
+		--prompt='Pane> ' < <(printf '%s\n' "$rows")
 ); then
 	[[ -n "$selected" ]] || exit 0
 	if [[ "${1:-}" == --stdin ]]; then

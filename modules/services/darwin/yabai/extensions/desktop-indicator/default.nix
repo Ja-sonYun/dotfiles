@@ -8,6 +8,13 @@ let
   cfg = config.services.yabai.extensions.desktopIndicator;
   script = pkgs.replaceVars ./script.lua {
     yabai = "${config.services.yabai.package}/bin/yabai";
+    controllerSocket =
+      if
+        config.services.yabai.extensions.controller.enable && config.services.hammerspoon.keybindings != { }
+      then
+        config.services.yabai.extensions.controller.socketPath
+      else
+        "";
   };
 in
 {

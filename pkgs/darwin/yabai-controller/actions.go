@@ -19,6 +19,13 @@ type window struct {
 	Floating bool   `json:"is-floating"`
 }
 
+type space struct {
+	ID         uint64 `json:"id"`
+	Index      int    `json:"index"`
+	Visible    bool   `json:"is-visible"`
+	Fullscreen bool   `json:"is-native-fullscreen"`
+}
+
 func focusedWindow(ctx context.Context, socket string) (window, error) {
 	data, err := sendYabai(ctx, socket, "query", "--windows", "id,is-floating", "--window")
 	if err != nil {
@@ -34,20 +41,25 @@ func focusedWindow(ctx context.Context, socket string) (window, error) {
 	return focused, nil
 }
 
-func displaySpace(ctx context.Context, socket string, number int) (string, error) {
-	if number < 1 {
-		return "", fmt.Errorf("space number must be positive")
-	}
-	data, err := sendYabai(ctx, socket, "query", "--spaces", "index,is-native-fullscreen", "--display")
+func displaySpaces(ctx context.Context, socket string) ([]space, error) {
+	data, err := sendYabai(ctx, socket, "query", "--spaces", "id,index,is-native-fullscreen,is-visible", "--display")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	var spaces []struct {
-		Index      int  `json:"index"`
-		Fullscreen bool `json:"is-native-fullscreen"`
-	}
+	var spaces []space
 	if err := json.Unmarshal(data, &spaces); err != nil {
-		return "", fmt.Errorf("decode display spaces: %w", err)
+		return nil, fmt.Errorf("decode display spaces: %w", err)
+	}
+	return spaces, nil
+}
+
+func displaySpace(ctx context.Context, socket string, number int) (space, error) {
+	if number < 1 {
+		return space{}, fmt.Errorf("space number must be positive")
+	}
+	spaces, err := displaySpaces(ctx, socket)
+	if err != nil {
+		return space{}, err
 	}
 	for _, space := range spaces {
 		if space.Fullscreen {
@@ -55,39 +67,63 @@ func displaySpace(ctx context.Context, socket string, number int) (string, error
 		}
 		number--
 		if number == 0 && space.Index > 0 {
-			return strconv.Itoa(space.Index), nil
+			return space, nil
 		}
 	}
-	return "", fmt.Errorf("requested regular space does not exist on the focused display")
+	return space{}, fmt.Errorf("requested regular space does not exist on the focused display")
 }
 
-func execute(ctx context.Context, socket string, request action) error {
+func execute(ctx context.Context, socket string, request action) (uint64, error) {
 	var args []string
+	var targetSpaceID uint64
 	switch request.Action {
 	case "command":
 		args = request.Args
+		if len(args) == 3 && args[0] == "display" && args[1] == "--space" && (args[2] == "prev" || args[2] == "next") {
+			spaces, err := displaySpaces(ctx, socket)
+			if err != nil {
+				return 0, err
+			}
+			for index, current := range spaces {
+				if !current.Visible {
+					continue
+				}
+				target := index - 1
+				if args[2] == "next" {
+					target = index + 1
+				}
+				// Native relative selectors include fullscreen Spaces; retain native boundary errors.
+				// https://github.com/asmvik/yabai/blob/dd845723416f5fe92af49fad5ebab00369e07edd/src/space_manager.c
+				if target >= 0 && target < len(spaces) {
+					targetSpaceID = spaces[target].ID
+					args = []string{"display", "--space", strconv.Itoa(spaces[target].Index)}
+				}
+				break
+			}
+		}
 	case "focus-space", "move-space":
 		var focused window
 		if request.Action == "move-space" {
 			var err error
 			focused, err = focusedWindow(ctx, socket)
 			if err != nil {
-				return err
+				return 0, err
 			}
 		}
 		target, err := displaySpace(ctx, socket, request.Space)
 		if err != nil {
-			return err
+			return 0, err
 		}
+		targetSpaceID = target.ID
 		if request.Action == "focus-space" {
-			args = []string{"space", "--focus", target}
+			args = []string{"space", "--focus", strconv.Itoa(target.Index)}
 		} else {
-			args = []string{"window", strconv.FormatUint(uint64(focused.ID), 10), "--space", target, "--focus"}
+			args = []string{"window", strconv.FormatUint(uint64(focused.ID), 10), "--space", strconv.Itoa(target.Index), "--focus"}
 		}
 	case "stack-recent":
 		focused, err := focusedWindow(ctx, socket)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		args = []string{"window", "recent", "--stack", strconv.FormatUint(uint64(focused.ID), 10)}
 	case "focus-stack-prev", "focus-stack-next":
@@ -98,13 +134,13 @@ func execute(ctx context.Context, socket string, request action) error {
 		_, err := sendYabai(ctx, socket, "window", "--focus", direction)
 		var rejected yabaiError
 		if !errors.As(err, &rejected) {
-			return err
+			return 0, err
 		}
 		args = []string{"window", "--focus", wrap}
 	case "toggle-float":
 		focused, err := focusedWindow(ctx, socket)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		layer := "above"
 		if focused.Floating {
@@ -112,9 +148,9 @@ func execute(ctx context.Context, socket string, request action) error {
 		}
 		args = []string{"window", strconv.FormatUint(uint64(focused.ID), 10), "--toggle", "float", "--sub-layer", layer}
 	default:
-		return fmt.Errorf("unknown action %q", request.Action)
+		return 0, fmt.Errorf("unknown action %q", request.Action)
 	}
 
 	_, err := sendYabai(ctx, socket, args...)
-	return err
+	return targetSpaceID, err
 }

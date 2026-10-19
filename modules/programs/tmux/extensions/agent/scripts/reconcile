@@ -18,11 +18,11 @@ waiting_re='(❯|›) *[0-9]+\.'
 idle_re='context [0-9]+% left|worked for [0-9]'
 
 detect_state() {
-	if grep -qiE "$waiting_re" <<<"$1"; then
+	if grep -qiE "$waiting_re" < <(printf '%s\n' "$1"); then
 		printf 'waiting'
-	elif grep -qiE "$running_re" <<<"$1"; then
+	elif grep -qiE "$running_re" < <(printf '%s\n' "$1"); then
 		printf 'running'
-	elif grep -qiE "$idle_re" <<<"$1"; then
+	elif grep -qiE "$idle_re" < <(printf '%s\n' "$1"); then
 		printf 'idle'
 	fi
 }

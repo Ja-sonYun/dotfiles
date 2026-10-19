@@ -38,7 +38,7 @@ in
 
       pwd = ''
         p="''${PWD/#$HOME/\~}"
-        oldIFS="$IFS"; IFS=/; read -ra parts <<< "$p"; IFS="$oldIFS"
+        oldIFS="$IFS"; IFS=/; read -ra parts < <(printf '%s\n' "$p"); IFS="$oldIFS"
         n=''${#parts[@]}
         out=()
         for (( i=0; i<n; i++ )); do

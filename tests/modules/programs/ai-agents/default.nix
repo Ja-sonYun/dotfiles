@@ -37,7 +37,6 @@ let
     ../../../../modules/programs/claude
     ../../../../modules/programs/claude-desktop
     ../../../../modules/programs/codex
-    ../../../../modules/programs/pi
   ];
   baseModule = {
     home = {
@@ -54,10 +53,6 @@ let
       codex = {
         enable = true;
         package = testPackage "codex";
-      };
-      pi = {
-        enable = true;
-        package = testPackage "pi";
       };
     };
   };

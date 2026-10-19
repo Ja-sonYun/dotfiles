@@ -16,10 +16,12 @@ local function query(domain, callback)
 	local properties = domain == "--spaces" and "id,index,display"
 		or "role,subrole,display,space,is-hidden,is-minimized,is-sticky"
 	local request = {
+		started = hs.timer.absoluteTime(),
 		stdoutBytes = 0,
 		stderrBytes = 0,
 	}
 	module.query = request
+	local stdoutChunks, stderrChunks = {}, {}
 
 	local function finish(result, reason)
 		if module.query ~= request then
@@ -28,6 +30,11 @@ local function query(domain, callback)
 		request.timeout:stop()
 		if reason then
 			logger:e("query_failed", {
+				revision = module.revision,
+				elapsed_ms = (hs.timer.absoluteTime() - request.started) / 1e6,
+				stdout_tail = request.stdoutTail,
+				stderr = request.stderr,
+				last_success = module.lastSuccess,
 				domain = domain,
 				reason = reason,
 				exit_code = request.code,
@@ -39,19 +46,25 @@ local function query(domain, callback)
 		callback(result)
 	end
 
-	request.task = hs.task.new("@yabai@", function(code, stdout, stderr)
+	local function complete()
 		if module.query ~= request then
 			return
 		end
-		request.code = code
+		local stdout = table.concat(stdoutChunks) .. (request.stdoutEnd or "")
+		local stderr = table.concat(stderrChunks) .. (request.stderrEnd or "")
 		request.stdoutBytes = #(stdout or "")
 		request.stderrBytes = #(stderr or "")
+		request.stdoutTail = (stdout or ""):sub(-512)
+		request.stderr = (stderr or ""):sub(-1024)
+		if request.code == nil then
+			return
+		end
 
 		if request.expired then
 			finish(nil, "timeout")
 			return
 		end
-		if code ~= 0 then
+		if request.code ~= 0 then
 			finish(nil, "exit")
 			return
 		end
@@ -59,16 +72,32 @@ local function query(domain, callback)
 		local ok, result = pcall(hs.json.decode, output)
 		if ok and type(result) == "table" then
 			finish(result)
-		else
-			finish(nil, "invalid-json")
 		end
+	end
+
+	-- Drain pipes while running; stream callbacks may arrive after termination.
+	-- https://www.hammerspoon.org/docs/hs.task.html#new
+	request.task = hs.task.new("@yabai@", function(code, stdout, stderr)
+		request.code = code
+		request.stdoutEnd = stdout
+		request.stderrEnd = stderr
+		complete()
+	end, function(_, stdout, stderr)
+		stdoutChunks[#stdoutChunks + 1] = stdout or ""
+		stderrChunks[#stderrChunks + 1] = stderr or ""
+		complete()
+		return true
 	end, { "-m", "query", domain, properties })
 	request.timeout = hs.timer.doAfter(5, function()
 		if module.query ~= request then
 			return
 		end
 		request.expired = true
-		request.task:terminate()
+		if request.code ~= nil then
+			finish(nil, "invalid-json")
+		else
+			request.task:terminate()
+		end
 	end)
 	if not request.task or not request.task:start() then
 		finish(nil, "start-failed")
@@ -142,42 +171,29 @@ local function removeDisplay(uuid)
 	end
 end
 
-local function updateDisplay(screen, uuid, activeSpace)
+local function updateDisplay(screen, uuid, managedDisplay)
 	local frame = screen:frame()
 	local fullFrame = screen:fullFrame()
 	if frame.y - fullFrame.y < height then
 		removeDisplay(uuid)
 		return
 	end
-	if not activeSpace then
+	if not managedDisplay then
 		return
 	end
-	local activeSpaceType = hs.spaces.spaceType(activeSpace)
-	if not activeSpaceType then
-		return
-	end
-	if activeSpaceType ~= "user" then
-		removeDisplay(uuid)
-		return
-	end
-
-	local spaces = hs.spaces.spacesForScreen(screen)
-	if not spaces then
-		return
-	end
+	local activeSpace = managedDisplay["Current Space"].ManagedSpaceID
 
 	local desktops = {}
 	local currentIndex
-	for _, space in ipairs(spaces) do
-		local spaceType = hs.spaces.spaceType(space)
-		if not spaceType then
-			return
-		end
-		if spaceType == "user" then
-			desktops[#desktops + 1] = space
-			if space == activeSpace then
+	for _, space in ipairs(managedDisplay.Spaces) do
+		if space.type == 0 then
+			desktops[#desktops + 1] = space.ManagedSpaceID
+			if space.ManagedSpaceID == activeSpace then
 				currentIndex = #desktops
 			end
+		elseif space.ManagedSpaceID == activeSpace then
+			removeDisplay(uuid)
+			return
 		end
 	end
 	if not currentIndex then
@@ -194,6 +210,9 @@ local function updateDisplay(screen, uuid, activeSpace)
 	local state = table.concat({ table.concat(desktops, ","), table.concat(contents, ","), activeSpace, x, y }, ":")
 	local display = module.displays[uuid]
 	if display and display.state == state then
+		if not display.canvas:isShowing() then
+			display.canvas:show()
+		end
 		return
 	end
 
@@ -279,19 +298,23 @@ local function updateDisplay(screen, uuid, activeSpace)
 		state = state,
 		count = #desktops,
 	}
-	if create then
-		canvas:show()
-	end
+	canvas:show()
 end
 
-local function refresh()
-	local activeSpaces = hs.spaces.activeSpaces() or {}
+local function refresh(snapshot)
+	-- Share one snapshot: the convenience getters each repeat this native query.
+	-- https://www.hammerspoon.org/docs/hs.spaces.html#data_managedDisplaySpaces
+	snapshot = snapshot or hs.spaces.data_managedDisplaySpaces()
+	local displays = {}
+	for _, display in ipairs(snapshot) do
+		displays[display["Display Identifier"]] = display
+	end
 	local connected = {}
 	for _, screen in ipairs(hs.screen.allScreens()) do
 		local uuid = screen:getUUID()
 		if uuid then
 			connected[uuid] = true
-			updateDisplay(screen, uuid, activeSpaces[uuid])
+			updateDisplay(screen, uuid, displays[uuid] or displays.Main)
 		end
 	end
 	for uuid in pairs(module.displays) do
@@ -299,19 +322,23 @@ local function refresh()
 			removeDisplay(uuid)
 		end
 	end
+	return snapshot
 end
 
 local refreshSafely = logger:wrap("refresh_failed", refresh)
 
 local function refreshOccupancy()
 	if module.refreshing then
+		module.pending = true
 		return
 	end
+	module.pending = false
 	module.refreshing = true
 	local revision = module.revision
 	local function finish(occupancy)
 		module.refreshing = false
 		if revision == module.revision and occupancy then
+			module.lastSuccess = hs.timer.secondsSinceEpoch()
 			local changed = false
 			for space, occupied in pairs(occupancy) do
 				if module.occupancy[space] ~= occupied then
@@ -332,6 +359,9 @@ local function refreshOccupancy()
 			if changed then
 				refreshSafely()
 			end
+		end
+		if module.pending then
+			refreshOccupancy()
 		end
 	end
 	query("--spaces", function(spaces)
@@ -358,14 +388,103 @@ local function refreshAll()
 	refreshOccupancySafely()
 end
 
-local function spacesChanged()
-	module.revision = module.revision + 1
-	refreshAll()
+local function spacesChanged(event)
+	local snapshot = hs.spaces.data_managedDisplaySpaces()
+	-- Selecting a desktop does not change which desktops contain windows.
+	local selectionOnly = event == "space_changed"
+	local selectionState
+	if selectionOnly then
+		local selection = {}
+		for _, display in ipairs(snapshot) do
+			selection[#selection + 1] = display["Display Identifier"] .. ":" .. display["Current Space"].ManagedSpaceID
+		end
+		table.sort(selection)
+		local state = table.concat(selection, ",")
+		if module.selection == state then
+			return
+		end
+		selectionState = state
+	else
+		module.selection = nil
+		module.revision = module.revision + 1
+	end
+	refreshSafely(snapshot)
+	module.selection = selectionState
+	if not selectionOnly then
+		refreshOccupancySafely()
+	end
 end
 
-module.spaceWatcher = hs.spaces.watcher.new(spacesChanged):start()
-module.screenWatcher = hs.screen.watcher.new(spacesChanged):start()
-module.refreshTimer = hs.timer.doEvery(3, refreshAll)
-refreshAll()
+module.spaceWatcher = hs.spaces.watcher
+	.new(function()
+		spacesChanged("space_changed")
+	end)
+	:start()
+module.screenWatcher = hs.screen.watcher
+	.new(function()
+		spacesChanged("display_changed")
+	end)
+	:start()
+module.eventRefreshTimer = hs.timer.delayed.new(0.1, function()
+	spacesChanged("window-state")
+end)
+require("yabai-events").subscribe("desktop-indicator", function(event)
+	if event == "window_focused" or event == "window_moved" or event == "window_resized" then
+		return
+	end
+	if event:match("^space_") or event:match("^display_") then
+		if event ~= "space_changed" then
+			module.eventRefreshTimer:stop()
+		end
+		spacesChanged(event)
+	elseif not module.eventRefreshTimer:running() then
+		module.eventRefreshTimer:start()
+	end
+end)
+-- Start query deadlines after synchronous module initialization finishes.
+module.startupTimer = hs.timer.doAfter(0, function()
+	module.refreshTimer = hs.timer.doEvery(3, refreshAll)
+	refreshAll()
+end)
+
+local controllerSocket = "@controllerSocket@"
+if controllerSocket ~= "" then
+	require("keybindings").subscribeSocket(controllerSocket, "desktop-indicator", function(reply, request)
+		local payload = request.payload
+		local args = payload.args or {}
+		local changesSpace = payload.action == "focus-space"
+			or payload.action == "move-space"
+			or (payload.action == "command" and args[1] == "display" and args[2] == "--space")
+		if not changesSpace then
+			return
+		end
+		if module.transitionTimer then
+			module.transitionTimer:stop()
+			module.transitionTimer = nil
+		end
+		if not reply.ok or not reply.target_space_id then
+			return
+		end
+
+		-- Read actual state without waiting for the later Space notification.
+		local started = hs.timer.absoluteTime()
+		local function observe()
+			local snapshot = refreshSafely()
+			local arrived = false
+			for _, display in ipairs(snapshot) do
+				if display["Current Space"].ManagedSpaceID == reply.target_space_id then
+					arrived = true
+					break
+				end
+			end
+			if arrived or hs.timer.absoluteTime() - started >= 250e6 then
+				module.transitionTimer:stop()
+				module.transitionTimer = nil
+			end
+		end
+		module.transitionTimer = hs.timer.new(0.02, observe):start()
+		observe()
+	end)
+end
 
 return module

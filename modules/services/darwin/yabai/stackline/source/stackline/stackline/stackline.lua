@@ -21,31 +21,66 @@ function stackline:init(userConfig) -- {{{
 	-- init config with default settings + user overrides
 	self.config:init(u.extend(require("stackline.conf"), userConfig or {}))
 
-	-- init stackmanager, & run update right away
+	-- Initialize the manager after its configuration is available.
 	-- NOTE: Requires self.config to be initialized first
 	self.manager = require("stackline.stackmanager"):init()
-	self.manager:update({ forceRedraw = true })
 
-	-- Debounce membership queries independently of geometry settling.
+	-- Coalesce membership events without postponing an already scheduled refresh.
 	self.queryWindowState = timer.new(
 		self.config:get("advanced.maxRefreshRate"),
 		function()
-			self.manager:update()
+			self:scheduleQuery(false, true)
 		end,
 		true -- continue on error
 	)
 
 	self:setupListeners()
+	require("yabai-events").subscribe("stackline", function(event)
+		local immediate = event:match("^space_") or event:match("^display_")
+		self:scheduleQuery(event == "space_changed", immediate, event == "space_changed" and "yabai" or nil)
+	end)
 
 	self:setupClickTracker()
+	-- Start query deadlines after synchronous module initialization finishes.
+	self.startupTimer = hs.timer.doAfter(0, function()
+		self.manager:update({ forceRedraw = true })
+	end)
 	return self
 end -- }}}
+
+function stackline:scheduleQuery(force, immediate, spaceSource)
+	if spaceSource then
+		-- Both sources observe the same selection; invalidate only once.
+		-- https://www.hammerspoon.org/docs/hs.spaces.html#data_managedDisplaySpaces
+		local selection = {}
+		local displays = hs.spaces.data_managedDisplaySpaces()
+		for _, display in ipairs(displays) do
+			selection[#selection + 1] = display["Display Identifier"] .. ":" .. display["Current Space"].ManagedSpaceID
+		end
+		table.sort(selection)
+		local state = table.concat(selection, ",")
+		if self.spaceSelection == state then
+			return
+		end
+		self.spaceSelection = state
+		self.manager.visibleWindowIds = {}
+	end
+
+	self.forceQueryRedraw = self.forceQueryRedraw or force
+	if immediate then
+		self.queryWindowState:stop()
+		self.manager.query.invalidate(self.forceQueryRedraw)
+		self.forceQueryRedraw = false
+		self.manager:update()
+	elseif not self.queryWindowState:running() then
+		self.queryWindowState:start()
+	end
+end
 
 stackline.wf = wf.new():setOverrideFilter({ -- {{{
 	-- Default window filter controls what hs.window 'sees'
 	visible = true, -- i.e., neither hidden nor minimized
 	fullscreen = false,
-	currentSpace = true,
 	allowRoles = "AXStandardWindow",
 }) -- }}}
 
@@ -83,17 +118,15 @@ function stackline:setupListeners() -- {{{
 	-- update = query window state & check if redraw needed
 	self.wf:subscribe(self.events.checkOn, function(hsWin, _app, evt)
 		local forceRedraw = u.contains(self.events.forceCheckOn, evt)
-		self.manager.query.invalidate(forceRedraw)
 
 		if evt == wf.windowMoved then
 			local win = self.manager:findWindow(hsWin:id())
-			if win and not win.stack.motionHidden then
+			if win and self.manager.visibleWindowIds[win.id] and not win.stack.motionHidden then
 				win.stack:updateGeometry(hsWin)
 			end
 		end
 
-		log.i("Window event:", evt, "force:", forceRedraw)
-		self.queryWindowState:start()
+		self:scheduleQuery(forceRedraw, false)
 	end)
 
 	-- Focus outside the displayed stacks must also update their inactive colors.
@@ -120,7 +153,6 @@ function stackline:setupClickTracker() -- {{{
 		local clickAt = hs.geometry.point(e:location().x, e:location().y)
 		local clickedWin = self.manager:getClickedWindow(clickAt)
 		if clickedWin then
-			log.i("Clicked window at", clickAt)
 			clickedWin._win:focus()
 			return true -- stop propogation
 		end
@@ -135,11 +167,20 @@ function stackline:refreshClickTracker() -- {{{
 end -- }}}
 
 function stackline.redrawWinIndicator(hsWin, _app, evt) -- {{{
-	if evt == wf.windowDestroyed then
-		local id = hsWin:id()
-		if id then
-			stackline.manager:forgetWindow(id)
+	local id = hsWin:id()
+	if evt == wf.windowDestroyed and id then
+		stackline.manager:forgetWindow(id)
+	end
+	if evt == wf.windowFocused and id then
+		stackline.manager.focusRevision = stackline.manager.focusRevision + 1
+		if id ~= stackline.manager.focusedWindowId or not stackline.manager.lastFocusedByWindowId[id] then
+			stackline.manager.focusSequence = stackline.manager.focusSequence + 1
+			stackline.manager.lastFocusedByWindowId[id] = stackline.manager.focusSequence
 		end
+		stackline.manager.focusedWindowId = id
+	elseif id and id == stackline.manager.focusedWindowId then
+		stackline.manager.focusRevision = stackline.manager.focusRevision + 1
+		stackline.manager.focusedWindowId = nil
 	end
 	stackline.manager:syncFocus()
 end -- }}}
@@ -151,13 +192,11 @@ end -- }}}
 
 stackline.spaceWatcher = hs.spaces.watcher
 	.new( -- {{{
-		function(spaceIdx)
+		function()
 			-- QUESTION: do I need to clean this up? If so, how?
 			-- Update stackline when switching spaces
 			-- NOTE: hs.spaces.watcher uses deprecated macos APIs, so this may break in an upcoming macos release
-			log.i(("hs.spaces.watcher -> changed to space %d"):format(spaceIdx))
-			stackline.manager.query.invalidate(true)
-			stackline.queryWindowState:start()
+			stackline:scheduleQuery(true, true, "hammerspoon")
 			stackline:refreshClickTracker()
 		end
 	)

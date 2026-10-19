@@ -40,6 +40,7 @@ let
   ) cfg.scripts;
   initLua = pkgs.replaceVars ./init.lua {
     autoLaunch = lib.boolToString cfg.autoLaunch;
+    windowFilterLoader = ./window-filter.lua;
     inherit scriptRequires scriptsDir;
   };
 in

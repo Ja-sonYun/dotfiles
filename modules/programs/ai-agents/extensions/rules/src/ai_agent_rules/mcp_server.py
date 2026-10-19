@@ -22,7 +22,14 @@ from ai_agent_rules.rules import (
     effective_rules,
     load_rules,
 )
-from ai_agent_rules.sessions import require_session, state_transaction
+from ai_agent_rules.sessions import (
+    approve_request,
+    consume_approval,
+    pending_approval,
+    record_rejection,
+    require_session,
+    state_transaction,
+)
 
 
 def change_rule(
@@ -61,6 +68,15 @@ def create_server(
     debug_log: bool = False,
 ) -> FastMCP:
     server = FastMCP("rules", instructions=RULES_GUIDANCE)
+
+    @server.tool()
+    async def rules_request_approval(
+        session_handle: str, request_id: str
+    ) -> dict[str, object]:
+        """Record a one-time rule exception for a stored request without a UI prompt."""
+        approval = await asyncio.to_thread(pending_approval, session_handle, request_id)
+        await asyncio.to_thread(approve_request, approval)
+        return {"status": "approved", "request_id": request_id}
 
     @server.tool()
     async def rules_list(session_handle: str) -> dict[str, object]:
@@ -138,6 +154,7 @@ def create_server(
         (not a pass), incomplete (check failed), skipped (no applicable rules).
         Feedback reports violations, uncertainty, or failures, with a debug log
         path when enabled. Fix findings and recheck before presenting the draft.
+        A one-time exception returns overridden, not a passing check.
         """
         try:
             cwd, client, rules = await asyncio.to_thread(
@@ -149,6 +166,24 @@ def create_server(
             ]
         except OSError as error:
             raise RuntimeError("Cannot read the rules.") from error
+        request: dict[str, object] = {
+            "kind": "task",
+            "cwd": str(cwd),
+            "tool_name": "rules_check",
+            "tool_input": {"text": text},
+        }
+        approved = await asyncio.to_thread(consume_approval, session_handle, request)
+        if approved is not None:
+            return {
+                "status": "overridden",
+                "request_id": approved,
+                "feedback": [
+                    (
+                        "A rule exception was consumed for this exact task text once. "
+                        "This is not a passing check or authorization to execute tools."
+                    )
+                ],
+            }
         result = await evaluate(
             api,
             applicable,
@@ -170,6 +205,24 @@ def create_server(
         feedback = result.feedback("task check")
         if feedback:
             response["feedback"] = feedback
+        if (
+            result.errors
+            or result.halted
+            or any(
+                item["verdict"] in {"violation", "unclear"} for item in result.results
+            )
+        ):
+            request_id = await asyncio.to_thread(
+                record_rejection, session_handle, request, "\n\n".join(feedback)
+            )
+            response["request_id"] = request_id
+            response["approval_tool"] = {
+                "name": "rules_request_approval",
+                "arguments": {
+                    "session_handle": session_handle,
+                    "request_id": request_id,
+                },
+            }
         return response
 
     return server

@@ -14,6 +14,7 @@
         "Code"
         "Xcode"
       ];
+      "com.apple.inputmethod.Japanese" = [ "Slack" ];
     };
     defaultSource =
       if config.home-manager.users.${username}.services.seamtype.enable == true then

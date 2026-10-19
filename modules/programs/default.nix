@@ -8,7 +8,7 @@
     ./git-hooks
     ./navi
     ./open-code-review
-    ./pi
+    ./pi.nix
     ./radare2
     ./state
     ./tmux

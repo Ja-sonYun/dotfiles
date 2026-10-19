@@ -1,0 +1,20 @@
+Signal response completion before closing the daemon's socket descriptor.
+
+Base: https://github.com/asmvik/yabai/commit/dd845723416f5fe92af49fad5ebab00369e07edd
+Source: https://github.com/asmvik/yabai/blob/dd845723416f5fe92af49fad5ebab00369e07edd/src/event_loop.c#L1613
+
+Signal subprocesses can inherit the response descriptor. Closing only the
+daemon's copy leaves clients waiting for EOF until those subprocesses exit.
+Shut down writes after flushing the complete response so EOF does not depend
+on inherited descriptors being closed. Keep the response bytes unchanged.
+
+--- a/src/event_loop.c
++++ b/src/event_loop.c
+@@ -1633,6 +1633,7 @@
+             handle_message(rsp, message);
+ 
+             fflush(rsp);
++            shutdown(fileno(rsp), SHUT_WR);
+             fclose(rsp);
+ 
+             return;

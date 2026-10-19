@@ -22,9 +22,10 @@ type request struct {
 }
 
 type response struct {
-	ID    uint64 `json:"id"`
-	OK    bool   `json:"ok"`
-	Error string `json:"error,omitempty"`
+	ID            uint64 `json:"id"`
+	OK            bool   `json:"ok"`
+	Error         string `json:"error,omitempty"`
+	TargetSpaceID uint64 `json:"target_space_id,omitempty"`
 }
 
 type job struct {
@@ -83,7 +84,10 @@ func serveConnection(ctx context.Context, conn net.Conn, jobs chan<- job) {
 		} else if input.ID == 0 {
 			output.Error = "request id must be positive"
 		} else {
-			pending := job{request: input, result: make(chan response, 1)}
+			pending := job{
+				request: input,
+				result:  make(chan response, 1),
+			}
 			select {
 			case jobs <- pending:
 			case <-ctx.Done():
@@ -125,11 +129,14 @@ func run(ctx context.Context, socket, yabaiSocket string) error {
 				return
 			case pending := <-jobs:
 				actionContext, cancel := context.WithTimeout(ctx, 10*time.Second)
-				err := execute(actionContext, yabaiSocket, pending.request.Payload)
+				targetSpaceID, err := execute(actionContext, yabaiSocket, pending.request.Payload)
 				cancel()
 				output := response{ID: pending.request.ID, OK: err == nil}
 				if err != nil {
+					log.Printf("controller request %d (%s): %v", pending.request.ID, pending.request.Payload.Action, err)
 					output.Error = err.Error()
+				} else {
+					output.TargetSpaceID = targetSpaceID
 				}
 				pending.result <- output
 			}

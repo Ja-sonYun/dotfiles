@@ -17,7 +17,7 @@ let
     ''}
     ${lib.optionalString (cfg.ac.highPerformance != null) ''
       capabilities=$(/usr/bin/pmset -g cap)
-      if /usr/bin/grep -q highpowermode <<< "$capabilities"; then
+      if [[ "$capabilities" == *highpowermode* ]]; then
         /usr/bin/pmset -c powermode ${if cfg.ac.highPerformance then "2" else "0"}
       fi
     ''}

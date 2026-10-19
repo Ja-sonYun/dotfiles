@@ -101,9 +101,3 @@ elif [[ "$settings_changed" == true ]]; then
 fi
 
 "$bundle/Contents/MacOS/Seamtype" --register
-if ! macism "$source_id"; then
-	echo "Add Seamtype in System Settings > Keyboard > Input Sources > Korean, then activate again." >&2
-	exit 1
-fi
-seamtype-disable-input-source com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese
-seamtype-disable-input-source com.apple.inputmethod.Korean.2SetKorean

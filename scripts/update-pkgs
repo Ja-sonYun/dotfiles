@@ -55,6 +55,7 @@ update_package() (
 	local file=$1 package_dir lock_file had_lock=false
 	local stage final_spec='' final_lock='' package_cancel_status=0
 	local name registry version previous_version generator generated_lock status current_hash
+	local lock_root=$root_dir lock_expression="$root_dir/libs/dream2nix/lock.nix"
 
 	stage=$(mktemp -d) || exit $?
 	trap cleanup_package EXIT
@@ -65,6 +66,10 @@ update_package() (
 	fi
 
 	package_dir=$(dirname "$file") || exit $?
+	if [[ $package_dir == "$root_dir/portable/pi" ]]; then
+		lock_root=$package_dir
+		lock_expression="$package_dir/nix/lock.nix"
+	fi
 	lock_file="$package_dir/lock.$system.json"
 	cp -p "$file" "$stage/original-spec.json" || exit $?
 	cp -p "$file" "$stage/package-spec.json" || exit $?
@@ -90,8 +95,8 @@ update_package() (
 		version=$(latest_version "$registry" "$name" "$stage") || exit $?
 		if [[ $version == "$previous_version" && $had_lock == true ]] &&
 			validate_lock "$registry" "$stage/original-lock.json" 2>/dev/null; then
-			current_hash=$(nix-instantiate --eval --strict --json "$root_dir/libs/dream2nix/lock.nix" \
-				--argstr root "$root_dir" --argstr package "$package_dir" \
+			current_hash=$(nix-instantiate --eval --strict --json "$lock_expression" \
+				--argstr root "$lock_root" --argstr package "$package_dir" \
 				--argstr candidate "$stage" --argstr system "$system" \
 				--arg hashOnly true) || exit $?
 			if jq -e --argjson hash "$current_hash" '.invalidationHash == $hash' \
@@ -107,8 +112,8 @@ update_package() (
 		"$stage/original-spec.json" >"$stage/package-spec.json" || exit $?
 	touch "$stage/flake.nix" || exit $?
 
-	generator=$(nix-build "$root_dir/libs/dream2nix/lock.nix" --no-out-link \
-		--argstr root "$root_dir" --argstr package "$package_dir" \
+	generator=$(nix-build "$lock_expression" --no-out-link \
+		--argstr root "$lock_root" --argstr package "$package_dir" \
 		--argstr candidate "$stage" --argstr system "$system") || exit $?
 	(
 		cd "$stage" || exit $?
@@ -227,8 +232,9 @@ if ! resolved_path=$(realpath "$search_path"); then
 fi
 case "$resolved_path/" in
 "$root_dir/pkgs/"*) ;;
+"$root_dir/portable/pi/") ;;
 *)
-	printf 'Package directory must be inside %s/pkgs\n' "$root_dir" >&2
+	printf 'Package directory must be inside %s/pkgs or portable/pi\n' "$root_dir" >&2
 	exit 2
 	;;
 esac

@@ -4,30 +4,33 @@ log.i("Loading module: window")
 local Window = {}
 
 function Window:new(hsWin) -- {{{
+	local app = hsWin:application()
+	local screen = hsWin:screen()
+	if not app or not screen then
+		return nil
+	end
+
 	local frame = hsWin:frame()
 	local stackIdResult = self:makeStackId(frame)
 	local ws = {
 		title = hsWin:title(), -- window title
-		app = hsWin:application():name(), -- app name (string)
+		app = app:name(), -- app name (string)
 		id = hsWin:id(), -- window id (string) NOTE: HS win.id == yabai win.id
 		frame = frame, -- x,y,w,h of window (table)
 		stackId = stackIdResult.stackId, -- "{{x}|{y}|{w}|{h}" e.g., "35|63|1185|741" (string)
 		topLeft = stackIdResult.topLeft, -- "{{x}|{y}" e.g., "35|63" (string)
 		stackIdFzy = stackIdResult.fzyFrame, -- "{{x}|{y}" e.g., "35|63" (string)
 		_win = hsWin, -- hs.window object (table)
-		screen = hsWin:screen():id(),
+		screen = screen:id(),
 		indicator = nil, -- the canvas element (table)
 	}
 	setmetatable(ws, self)
 	self.__index = self
 
-	log.i(("Window:new(%s)"):format(ws.id))
-
 	return ws
 end -- }}}
 
 function Window:setupIndicator(geometry) -- {{{
-	log.d("setupIndicator for", self.id)
 	self.config = stackline.config:get("appearance")
 	local c = self.config
 
@@ -64,7 +67,6 @@ function Window:updateIndicatorGeometry(geometry) -- {{{
 end -- }}}
 
 function Window:drawIndicator(overrideOpts) -- {{{
-	log.i("drawIndicator for", self.id)
 	-- should there be a dedicated "Indicator" class to perform the actual drawing?
 	local opts = u.extend(self.config, overrideOpts or {})
 	local fadeDuration = opts.shouldFade and opts.fadeDuration or 0
@@ -193,7 +195,6 @@ function Window:makeStackId(frame) -- {{{
 end -- }}}
 
 function Window:deleteIndicator() -- {{{
-	log.d("deleteIndicator for", self.id)
 	if self.indicator then
 		self.indicator:delete(self.config.fadeDuration)
 		self.indicator = nil

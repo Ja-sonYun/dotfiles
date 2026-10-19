@@ -20,7 +20,7 @@ let
 
     ${lib.concatStringsSep "\n" (
       lib.mapAttrsToList (formula: linked: ''
-        if /usr/bin/grep -Fxq -- ${lib.escapeShellArg formula} <<< "$installed"; then
+        if [[ $'\n'"$installed"$'\n' == *$'\n'${lib.escapeShellArg formula}$'\n'* ]]; then
           /usr/bin/sudo --user=${lib.escapeShellArg cfg.user} --set-home \
             /usr/bin/env HOMEBREW_NO_AUTO_UPDATE=1 "$brew" ${
               if linked then "link --formula --force" else "unlink --formula"

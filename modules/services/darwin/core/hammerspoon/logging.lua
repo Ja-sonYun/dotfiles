@@ -1,4 +1,4 @@
-local module = {}
+local module = { runID = hs.host.uuid() }
 local uidOutput, uidRead = hs.execute("/usr/bin/id -u", false)
 local uid = uidRead and tonumber(uidOutput)
 
@@ -50,11 +50,13 @@ function module.new(name, destination)
 			record[key] = value
 		end
 		record.time = os.date("!%Y-%m-%dT%H:%M:%SZ")
+		record.time_unix = hs.timer.secondsSinceEpoch()
 		record.module = self.name
 		record.level = level
 		record.event = tostring(event)
+		record.hammerspoon_run_id = module.runID
 		local encoded, line = pcall(hs.json.encode, record)
-		if not encoded then
+		if not encoded or type(line) ~= "string" then
 			hs.printf("File log encoding failed (%s): %s", self.name, tostring(line))
 			return
 		end

@@ -40,11 +40,15 @@ push-secrets: ## Push secrets to git
 update-vim: ## Update vim flake
 	cd ./portable/vim && nix flake update
 
-update-raw: update-vim ## Update all flakes
+update-pi: ## Update pi flake
+	cd ./portable/pi && nix flake update
+
+update-raw: update-vim update-pi ## Update all flakes
 	nix flake update
 
 update-pkgs: ## Update package versions and locks for this system
 	./scripts/update-pkgs
+	./scripts/update-pkgs --path portable/pi
 
 update: push-secrets ## Full update with ulimit fix
 	@sh -c 'set -eu; \
@@ -173,4 +177,5 @@ commit:
 
 lock: add
 	nix flake update vim
+	nix flake update pi
 	nix flake update server

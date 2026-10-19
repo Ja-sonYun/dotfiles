@@ -26,6 +26,7 @@ stdenv.mkDerivation {
     ./patches/sa-response-deadline.patch
     ./patches/fullscreen-transition-waits.patch
     ./patches/ax-geometry-errors.patch
+    ./patches/response-shutdown.patch
   ];
 
   __structuredAttrs = true;

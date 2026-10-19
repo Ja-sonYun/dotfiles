@@ -273,12 +273,6 @@ let
         ]
         ++ lib.optional (lib.hasInfix "/.codex/config.toml" home.activation.codexConfigMerge.data) "~/.codex/config.toml"
       );
-      Pi = homeFiles.generated [
-        ".pi/agent/skills/inline-tools-check-docs"
-        ".pi/agent/skills/inline-tools-review-code"
-        ".pi/agent/skills/root-skill-root-helper"
-        ".pi/agent/skills/strict-entry-strict-skill"
-      ];
     };
     files = {
       "~/.claude/settings.json" = homeFiles.materialized ".claude/settings.json";
@@ -299,14 +293,6 @@ let
         "${homeFiles.source ".codex/skills/root-skill-root-helper"}/SKILL.md";
       "~/.codex/skills/strict-entry-strict-skill/SKILL.md" =
         "${homeFiles.source ".codex/skills/strict-entry-strict-skill"}/SKILL.md";
-      "~/.pi/agent/skills/inline-tools-check-docs/SKILL.md" =
-        "${homeFiles.source ".pi/agent/skills/inline-tools-check-docs"}/SKILL.md";
-      "~/.pi/agent/skills/inline-tools-review-code/SKILL.md" =
-        "${homeFiles.source ".pi/agent/skills/inline-tools-review-code"}/SKILL.md";
-      "~/.pi/agent/skills/root-skill-root-helper/SKILL.md" =
-        "${homeFiles.source ".pi/agent/skills/root-skill-root-helper"}/SKILL.md";
-      "~/.pi/agent/skills/strict-entry-strict-skill/SKILL.md" =
-        "${homeFiles.source ".pi/agent/skills/strict-entry-strict-skill"}/SKILL.md";
     };
   };
   expectedSkill = ''
@@ -359,12 +345,6 @@ let
         "~/.codex/skills/root-skill-root-helper"
         "~/.codex/skills/strict-entry-strict-skill"
       ];
-      Pi = [
-        "~/.pi/agent/skills/inline-tools-check-docs"
-        "~/.pi/agent/skills/inline-tools-review-code"
-        "~/.pi/agent/skills/root-skill-root-helper"
-        "~/.pi/agent/skills/strict-entry-strict-skill"
-      ];
     };
     files = {
       "~/.claude/settings.json".json.at.hooks = {
@@ -401,10 +381,6 @@ let
       "~/.codex/skills/inline-tools-review-code/SKILL.md".text = expectedSkill;
       "~/.codex/skills/root-skill-root-helper/SKILL.md".text = expectedRootSkill;
       "~/.codex/skills/strict-entry-strict-skill/SKILL.md".text = expectedStrictSkill;
-      "~/.pi/agent/skills/inline-tools-check-docs/SKILL.md".text = expectedCustomSkill;
-      "~/.pi/agent/skills/inline-tools-review-code/SKILL.md".text = expectedSkill;
-      "~/.pi/agent/skills/root-skill-root-helper/SKILL.md".text = expectedRootSkill;
-      "~/.pi/agent/skills/strict-entry-strict-skill/SKILL.md".text = expectedStrictSkill;
     };
   };
 in

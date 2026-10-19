@@ -1,12 +1,14 @@
 package.path = "@scriptsDir@/?.lua;" .. package.path
 local logger = require("logging").new("hammerspoon")
-logger.context.run_id = hs.host.uuid()
 logger:i("initialization_started")
 local showError = hs.showError
 hs.showError = function(message)
 	logger:e("unhandled_error", { message = tostring(message) })
 	return showError(message)
 end
+
+assert(not package.loaded["hs.window_filter"], "Window filter loaded before its Space refresh patch")
+package.preload["hs.window_filter"] = assert(loadfile("@windowFilterLoader@"))
 
 local previousShutdown = hs.shutdownCallback
 hs.shutdownCallback = function()
@@ -33,12 +35,10 @@ end):start()
 logger:i("config_watcher_started")
 
 local function loadModule(name)
-	local started = hs.timer.secondsSinceEpoch()
-	logger:i("module_load_started", { target = name })
 	logger:wrap("module_load_failed", function()
 		require(name)
 	end)()
-	logger:i("module_load_finished", { target = name, elapsed_seconds = hs.timer.secondsSinceEpoch() - started })
+	logger:i("module_loaded", { target = name })
 end
 
 @scriptRequires@

@@ -1,6 +1,7 @@
 _:
 let
   yabaiSettings = {
+    debug_output = "off";
     layout = "bsp";
 
     top_padding = 4;

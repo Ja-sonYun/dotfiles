@@ -73,7 +73,7 @@ else
 	geom="$(tmux show-options -gqv "@popup_geom_$key")"
 	[[ -n "$geom" ]] || geom="$default_geom"
 fi
-read -r x y w h <<<"$geom"
+read -r x y w h < <(printf '%s\n' "$geom")
 
 # Convert one raw geometry token to absolute cells.
 #   "35%"        -> percentage of $2 (total size)

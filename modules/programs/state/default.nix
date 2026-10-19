@@ -67,50 +67,50 @@ in
       if [[ ! -e ${lib.escapeShellArg stateFile} && ! -L ${lib.escapeShellArg stateFile} ]]; then
         run ${pkgs.coreutils}/bin/install -m 600 ${initialState} ${lib.escapeShellArg stateFile}
       else
-        run ${statePython}/bin/python3 - ${initialState} ${lib.escapeShellArg stateFile} <<'PY'
-      import os
-      import stat
-      import sys
-      import tempfile
-      from collections.abc import Mapping, MutableMapping
-      from pathlib import Path
+        run ${statePython}/bin/python3 -c ${lib.escapeShellArg ''
+          import os
+          import stat
+          import sys
+          import tempfile
+          from collections.abc import Mapping, MutableMapping
+          from pathlib import Path
 
-      import tomlkit
-
-
-      def add_missing(state: MutableMapping[str, object], defaults: Mapping[str, object]) -> bool:
-          changed = False
-          for key, value in defaults.items():
-              if key not in state:
-                  state[key] = value
-                  changed = True
-              elif isinstance(value, Mapping):
-                  current = state[key]
-                  if not isinstance(current, MutableMapping):
-                      raise ValueError(f"State key {key!r} must be a table")
-                  changed = add_missing(current, value) or changed
-          return changed
+          import tomlkit
 
 
-      state_path = Path(sys.argv[2]).resolve(strict=True)
-      defaults = tomlkit.parse(Path(sys.argv[1]).read_text(encoding="utf-8"))
-      state = tomlkit.parse(state_path.read_text(encoding="utf-8"))
+          def add_missing(state: MutableMapping[str, object], defaults: Mapping[str, object]) -> bool:
+              changed = False
+              for key, value in defaults.items():
+                  if key not in state:
+                      state[key] = value
+                      changed = True
+                  elif isinstance(value, Mapping):
+                      current = state[key]
+                      if not isinstance(current, MutableMapping):
+                          raise ValueError(f"State key {key!r} must be a table")
+                      changed = add_missing(current, value) or changed
+              return changed
 
-      if add_missing(state, defaults):
-          content = tomlkit.dumps(state)
-          mode = stat.S_IMODE(state_path.stat().st_mode)
-          descriptor, temporary_name = tempfile.mkstemp(prefix=".state-", dir=state_path.parent)
-          temporary_path = Path(temporary_name)
-          try:
-              with os.fdopen(descriptor, "w", encoding="utf-8") as output:
-                  os.fchmod(output.fileno(), mode)
-                  output.write(content)
-                  output.flush()
-                  os.fsync(output.fileno())
-              temporary_path.replace(state_path)
-          finally:
-              temporary_path.unlink(missing_ok=True)
-      PY
+
+          state_path = Path(sys.argv[2]).resolve(strict=True)
+          defaults = tomlkit.parse(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          state = tomlkit.parse(state_path.read_text(encoding="utf-8"))
+
+          if add_missing(state, defaults):
+              content = tomlkit.dumps(state)
+              mode = stat.S_IMODE(state_path.stat().st_mode)
+              descriptor, temporary_name = tempfile.mkstemp(prefix=".state-", dir=state_path.parent)
+              temporary_path = Path(temporary_name)
+              try:
+                  with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+                      os.fchmod(output.fileno(), mode)
+                      output.write(content)
+                      output.flush()
+                      os.fsync(output.fileno())
+                  temporary_path.replace(state_path)
+              finally:
+                  temporary_path.unlink(missing_ok=True)
+        ''} ${initialState} ${lib.escapeShellArg stateFile}
       fi
     '';
   };
