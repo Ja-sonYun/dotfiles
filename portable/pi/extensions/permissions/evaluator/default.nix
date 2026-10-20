@@ -15,11 +15,10 @@ python3.pkgs.buildPythonApplication {
   ];
 
   makeWrapperArgs = [
-    "--prefix PATH : ${
-      lib.makeBinPath [
-        git
-      ]
-    }"
+    "--prefix"
+    "PATH"
+    ":"
+    (lib.makeBinPath [ git ])
   ];
   meta.mainProgram = "pi-permissions-evaluator";
 }

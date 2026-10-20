@@ -50,7 +50,7 @@ _: {
           while IFS= read -r branch; do
             [ "$branch" = "$current" ] && continue
 
-            if printf '%s\n' "$merged" | grep -Fxq -- "$branch"; then
+            if grep -Fxq -- "$branch" <<< "$merged"; then
               git branch -d "$branch"
             fi
           done

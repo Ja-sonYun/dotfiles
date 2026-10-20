@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-knip",
-    "version": "6.42.0",
+    "version": "6.42.1",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-knip",
-        "version": "6.42.0",
+        "version": "6.42.1",
         "dependencies": {
-          "knip": "6.42.0"
+          "knip": "6.42.1"
         }
       },
       "node_modules/@emnapi/core": {
@@ -553,9 +553,9 @@
         }
       },
       "node_modules/knip": {
-        "version": "6.42.0",
-        "resolved": "https://registry.npmjs.org/knip/-/knip-6.42.0.tgz",
-        "integrity": "sha512-lNypqHwi38RJQG8pVuItqzCDPMOfPbBExyFh8aM4yMJRHVU7t5OQAtEK4tDkaB3rLHetOcVMhRFAgv5Vn2CM0A==",
+        "version": "6.42.1",
+        "resolved": "https://registry.npmjs.org/knip/-/knip-6.42.1.tgz",
+        "integrity": "sha512-gKJVsiT4LJQ0lfc8uSHOCzkOY8adAXNFGarIeODZbJOkBnQRVsG3e0UZFnO4LMwjA82A5tBWX/VgoeTYcjdKiQ==",
         "funding": [
           {
             "type": "github",
@@ -773,5 +773,5 @@
       }
     }
   },
-  "invalidationHash": "33919478c4e2063e0f605f18476353036a6718bd71f05e58cf746ada117252ad"
+  "invalidationHash": "44a334d8381a2217699c431cb544426da8fd7520b250761ba5d043d15958f9c0"
 }

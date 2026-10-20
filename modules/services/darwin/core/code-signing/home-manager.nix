@@ -69,7 +69,7 @@ in
               | /usr/bin/head -n 1 \
               || true
           )
-          identity_hash=$(/usr/bin/printf '%s\n' "$identity_line" | /usr/bin/awk '{ print $2 }')
+          identity_hash=$(/usr/bin/awk '{ print $2 }' <<< "$identity_line")
           if [[ -z "$identity_hash" ]]; then
             echo "Missing Code Signing identity for $name: $identity" >&2
             exit 1

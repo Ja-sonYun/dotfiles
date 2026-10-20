@@ -48,7 +48,7 @@
           if ! integrity=$(jq -er --arg name "$name" --arg version "$version" --arg resolved "$resolved" '
             select(.name == $name and .version == $version and .dist.tarball == $resolved)
             | .dist.integrity | strings | select(test("^(sha256|sha512)-[A-Za-z0-9+/]+=*$"))
-          ' < <(printf '%s\n' "$metadata")); then
+          ' <<< "$metadata"); then
             echo "No matching registry integrity for $entry: $name@$version ($resolved)" >&2
             exit 1
           fi
@@ -56,7 +56,7 @@
           jq --arg entry "$entry" --arg integrity "$integrity" \
             '.packages[$entry].integrity = $integrity' package-lock.json > complete-package-lock.json
           mv complete-package-lock.json package-lock.json
-        done < <(printf '%s\n' "$missing")
+        done <<< "$missing"
       '';
     };
   };

@@ -20,6 +20,7 @@
     isort = final.callPackage ../pkgs/cli-tools/isort { };
     mermaid-ascii = final.callPackage ../pkgs/cli-tools/mermaid-ascii { };
     mypy = final.callPackage ../pkgs/cli-tools/mypy { };
+    sqlfluff = final.callPackage ../pkgs/cli-tools/sqlfluff { };
     state-get = final.callPackage ../pkgs/cli-tools/state-get { };
     templates-cli = final.callPackage ../pkgs/cli-tools/templates-cli { };
     tmux-menu = final.callPackage ../pkgs/cli-tools/tmux-menu { };

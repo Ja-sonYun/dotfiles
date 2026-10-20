@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-firecrawl-mcp",
-    "version": "3.33.0",
+    "version": "3.33.4",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-firecrawl-mcp",
-        "version": "3.33.0",
+        "version": "3.33.4",
         "dependencies": {
-          "firecrawl-mcp": "3.33.0"
+          "firecrawl-mcp": "3.33.4"
         }
       },
       "node_modules/@borewit/text-codec": {
@@ -795,9 +795,9 @@
         "license": "MIT"
       },
       "node_modules/fast-uri": {
-        "version": "3.1.8",
-        "resolved": "https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.8.tgz",
-        "integrity": "sha512-GZMtZUTNRpOVIECoXwLNZS5xUGE+mVNbTB8h/7Rwh2TFWcBQiPzTgyZi05BF9UMZKkLJv8XBRJTlU7zg8+ZfMg==",
+        "version": "3.1.9",
+        "resolved": "https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.9.tgz",
+        "integrity": "sha512-hS/0Wt3Ya043oKXs0sIxrMpKQITXhMLIrVAKKXi4gozGC9v7YRWVnXIZzjNPTO02M9BdxLCWqK1yRXgNziVyJQ==",
         "funding": [
           {
             "type": "github",
@@ -898,9 +898,9 @@
         }
       },
       "node_modules/firecrawl": {
-        "version": "4.46.0",
-        "resolved": "https://registry.npmjs.org/firecrawl/-/firecrawl-4.46.0.tgz",
-        "integrity": "sha512-HpWbz/IaJ2sxGeYz3RXsAucu7ecXq53HjrNBKli/Qofh1LbMHLeNT/+f+k68w4shZ2f1B8KAN/yVqMgWE6wIBA==",
+        "version": "4.50.0",
+        "resolved": "https://registry.npmjs.org/firecrawl/-/firecrawl-4.50.0.tgz",
+        "integrity": "sha512-8XKMYKjofhBjdii/0DZON7J9ISVVDAdJ3z2g/GdRhseWMANT5ELMI4Ov4WKs6bTrAH3n5+n0vRo+xd2evf0OcQ==",
         "license": "MIT",
         "dependencies": {
           "axios": "1.20.0",
@@ -909,19 +909,19 @@
           "zod-to-json-schema": "^3.23.0"
         },
         "engines": {
-          "node": ">=22.0.0"
+          "node": ">=18.0.0"
         }
       },
       "node_modules/firecrawl-mcp": {
-        "version": "3.33.0",
-        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.33.0.tgz",
-        "integrity": "sha512-qF1XNNY+UG+z2bnGUibJTn9eSzKR3cTvekIUcVIby+9L2TpN3LXpMB9qoAew+qmiQizSS57htjJAkL+TVpsZLQ==",
+        "version": "3.33.4",
+        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.33.4.tgz",
+        "integrity": "sha512-A6FF9n5Tqwr014svYil+dp1tHJEYZl5bUVhdIF6aTMnM/zjNzyHq9iP2IJbh9aosgBmD+Ti86bGawPjGgslOSQ==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/sdk": "^1.29.0",
           "dotenv": "^17.2.2",
           "fastmcp": "4.3.2",
-          "firecrawl": "4.46.0",
+          "firecrawl": "4.50.0",
           "fuse.js": "^7.1.0",
           "hono": "^4.12.27",
           "mcp-proxy": "^6.5.1",
@@ -2452,5 +2452,5 @@
       }
     }
   },
-  "invalidationHash": "c40b5b30dc3cee75f2a08a820185c57e2d0466556d7c07e16b7b7a309bbef9cc"
+  "invalidationHash": "9f26bf73835529a6dd61ec5e9081ed7abbb783a08302b4f39aafe64ce9c0ee5d"
 }

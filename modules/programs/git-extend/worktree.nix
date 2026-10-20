@@ -327,7 +327,7 @@ in
           [ -n "$num" ] || err "usage: git worktree pr <number>"
           metadata="$(gh pr view "$num" --json number,headRefName,headRefOid,headRepository,headRepositoryOwner \
             -q '[.number, .headRepositoryOwner.login, .headRepository.name, .headRefName, .headRefOid] | @tsv')"
-          IFS=$'\t' read -r num owner repository head_ref head_sha < <(printf '%s\n' "$metadata")
+          IFS=$'\t' read -r num owner repository head_ref head_sha <<< "$metadata"
           [ -n "$head_sha" ] && [ -n "$owner" ] && [ -n "$repository" ] || err "could not resolve PR $num"
           base_repository="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
           identity="$base_repository#$num:$owner/$repository:$head_ref:$head_sha"

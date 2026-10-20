@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-n8n-mcp",
-    "version": "2.94.2",
+    "version": "2.94.3",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-n8n-mcp",
-        "version": "2.94.2",
+        "version": "2.94.3",
         "dependencies": {
-          "n8n-mcp": "2.94.2"
+          "n8n-mcp": "2.94.3"
         }
       },
       "node_modules/@hono/node-server": {
@@ -695,9 +695,9 @@
         "license": "MIT"
       },
       "node_modules/fast-uri": {
-        "version": "3.1.8",
-        "resolved": "https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.8.tgz",
-        "integrity": "sha512-GZMtZUTNRpOVIECoXwLNZS5xUGE+mVNbTB8h/7Rwh2TFWcBQiPzTgyZi05BF9UMZKkLJv8XBRJTlU7zg8+ZfMg==",
+        "version": "3.1.9",
+        "resolved": "https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.9.tgz",
+        "integrity": "sha512-hS/0Wt3Ya043oKXs0sIxrMpKQITXhMLIrVAKKXi4gozGC9v7YRWVnXIZzjNPTO02M9BdxLCWqK1yRXgNziVyJQ==",
         "funding": [
           {
             "type": "github",
@@ -1172,9 +1172,9 @@
         "license": "MIT"
       },
       "node_modules/n8n-mcp": {
-        "version": "2.94.2",
-        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.94.2.tgz",
-        "integrity": "sha512-2OPXHo1GBMjTqNryC3VJ6T3w7hGka+37goOQ/oSp/NcRrZAMZ0LD/y0HbhhAlBywTMoIC87p2p7kRMXN0EYokw==",
+        "version": "2.94.3",
+        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.94.3.tgz",
+        "integrity": "sha512-VrCwq+MDTWk2Uq1iiZ9WU2lj+voPvUzOkvdTWom6iucLFTHJWKuYD9wYS8G0x7t23XM6EYV26VNTLQpuSIvB0Q==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/sdk": "1.30.0",
@@ -1725,9 +1725,9 @@
         }
       },
       "node_modules/sql.js": {
-        "version": "1.15.0",
-        "resolved": "https://registry.npmjs.org/sql.js/-/sql.js-1.15.0.tgz",
-        "integrity": "sha512-54VT5h9/VGlLaQan5pX/Zx8k6Vbykwl5hRUtl4h4+VYnaZCTraUs4P1i2WLz21O6oPVp6Gvg+d1OyPo01ZG5ig==",
+        "version": "1.15.1",
+        "resolved": "https://registry.npmjs.org/sql.js/-/sql.js-1.15.1.tgz",
+        "integrity": "sha512-i0M/6s+lcl67Flm/1m8/AeVU5caDramlILXU/udUwpTQym2qKMSe2sJiXB5d5WXFB272aj4B2v1JbtQ93ID3Pg==",
         "license": "MIT"
       },
       "node_modules/statuses": {
@@ -1936,5 +1936,5 @@
       }
     }
   },
-  "invalidationHash": "238c8d5bc5808a5b69b0a266e6cc8fbe0fc9cafa6facf39c0af91b2b44479fd0"
+  "invalidationHash": "825eafbb812217370a82b8bb517b978ac2b65b4739d4f9a41d887f20c73902ea"
 }

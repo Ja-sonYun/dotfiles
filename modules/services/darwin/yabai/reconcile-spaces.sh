@@ -9,7 +9,7 @@ fi
 printf '%s\n' "$$" >"$1"
 
 current_spaces=$(yabai -m query --spaces)
-displays=$(jq -r '[.[] | select(."is-native-fullscreen" == false) | .display] | unique[]' < <(printf '%s\n' "$current_spaces"))
+displays=$(jq -r '[.[] | select(."is-native-fullscreen" == false) | .display] | unique[]' <<<"$current_spaces")
 
 while read -r display; do
 	if [[ -z "$display" ]]; then
@@ -18,7 +18,7 @@ while read -r display; do
 
 	desktop_count=$(jq --argjson display "$display" '
     [.[] | select(.display == $display and ."is-native-fullscreen" == false)] | length
-  ' < <(printf '%s\n' "$current_spaces"))
+  ' <<<"$current_spaces")
 
 	missing=$((target_desktops - desktop_count))
 	spaces_created=0
@@ -38,7 +38,7 @@ while read -r display; do
 
 	desktop_count=$(jq --argjson display "$display" '
     [.[] | select(.display == $display and ."is-native-fullscreen" == false)] | length
-  ' < <(printf '%s\n' "$current_spaces"))
+  ' <<<"$current_spaces")
 	excess=$((desktop_count - target_desktops))
 	if ((excess <= 0)); then
 		continue
@@ -55,7 +55,7 @@ while read -r display; do
     | sort_by(.index)
     | reverse[]
     | .index
-  ' < <(printf '%s\n' "$current_spaces"))
+  ' <<<"$current_spaces")
 
 	spaces_destroyed=0
 	while read -r index; do
@@ -75,11 +75,11 @@ while read -r display; do
         and ."is-visible" == false
         and (.windows | length) == 0
       )
-    ' < <(printf '%s\n' "$current_spaces") >/dev/null || continue
+    ' <<<"$current_spaces" >/dev/null || continue
 
 		desktop_count=$(jq --argjson display "$display" '
       [.[] | select(.display == $display and ."is-native-fullscreen" == false)] | length
-    ' < <(printf '%s\n' "$current_spaces"))
+    ' <<<"$current_spaces")
 		if ((desktop_count <= target_desktops)); then
 			excess=0
 			break
@@ -90,7 +90,7 @@ while read -r display; do
 			spaces_destroyed=1
 			/bin/sleep 0.2
 		fi
-	done < <(printf '%s\n' "$candidates")
+	done <<<"$candidates"
 	if ((spaces_destroyed)); then
 		current_spaces=$(yabai -m query --spaces)
 	fi
@@ -98,7 +98,7 @@ while read -r display; do
 	if ((excess > 0)); then
 		echo "yabai-reconcile-spaces: display $display kept $excess excess desktop(s); none were safely removable" >&2
 	fi
-done < <(printf '%s\n' "$displays")
+done <<<"$displays"
 
 visible_spaces=$(yabai -m query --spaces | jq -r '
   .[]
@@ -114,4 +114,4 @@ while read -r index; do
 	fi
 
 	yabai -m space "$index" --padding "$padding_spec" --gap "$gap_spec"
-done < <(printf '%s\n' "$visible_spaces")
+done <<<"$visible_spaces"
