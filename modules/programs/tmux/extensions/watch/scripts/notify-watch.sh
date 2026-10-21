@@ -3,20 +3,25 @@
 # shellcheck source=/dev/null
 source "${BASH_SOURCE[0]%/*}/runtime.sh" || exit 1
 TMUX_BIN="${TMUX_BIN:-tmux}"
+NOTIFY_CLIENT="${2:-}"
+[[ "${1:-}" =~ ^%[0-9]+$ ]] || exit 2
+notify_init || exit 1
+"${BASH_SOURCE[0]%/*}/notify-cancel.sh" --orphans-only || exit 1
 
 IFS=$'\x1f' read -r PANE_ID PANE_PID PROCESS_NAME SOCKET_PATH SERVER_PID < <(
-	"$TMUX_BIN" display-message -p $'#{pane_id}\x1f#{pane_pid}\x1f#{pane_current_command}\x1f#{socket_path}\x1f#{pid}'
+	"$TMUX_BIN" display-message -pt "$1" $'#{pane_id}\x1f#{pane_pid}\x1f#{pane_current_command}\x1f#{socket_path}\x1f#{pid}'
 )
+[[ "$PANE_ID" == "$1" ]] || exit 0
 PANE_PGID=$(/bin/ps -p "$PANE_PID" -o pgid= 2>/dev/null | tr -d ' ')
 PROCESS_GROUP=$(/bin/ps -p "$PANE_PID" -o tpgid= 2>/dev/null | tr -d ' ')
 
 if [ -z "$PANE_PGID" ] || [ -z "$PROCESS_GROUP" ] || [ "$PROCESS_GROUP" -le 0 ] || [ "$PROCESS_GROUP" = "$PANE_PGID" ]; then
-	"$TMUX_BIN" display-message "No foreground process found"
+	notify_message "$NOTIFY_CLIENT" "No foreground process found"
 	exit 0
 fi
 
 if ! /bin/kill -0 -- "-$PROCESS_GROUP" 2>/dev/null; then
-	"$TMUX_BIN" display-message "No foreground process found"
+	notify_message "$NOTIFY_CLIENT" "No foreground process found"
 	exit 0
 fi
 
@@ -27,7 +32,7 @@ GROUP_START=$(/bin/ps -p "$PROCESS_GROUP" -o lstart= 2>/dev/null)
 
 notify_lock || exit 1
 if [ -f "$INFO_FILE" ] && notify_watcher_alive "$INFO_FILE"; then
-	"$TMUX_BIN" display-message "Already watching process group $PROCESS_GROUP"
+	notify_message "$NOTIFY_CLIENT" "Already watching process group $PROCESS_GROUP"
 	notify_unlock
 	exit 0
 fi
@@ -55,7 +60,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 START_TIME=$(date +%s)
-"$TMUX_BIN" display-message "Watching process group $PROCESS_GROUP ($PROCESS_NAME)"
+notify_message "$NOTIFY_CLIENT" "Watching process group $PROCESS_GROUP ($PROCESS_NAME)"
 while owns_record && /bin/kill -0 -- "-$PROCESS_GROUP" 2>/dev/null; do
 	CURRENT_GROUP_START=$(/bin/ps -p "$PROCESS_GROUP" -o lstart= 2>/dev/null)
 	if [ -n "$GROUP_START" ] && [ -n "$CURRENT_GROUP_START" ] && [ "$CURRENT_GROUP_START" != "$GROUP_START" ]; then

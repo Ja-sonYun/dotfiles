@@ -98,21 +98,17 @@ in
     ];
 
     programs.tmux.hooks = {
-      paneTitleNewWindow = {
-        event = "after-new-window";
-        command = ''run-shell -b "${scripts}/panes #{pane_id}"'';
+      paneTitlePaneCreated = {
+        event = "pane-created";
+        command = ''run-shell -b "${scripts}/panes #{hook_pane}"'';
       };
       paneTitleSelectPane = {
-        event = "after-select-pane";
-        command = ''run-shell -b "${scripts}/panes #{pane_id}"'';
+        event = "window-pane-changed";
+        command = ''run-shell -b "${scripts}/panes #{hook_pane}"'';
       };
       paneTitleSelectWindow = {
-        event = "after-select-window";
-        command = ''run-shell -b "${scripts}/panes #{pane_id}"'';
-      };
-      paneTitleSplitWindow = {
-        event = "after-split-window";
-        command = ''run-shell -b "${scripts}/panes #{pane_id}"'';
+        event = "session-window-changed";
+        command = ''run-shell -b "${scripts}/panes #{hook_window}"'';
       };
       paneTitlePaneExited = {
         event = "pane-exited";

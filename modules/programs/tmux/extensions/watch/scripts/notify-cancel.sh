@@ -2,9 +2,11 @@
 # shellcheck source=/dev/null
 source "${BASH_SOURCE[0]%/*}/runtime.sh" || exit 1
 TMUX_BIN="${TMUX_BIN:-tmux}"
+NOTIFY_CLIENT="${2:-}"
+notify_init || exit 1
 
 case "${1:-}" in
-	"")
+	%[0-9]*)
 		orphans_only=0
 		;;
 	--orphans-only)
@@ -17,8 +19,9 @@ esac
 
 if [ "$orphans_only" -eq 0 ]; then
 	IFS=$'\x1f' read -r current_pane current_socket < <(
-		"$TMUX_BIN" display-message -p $'#{pane_id}\x1f#{socket_path}'
+		"$TMUX_BIN" display-message -pt "$1" $'#{pane_id}\x1f#{socket_path}'
 	)
+	[[ "$current_pane" == "$1" ]] || exit 0
 fi
 
 cancelled=0
@@ -47,8 +50,8 @@ notify_unlock
 
 if [ "$orphans_only" -eq 0 ]; then
 	if [ "$cancelled" -gt 0 ]; then
-		"$TMUX_BIN" display-message "Notify cancelled ($cancelled)"
+		notify_message "$NOTIFY_CLIENT" "Notify cancelled ($cancelled)"
 	else
-		"$TMUX_BIN" display-message "No active notify for this pane"
+		notify_message "$NOTIFY_CLIENT" "No active notify for this pane"
 	fi
 fi

@@ -15,14 +15,8 @@
   F10.command = "set -gq @nop 1";
   F11.command = "set -gq @nop 1";
   F12.command = "set -gq @nop 1";
-  "C-d".script = ''
-    remap="$(tmux display-message -p '#{E:TMUX_REMAP_CTRL_D}')"
-    if [ -n "$remap" ]; then
-      tmux send-keys "$remap"
-    else
-      tmux send-keys C-d
-    fi
-  '';
+  "C-d".command =
+    "if-shell -F '#{!=:#{E:TMUX_REMAP_CTRL_D},}' { send-keys -F '#{E:TMUX_REMAP_CTRL_D}' } { send-keys C-d }";
   menuCtrlC = {
     key = "C-c";
     cases = [

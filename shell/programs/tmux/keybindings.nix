@@ -20,6 +20,8 @@ in
       { key = "C-r"; }
       { key = "o"; }
       { key = "Space"; }
+      { key = "Tab"; }
+      { key = "BTab"; }
       { key = "'&'"; }
       { key = "X"; }
       {
@@ -90,6 +92,7 @@ in
         lib.mkIf
           (config.programs.tmux.extensions.shell.enable || config.programs.tmux.extensions.agent.enable)
           {
+            noDefault = true;
             cases =
               lib.optionals config.programs.tmux.extensions.shell.enable [
                 {

@@ -1,9 +1,7 @@
 import argparse
 import fcntl
-import gzip
 import json
 import os
-import shutil
 import stat
 import subprocess
 import sys
@@ -311,7 +309,6 @@ Event = Annotated[
     | ShellSession,
     Field(discriminator="type"),
 ]
-EVENTS = TypeAdapter(Event)
 
 
 class TmuxIdentity(Model):
@@ -451,6 +448,9 @@ def sync_directory(directory: Path) -> None:
 
 
 def replace_gzip(source: Path, destination: Path, extra: bytes = b"") -> None:
+    import gzip
+    import shutil
+
     temporary = destination.with_suffix(".gz.tmp")
     try:
         with temporary.open("wb") as output:
@@ -874,6 +874,8 @@ def record_tmux(config: Settings, args: argparse.Namespace) -> None:
                     "-F",
                     "#{client_tty}\t#{session_id}\t#{window_id}\t#{pane_id}",
                 )
+                pane_fields: dict[str, tuple[str, str, str]] = {}
+                session_names: dict[str, str] = {}
                 for line in clients.splitlines():
                     tty, session, window, pane = line.split("\t")
                     if args.action == "_tmux-event" and any(
@@ -887,28 +889,33 @@ def record_tmux(config: Settings, args: argparse.Namespace) -> None:
                         continue
                     if not pane:
                         continue
-                    command, cwd, pane_title = (
-                        tmux_output(
+                    if pane not in pane_fields:
+                        command, cwd, pane_title = (
+                            tmux_output(
+                                config,
+                                socket,
+                                "display-message",
+                                "-p",
+                                "-t",
+                                pane,
+                                "#{pane_current_command}\t#{pane_current_path}\t#{pane_title}",
+                            )
+                            .removesuffix("\n")
+                            .split("\t", 2)
+                        )
+                        pane_fields[pane] = (command, cwd, pane_title)
+                    command, cwd, pane_title = pane_fields[pane]
+                    if session not in session_names:
+                        session_names[session] = tmux_output(
                             config,
                             socket,
                             "display-message",
                             "-p",
                             "-t",
-                            pane,
-                            "#{pane_current_command}\t#{pane_current_path}\t#{pane_title}",
-                        )
-                        .removesuffix("\n")
-                        .split("\t", 2)
-                    )
-                    session_name = tmux_output(
-                        config,
-                        socket,
-                        "display-message",
-                        "-p",
-                        "-t",
-                        session,
-                        "#{session_name}",
-                    ).removesuffix("\n")
+                            f"{session}:",
+                            "#{session_name}",
+                        ).removesuffix("\n")
+                    session_name = session_names[session]
                     fields = TerminalFields(
                         tmux_socket=socket,
                         client_tty=tty,
@@ -951,6 +958,9 @@ def visible(value: str) -> str:
 
 
 def load_events(config: Settings, day: date) -> list[Event]:
+    import gzip
+
+    events_adapter = TypeAdapter(Event)
     directory = config.data_directory / day.isoformat()
     events: list[Event] = []
     if directory.is_dir():
@@ -967,7 +977,7 @@ def load_events(config: Settings, day: date) -> list[Event]:
                 with reader:
                     for number, line in enumerate(reader, 1):
                         try:
-                            events.append(EVENTS.validate_json(line))
+                            events.append(events_adapter.validate_json(line))
                         except ValidationError:
                             print(
                                 f"Skipping invalid record: {path}:{number}",

@@ -3,6 +3,7 @@
 state="${1:-}"
 pane_id="${2:-${TMUX_PANE:-}}"
 session_id_hint="${3:-}"
+expected_generation="${4:-}"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
@@ -13,37 +14,47 @@ schedule_counts() {
 }
 
 resolve_session_id() {
-	local owner id candidate name
-	owner="$(tmux show-option -pqv -t "$pane_id" @agent_session_id 2>/dev/null)"
-	if [[ -n "$owner" ]] && tmux has-session -t "$owner" 2>/dev/null; then
-		printf '%s\n' "$owner"
+	local owner id candidate name marker context
+	owner="$stored_session_id"
+	if [[ -n "$owner" && "$owner" == "$current_session" ]]; then
+		printf '%s\x1f%s\x1f%s\n' "$owner" "$current_session_name" "$current_marker"
+		return
+	fi
+	if [[ -n "$owner" ]] && context="$(tmux display-message -pt "$owner:" $'#{session_id}\x1f#{session_name}\x1f#{E:TMUX_AGENT_STATUS}' 2>/dev/null)"; then
+		printf '%s\n' "$context"
 		return
 	fi
 	if [[ -n "$session_id_hint" ]]; then
-		name="$(tmux display-message -pt "$session_id_hint:" '#{session_name}' 2>/dev/null)"
+		IFS=$'\x1f' read -r candidate name marker < <(
+			tmux display-message -pt "$session_id_hint:" $'#{session_id}\x1f#{session_name}\x1f#{E:TMUX_AGENT_STATUS}' 2>/dev/null
+		)
 		if session_matches "$name" agent; then
-			printf '%s\n' "$session_id_hint"
+			printf '%s\x1f%s\x1f%s\n' "$candidate" "$name" "$marker"
 			return
 		fi
 	fi
-	while IFS=$'\x1f' read -r id candidate name; do
+	if session_matches "$current_session_name" agent; then
+		printf '%s\x1f%s\x1f%s\n' "$current_session" "$current_session_name" "$current_marker"
+		return
+	fi
+	while IFS=$'\x1f' read -r id candidate name marker; do
 		[[ "$id" == "$pane_id" ]] || continue
 		if session_matches "$name" agent; then
-			printf '%s\n' "$candidate"
+			printf '%s\x1f%s\x1f%s\n' "$candidate" "$name" "$marker"
 			return
 		fi
-	done < <(tmux list-panes -a -F $'#{pane_id}\x1f#{session_id}\x1f#{session_name}' 2>/dev/null)
+	done < <(tmux list-panes -a -F $'#{pane_id}\x1f#{session_id}\x1f#{session_name}\x1f#{E:TMUX_AGENT_STATUS}' 2>/dev/null)
 	if [[ -n "$session_id_hint" ]]; then
-		printf '%s\n' "$session_id_hint"
+		tmux display-message -pt "$session_id_hint:" $'#{session_id}\x1f#{session_name}\x1f#{E:TMUX_AGENT_STATUS}' 2>/dev/null
 	else
-		tmux display-message -pt "$pane_id" '#{session_id}' 2>/dev/null
+		printf '%s\x1f%s\x1f%s\n' "$current_session" "$current_session_name" "$current_marker"
 	fi
 }
 
 detect_agent() {
 	local word base mapping pattern display_name
 	local -a mappings
-	read -r -a mappings < <(printf '%s\n' "$(tmux show-option -gqv @agent_command_map)")
+	read -r -a mappings <<<"$command_map"
 	for word in "$@"; do
 		for word in $word; do
 			base="${word##*/}"
@@ -91,13 +102,30 @@ esac
 
 [[ -z "$pane_id" ]] && exit 0
 
-if [[ "$state" == "init" && -z "${2:-}" && -n "${STATE_COMMAND_NAME:-}" ]]; then
-	if [[ -z "$(detect_agent "$STATE_COMMAND_NAME")" ]]; then
-		exit 0
-	fi
-fi
-
 tmux_lock "__agent_status_$pane_id" || exit 1
+
+IFS=$'\x1f' read -r pane_id pane_path start_command current_command enabled prev_state stored_agent stored_path stored_session_id stored_display_name stored_launch_name generation command_map event_client event_session current_session current_session_name current_marker < <(
+	tmux display-message -pt "$pane_id" $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_start_command}\x1f#{pane_current_command}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_path}\x1f#{@agent_session_id}\x1f#{@agent_display_name}\x1f#{@agent_launch_name}\x1f#{@agent_event_generation}\x1f#{@agent_command_map}\x1f#{@agent_event_client}\x1f#{@agent_event_session}\x1f#{session_id}\x1f#{session_name}\x1f#{E:TMUX_AGENT_STATUS}' 2>/dev/null
+)
+if [[ -z "$pane_id" ]]; then
+	[[ "$state" != delete ]] || schedule_counts
+	exit 0
+fi
+generation="${generation:-0}"
+[[ -z "$expected_generation" || "$expected_generation" == "$generation" ]] || exit 0
+if [[ -n "${AI_AGENT_SESSION_ID:-}" && "${AI_AGENT_EVENT:-}" != SessionStart && -n "$event_session" && ("$event_session" != "$AI_AGENT_SESSION_ID" || "$event_client" != "${AI_AGENT_CLIENT:-}") ]]; then
+	exit 0
+fi
+if [[ "$state" == init && -z "${2:-}" && -n "${STATE_COMMAND_NAME:-}" && -z "$(detect_agent "$STATE_COMMAND_NAME")" ]]; then
+	exit 0
+fi
+tmux_begin
+tmux_add set-option -p -q -t "$pane_id" @agent_event_generation "$((generation + 1))"
+if [[ "${AI_AGENT_EVENT:-}" == SessionStart && -n "${AI_AGENT_SESSION_ID:-}" ]]; then
+	tmux_add set-option -p -q -t "$pane_id" @agent_event_client "${AI_AGENT_CLIENT:-}"
+	tmux_add set-option -p -q -t "$pane_id" @agent_event_session "$AI_AGENT_SESSION_ID"
+fi
+tmux_flush || exit 1
 
 if [[ "$state" == "delete" ]]; then
 	clear_pane_state "$pane_id" || exit 1
@@ -105,14 +133,10 @@ if [[ "$state" == "delete" ]]; then
 	exit 0
 fi
 
-session_id="$(resolve_session_id)"
-session_name="$(tmux display-message -pt "$session_id:" '#{session_name}' 2>/dev/null)"
+IFS=$'\x1f' read -r session_id session_name agent_status < <(resolve_session_id)
 if [[ "$session_name" == "_popup_all_agents" ]]; then
 	exit 0
 fi
-IFS=$'\x1f' read -r pane_id pane_path start_command current_command enabled prev_state stored_agent stored_path stored_session_id stored_display_name stored_launch_name < <(
-	tmux display-message -pt "$pane_id" $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_start_command}\x1f#{pane_current_command}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_path}\x1f#{@agent_session_id}\x1f#{@agent_display_name}\x1f#{@agent_launch_name}' 2>/dev/null
-)
 if [[ -z "$pane_id" || -z "$session_id" || -z "$session_name" ]]; then
 	schedule_counts
 	exit 0
@@ -133,12 +157,16 @@ if ! session_matches "$session_name" agent; then
 	schedule_counts
 	exit 0
 fi
-agent_status="$(tmux display-message -pt "$session_id" '#{E:TMUX_AGENT_STATUS}' 2>/dev/null)"
 launch_name="$stored_launch_name"
 if [[ -z "${2:-}" ]]; then
 	launch_name="${STATE_COMMAND_NAME:-$launch_name}"
 fi
-IFS=$'\x1f' read -r agent display_name < <(detect_agent "$launch_name" "$start_command" "$current_command")
+if [[ "$enabled" == 1 && -n "$stored_agent" && "$launch_name" == "$stored_launch_name" ]]; then
+	agent="$stored_agent"
+	display_name="$stored_display_name"
+else
+	IFS=$'\x1f' read -r agent display_name < <(detect_agent "$launch_name" "$start_command" "$current_command")
+fi
 if [[ -z "$agent_status" && -z "$agent" ]]; then
 	[[ "$enabled" != "1" ]] || clear_pane_state "$pane_id" || exit 1
 	schedule_counts

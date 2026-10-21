@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-mcp-remote",
-    "version": "0.15.1",
+    "version": "0.15.2",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-mcp-remote",
-        "version": "0.15.1",
+        "version": "0.15.2",
         "dependencies": {
-          "mcp-remote": "0.15.1"
+          "mcp-remote": "0.15.2"
         }
       },
       "node_modules/accepts": {
@@ -555,9 +555,9 @@
         }
       },
       "node_modules/mcp-remote": {
-        "version": "0.15.1",
-        "resolved": "https://registry.npmjs.org/mcp-remote/-/mcp-remote-0.15.1.tgz",
-        "integrity": "sha512-znJhxnoQZTDx9AieHZrRYs8YqWKpyH1SKyFEFnMTMDUPpx6r9dSc/L4lKf18DdWMQqKpbwWbfIZfyiVg2RSXzg==",
+        "version": "0.15.2",
+        "resolved": "https://registry.npmjs.org/mcp-remote/-/mcp-remote-0.15.2.tgz",
+        "integrity": "sha512-3PrXMgjJew6xbZH21D7AbtOoHwhvjWt1IY6wepHjKTZLPSkTPifdMVBFuoxsuF6WK6nUlZIgpSj5o5NscJ+XXw==",
         "license": "MIT",
         "dependencies": {
           "express": "^4.21.2",
@@ -958,9 +958,9 @@
         }
       },
       "node_modules/undici": {
-        "version": "7.30.0",
-        "resolved": "https://registry.npmjs.org/undici/-/undici-7.30.0.tgz",
-        "integrity": "sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==",
+        "version": "7.30.1",
+        "resolved": "https://registry.npmjs.org/undici/-/undici-7.30.1.tgz",
+        "integrity": "sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==",
         "license": "MIT",
         "engines": {
           "node": ">=20.18.1"
@@ -1010,5 +1010,5 @@
       }
     }
   },
-  "invalidationHash": "e0fb03660cb6c7b719809226b11e2c1a026ef01fe0c2145ee9c1df09b2f70298"
+  "invalidationHash": "b05300a862c3b33e595607d8b2a15e0fca54518f1f798e2e4941e96a3578346f"
 }

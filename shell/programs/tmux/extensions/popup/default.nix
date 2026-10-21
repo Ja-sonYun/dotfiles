@@ -8,8 +8,8 @@ let
   inherit (popup) scripts;
   sharedRootBindings = import ../../shared-root.nix;
 
-  popupRootMatch = ''table="$(tmux show-options -qv key-table)"; test "$table" = popup-root || test "$table" = popup-locked-root'';
-  popupLockedRootMatch = ''test "$(tmux show-options -qv key-table)" = popup-locked-root'';
+  popupRootMatch = "#{||:#{==:#{key-table},popup-root},#{==:#{key-table},popup-locked-root}}";
+  popupLockedRootMatch = "#{==:#{key-table},popup-locked-root}";
 in
 lib.mkIf popup.enable {
   programs.tmux = {
@@ -25,25 +25,25 @@ lib.mkIf popup.enable {
       };
       w.cases = [
         {
-          match = popupRootMatch;
+          whenFormat = popupRootMatch;
           command = "detach";
         }
       ];
       s.cases = [
         {
-          match = popupRootMatch;
+          whenFormat = popupRootMatch;
           command = "detach";
         }
       ];
       c.cases = [
         {
-          match = popupLockedRootMatch;
+          whenFormat = popupLockedRootMatch;
           command = "detach";
         }
       ];
       n.cases = [
         {
-          match = popupLockedRootMatch;
+          whenFormat = popupLockedRootMatch;
           unlessEnv = [ "TMUX_POPUP_KEEP_OPEN" ];
           command = "detach";
         }
@@ -52,7 +52,7 @@ lib.mkIf popup.enable {
         repeat = true;
         cases = [
           {
-            match = popupLockedRootMatch;
+            whenFormat = popupLockedRootMatch;
             unlessEnv = [ "TMUX_POPUP_KEEP_OPEN" ];
             command = "detach";
           }
@@ -61,7 +61,7 @@ lib.mkIf popup.enable {
       };
       p.cases = [
         {
-          match = popupLockedRootMatch;
+          whenFormat = popupLockedRootMatch;
           unlessEnv = [ "TMUX_POPUP_KEEP_OPEN" ];
           command = "detach";
         }
@@ -70,7 +70,7 @@ lib.mkIf popup.enable {
         repeat = true;
         cases = [
           {
-            match = popupLockedRootMatch;
+            whenFormat = popupLockedRootMatch;
             unlessEnv = [ "TMUX_POPUP_KEEP_OPEN" ];
             command = "detach";
           }
@@ -79,7 +79,7 @@ lib.mkIf popup.enable {
       };
       "%".cases = [
         {
-          match = popupLockedRootMatch;
+          whenFormat = popupLockedRootMatch;
           command = "detach";
         }
       ];
@@ -87,14 +87,32 @@ lib.mkIf popup.enable {
         key = "'\"'";
         cases = [
           {
-            match = popupLockedRootMatch;
+            whenFormat = popupLockedRootMatch;
             command = "detach";
           }
         ];
       };
       "!".cases = [
         {
-          match = popupLockedRootMatch;
+          whenFormat = popupLockedRootMatch;
+          command = "detach";
+        }
+      ];
+      "*".cases = [
+        {
+          whenFormat = popupLockedRootMatch;
+          command = "detach";
+        }
+      ];
+      "@".cases = [
+        {
+          whenFormat = popupLockedRootMatch;
+          command = "detach";
+        }
+      ];
+      g.cases = [
+        {
+          whenFormat = popupLockedRootMatch;
           command = "detach";
         }
       ];
@@ -106,7 +124,7 @@ lib.mkIf popup.enable {
             command = ''run-shell -b "${scripts}/move reset '#{session_name}'"'';
           }
           {
-            match = popupRootMatch;
+            whenFormat = popupRootMatch;
             command = ''run-shell -b "${scripts}/move reset '#{session_name}'"'';
           }
         ];
@@ -147,7 +165,7 @@ lib.mkIf popup.enable {
           command = "switch-client -T popupmove";
         }
         {
-          match = popupRootMatch;
+          whenFormat = popupRootMatch;
           command = "switch-client -T popupmove";
         }
       ];

@@ -119,20 +119,44 @@ tmux_add() {
 }
 
 tmux_refresh_clients() {
-	local client current error exists
-	while IFS= read -r client; do
+	local client session window target
+	local -A sessions=() windows=()
+	local -a commands=()
+	for target in "$@"; do
+		case "$target" in
+		\$*) sessions[$target]=1 ;;
+		@*) windows[$target]=1 ;;
+		esac
+	done
+	if ((${#windows[@]})); then
+		while read -r session window; do
+			[[ -z "${windows[$window]:-}" ]] || sessions[$session]=1
+		done < <(tmux list-windows -a -F '#{session_id} #{window_id}' 2>/dev/null)
+	fi
+	while IFS=$'\x1f' read -r client session; do
 		[[ -n "$client" ]] || continue
-		if error="$(tmux refresh-client -S -t "$client" 2>&1)"; then
+		(($# == 0)) || [[ -n "${sessions[$session]:-}" ]] || continue
+		((${#commands[@]} == 0)) || commands+=(';')
+		commands+=(refresh-client -S -t "$client")
+	done < <(tmux list-clients -F $'#{client_tty}\x1f#{session_id}' 2>/dev/null)
+	((${#commands[@]})) || return 0
+	tmux "${commands[@]}"
+}
+
+tmux_flush_if() {
+	local target="$1" condition="$2" command="" argument
+	for argument in "${_TMUX_BATCH[@]}"; do
+		if [[ "$argument" == ";" ]]; then
+			command+=" ; "
 			continue
 		fi
-		exists=""
-		while IFS= read -r current; do
-			[[ "$current" == "$client" ]] && exists=1
-		done < <(tmux list-clients -F '#{client_tty}' 2>/dev/null)
-		[[ -n "$exists" ]] || continue
-		printf '%s\n' "$error" >&2
-		return 1
-	done < <(tmux list-clients -F '#{client_tty}' 2>/dev/null)
+		argument="${argument//\\/\\\\}"
+		argument="${argument//\"/\\\"}"
+		argument="${argument//\$/\\\$}"
+		command+="\"$argument\" "
+	done
+	_TMUX_BATCH=()
+	[[ "$(tmux if-shell -F -t "$target" "$condition" "$command ; display-message -p 1")" == 1 ]]
 }
 
 tmux_flush() {

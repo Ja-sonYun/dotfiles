@@ -1,0 +1,7 @@
+{
+  "registry": "npm",
+  "name": "rea-agents",
+  "versions": {
+    "aarch64-darwin": "6.7.0"
+  }
+}

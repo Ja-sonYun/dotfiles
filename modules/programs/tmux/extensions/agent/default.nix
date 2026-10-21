@@ -229,25 +229,13 @@ in
         '';
 
         hooks = {
-          agentSessionCountsNewWindow = {
-            event = "after-new-window";
+          agentSessionCountsPaneCreated = {
+            event = "pane-created";
             command = ''run-shell -b "${scripts}/counts"'';
           };
           agentSessionCountsSelectPane = {
-            event = "after-select-pane";
-            command = ''run-shell -b "${scripts}/counts"'';
-          };
-          agentSessionCountsSelectWindow = {
-            event = "after-select-window";
-            command = ''run-shell -b "${scripts}/counts"'';
-          };
-          agentSessionCountsSplitWindow = {
-            event = "after-split-window";
-            command = ''run-shell -b "${scripts}/counts"'';
-          };
-          agentSessionCountsClientSessionChanged = {
-            event = "client-session-changed";
-            command = ''run-shell -b "${scripts}/counts"'';
+            event = "window-pane-changed";
+            command = ''run-shell -b "${scripts}/counts --window #{hook_window}"'';
           };
           agentStatusNewSession = {
             event = "after-new-session";

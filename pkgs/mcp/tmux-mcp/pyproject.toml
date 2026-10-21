@@ -1,0 +1,12 @@
+[project]
+name = "tmux-mcp"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["mcp>=1,<2", "pydantic>=2,<3", "pydantic-settings>=2.6,<3"]
+
+[project.scripts]
+tmux-mcp = "tmux_mcp.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"

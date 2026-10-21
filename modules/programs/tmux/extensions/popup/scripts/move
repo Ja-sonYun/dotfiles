@@ -119,6 +119,7 @@ border="$(tmux show-options -gqv "@popup_border_$key")"
 # `tmux attach` job (and with it the inner client — the one whose key
 # binding invoked us; run-shell keeps this script alive server-side).
 [[ -n "$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null)" ]] || exit 0
+session_id="$(tmux display-message -pt "$inner:" '#{session_id}' 2>/dev/null)" || exit 1
 tmux_begin
 tmux_add set -g "@popup_geom_$key" "$x $y $w $h"
 tmux_add display-popup -C -c "$outer"
@@ -132,14 +133,24 @@ for _ in {1..20}; do
 	[[ -z "$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null)" ]] && break
 	sleep 0.05
 done
+[[ -z "$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null)" ]] || exit 1
 
 # Reopen at the new geometry, reattaching to the same session so all content
 # is preserved. display-popup blocks until the popup closes again, so it must
 # be backgrounded — the popup itself lives on the server and survives us.
-tmux display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
-	${border:+-b "$border"} -E "tmux attach -t $(printf '%q' "$inner")" &
-
-((reset)) && exit 0
+(
+	tmux_lock_close
+	tmux display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
+		${border:+-b "$border"} -E "tmux attach -t $(printf '%q' "$session_id")"
+	if [[ "$inner" == _popup_all_agents ]]; then
+		tmux_lock "__popup_lock_$key" || exit 1
+		if [[ -z "$(tmux list-clients -t "$session_id" -F '#{client_name}' 2>/dev/null)" ]]; then
+			tmux kill-session -t "$session_id" 2>/dev/null || true
+		fi
+	fi
+) &
+popup_pid=$!
+reopened=0
 
 # Re-arm popupmove mode on the reopened popup's client. Each close/reopen
 # creates a brand-new inner client that starts in the root key table; without
@@ -147,9 +158,16 @@ tmux display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
 for _ in {1..20}; do
 	new="$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null | head -n1)"
 	if [[ -n "$new" ]]; then
-		tmux switch-client -c "$new" -T popupmove
+		reopened=1
+		((reset)) || tmux switch-client -c "$new" -T popupmove
 		break
 	fi
 	sleep 0.05
 done
+if ((reopened == 0)); then
+	tmux display-popup -C -c "$outer"
+	tmux_unlock
+	wait "$popup_pid"
+	exit 1
+fi
 exit 0

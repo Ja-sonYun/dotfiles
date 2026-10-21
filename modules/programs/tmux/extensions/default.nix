@@ -14,6 +14,7 @@ let
     "watch"
     "sessionCleanup"
     "gitPr"
+    "mcp"
   ];
 in
 {
@@ -25,6 +26,7 @@ in
     ./watch
     ./session-cleanup
     ./git-pr
+    ./mcp
   ];
   config = lib.mkIf enabled {
     assertions = [

@@ -121,6 +121,7 @@ in
         export TMUX_MENU_ORIGIN_PANE="$pane_id"
         export TMUX_MENU_ORIGIN_WINDOW="$window_id"
         export TMUX_MENU_CLIENT="$client_name"
+        export TMUX_MENU_PANE="$pane_id"
         menu=$(tmux show-options -qv @menu)
         menu=''${menu:-menu}
         if [ -n "$(tmux display-message -pt "$pane_id" '#{E:DEFAULT}')" ]; then
@@ -130,14 +131,15 @@ in
         session=$(tmux display-message -pt "$pane_id" '#{session_name}' 2>/dev/null)
         key="''${session//[^A-Za-z0-9]/_}"
         outer=$(tmux show-options -gqv "@popup_client_$key" 2>/dev/null)
-        W="" H=""
+        W="" H="" outer_pane=""
         if [ -n "$outer" ] && [ "$outer" != "$client_name" ]; then
-          read -r W H < <(tmux list-clients -F $'#{client_name}\t#{client_width} #{client_height}' 2>/dev/null |
+          read -r W H outer_pane < <(tmux list-clients -F $'#{client_name}\t#{client_width} #{client_height} #{pane_id}' 2>/dev/null |
             awk -F '\t' -v c="$outer" '$1 == c { print $2; exit }')
         fi
-        if [ -n "$W" ] && [ -n "$H" ]; then
+        if [ -n "$W" ] && [ -n "$H" ] && [ -n "$outer_pane" ]; then
           tmux detach-client -t "$client_name" 2>/dev/null
           export TMUX_MENU_CLIENT="$outer"
+          export TMUX_MENU_PANE="$outer_pane"
           exec ${menuCfg.package}/bin/tmux-menu show -x "$((W - 1))" -y "$H" --menu ${menuCfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
         fi
         exec ${menuCfg.package}/bin/tmux-menu show --menu ${menuCfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"

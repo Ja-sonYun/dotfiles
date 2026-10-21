@@ -80,6 +80,7 @@ lib.mkIf agent.enable {
         }
         {
           command = "claude-work";
+          args = [ "--chrome" ];
           key = "a";
         }
         {

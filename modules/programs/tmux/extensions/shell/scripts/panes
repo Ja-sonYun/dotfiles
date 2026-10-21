@@ -6,7 +6,6 @@ render_seq="${3:-}"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
-tmux_lock __shell_panes_lock || exit
 
 label_for_path() {
 	basename "$(project_for_path "$1")"
@@ -15,19 +14,26 @@ label_for_path() {
 [[ -z "$target" ]] && target="$(tmux display-message -p '#{pane_id}' 2>/dev/null)"
 [[ -z "$target" ]] && exit 0
 
-fmt=$'#{pane_id}\x1f#{session_name}\x1f#{window_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pcmd}\x1f#{@pane_project_label}\x1f#{@panes}\x1f#{@shell_seq}\x1f#{@shell_pwd}\x1f#{@shell_cmd}'
-if [[ "$target" == @* ]]; then
-	IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq shell_path shell_command < <(
-		tmux list-panes -t "$target" -F "$fmt" 2>/dev/null | sed -n '1p'
-	)
-else
-	IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq shell_path shell_command < <(
-		tmux display-message -pt "$target" "$fmt" 2>/dev/null
-	)
-fi
+fmt=$'#{pane_id}\x1f#{session_name}\x1f#{window_id}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{@pane_last_path}\x1f#{@pcmd}\x1f#{@pane_project_label}\x1f#{@panes}\x1f#{@shell_seq}\x1f#{@shell_pwd}\x1f#{@shell_cmd}\x1f#{E:TMUX_TITLE_OWNER}'
+read_target() {
+	if [[ "$target" == @* ]]; then
+		IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq shell_path shell_command title_owner < <(
+			tmux list-panes -t "$target" -F "$fmt" 2>/dev/null | sed -n '1p'
+		)
+	else
+		IFS=$'\x1f' read -r pane_id session window_id current_path current_command stored_path stored_cmd stored_project_label old_panes start_seq shell_path shell_command title_owner < <(
+			tmux display-message -pt "$target" "$fmt" 2>/dev/null
+		)
+	fi
+}
+read_target
 [[ -n "$pane_id" && -n "$session" && -n "$window_id" ]] || exit 0
-
-[[ -z "$(tmux display-message -pt "$session" '#{E:TMUX_TITLE_OWNER}' 2>/dev/null)" ]] || exit 0
+[[ -z "$title_owner" ]] || exit 0
+[[ -z "$render_seq" || "$render_seq" == "$start_seq" ]] || exit 0
+tmux_lock __shell_panes_lock || exit
+read_target
+[[ -n "$pane_id" && -z "$title_owner" ]] || exit 0
+[[ -z "$render_seq" || "$render_seq" == "$start_seq" ]] || exit 0
 
 mode=full
 if session_matches "$session" subshell; then
@@ -104,10 +110,11 @@ fi
 
 # caller's seq dates the rendered data; self-captured seq would miss stale writes
 check_seq="${render_seq:-$start_seq}"
-if [[ -n "$check_seq" ]]; then
-	current_seq="$(tmux display-message -pt "$pane_id" '#{@shell_seq}' 2>/dev/null)"
-	[[ "$check_seq" != "$current_seq" ]] && exit 0
-fi
 
-tmux_flush || exit
-[[ "${refresh_clients:-}" != 1 ]] || tmux_refresh_clients
+condition='#{==:#{E:TMUX_TITLE_OWNER},}'
+if [[ -n "$check_seq" ]]; then
+	[[ "$check_seq" =~ ^[0-9]+$ ]] || exit 0
+	condition="#{&&:$condition,#{==:#{@shell_seq},$check_seq}}"
+fi
+tmux_flush_if "$pane_id" "$condition" || exit
+[[ "${refresh_clients:-}" != 1 ]] || tmux_refresh_clients "$window_id"

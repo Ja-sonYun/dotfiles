@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 
 NOTIFY_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/tmux-notify-$UID"
-umask 077
-[[ ! -L "$NOTIFY_DIR" ]] || return 1
-mkdir -p "$NOTIFY_DIR" || return 1
-[[ ! -L "$NOTIFY_DIR" && -O "$NOTIFY_DIR" ]] || return 1
-chmod 700 "$NOTIFY_DIR" || return 1
+notify_message() {
+	local client="$1"
+	shift
+	[[ -n "$client" ]] || return 0
+	"$TMUX_BIN" display-message -c "$client" "$@"
+}
+
+notify_init() {
+	umask 077
+	[[ ! -L "$NOTIFY_DIR" ]] || return 1
+	mkdir -p "$NOTIFY_DIR" || return 1
+	[[ ! -L "$NOTIFY_DIR" && -O "$NOTIFY_DIR" ]] || return 1
+	chmod 700 "$NOTIFY_DIR"
+}
 
 notify_lock() {
 	exec 9>"$NOTIFY_DIR/.lock" || return 1

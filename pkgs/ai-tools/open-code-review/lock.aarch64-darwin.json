@@ -1,75 +1,75 @@
 {
   "package-lock": {
     "name": "dotfiles-open-code-review",
-    "version": "1.13.1",
+    "version": "1.13.2",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-open-code-review",
-        "version": "1.13.1",
+        "version": "1.13.2",
         "dependencies": {
-          "@alibaba-group/ocr-darwin-arm64": "1.13.1",
-          "@alibaba-group/open-code-review": "1.13.1"
+          "@alibaba-group/ocr-darwin-arm64": "1.13.2",
+          "@alibaba-group/open-code-review": "1.13.2"
         }
       },
       "node_modules/@alibaba-group/ocr-darwin-arm64": {
-        "version": "1.13.1",
-        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-darwin-arm64/-/ocr-darwin-arm64-1.13.1.tgz",
-        "integrity": "sha512-IUKNBPN4WjpEjFeTx47rRR2v2VABbykqaLGnpqTCtE3xAxNtwB4ZAb0BVPQiATzWB8iiKVXtKbC3EiLedunXyw==",
+        "version": "1.13.2",
+        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-darwin-arm64/-/ocr-darwin-arm64-1.13.2.tgz",
+        "integrity": "sha512-5T+DkjtkK5FIbgidH/4hNVP8DcGPMM+kqYylinZizgh5aHMUpGH9VmGCilN1TmKX2DlIembNZPsq5l1c7FwKgA==",
         "cpu": ["arm64"],
         "license": "Apache-2.0",
         "os": ["darwin"]
       },
       "node_modules/@alibaba-group/ocr-darwin-x64": {
-        "version": "1.13.1",
-        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-darwin-x64/-/ocr-darwin-x64-1.13.1.tgz",
-        "integrity": "sha512-ZQ/fSzOiSSEOcLMuwecXVJANd2gW784nGWF/T7lqwQR3j+N6yKhELu57h+e9qSZLcIH5itQR61p8hEcHkYZ3Aw==",
+        "version": "1.13.2",
+        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-darwin-x64/-/ocr-darwin-x64-1.13.2.tgz",
+        "integrity": "sha512-tJux3tX41KUsCPQU6jPSHUQCXcxh6/dF28fVsXAega5rlG4ObGTR9N0wN+I6jRF//F+dVAsKe0gJycis+tSaDg==",
         "cpu": ["x64"],
         "license": "Apache-2.0",
         "optional": true,
         "os": ["darwin"]
       },
       "node_modules/@alibaba-group/ocr-linux-arm64": {
-        "version": "1.13.1",
-        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-linux-arm64/-/ocr-linux-arm64-1.13.1.tgz",
-        "integrity": "sha512-RcaHcupR10lIxrknhT4QB4VqhNFhbM7lQbBHguJhtZ4IYnhAn4ZY1a/6bNgvyf8ZWJq8EA+wBbsDraVl1BDEpw==",
+        "version": "1.13.2",
+        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-linux-arm64/-/ocr-linux-arm64-1.13.2.tgz",
+        "integrity": "sha512-eSIjHjyUsl2iQ3nz1+zczjQEbFj3s/loKAxY9hEuk3+bxsdw22wI2/RTYRMBMc7DQ8HrIebbgSS4NuSuyq1bXQ==",
         "cpu": ["arm64"],
         "license": "Apache-2.0",
         "optional": true,
         "os": ["linux"]
       },
       "node_modules/@alibaba-group/ocr-linux-x64": {
-        "version": "1.13.1",
-        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-linux-x64/-/ocr-linux-x64-1.13.1.tgz",
-        "integrity": "sha512-aaC/IFLscrhe5DfCGzVLQ+VigXV1QB+G8GnzcxjzEhHyQu2u+YZP0Z1O7Q4OJYoQk/kKskVpMfRO0q0rPB0tig==",
+        "version": "1.13.2",
+        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-linux-x64/-/ocr-linux-x64-1.13.2.tgz",
+        "integrity": "sha512-eVY/+mdU/RC+0xqzjnSEKp+kfBD3qxK/DfFxLXlvW8LZpbx+XHdCZFyetOgLANC+xeqrHm9flvt6Sp4aeh1Prg==",
         "cpu": ["x64"],
         "license": "Apache-2.0",
         "optional": true,
         "os": ["linux"]
       },
       "node_modules/@alibaba-group/ocr-win32-arm64": {
-        "version": "1.13.1",
-        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-win32-arm64/-/ocr-win32-arm64-1.13.1.tgz",
-        "integrity": "sha512-gdVER6+S4edqTBiLL6qV1JeUF+sruhuxlFK2RM+0u9euOLyeyWARqvO/Ft8ud5jYrsur6Mq9YInRZnGKjl6YYg==",
+        "version": "1.13.2",
+        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-win32-arm64/-/ocr-win32-arm64-1.13.2.tgz",
+        "integrity": "sha512-tZw3QW0wC69mHeiMsEirYqcr8GPc3gPA8ZtoMgfB0k27Ev1+V1pWMkFCC6Y2IDnlIVZyCy6mNRxBqxb9M4aI8Q==",
         "cpu": ["arm64"],
         "license": "Apache-2.0",
         "optional": true,
         "os": ["win32"]
       },
       "node_modules/@alibaba-group/ocr-win32-x64": {
-        "version": "1.13.1",
-        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-win32-x64/-/ocr-win32-x64-1.13.1.tgz",
-        "integrity": "sha512-XZ72kMrS8gfCEbdUmnQFKsEsxOL3TGjjeB427TvMFswTKlQxlWIGSwRBPV5gZGwIJJr/3bikBsm05WW2DUGLgg==",
+        "version": "1.13.2",
+        "resolved": "https://registry.npmjs.org/@alibaba-group/ocr-win32-x64/-/ocr-win32-x64-1.13.2.tgz",
+        "integrity": "sha512-LfVYNVDy0nTe9PQMBPE0WI7oAWC6vOr17phHDD7XSac//5fUWjJE48YJC+eK0LWukm6/kTw/ri09nV4pbm13mg==",
         "cpu": ["x64"],
         "license": "Apache-2.0",
         "optional": true,
         "os": ["win32"]
       },
       "node_modules/@alibaba-group/open-code-review": {
-        "version": "1.13.1",
-        "resolved": "https://registry.npmjs.org/@alibaba-group/open-code-review/-/open-code-review-1.13.1.tgz",
-        "integrity": "sha512-gE1i3NCDmeEpVtR/Xcv45XZTOYVS4hNnYARAi0UkQdkX49ZaasX+MpQFDsFyXTzZDQSkQ5lomTOq/BjIPs5DjQ==",
+        "version": "1.13.2",
+        "resolved": "https://registry.npmjs.org/@alibaba-group/open-code-review/-/open-code-review-1.13.2.tgz",
+        "integrity": "sha512-3auDOAqhQalV85iw5ww6I6LjOqw1ZTu9MVoW2DU0pou7yHJ/g+x+7J7z7sKtJoGD9O3/bnlHxDxCm1ZE7Or64Q==",
         "hasInstallScript": true,
         "license": "Apache-2.0",
         "bin": {
@@ -79,15 +79,15 @@
           "node": ">=14"
         },
         "optionalDependencies": {
-          "@alibaba-group/ocr-darwin-arm64": "1.13.1",
-          "@alibaba-group/ocr-darwin-x64": "1.13.1",
-          "@alibaba-group/ocr-linux-arm64": "1.13.1",
-          "@alibaba-group/ocr-linux-x64": "1.13.1",
-          "@alibaba-group/ocr-win32-arm64": "1.13.1",
-          "@alibaba-group/ocr-win32-x64": "1.13.1"
+          "@alibaba-group/ocr-darwin-arm64": "1.13.2",
+          "@alibaba-group/ocr-darwin-x64": "1.13.2",
+          "@alibaba-group/ocr-linux-arm64": "1.13.2",
+          "@alibaba-group/ocr-linux-x64": "1.13.2",
+          "@alibaba-group/ocr-win32-arm64": "1.13.2",
+          "@alibaba-group/ocr-win32-x64": "1.13.2"
         }
       }
     }
   },
-  "invalidationHash": "ac5e59dcd713b846914cbaa43956aeaa415ae202d3bf85dd1a550945d8751860"
+  "invalidationHash": "d83381dbc3147dcd4ce597d386354c2c38a1ab7212c8265a323523418cd51c65"
 }

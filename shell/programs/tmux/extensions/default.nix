@@ -12,6 +12,7 @@ in
     lib.optionals (hasTag "ai") [ ./agent ]
     ++ lib.optionals (hasTag "task") [ ./taskwarrior.nix ]
     ++ [
+      ./mcp
       ./monitor
       ./popup
       ./shell

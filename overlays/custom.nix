@@ -48,8 +48,11 @@
     mcp-nixos = final.callPackage ../pkgs/mcp/mcp-nixos { };
     mcp-remote = final.callPackage ../pkgs/mcp/mcp-remote { };
     n8n-mcp = final.callPackage ../pkgs/mcp/n8n-mcp { };
+    rea = final.callPackage ../pkgs/mcp/rea { };
+    tmux-mcp = final.callPackage ../pkgs/mcp/tmux-mcp { };
 
     r2dec = final.callPackage ../pkgs/radare2/r2dec { };
     r2ghidra = final.callPackage ../pkgs/radare2/r2ghidra { };
+    r2mcp = final.callPackage ../pkgs/radare2/r2mcp { };
   };
 }

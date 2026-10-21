@@ -236,6 +236,7 @@ in
         export TMUX_MENU_ORIGIN_PANE="$pane_id"
         export TMUX_MENU_ORIGIN_WINDOW="$window_id"
         export TMUX_MENU_CLIENT="$client_name"
+        export TMUX_MENU_PANE="$pane_id"
         menu=$(tmux show-options -qv @menu)
         menu=''${menu:-menu}
         exec ${cfg.package}/bin/tmux-menu show --menu ${cfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"

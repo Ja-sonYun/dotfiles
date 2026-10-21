@@ -52,19 +52,17 @@
               previous="''${previous:A}"
               [[ -z "$next" ]] || next="''${next:A}"
 
-              while IFS= read -r session_id; do
+              while IFS=$'\x1f' read -r session_id project_root label; do
                 [[ "$session_id" != "$current_session" ]] || continue
-                project_root=$(tmux show-options -qv -t "$session_id" @session_cleanup_root 2>/dev/null)
                 [[ -n "$project_root" ]] || continue
                 [[ "$previous" == "$project_root" || "$previous" == "''${project_root%/}/"* ]] || continue
                 if [[ -n "$next" && ( "$next" == "$project_root" || "$next" == "''${project_root%/}/"* ) ]]; then
                   continue
                 fi
-                label=$(tmux show-options -qv -t "$session_id" @session_cleanup_label 2>/dev/null)
                 if _tmux_cleanup_confirm "''${label:-$session_id}"; then
                   tmux kill-session -t "$session_id" 2>/dev/null
                 fi
-              done < <(tmux list-sessions -F '#{session_id}' 2>/dev/null)
+              done < <(tmux list-sessions -F $'#{session_id}\x1f#{@session_cleanup_root}\x1f#{@session_cleanup_label}' 2>/dev/null)
               return 0
             '';
 

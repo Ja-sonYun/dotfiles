@@ -13,6 +13,7 @@
 
     setServerOptions = {
       escape-time = "30";
+      theme = "terminal";
     };
 
     setGlobalOptions = {
@@ -25,6 +26,10 @@
       focus-events = "on";
       pane-border-style = "'bg=default fg=color231'";
       pane-active-border-style = "'bg=default fg=color231'";
+      popup-style = "'bg=terminal,fg=themewhite'";
+      popup-border-style = "'bg=terminal,fg=themelightgrey'";
+      menu-style = "'bg=terminal,fg=themewhite'";
+      menu-border-style = "'bg=terminal,fg=themelightgrey'";
       copy-mode-line-numbers = "hybrid";
       copy-mode-line-number-style = "'fg=color244,bg=default'";
       copy-mode-current-line-number-style = "'fg=green,bg=default'";

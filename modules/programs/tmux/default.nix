@@ -24,6 +24,11 @@ let
         default = null;
         description = "Additional shell condition.";
       };
+      whenFormat = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Additional tmux format condition.";
+      };
       command = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
@@ -125,6 +130,7 @@ let
     ";" = "last-pane";
     "=" = "choose-buffer -Z";
     "?" = "list-keys -N";
+    "@" = ''if-shell -F "#{pane_floating_flag}" { join-pane } { break-pane -W }'';
     "C" = "customize-mode -Z";
     "D" = "choose-client -Z";
     "E" = "select-layout -E";
@@ -135,6 +141,7 @@ let
     "c" = "new-window";
     "d" = "detach-client";
     "f" = ''command-prompt { find-window -Z "%%" }'';
+    "g" = "switch-client -Tmove";
     "i" = "display-message";
     "l" = "last-window";
     "m" = "select-pane -m";
@@ -223,10 +230,10 @@ let
 
   caseGuard =
     c:
-    lib.concatStringsSep " && " (
-      (map (e: "test -n \"#{E:${e}}\"") c.whenEnv)
-      ++ (map (e: "test -z \"#{E:${e}}\"") c.unlessEnv)
-      ++ lib.optional (c.match != null) c.match
+    lib.foldl' (acc: value: if acc == "" then value else "#{&&:${acc},${value}}") "" (
+      (map (e: "#{!=:#{E:${e}},}") c.whenEnv)
+      ++ (map (e: "#{==:#{E:${e}},}") c.unlessEnv)
+      ++ lib.optional (c.whenFormat != null) c.whenFormat
     );
 
   caseAct =
@@ -239,8 +246,8 @@ let
   renderBinding =
     name: b:
     let
-      guarded = lib.filter (c: caseGuard c != "") b.cases;
-      defaultCase = lib.findFirst (c: caseGuard c == "") null b.cases;
+      guarded = lib.filter (c: caseGuard c != "" || c.match != null) b.cases;
+      defaultCase = lib.findFirst (c: caseGuard c == "" && c.match == null) null b.cases;
       defaultAct =
         if defaultCase != null then
           caseAct name "d" defaultCase
@@ -250,9 +257,18 @@ let
           keyDefaults.${b.key} or null;
       chain = lib.foldr (
         e: acc:
-        "if-shell '${caseGuard e.c}' { ${caseAct name e.i e.c} }${
-          lib.optionalString (acc != null) " { ${acc} }"
-        }"
+        let
+          fallback = lib.optionalString (acc != null) " { ${acc} }";
+          action =
+            if e.c.match == null then
+              caseAct name e.i e.c
+            else
+              "if-shell ${lib.escapeShellArg e.c.match} { ${caseAct name e.i e.c} }${fallback}";
+        in
+        if caseGuard e.c == "" then
+          action
+        else
+          "if-shell -F ${lib.escapeShellArg (caseGuard e.c)} { ${action} }${fallback}"
       ) defaultAct (lib.imap0 (i: c: { inherit i c; }) guarded);
       action =
         if b.cases == [ ] then

@@ -10,9 +10,9 @@ in
     defaultGroup = "normal";
 
     segments = {
-      space = "printf ' '";
+      space.format = " ";
 
-      prompt = ''printf '#[fg=red]X #[fg=default]%s>> ' "''${USER:-$(whoami)}"'';
+      prompt.format = "#[fg=red]X #[fg=default]${config.home.username}>> ";
 
       git = ''
         shorten_string() {

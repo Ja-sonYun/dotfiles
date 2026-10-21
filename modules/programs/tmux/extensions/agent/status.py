@@ -22,7 +22,7 @@ def state_for_event(hook_input: HookInput, client: str) -> str | None:
     event_name = str(hook_input.get("hook_event_name") or "")
     if event_name == "SessionStart":
         source = str(hook_input.get("source") or "")
-        return "running" if client != "Codex" and source == "resume" else "idle"
+        return "running" if client == "Claude" and source == "resume" else "idle"
     if event_name in {"PostToolUse", "UserPromptSubmit"}:
         return "running"
     if event_name == "PreToolUse":
@@ -34,7 +34,9 @@ def state_for_event(hook_input: HookInput, client: str) -> str | None:
         return "waiting"
     if event_name == "Stop":
         return "waiting" if is_proposed_plan(hook_input) else "idle"
-    if event_name in {"SessionEnd", "StopFailure"}:
+    if event_name == "StopFailure":
+        return "error"
+    if event_name == "SessionEnd":
         return "idle"
     return None
 
@@ -159,6 +161,8 @@ def main() -> int:
         return 2
 
     hook_input = load_hook_input(sys.stdin.read())
+    os.environ["AI_AGENT_SESSION_ID"] = str(hook_input.get("session_id") or "")
+    os.environ["AI_AGENT_EVENT"] = str(hook_input.get("hook_event_name") or "")
     if client == "Claude":
         agent_id = hook_input.get("agent_id")
         if isinstance(agent_id, str) and agent_id:

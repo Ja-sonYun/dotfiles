@@ -110,12 +110,21 @@ let
 
   statusCmd =
     g: side: segments:
-    if segments == [ ] then ''""'' else ''"#(cd #{q:pane_current_path};${tmcStatus} ${g} ${side})"'';
+    if segments == [ ] then
+      ''""''
+    else if lib.all (name: builtins.isAttrs cfg.segments.${name}) segments then
+      esc (
+        lib.concatStringsSep cfg.separator (
+          lib.filter (value: value != "") (map (name: cfg.segments.${name}.format) segments)
+        )
+      )
+    else
+      ''"#(cd #{q:pane_current_path};${tmcStatus} ${g} ${side})"'';
 
   segmentDefs = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (n: body: ''
       seg_${n}() {
-      ${body}
+      ${if builtins.isAttrs body then "printf '%s' ${esc body.format}" else body}
       }
     '') cfg.segments
   );
@@ -229,39 +238,56 @@ let
       ];
       chain =
         cmd: target: frags:
-        "tmux " + lib.concatMapStringsSep " \\; " (f: ''${cmd} -t "${target}" ${f}'') frags;
+        "commands+=(" + lib.concatMapStringsSep " " (f: ''${cmd} -t "${target}" ${f} ';' '') frags + ")";
     in
     ''
       apply_${gname}() {
-        local session="$1" win
+        local session="$1" only_window="$2" win
+        local -a commands=()
         ${chain "set-option" "$session" sessionFrags}
-        while IFS= read -r win; do
-          [ -z "$win" ] && continue
+        if [ -n "$only_window" ]; then
+          win="$only_window"
           ${chain "set-window-option" "$win" winFrags}
-        done < <(tmux list-windows -t "$session" -F '#{window_id}' 2>/dev/null)
+        else
+          while IFS= read -r win; do
+            [ -z "$win" ] && continue
+            ${chain "set-window-option" "$win" winFrags}
+          done < <(tmux list-windows -t "$session" -F '#{window_id}' 2>/dev/null)
+        fi
+        unset 'commands[-1]'
+        tmux "''${commands[@]}"
       }
     '';
 
   applyFns = lib.concatStringsSep "\n" (lib.mapAttrsToList applyFn cfg.groups);
 
   applyCases = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (n: _: ''${n}) apply_${n} "$session" ;;'') cfg.groups
+    lib.mapAttrsToList (n: _: ''${n}) apply_${n} "$session" "$only_window" || exit ;;'') cfg.groups
   );
 
   tmcGroupApply = pkgs.writeShellScript "tmc-group-apply" ''
-    pane_id="$1"
-    [ -z "$pane_id" ] && pane_id="$TMUX_PANE"
-    [ -z "$pane_id" ] && exit 0
-    session="$(tmux display-message -pt "$pane_id" '#{session_name}' 2>/dev/null)"
-    [ -z "$session" ] && exit 0
+    session="$1"
+    window="$2"
+    event="$3"
+    [ -n "$session" ] || exit 0
+    session_name="$(tmux display-message -pt "$session:" '#{session_name}' 2>/dev/null)" || exit 0
 
     ${applyFns}
 
-    group="$(${tmcResolveGroup} "$session")"
-    case "$session" in
+    group="$(${tmcResolveGroup} "$session_name")"
+    applied="$(tmux show-option -qv -t "$session" @tmc_applied)"
+    signature="${
+      builtins.hashString "sha256" (builtins.toJSON { inherit (cfg) groups segments separator; })
+    }:$group"
+    only_window=""
+    if [ "$applied" = "$signature" ]; then
+      [ "$event" = after-new-window ] || exit 0
+      only_window="$window"
+    fi
+    case "$session_name" in
       _popup_*)
         if [ "$group" = ${esc cfg.defaultGroup} ]; then
-          tmux set-option -t "$pane_id" status off
+          tmux set-option -t "$session" status off
           exit 0
         fi
         ;;
@@ -269,6 +295,7 @@ let
     case "$group" in
     ${applyCases}
     esac
+    tmux set-option -q -t "$session" @tmc_applied "$signature"
   '';
 
   startCmds = lib.concatMapStringsSep "\n" (
@@ -310,7 +337,7 @@ let
 
   applyHook = event: {
     inherit event;
-    command = ''run-shell -b "${tmcGroupApply} #{pane_id}"'';
+    command = ''run-shell -b "${tmcGroupApply} #{q:session_id} #{window_id} ${event}"'';
   };
 in
 {
@@ -318,7 +345,16 @@ in
     enable = lib.mkEnableOption "tmux-customize";
 
     segments = lib.mkOption {
-      type = lib.types.attrsOf lib.types.lines;
+      type = lib.types.attrsOf (
+        lib.types.either lib.types.lines (
+          lib.types.submodule {
+            options.format = lib.mkOption {
+              type = lib.types.str;
+              description = "Static tmux status format.";
+            };
+          }
+        )
+      );
       default = { };
       description = "Named status scripts.";
     };
