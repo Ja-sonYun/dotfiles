@@ -104,6 +104,7 @@ let
         ../modules/desktop/darwin
         ../modules/services
         ../modules/services/darwin
+        ../modules/programs/slack/darwin.nix
 
         ../hosts/aarch64-darwin/darwin.nix
 
@@ -116,6 +117,7 @@ let
             users.${specialArgs.username}.imports = [
               ../modules/desktop/darwin/home-manager.nix
               ../modules/services/darwin/home-manager.nix
+              ../modules/programs/slack/home-manager.nix
             ]
             ++ mkHomeManagerConfig hostname;
           };

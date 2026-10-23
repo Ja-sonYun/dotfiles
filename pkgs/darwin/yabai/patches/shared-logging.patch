@@ -1,0 +1,85 @@
+diff --git a/src/misc/log.h b/src/misc/log.h
+--- a/src/misc/log.h
++++ b/src/misc/log.h
+@@ -10,7 +10,7 @@
+ 
+     va_list args;
+     va_start(args, format);
+-    vfprintf(stdout, format, args);
++    yabai_logv(stdout, "debug", "diagnostic", format, args);
+     va_end(args);
+ }
+ 
+@@ -19,7 +19,7 @@
+ {
+     va_list args;
+     va_start(args, format);
+-    vfprintf(stderr, format, args);
++    yabai_logv(stderr, "warning", "diagnostic", format, args);
+     va_end(args);
+ }
+ 
+@@ -28,7 +28,7 @@
+ {
+     va_list args;
+     va_start(args, format);
+-    vfprintf(stderr, format, args);
++    yabai_logv(stderr, "error", "diagnostic", format, args);
+     va_end(args);
+ 
+     exit(EXIT_FAILURE);
+@@ -39,7 +39,7 @@
+ {
+     va_list args;
+     va_start(args, format);
+-    vfprintf(stderr, format, args);
++    yabai_logv(stderr, "error", "diagnostic", format, args);
+     va_end(args);
+ 
+     exit(EXIT_SUCCESS);
+@@ -50,6 +50,20 @@
+ {
+     if (!g_verbose) return;
+ 
++    if (g_dotfiles_logging) {
++        char arguments[DFL_FRAME_LIMIT] = {0};
++        size_t used = 0;
++        for (char *argument = message; *argument; argument += strlen(argument) + 1) {
++            size_t length = strlen(argument);
++            if (used + length + 2 > sizeof(arguments)) return;
++            arguments[used++] = ' ';
++            memcpy(arguments + used, argument, length + 1);
++            used += length;
++        }
++        yabai_log(stdout, "debug", "ipc_message", "%s:%s", prefix, arguments);
++        return;
++    }
++
+     fprintf(stdout, "%s:", prefix);
+ 
+     for (;*message;) {
+diff --git a/src/manifest.m b/src/manifest.m
+--- a/src/manifest.m
++++ b/src/manifest.m
+@@ -47,2 +47,3 @@
+-#include "misc/memory_pool.h"
+-#include "misc/ts.h"
++#include "misc/memory_pool.h"
++#include "misc/dotfiles_log.h"
++#include "misc/ts.h"
+diff --git a/src/misc/ts.h b/src/misc/ts.h
+--- a/src/misc/ts.h
++++ b/src/misc/ts.h
+@@ -31,1 +31,1 @@
+-        fprintf(stderr, "fatal error: temporary_storage exceeded amount of allocated memory. requested %lld, but allocated size is %lld\n", size, g_temp_storage.size);
++        yabai_log(stderr, "error", "temporary_storage_exhausted", "fatal error: temporary_storage exceeded amount of allocated memory. requested %lld, but allocated size is %lld\n", size, g_temp_storage.size);
+diff --git a/src/yabai.c b/src/yabai.c
+--- a/src/yabai.c
++++ b/src/yabai.c
+@@ -267,2 +267,4 @@
+-    if (is_root()) {
+-        require("yabai: running as root is not allowed! abort..\n");
++    g_dotfiles_logging = getenv("DOTFILES_LOG_SOCKET") != NULL;
++
++    if (is_root()) {
++        require("yabai: running as root is not allowed! abort..\n");

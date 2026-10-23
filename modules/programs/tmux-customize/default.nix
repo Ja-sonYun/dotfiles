@@ -255,7 +255,7 @@ let
           done < <(tmux list-windows -t "$session" -F '#{window_id}' 2>/dev/null)
         fi
         unset 'commands[-1]'
-        tmux "''${commands[@]}"
+        tmux_log_run "''${commands[@]}"
       }
     '';
 
@@ -266,6 +266,8 @@ let
   );
 
   tmcGroupApply = pkgs.writeShellScript "tmc-group-apply" ''
+    ${config.programs.tmux.loggingShell}
+    TMUX_LOG_COMPONENT=tmux.customize
     session="$1"
     window="$2"
     event="$3"
@@ -284,10 +286,11 @@ let
       [ "$event" = after-new-window ] || exit 0
       only_window="$window"
     fi
+    tmux_log info group_apply_start "session_id=$session" "window_id=$window" "hook=$event" "group=$group"
     case "$session_name" in
       _popup_*)
         if [ "$group" = ${esc cfg.defaultGroup} ]; then
-          tmux set-option -t "$session" status off
+          tmux_log_run set-option -t "$session" status off
           exit 0
         fi
         ;;
@@ -295,7 +298,12 @@ let
     case "$group" in
     ${applyCases}
     esac
-    tmux set-option -q -t "$session" @tmc_applied "$signature"
+    result=0
+    tmux_log_run set-option -q -t "$session" @tmc_applied "$signature" || result=$?
+    if [ "$result" -eq 0 ]; then
+      tmux_log info group_apply_complete "session_id=$session" "window_id=$window" "hook=$event" "group=$group"
+    fi
+    exit "$result"
   '';
 
   startCmds = lib.concatMapStringsSep "\n" (

@@ -10,6 +10,9 @@
 {
   imports = [
     ./desktop/finder-sidebar.nix
+    ./programs/ai-agent-notification.nix
+    ./services/slack-message-review.nix
+    ./services/slack-thread-summary.nix
   ]
   ++ lib.optionals (hasTag "gui") [
     ./desktop/seamtype.nix

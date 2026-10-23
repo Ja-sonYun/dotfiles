@@ -18,9 +18,9 @@ local module = {
 	missingTranscripts = {},
 }
 local logging = require("logging")
-local logger = logging.new("meeting-recorder", config.logPath)
-local detectionLogger = logging.new("meeting-detection", config.logPath)
-local transcriptionLogger = logging.new("transcription", config.logPath)
+local logger = logging.new("meeting-recorder")
+local detectionLogger = logging.new("meeting-detection")
+local transcriptionLogger = logging.new("transcription")
 logger:i("module_starting", { transcription_enabled = config.transcriberPath ~= nil })
 local outputDirectory = config.outputDirectory:gsub("/+$", "")
 local pendingRecordingsSetting = "meeting-recorder.pending-recordings"

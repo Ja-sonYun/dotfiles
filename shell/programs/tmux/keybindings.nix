@@ -13,6 +13,7 @@ in
     enableVimIntegration = true;
 
     unbind = [
+      { key = ","; }
       { key = "C-o"; }
       { key = "C-f"; }
       { key = "C-e"; }

@@ -26,6 +26,9 @@
       Ctrl+h/j/k/l normally navigate tmux panes or Vim. Those client bindings,
       popup-close shortcuts, and other tmux remappings do not apply to direct
       pane input through send_keys. Send only input intended for the pane program.
+      When sending commands through send_keys, prefer human-readable output.
+      For JSON, use indentation and line breaks when practical, such as with jq .,
+      while preserving the command's intended behavior.
     '';
   };
 }

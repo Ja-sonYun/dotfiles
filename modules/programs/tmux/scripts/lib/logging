@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+tmux_log() {
+	local level="$1" event="$2"
+	shift 2
+	[[ -n "${TMUX_LOG_SOCKET:-}" ]] || return 0
+	builtin dotfiles_log "$TMUX_LOG_SOCKET" "${TMUX_LOG_COMPONENT:-tmux}" "$level" "$event" \
+		"pid=$BASHPID" "pane_id=${TMUX_PANE:-}" \
+		"session_id=${session_id:-${owned_session:-${session:-}}}" "$@" >/dev/null 2>&1 || :
+}
+
+# Capture only stderr and keep the original stdout and exit status for the caller.
+tmux_log_run() {
+	local error status arguments level=error event=command_failed truncated=false
+	if error=$("${TMUX_BIN:-tmux}" "$@" 2>&1 1>&3) 3>&1; then
+		[[ -z "$error" ]] || printf '%s\n' "$error" >&2
+		return 0
+	else
+		status=$?
+	fi
+	printf -v arguments '%q ' "$@"
+	if [[ "$status" == 129 && ("$1" == popup || "$1" == display-popup) ]]; then
+		level=info
+		event=popup_closed
+	fi
+	((${#arguments} <= 8192 && ${#error} <= 8192)) || truncated=true
+	tmux_log "$level" "$event" "command=${arguments:0:8192}" "stderr=${error:0:8192}" \
+		"exit_code=$status" "truncated=$truncated"
+	[[ -z "$error" ]] || printf '%s\n' "$error" >&2
+	return "$status"
+}

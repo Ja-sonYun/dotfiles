@@ -15,10 +15,10 @@ func main() {
 
 func run() int {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "Expected codex or post-tool-failure.")
+		fmt.Fprintln(os.Stderr, "Expected codex, antigravity, or post-tool-failure.")
 		return 2
 	}
-	if os.Args[1] != "codex" && os.Args[1] != "post-tool-failure" {
+	if os.Args[1] != "codex" && os.Args[1] != "antigravity" && os.Args[1] != "post-tool-failure" {
 		fmt.Fprintln(os.Stderr, "Unknown hook adapter.")
 		return 2
 	}
@@ -29,7 +29,7 @@ func run() int {
 	if err := options.Parse(os.Args[2:]); err != nil {
 		return 2
 	}
-	if options.NArg() != 1 || *timeout < 0 || (os.Args[1] == "codex" && *timeout == 0) {
+	if options.NArg() != 1 || *timeout < 0 || (os.Args[1] != "post-tool-failure" && *timeout == 0) {
 		fmt.Fprintln(os.Stderr, "Expected a command and a valid timeout.")
 		return 2
 	}
@@ -50,6 +50,9 @@ func run() int {
 	}
 	if err != nil || input == nil {
 		input = make(map[string]json.RawMessage)
+	}
+	if os.Args[1] == "antigravity" {
+		return runAntigravity(input, *event, options.Arg(0), *timeout)
 	}
 	if failure {
 		input["hook_event_name"] = json.RawMessage(`"PostToolUse"`)

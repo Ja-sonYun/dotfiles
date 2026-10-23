@@ -8,8 +8,11 @@
 }:
 let
   cfg = config.services.meetingRecorder;
+  logging = config.home-manager.users.${username}.programs.logging;
   audioArchive = pkgs.callPackage ./pkgs/audio-archive { };
-  audioProcessWatcher = pkgs.callPackage ./pkgs/audio-process-watcher { };
+  audioProcessWatcher = pkgs.callPackage ./pkgs/audio-process-watcher {
+    logClientSource = logging.clientSources;
+  };
   calendarEventQuery = pkgs.callPackage ./pkgs/calendar-event-query { };
   meetingRecorder = pkgs.callPackage ./pkgs/meeting-recorder { };
   helpersDirectory = "${userhome}/.local/libexec/meeting-recorder";
@@ -35,7 +38,6 @@ let
         ;
       recorderAppPath = "${helpersDirectory}/Meeting Recorder.app";
       iconDirectory = "${./misc/status-icons}";
-      logPath = "/tmp/meeting-recorder";
       transcriberPath = if cfg.transcription.enable then "${pkgs.whisper-local}/bin/whisper" else null;
       archivePath = if cfg.transcription.enable then "${audioArchive}/bin/archive-audio" else null;
       transcription = {
@@ -143,30 +145,10 @@ in
       lib.optional cfg.transcription.enable pkgs.whisper-local;
 
     launchd.user.agents.meeting-recorder-audio-process-watcher.serviceConfig = {
-      ProgramArguments = [
-        (toString (
-          pkgs.writeShellScript "audio-process-watcher" ''
-            set -e
-            umask 077
-            for log in /tmp/meeting-recorder.out.log /tmp/meeting-recorder.err.log; do
-              if [[ ! -e "$log" && ! -L "$log" ]]; then
-                log_tmp=$(/usr/bin/mktemp "$log.XXXXXX")
-                log_status=0
-                /bin/link "$log_tmp" "$log" || log_status=$?
-                /bin/rm -f "$log_tmp"
-                if [[ "$log_status" != 0 && ! -e "$log" ]]; then exit 1; fi
-              fi
-              if [[ -L "$log" || ! -f "$log" || ! -O "$log" ]] || [[ "$(/usr/bin/stat -f %l "$log")" != 1 ]]; then
-                printf 'Unsafe log file rejected: %s\n' "$log" >&2
-                exit 1
-              fi
-              /bin/chmod 600 "$log"
-            done
-            exec ${audioProcessWatcher}/bin/audio-process-watcher \
-              >> /tmp/meeting-recorder.out.log 2>> /tmp/meeting-recorder.err.log
-          ''
-        ))
-      ];
+      ProgramArguments = [ "${audioProcessWatcher}/bin/audio-process-watcher" ];
+      EnvironmentVariables.DOTFILES_LOG_SOCKET = if logging.enable then logging.socketPath else "";
+      StandardOutPath = "/dev/null";
+      StandardErrorPath = "/dev/null";
       RunAtLoad = true;
       KeepAlive.SuccessfulExit = false;
       ProcessType = "Background";

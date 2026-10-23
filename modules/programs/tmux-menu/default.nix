@@ -233,6 +233,12 @@ in
           pane_current_path=$(tmux display-message -pt "$pane_id" '#{pane_current_path}' 2>/dev/null) || exit 0
           [ -n "$pane_current_path" ] || exit 0
         fi
+
+        if [ ! -d "$pane_current_path" ]; then
+          tmux display-message -c "$client_name" "tmux-menu: working directory unavailable: $pane_current_path"
+          exit "$?"
+        fi
+
         export TMUX_MENU_ORIGIN_PANE="$pane_id"
         export TMUX_MENU_ORIGIN_WINDOW="$window_id"
         export TMUX_MENU_CLIENT="$client_name"

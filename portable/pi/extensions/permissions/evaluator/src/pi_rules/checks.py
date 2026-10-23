@@ -95,7 +95,7 @@ def request_size(
     return len(
         json.dumps(
             {
-                "model": "jev-latest",
+                "model": os.environ.get("JEV_MODEL") or "jev-latest",
                 "state": state,
                 "questions": questions_for(rules, check_summary=check_summary),
             },
@@ -324,7 +324,10 @@ async def evaluate(
                         continue
                     response = await api.post(
                         "https://api.typesafe.ai/v1/systemone",
-                        json={**payload, "model": "jev-latest"},
+                        json={
+                            **payload,
+                            "model": os.environ.get("JEV_MODEL") or "jev-latest",
+                        },
                         headers={"Authorization": f"Bearer {api_key}"},
                         timeout=timeout,
                     )

@@ -5,8 +5,10 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$script_dir/../../../scripts/lib/common"
+export TMUX_LOG_COMPONENT=tmux.agent.overview
 if ! tmux_lock __popup_lock__popup_all_agents 2; then
 	tmux display-message "agent overview: busy"
+	tmux_log warning busy
 	exit 0
 fi
 
@@ -16,6 +18,7 @@ inner="$(tmux display-message -p '#{client_name}' 2>/dev/null)" || inner=""
 outer="${TMUX_MENU_CLIENT:-$inner}"
 if [[ -z "$outer" ]] || ! tmux list-clients -F '#{client_name}' | grep -qxF "$outer"; then
 	tmux display-message "agent overview: owner client not found"
+	tmux_log warning owner_missing "client=$outer"
 	exit 0
 fi
 
@@ -27,6 +30,7 @@ fi
 if tmux has-session -t "$session" 2>/dev/null &&
 ! error=$(tmux kill-session -t "$session" 2>&1); then
 	if tmux has-session -t "$session" 2>/dev/null; then
+		tmux_log error cleanup_failed "session=$session" "stderr=${error:0:8192}"
 		printf '%s\n' "$error" >&2
 		exit 1
 	fi
@@ -42,24 +46,28 @@ if ((${#windows[@]} == 0)); then
 	exit 0
 fi
 
-owned_session="$(tmux new-session -dP -F '#{session_id}' -s "$session" \
+owned_session="$(tmux_log_run new-session -dP -F '#{session_id}' -s "$session" \
 	-e TMUX_AGENT_STATUS=1 \
 	-e TMUX_TITLE_OWNER=agent \
 	-e TMUX_POPUP_KEEP_OPEN=1 \
 	-e CTRL_C_AS_CLOSE=1 \
 	-e TMUX_REMAP_CTRL_D=C-n)"
+tmux_log info session_created "session_id=$owned_session" "client=$outer"
 launching=0
 popup_pid=""
 cleanup_overview() {
+	local result=$? level=info
+	((result == 0 || result == 129 || result == 130 || result == 143)) || level=error
+	tmux_log "$level" overview_closed "session_id=$owned_session" "exit_code=$result"
 	if [[ -z "${_TMUX_LOCK_FD:-}" ]]; then
 		tmux_lock __popup_lock__popup_all_agents || return
 	fi
 	if ((launching)); then
-		tmux kill-session -t "$owned_session" 2>/dev/null || true
+		tmux_log_run kill-session -t "$owned_session" 2>/dev/null || true
 		tmux display-popup -C -c "$outer" 2>/dev/null || true
 		[[ -z "$popup_pid" ]] || wait "$popup_pid" || true
 	elif [[ -z "$(tmux list-clients -t "$owned_session" -F '#{client_name}' 2>/dev/null)" ]]; then
-		tmux kill-session -t "$owned_session" 2>/dev/null || true
+		tmux_log_run kill-session -t "$owned_session" 2>/dev/null || true
 	fi
 	tmux_unlock
 }
@@ -72,7 +80,7 @@ tmux_flush
 placeholder="$(tmux list-windows -t "$session" -F '#{window_id}')"
 linked=0
 for window in "${windows[@]}"; do
-	if tmux link-window -d -s "$window" -t "$session:" 2>/dev/null; then
+	if tmux_log_run link-window -d -s "$window" -t "$session:" 2>/dev/null; then
 		((linked += 1))
 	fi
 done
@@ -83,7 +91,8 @@ if ((linked == 0)); then
 	exit 0
 fi
 
-tmux kill-window -t "$placeholder"
+tmux_log_run kill-window -t "$placeholder"
+tmux_log info windows_linked "session_id=$owned_session" "placeholder=$placeholder" "count=$linked"
 
 default_width="$(tmux show-options -gqv @popup_default_width)"
 default_height="$(tmux show-options -gqv @popup_default_height)"
@@ -139,6 +148,7 @@ for _ in {1..20}; do
 	sleep 0.05
 done
 ((launching == 0)) || exit 1
+tmux_log info overview_opened "session_id=$owned_session" "client=$outer"
 
 tmux_unlock || exit
 trap cleanup_overview EXIT

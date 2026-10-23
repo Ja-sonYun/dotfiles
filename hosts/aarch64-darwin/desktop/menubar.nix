@@ -27,7 +27,7 @@ _: {
         };
 
         "com.apple.TextInputMenu" = {
-          visible = false;
+          visible = true;
         };
       };
     };

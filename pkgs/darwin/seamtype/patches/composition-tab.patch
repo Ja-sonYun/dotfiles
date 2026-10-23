@@ -1,0 +1,24 @@
+--- a/Sources/Seamtype/InputController.swift
++++ b/Sources/Seamtype/InputController.swift
+@@ -45,6 +45,7 @@
+         static let rightOption: UInt16 = 61
+         static let rightShift: UInt16 = 60
+         static let space: UInt16 = 49
++        static let tab: UInt16 = 48
+     }
+ 
+     override func activateServer(_ sender: Any!) {
+@@ -198,6 +199,13 @@
+     @MainActor private func key(for event: NSEvent) -> InputSession.Key {
++        if event.keyCode == KeyCode.tab,
++           event.modifierFlags.intersection([.command, .control, .option, .shift, .function]).isEmpty,
++           !session.inVimNormalMode,
++           !session.keys.isEmpty || session.conversion != nil {
++            return .cycle
++        }
++
+         let modifiers = event.modifierFlags.intersection([.command, .control, .option])
+         if modifiers == .option, !event.modifierFlags.contains(.shift), event.keyCode == KeyCode.space,
+            session.policy.switchKeys.contains(.optionSpace) {
+             return .cycle // ⌥Space chosen as a switch key
+         }

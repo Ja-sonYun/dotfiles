@@ -6,13 +6,18 @@
 }:
 let
   cfg = config.programs.tmux.extensions.agent;
-  tmuxRoot = ../..;
+  tmuxRoot = config.programs.tmux.runtime;
   scripts = "${tmuxRoot}/extensions/agent/scripts";
   picker = pkgs.writeShellApplication {
     name = "tmux-agent-picker";
     runtimeInputs = [ config.programs.tmux.package ];
     text = ''
-      exec ${pkgs.python3}/bin/python ${./picker.py} \
+      export TMUX_LOG_SOCKET=${
+        lib.escapeShellArg (
+          if config.programs.logging.enable then config.programs.logging.socketPath else ""
+        )
+      }
+      exec ${pkgs.python3}/bin/python ${./.}/picker.py \
         ${lib.escapeShellArg config.programs.tmux.extensions.shell.pickerCommand} "$@"
     '';
   };

@@ -13,6 +13,10 @@ let
     (config.programs.codex.settings.mcp_servers or { }) ? rules
     && (config.programs.codex.settings.mcp_servers.rules.enabled or true) != false
     && (config.programs.codex.settings.mcp_servers.rules.disabled or false) != true;
+  antigravityRulesEnabled =
+    config.programs.antigravity-cli.enable
+    && config.programs.antigravity-cli.mcpServers ? rules
+    && lib.hm.mcp.resolveEnabled config.programs.antigravity-cli.mcpServers.rules != false;
   independentCodexInstances = lib.filterAttrs (
     _: instance: instance.shareWith == null
   ) config.programs.codex.instances;
@@ -50,6 +54,37 @@ let
     "${rulesFile}"
   ]
   ++ lib.optional cfg.debugLog.enable "--debug-log";
+  rulesHooks =
+    lib.mapAttrs
+      (event: timeout: [
+        {
+          hooks = [
+            {
+              type = "command";
+              command = lib.escapeShellArgs (
+                [
+                  "${package}/bin/ai-agent-rules-client"
+                  "--server"
+                  "${package}/bin/ai-agent-rules-server"
+                  "--cache-name"
+                  "ai-agent/rules/server"
+                  "--timeout"
+                  (toString timeout)
+                  "--"
+                ]
+                ++ arguments
+              );
+              timeout = if event == "SessionEnd" then timeout else timeout + 3;
+            }
+          ];
+        }
+      ])
+      {
+        SessionStart = 5;
+        PreToolUse = 70;
+        PostToolUse = 160;
+        SessionEnd = 3;
+      };
   nonEmptyString = lib.types.addCheck lib.types.str (
     value: builtins.match "[[:space:]]*" value == null
   );
@@ -59,7 +94,7 @@ let
       options = {
         enable = lib.mkOption {
           type = lib.types.submodule {
-            options = lib.genAttrs [ "codex" "claude" ] (
+            options = lib.genAttrs [ "codex" "claude" "antigravity" ] (
               client:
               lib.mkOption {
                 type = lib.types.bool;
@@ -194,37 +229,11 @@ in
     );
 
     programs.ai-agents = {
-      hooks =
-        lib.mapAttrs
-          (event: timeout: [
-            {
-              hooks = [
-                {
-                  type = "command";
-                  command = lib.escapeShellArgs (
-                    [
-                      "${package}/bin/ai-agent-rules-client"
-                      "--server"
-                      "${package}/bin/ai-agent-rules-server"
-                      "--cache-name"
-                      "ai-agent/rules/server"
-                      "--timeout"
-                      (toString timeout)
-                      "--"
-                    ]
-                    ++ arguments
-                  );
-                  timeout = if event == "SessionEnd" then timeout else timeout + 3;
-                }
-              ];
-            }
-          ])
-          {
-            SessionStart = 5;
-            PreToolUse = 70;
-            PostToolUse = 160;
-            SessionEnd = 3;
-          };
+      hooksByAgent = {
+        codex = rulesHooks;
+        claude = rulesHooks;
+        antigravity = lib.mkIf antigravityRulesEnabled (removeAttrs rulesHooks [ "SessionEnd" ]);
+      };
 
       mcp.servers.rules = {
         command = "${package}/bin/ai-agent-rules-mcp";

@@ -8,6 +8,12 @@
 }:
 let
   cfg = config.services.yabai.extensions.controller;
+  logging = config.home-manager.users.${username}.programs.logging;
+  package = pkgs.yabai-controller.override (
+    lib.optionalAttrs logging.enable {
+      logClientSource = logging.clientSources;
+    }
+  );
 in
 {
   options.services.yabai.extensions.controller = {
@@ -40,7 +46,7 @@ in
       startupGuard.enable = true;
       serviceConfig = {
         ProgramArguments = [
-          "${pkgs.yabai-controller}/bin/yabai-controller"
+          "${package}/bin/yabai-controller"
           "--socket"
           cfg.socketPath
           "--yabai-socket"
@@ -51,7 +57,9 @@ in
         ProcessType = "Interactive";
         Umask = 63;
         ThrottleInterval = 5;
-        StandardErrorPath = "${userhome}/Library/Logs/yabai-controller.log";
+        EnvironmentVariables.DOTFILES_LOG_SOCKET = if logging.enable then logging.socketPath else "";
+        StandardOutPath = "/dev/null";
+        StandardErrorPath = "/dev/null";
       };
     };
   };

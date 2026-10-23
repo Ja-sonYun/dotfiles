@@ -39,11 +39,13 @@ let
       ]);
   codexHooks = hooksFor "codex";
   claudeHooks = hooksFor "claude";
+  antigravityHooks = hooksFor "antigravity";
   invalidEventNames = lib.unique (
     lib.concatMap (hooks: lib.subtractLists eventNames (builtins.attrNames hooks)) [
       cfg.hooks
       cfg.hooksByAgent.codex
       cfg.hooksByAgent.claude
+      cfg.hooksByAgent.antigravity
     ]
   );
   codex = import ./adapters/codex.nix {
@@ -52,6 +54,10 @@ let
   };
 
   claudeCompatible = import ./adapters/claude-compatible.nix {
+    inherit lib runner;
+  };
+  antigravity = import ./adapters/antigravity.nix {
+    canonicalHooks = antigravityHooks;
     inherit lib runner;
   };
 in
@@ -73,6 +79,10 @@ in
             type = hookSetType;
             default = { };
           };
+          antigravity = lib.mkOption {
+            type = hookSetType;
+            default = { };
+          };
         };
       };
       default = { };
@@ -84,6 +94,18 @@ in
     lib.mkMerge [
       {
         assertions = [
+          {
+            assertion =
+              !config.programs.antigravity-cli.enable
+              ||
+                lib.intersectLists antigravity.unsupportedEvents (builtins.attrNames cfg.hooksByAgent.antigravity)
+                == [ ];
+            message = "Antigravity has unsupported hook events: ${lib.concatStringsSep ", " antigravity.unsupportedEvents}.";
+          }
+          {
+            assertion = !config.programs.antigravity-cli.enable || antigravity.invalidMatchers == [ ];
+            message = "Antigravity only supports matchers for tool hooks.";
+          }
           {
             assertion = lib.all (
               hooks:
@@ -110,6 +132,15 @@ in
 
       (lib.mkIf (claudeHooks != { } && config.programs.claude-code.enable) {
         programs.claude-code.settings.hooks = claudeCompatible "Claude" claudeHooks;
+      })
+
+      (lib.mkIf (antigravityHooks != { } && config.programs.antigravity-cli.enable) {
+        programs.antigravity-cli.hooks.ai-agents = antigravity.hooks;
+        warnings = lib.optional (antigravity.unsupportedEvents != [ ]) (
+          "Antigravity native hooks cannot register these shared events: "
+          + lib.concatStringsSep ", " antigravity.unsupportedEvents
+          + "."
+        );
       })
     ]
   );

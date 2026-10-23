@@ -1,80 +1,126 @@
+local config = hs.json.decode([==[@configJson@]==])
 local module = { runID = hs.host.uuid() }
-local uidOutput, uidRead = hs.execute("/usr/bin/id -u", false)
-local uid = uidRead and tonumber(uidOutput)
+local levels = { debug = 10, info = 20, warning = 30, error = 40 }
+local application = hs.application.get("org.hammerspoon.Hammerspoon")
+local pid = application and application:pid() or 0
+local connection
+local pending
 
-local function secureLog(path)
-	if not uid then
-		hs.printf("Cannot determine the log file owner")
-		return false
+local function finish(token, disconnect)
+	if pending ~= token then
+		return
 	end
-	local quoted = "'" .. path:gsub("'", "'\\''") .. "'"
-	local attributes = hs.fs.symlinkAttributes(path)
-	if not attributes then
-		local command = "log_tmp=$(/usr/bin/mktemp "
-			.. quoted
-			.. '.XXXXXX) || exit 1; /bin/link "$log_tmp" '
-			.. quoted
-			.. '; log_status=$?; /bin/rm -f "$log_tmp"; exit "$log_status"'
-		local output, created = hs.execute(command, false)
-		attributes = hs.fs.symlinkAttributes(path)
-		if not created and not attributes then
-			hs.printf("File log creation failed (%s): %s", path, tostring(output))
-			return false
+	pending = nil
+	if token.timer then
+		token.timer:stop()
+	end
+	if disconnect then
+		pcall(function()
+			token.socket:disconnect()
+		end)
+		if connection == token.socket then
+			connection = nil
 		end
 	end
-	-- The sticky /tmp directory prevents other users replacing an owned file.
-	if not attributes or attributes.mode ~= "file" or attributes.uid ~= uid or attributes.nlink ~= 1 then
-		hs.printf("Unsafe log file rejected: %s", path)
-		return false
-	end
-	if attributes.permissions == "rw-------" then
-		return true
-	end
-	local output, secured = hs.execute("/bin/chmod 600 " .. quoted, false)
-	if not secured then
-		hs.printf("File log permissions failed (%s): %s", path, tostring(output))
-	end
-	return secured
 end
 
-function module.new(name, destination)
-	local logger = { context = {}, destination = destination or "/tmp/hammerspoon", name = name }
-	secureLog(logger.destination .. ".out.log")
-	secureLog(logger.destination .. ".err.log")
+local function send(packet)
+	if pending then
+		return
+	end
+	if not connection then
+		local ok, socket = pcall(hs.socket.new)
+		if not ok or not socket then
+			return
+		end
+		connection = socket
+	end
+	local token = { socket = connection }
+	pending = token
+	-- Bound pending state even when a failed operation has no completion callback.
+	token.timer = hs.timer.doAfter(1, function()
+		finish(token, true)
+	end)
+
+	local function write()
+		if pending ~= token then
+			return
+		end
+		local ok = pcall(function()
+			token.socket:write(packet, 0, function()
+				finish(token, false)
+			end)
+		end)
+		if not ok then
+			finish(token, true)
+		end
+	end
+
+	local ok = pcall(function()
+		token.socket:setTimeout(1)
+		if token.socket:connected() then
+			write()
+		elseif not token.socket:connect(config.socketPath, write) then
+			finish(token, true)
+		end
+	end)
+	if not ok then
+		finish(token, true)
+	end
+end
+
+function module.close()
+	if pending then
+		finish(pending, true)
+	elseif connection then
+		pcall(function()
+			connection:disconnect()
+		end)
+		connection = nil
+	end
+end
+
+function module.new(name)
+	local logger = { context = {}, name = name }
 	function logger:write(level, event, fields)
-		local record = {}
-		for key, value in pairs(self.context) do
-			record[key] = value
-		end
-		for key, value in pairs(fields or {}) do
-			record[key] = value
-		end
-		record.time = os.date("!%Y-%m-%dT%H:%M:%SZ")
-		record.time_unix = hs.timer.secondsSinceEpoch()
-		record.module = self.name
-		record.level = level
-		record.event = tostring(event)
-		record.hammerspoon_run_id = module.runID
-		local encoded, line = pcall(hs.json.encode, record)
-		if not encoded or type(line) ~= "string" then
-			hs.printf("File log encoding failed (%s): %s", self.name, tostring(line))
+		if config.socketPath == "" or pending or not levels[level] or levels[level] < levels[config.level] then
 			return
 		end
-		local suffix = (level == "error" or level == "warning") and ".err.log" or ".out.log"
-		local path = self.destination .. suffix
-		if not secureLog(path) then
-			return
-		end
-		local file, err = io.open(path, "a")
-		if file then
-			local written, writeError = file:write(line .. "\n")
-			local closed, closeError = file:close()
-			if written and closed then
-				return
+		local encoded, line = pcall(function()
+			local context = {}
+			for key, value in pairs(self.context) do
+				context[key] = value
 			end
-			err = writeError or closeError
+			for key, value in pairs(fields or {}) do
+				context[key] = value
+			end
+			event = tostring(event)
+			if #event > 64 then
+				if context.message == nil then
+					context.message = event
+				else
+					context.event_message = event
+				end
+				event = "message"
+			end
+			context.hammerspoon_run_id = module.runID
+			context.time_unix = hs.timer.secondsSinceEpoch()
+			for key, value in pairs(context) do
+				context[key] = type(value) == "table" and hs.json.encode(value) or tostring(value)
+			end
+			return hs.json.encode({
+				time = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+				component = "hammerspoon." .. self.name,
+				level = level,
+				event = event,
+				pid = pid,
+				fields = context,
+			})
+		end)
+		if not encoded or type(line) ~= "string" or #line + 1 > 32768 then
+			return
 		end
-		hs.printf("File logging failed (%s): %s", self.name, tostring(err))
+		send(line .. "\n")
 	end
 	function logger:i(event, fields)
 		self:write("info", event, fields)

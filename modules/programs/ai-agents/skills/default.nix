@@ -6,6 +6,7 @@
 }:
 let
   cfg = config.programs.ai-agents;
+  syncLib = import ../sync.nix { inherit lib; };
   sourceType =
     with lib.types;
     oneOf [
@@ -86,6 +87,12 @@ in
 
         (lib.mkIf config.programs.claude-code.enable {
           programs.claude-code.skills = cfg.skills;
+        })
+
+        (lib.mkIf config.programs.antigravity-cli.enable {
+          programs.antigravity-cli.skills =
+            syncLib.select "programs.antigravity-cli.sync.skills" config.programs.antigravity-cli.sync.skills
+              cfg.skills;
         })
       ]
     ))

@@ -1,11 +1,13 @@
 {
   imports = [
     ./ai-agents
+    ./antigravity-cli
     ./claude
     ./claude-desktop
     ./codex
     ./git-extend
     ./git-hooks
+    ./logging.nix
     ./navi
     ./open-code-review
     ./pi.nix

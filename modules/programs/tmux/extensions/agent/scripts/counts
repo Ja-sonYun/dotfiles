@@ -25,6 +25,7 @@ fi
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
+export TMUX_LOG_COMPONENT=tmux.agent.counts
 
 declare -A refresh_targets=()
 
@@ -272,6 +273,7 @@ recompute() {
 
 	((changed)) || return 0
 	tmux_flush || return 1
+	tmux_log info counts_changed "window_id=$target" "targets=${!refresh_targets[*]}"
 }
 
 dirty_option="@agent_counts_dirty"
@@ -341,5 +343,8 @@ while :; do
 done
 if ((${#refresh_targets[@]})); then
 	tmux_refresh_clients "${!refresh_targets[@]}" || result=1
+fi
+if ((result)); then
+	tmux_log error refresh_failed "exit_code=$result"
 fi
 exit "$result"

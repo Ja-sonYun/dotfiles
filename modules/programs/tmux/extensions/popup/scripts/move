@@ -30,6 +30,7 @@
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
+export TMUX_LOG_COMPONENT=tmux.popup.move
 
 if [[ "${1:-}" == reset ]]; then
 	reset=1
@@ -48,12 +49,14 @@ fi
 key="${inner//[^A-Za-z0-9]/_}"
 if ! tmux_lock "__popup_lock_$key" 2; then
 	tmux display-message "popup move: busy"
+	tmux_log warning busy "session=$inner"
 	exit 0
 fi
 
 outer="$(tmux show-options -gqv "@popup_client_$key")"
 if [[ -z "$outer" ]] || ! tmux list-clients -F '#{client_name}' | grep -qxF "$outer"; then
 	tmux display-message "popup move: owner client not found"
+	tmux_log warning owner_missing "session=$inner"
 	exit 0
 fi
 
@@ -133,14 +136,17 @@ for _ in {1..20}; do
 	[[ -z "$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null)" ]] && break
 	sleep 0.05
 done
-[[ -z "$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null)" ]] || exit 1
+if [[ -n "$(tmux list-clients -t "$inner" -F '#{client_name}' 2>/dev/null)" ]]; then
+	tmux_log error close_timeout "session_id=$session_id"
+	exit 1
+fi
 
 # Reopen at the new geometry, reattaching to the same session so all content
 # is preserved. display-popup blocks until the popup closes again, so it must
 # be backgrounded — the popup itself lives on the server and survives us.
 (
 	tmux_lock_close
-	tmux display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
+	tmux_log_run display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
 		${border:+-b "$border"} -E "tmux attach -t $(printf '%q' "$session_id")"
 	if [[ "$inner" == _popup_all_agents ]]; then
 		tmux_lock "__popup_lock_$key" || exit 1
@@ -165,9 +171,11 @@ for _ in {1..20}; do
 	sleep 0.05
 done
 if ((reopened == 0)); then
+	tmux_log error reopen_timeout "session_id=$session_id"
 	tmux display-popup -C -c "$outer"
 	tmux_unlock
 	wait "$popup_pid"
 	exit 1
 fi
+tmux_log info moved "session_id=$session_id" "geometry=$x $y $w $h" "reset=$reset"
 exit 0

@@ -274,10 +274,14 @@ class Tmux:
             ]
         )
 
-    async def capture_pane(self, pane_id: str, lines: int | None = None) -> Capture:
+    async def capture_pane(
+        self, pane_id: str, lines: int | None = None, offset: int = 0
+    ) -> Capture:
         count = self.config.capture.defaultLines if lines is None else lines
         if isinstance(count, bool) or not 1 <= count <= self.config.capture.maxLines:
             raise RequestError("Requested line count is outside the configured limits.")
+        if isinstance(offset, bool) or offset < 0:
+            raise RequestError("Requested offset must be non-negative.")
         await self.require_pane(pane_id)
         # Join soft-wrapped rows and retain all available context for redaction.
         # https://github.com/tmux/tmux/blob/master/tmux.1
@@ -288,7 +292,9 @@ class Tmux:
         # The oldest logical line may have lost its beginning to the history limit.
         # Discard it after redaction to preserve multiline secret matching context.
         masked = masked.partition("\n")[2]
-        output = "\n".join(masked.splitlines()[-count:])
+        logical_lines = masked.splitlines()
+        end = max(0, len(logical_lines) - offset)
+        output = "\n".join(logical_lines[max(0, end - count) : end])
         encoded = output.encode("utf-8")
         limit = self.config.capture.maxOutputBytes
         return Capture(
@@ -370,7 +376,10 @@ def create_server(config: Config) -> FastMCP:
             "Read redacted output from an allowed pane in the current project, "
             "or another project explicitly requested by the user. The oldest "
             "available logical line is withheld because its beginning may have "
-            "been trimmed from tmux history."
+            "been trimmed from tmux history. offset skips logical lines from the "
+            "newest end (default 0); lines selects how many preceding lines to read. "
+            "If truncated is true, request fewer lines to avoid the output byte limit. "
+            "Offsets may shift as new output arrives or old history is discarded."
         ),
         annotations=readonly,
     )(tmux.capture_pane)

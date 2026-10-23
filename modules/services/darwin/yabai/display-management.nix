@@ -4,6 +4,8 @@
   renderAttrs,
   yabaiSettings,
   targetDesktopsPerDisplay,
+  logging,
+  yabaiPackage,
 }:
 
 let
@@ -16,9 +18,33 @@ let
     name = "yabai-reconcile-spaces-worker";
     runtimeInputs = [
       pkgs.jq
-      pkgs.yabai
+      yabaiPackage
     ];
     text = ''
+      ${lib.optionalString logging.enable ''
+        enable -f ${lib.escapeShellArg logging.bashLibrary} dotfiles_log 2>/dev/null || :
+      ''}
+      log_event() {
+        ${
+          if logging.enable then
+            ''
+              builtin dotfiles_log ${lib.escapeShellArg logging.socketPath} yabai.reconcile "$@" >/dev/null 2>&1 || :
+            ''
+          else
+            ":"
+        }
+      }
+      yabai() {
+        local status arguments
+        if command yabai "$@"; then
+          return 0
+        else
+          status=$?
+        fi
+        printf -v arguments '%q ' "$@"
+        log_event error command_failed "command=$arguments" "exit_code=$status"
+        return "$status"
+      }
       target_desktops=${toString targetDesktopsPerDisplay}
       padding_spec=${lib.escapeShellArg "abs:${toString (yabaiSettings.top_padding or 0)}:${toString (yabaiSettings.bottom_padding or 0)}:${toString (yabaiSettings.left_padding or 0)}:${toString (yabaiSettings.right_padding or 0)}"}
       gap_spec=${lib.escapeShellArg "abs:${toString (yabaiSettings.window_gap or 0)}"}

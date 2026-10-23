@@ -16,6 +16,7 @@ hs.shutdownCallback = function()
 	if previousShutdown then
 		previousShutdown()
 	end
+	require("logging").close()
 end
 
 require("hs.ipc")

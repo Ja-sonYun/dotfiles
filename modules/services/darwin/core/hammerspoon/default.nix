@@ -7,6 +7,7 @@
 }:
 let
   cfg = config.services.hammerspoon;
+  logging = config.home-manager.users.${username}.programs.logging;
   hasKeybindings = cfg.keybindings != { };
   keybindingsFile = pkgs.writeText "hammerspoon-keybindings.json" (
     builtins.toJSON (
@@ -30,7 +31,12 @@ let
     [
       {
         name = "logging.lua";
-        path = ./logging.lua;
+        path = pkgs.replaceVars ./logging.lua {
+          configJson = builtins.toJSON {
+            socketPath = if logging.enable then logging.socketPath else "";
+            inherit (logging) level;
+          };
+        };
       }
     ]
     ++ cfg.scripts

@@ -29,7 +29,7 @@ const help = `Usage: jev [options]
   --noul.true TEXT          Optional description of a yes outcome
   --noul.false TEXT         Optional description of a no outcome
   --questions.ID.FIELD TEXT Named questions using API fields
-  --model NAME              Model ID or alias (default: jev-latest)
+  --model NAME              Model ID or alias (default: JEV_MODEL or jev-latest)
   --timeout DURATION        HTTP deadline including body reading (default: 10s)
   --batch-items PATH        Split a state array at .items, .nested.items, or .
   --batch-size auto|N       Token-based batching, optionally capped at N items
@@ -371,7 +371,10 @@ func requestBody(values map[string]any) (map[string]any, error) {
 	}
 	model, ok := values["model"]
 	if !ok {
-		model = "jev-latest"
+		model = os.Getenv("JEV_MODEL")
+		if model == "" {
+			model = "jev-latest"
+		}
 	}
 	return map[string]any{
 		"model":     model,

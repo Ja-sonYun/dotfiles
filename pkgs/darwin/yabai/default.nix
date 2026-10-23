@@ -9,6 +9,7 @@
   stdenv,
   versionCheckHook,
   xxd,
+  logClientSource ? null,
 }:
 stdenv.mkDerivation {
   pname = "yabai";
@@ -27,7 +28,8 @@ stdenv.mkDerivation {
     ./patches/fullscreen-transition-waits.patch
     ./patches/ax-geometry-errors.patch
     ./patches/response-shutdown.patch
-  ];
+  ]
+  ++ lib.optional (logClientSource != null) ./patches/shared-logging.patch;
 
   __structuredAttrs = true;
   strictDeps = true;
@@ -70,6 +72,10 @@ stdenv.mkDerivation {
       ];
     in
     ''
+      ${lib.optionalString (logClientSource != null) ''
+        cp ${logClientSource}/native/client.h src/misc/dotfiles_log_client.h
+        cp ${./logging.h} src/misc/dotfiles_log.h
+      ''}
       substituteInPlace makefile \
         --replace-fail "-arch x86_64 -arch arm64e" "-arch ${archSA}" \
         --replace-fail "-arch x86_64 -arch arm64" "-arch ${arch} -Wl,-no_uuid" \

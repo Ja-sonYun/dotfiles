@@ -4,6 +4,7 @@
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
+export TMUX_LOG_COMPONENT=tmux.agent.reconcile
 
 tmux_lock __agent_reconcile_lock 0.1 || exit 0
 now="$(date +%s)"
@@ -34,5 +35,6 @@ while IFS=$'\x1f' read -r pane_id session_id session_name enabled state in_mode 
 	[[ -n "$content" ]] || continue
 	detected="$(detect_state "$content")"
 	[[ -n "$detected" && "$detected" != "$state" ]] || continue
+	tmux_log info state_detected "pane_id=$pane_id" "session_id=$session_id" "previous=$state" "state=$detected"
 	"$script_dir/status" "$detected" "$pane_id" "$session_id" "${generation:-0}" || exit
 done < <(tmux list-panes -a -F $'#{pane_id}\x1f#{session_id}\x1f#{session_name}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{pane_in_mode}\x1f#{@agent_name}\x1f#{@agent_event_generation}' 2>/dev/null)

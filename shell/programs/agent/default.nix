@@ -6,6 +6,7 @@
       codex = "codex";
       claude = "claude";
       pi = "pi";
+      agy = "agy";
     };
   };
 }

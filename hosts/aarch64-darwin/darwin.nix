@@ -19,6 +19,7 @@
     ./services/sharing.nix
   ]
   ++ lib.optionals (hasTag "gui") [
+    ./programs/slack.nix
     ./desktop/application-input-sources.nix
     ./desktop/session-actions.nix
     ./services/activity-history.nix

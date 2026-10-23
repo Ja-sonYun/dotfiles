@@ -7,15 +7,18 @@
 let
   cfg = config.programs.tmux.extensions.popup;
   menuCfg = config.programs.tmux-menu;
-  tmuxRoot = ../..;
+  tmuxRoot = config.programs.tmux.runtime;
   popupScript = pkgs.writeShellScript "tmux-popup" ''
+    ${config.programs.tmux.loggingShell}
+    TMUX_LOG_COMPONENT=tmux.popup.toggle
+    tmux_log info toggle_requested
     main_session=${lib.escapeShellArg cfg.mainSession}
     client="''${1:-$(tmux display-message -p '#{client_name}')}"
     if [ -n "$(tmux display-message -p '#{E:MAIN_POPUP}')" ]; then
       if tmux list-clients -t "$main_session" -F '#{client_name}' 2>/dev/null | grep -q .; then
-        tmux detach-client -t "$client"
+        tmux_log_run detach-client -t "$client"
       else
-        tmux switch-client -c "$client" -t "$main_session"
+        tmux_log_run switch-client -c "$client" -t "$main_session"
       fi
     else
       outer="$client"
@@ -31,17 +34,19 @@ let
       # popup-move closes this popup with SIGHUP; only its 129 status is expected.
       if [ -n "$geom" ]; then
         set -- $geom
-        tmux popup -c "$outer" -e POPUP=1 -x "$1" -y "$2" -w "$3" -h "$4" -E "tmux attach -t popup || tmux new -s popup -e MAIN_POPUP=1 -e DEFAULT=1" || [ "$?" -eq 129 ]
+        tmux_log_run popup -c "$outer" -e POPUP=1 -x "$1" -y "$2" -w "$3" -h "$4" -E "tmux attach -t popup || tmux new -s popup -e MAIN_POPUP=1 -e DEFAULT=1" || [ "$?" -eq 129 ]
       else
-        tmux popup -c "$outer" -e POPUP=1 -w ${lib.escapeShellArg cfg.defaultWidth} -h ${lib.escapeShellArg cfg.defaultHeight} -E "tmux attach -t popup || tmux new -s popup -e MAIN_POPUP=1 -e DEFAULT=1" || [ "$?" -eq 129 ]
+        tmux_log_run popup -c "$outer" -e POPUP=1 -w ${lib.escapeShellArg cfg.defaultWidth} -h ${lib.escapeShellArg cfg.defaultHeight} -E "tmux attach -t popup || tmux new -s popup -e MAIN_POPUP=1 -e DEFAULT=1" || [ "$?" -eq 129 ]
       fi
     fi
   '';
 
   swapScript = pkgs.writeShellScript "tmux-popup-swap" ''
     source "${tmuxRoot}/scripts/lib/common"
+    TMUX_LOG_COMPONENT=tmux.popup.swap
     if ! tmux_lock __popup_swap_lock 2; then
       tmux display-message "popup swap: busy"
+      tmux_log warning busy
       exit 0
     fi
     main_session=${lib.escapeShellArg cfg.mainSession}
@@ -55,7 +60,8 @@ let
       tmux display-message "popup swap is unavailable while popup is open"
       exit 0
     fi
-    tmux rename-session -t "$main_session" _temp_current \; \
+    tmux_log info swap_requested "client=$client"
+    tmux_log_run rename-session -t "$main_session" _temp_current \; \
       rename-session -t popup _temp_popup \; \
       rename-session -t _temp_current popup \; \
       rename-session -t _temp_popup "$main_session" \; \
@@ -64,6 +70,11 @@ let
       set-environment -t popup -u MAIN \; \
       set-environment -t popup MAIN_POPUP 1 \; \
       switch-client -c "$client" -t "$main_session"
+    result=$?
+    if [ "$result" -eq 0 ]; then
+      tmux_log info swapped "client=$client"
+    fi
+    exit "$result"
   '';
 in
 {
@@ -107,6 +118,8 @@ in
     };
     programs.tmux-menu.showScript = lib.mkIf menuCfg.enable (
       pkgs.writeShellScript "tmux-menu-show" ''
+        ${config.programs.tmux.loggingShell}
+        TMUX_LOG_COMPONENT=tmux.popup.menu
         pane_id="$1"
         window_id="$2"
         client_name="$3"
@@ -118,7 +131,15 @@ in
           pane_current_path=$(tmux display-message -pt "$pane_id" '#{pane_current_path}' 2>/dev/null) || exit 0
           [ -n "$pane_current_path" ] || exit 0
         fi
+
+        if [ ! -d "$pane_current_path" ]; then
+          tmux_log warning directory_unavailable "pane_id=$pane_id"
+          tmux display-message -c "$client_name" "tmux-menu: working directory unavailable: $pane_current_path"
+          exit "$?"
+        fi
+
         export TMUX_MENU_ORIGIN_PANE="$pane_id"
+        tmux_log info menu_opened "pane_id=$pane_id" "window_id=$window_id" "client=$client_name"
         export TMUX_MENU_ORIGIN_WINDOW="$window_id"
         export TMUX_MENU_CLIENT="$client_name"
         export TMUX_MENU_PANE="$pane_id"

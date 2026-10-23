@@ -33,9 +33,19 @@ class ApprovalRequest:
 def session_key(hook_input: HookInput) -> str | None:
     client = environment().get("AI_AGENT_CLIENT", "").lower()
     session = hook_input.get("session_id")
-    if client not in {"codex", "claude"} or not isinstance(session, str) or not session:
+    if (
+        client not in {"codex", "claude", "antigravity"}
+        or not isinstance(session, str)
+        or not session
+    ):
         return None
-    return hashlib.sha256(json.dumps([client, session]).encode()).hexdigest()
+    identity = [client, session]
+    if client == "antigravity":
+        owner = environment().get("AI_AGENT_RULES_OWNER")
+        if not owner:
+            return None
+        identity.append(owner)
+    return hashlib.sha256(json.dumps(identity).encode()).hexdigest()
 
 
 @contextmanager
@@ -233,5 +243,9 @@ def consume_approval(handle: str, request: HookInput) -> str | None:
 def end_session(hook_input: HookInput) -> None:
     handle = session_key(hook_input)
     if handle is not None:
-        with state_transaction() as database:
-            database.execute("DELETE FROM sessions WHERE handle = ?", (handle,))
+        delete_session(handle)
+
+
+def delete_session(handle: str) -> None:
+    with state_transaction() as database:
+        database.execute("DELETE FROM sessions WHERE handle = ?", (handle,))

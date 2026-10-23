@@ -47,23 +47,39 @@ umask 077
 mkdir -p -- "$directory" "$(dirname "$bundle")"
 
 merge_settings() {
-	local key file
+	local key file input missing
 	key="$1"
 	file="$directory/$2"
+	input="$file"
+	missing=false
+	if [[ ! -e "$file" ]]; then
+		input=/dev/null
+		missing=true
+	fi
+
 	temporary_file=$(mktemp "$file.XXXXXX")
-	if [[ -e "$file" ]]; then
-		jq -e --slurp --arg key "$key" --slurpfile policy "$configuration" '
-      if length != 1 or (.[0] | type) != "object" then
+	jq -e --slurp --arg key "$key" --argjson missing "$missing" --slurpfile policy "$configuration" '
+      (if $missing then
+        {}
+      elif length != 1 or (.[0] | type) != "object" then
         error("Seamtype settings must contain one object")
-      elif $key == "settings" then
-        .[0] * $policy[0].settings
       else
-        $policy[0].appDefaults * .[0]
+        .[0]
+      end)
+      | if $key == "settings" then
+        . * $policy[0].settings
+      else
+        ($policy[0].appDefaults * .)
+        | if $policy[0].holdSpace != null then
+          .["*"] //= {}
+          | with_entries(.value.holdSpace = $policy[0].holdSpace)
+        else
+          .
+        end
       end
-    ' "$file" >"$temporary_file"
+    ' "$input" >"$temporary_file"
+	if [[ -e "$file" ]]; then
 		chmod --reference="$file" "$temporary_file"
-	else
-		jq --arg key "$key" '.[$key]' "$configuration" >"$temporary_file"
 	fi
 
 	if [[ -e "$file" ]] && cmp -s -- "$file" "$temporary_file"; then

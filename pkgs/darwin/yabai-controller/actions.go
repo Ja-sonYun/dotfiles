@@ -92,12 +92,10 @@ func execute(ctx context.Context, socket string, request action) (uint64, error)
 				if args[2] == "next" {
 					target = index + 1
 				}
-				// Native relative selectors include fullscreen Spaces; retain native boundary errors.
-				// https://github.com/asmvik/yabai/blob/dd845723416f5fe92af49fad5ebab00369e07edd/src/space_manager.c
-				if target >= 0 && target < len(spaces) {
-					targetSpaceID = spaces[target].ID
-					args = []string{"display", "--space", strconv.Itoa(spaces[target].Index)}
-				}
+				// Wrap within the current display, including fullscreen Spaces.
+				target = (target + len(spaces)) % len(spaces)
+				targetSpaceID = spaces[target].ID
+				args = []string{"display", "--space", strconv.Itoa(spaces[target].Index)}
 				break
 			}
 		}

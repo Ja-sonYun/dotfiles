@@ -1,6 +1,27 @@
 #import <CoreAudio/CoreAudio.h>
 #import <Foundation/Foundation.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#ifdef DOTFILES_LOGGING
+#include "client.h"
+#endif
+
+static void WatcherError(const char *format, ...) {
+  va_list arguments;
+  va_start(arguments, format);
+#ifdef DOTFILES_LOGGING
+  const char *path = getenv("DOTFILES_LOG_SOCKET");
+  if (path) {
+    dfl_logv(path, "meeting-recorder.audio-watcher", "error", "diagnostic", format, arguments);
+  } else {
+    vfprintf(stderr, format, arguments);
+  }
+#else
+  vfprintf(stderr, format, arguments);
+#endif
+  va_end(arguments);
+}
 
 static NSString *const StateNotification = @"com.jaykuroyanagi.audio-process-watcher.state";
 static NSString *const RefreshNotification = @"com.jaykuroyanagi.audio-process-watcher.refresh";
@@ -58,7 +79,7 @@ static BOOL IsUnavailableProcessObjectStatus(OSStatus status) {
     self.processListListener
   );
   if (status != noErr) {
-    fprintf(stderr, "audio-process-watcher: failed to observe the process list (%d)\n", status);
+    WatcherError("audio-process-watcher: failed to observe the process list (%d)\n", status);
     return NO;
   }
 
@@ -167,8 +188,7 @@ static BOOL IsUnavailableProcessObjectStatus(OSStatus status) {
       if (inputStatus == noErr) {
         AudioObjectRemovePropertyListenerBlock(objectID, &inputAddress, self.queue, listener);
       }
-      fprintf(
-        stderr,
+      WatcherError(
         "audio-process-watcher: failed to observe process %u (%d, %d)\n",
         objectID,
         runningStatus,
@@ -225,8 +245,7 @@ static BOOL IsUnavailableProcessObjectStatus(OSStatus status) {
                               selector:kAudioProcessPropertyIsRunningInput
                               objectID:objectID];
     if (status != noErr) {
-      fprintf(
-        stderr,
+      WatcherError(
         "audio-process-watcher: failed to read process %u input state (%d)\n",
         objectID,
         status
@@ -244,8 +263,7 @@ static BOOL IsUnavailableProcessObjectStatus(OSStatus status) {
 
     NSString *bundleID = [self bundleIDForObjectID:objectID status:&status];
     if (status != noErr) {
-      fprintf(
-        stderr,
+      WatcherError(
         "audio-process-watcher: failed to read process %u bundle ID (%d)\n",
         objectID,
         status
@@ -288,7 +306,7 @@ static BOOL IsUnavailableProcessObjectStatus(OSStatus status) {
   OSStatus status = noErr;
   NSArray<NSNumber *> *objectIDs = [self processObjectIDsWithStatus:&status];
   if (objectIDs == nil) {
-    fprintf(stderr, "audio-process-watcher: failed to read the process list (%d)\n", status);
+    WatcherError("audio-process-watcher: failed to read the process list (%d)\n", status);
     [self scheduleRetry];
     return;
   }
@@ -383,7 +401,7 @@ int main(void) {
   }
 
   @autoreleasepool {
-    fprintf(stderr, "audio-process-watcher: macOS 14.2 or newer is required\n");
+    WatcherError("audio-process-watcher: macOS 14.2 or newer is required\n");
     return 0;
   }
 }

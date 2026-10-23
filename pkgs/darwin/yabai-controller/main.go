@@ -14,7 +14,19 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"yabai-controller/internal/logclient"
 )
+
+var diagnostics logclient.Client
+
+func logDiagnostic(event string, fields map[string]string) {
+	if path, configured := os.LookupEnv("DOTFILES_LOG_SOCKET"); configured {
+		diagnostics.Log(path, "yabai.controller", "error", event, fields)
+	} else {
+		log.Print(fields["message"])
+	}
+}
 
 type request struct {
 	ID      uint64 `json:"id"`
@@ -108,7 +120,7 @@ func serveConnection(ctx context.Context, conn net.Conn, jobs chan<- job) {
 		}
 	}
 	if err := scanner.Err(); err != nil && ctx.Err() == nil {
-		log.Printf("read controller request: %v", err)
+		logDiagnostic("request_read_failed", map[string]string{"message": fmt.Sprintf("read controller request: %v", err)})
 	}
 }
 
@@ -133,7 +145,11 @@ func run(ctx context.Context, socket, yabaiSocket string) error {
 				cancel()
 				output := response{ID: pending.request.ID, OK: err == nil}
 				if err != nil {
-					log.Printf("controller request %d (%s): %v", pending.request.ID, pending.request.Payload.Action, err)
+					logDiagnostic("action_failed", map[string]string{
+						"message":    fmt.Sprintf("controller request %d (%s): %v", pending.request.ID, pending.request.Payload.Action, err),
+						"action":     pending.request.Payload.Action,
+						"request_id": fmt.Sprint(pending.request.ID),
+					})
 					output.Error = err.Error()
 				} else {
 					output.TargetSpaceID = targetSpaceID
@@ -160,12 +176,14 @@ func main() {
 	yabaiSocket := flag.String("yabai-socket", "", "Yabai Unix socket path")
 	flag.Parse()
 	if !filepath.IsAbs(*socket) || !filepath.IsAbs(*yabaiSocket) {
-		log.Fatal("--socket and --yabai-socket must be absolute paths")
+		logDiagnostic("configuration_invalid", map[string]string{"message": "--socket and --yabai-socket must be absolute paths"})
+		os.Exit(1)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, *socket, *yabaiSocket); err != nil {
-		log.Fatal(err)
+		logDiagnostic("service_failed", map[string]string{"message": err.Error()})
+		os.Exit(1)
 	}
 }

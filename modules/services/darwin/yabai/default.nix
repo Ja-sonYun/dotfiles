@@ -3,17 +3,22 @@
   lib,
   pkgs,
   userhome,
+  username,
   ...
 }:
 let
   cfg = config.services.yabai;
+  logging = config.home-manager.users.${username}.programs.logging;
+  yabaiPackage = pkgs.yabai.override {
+    logClientSource = logging.clientSources;
+  };
   hasSignedYabai = config.services.codeSigning.targets ? yabai;
   signedYabaiPath = "${userhome}/.local/libexec/yabai/yabai";
   signedYabaiPackage = pkgs.writeShellScriptBin "yabai" ''
     exec ${lib.escapeShellArg signedYabaiPath} "$@"
   '';
   yabaiSaSudoers = pkgs.runCommand "sudoers-yabai" { } ''
-    yabai_bin=${lib.escapeShellArg "${pkgs.yabai}/bin/yabai"}
+    yabai_bin=${lib.escapeShellArg "${yabaiPackage}/bin/yabai"}
     shasum=$(sha256sum "$yabai_bin" | cut -d' ' -f1)
     cat <<EOF >"$out"
     %admin ALL=(root) NOPASSWD: sha256:$shasum $yabai_bin --load-sa
@@ -30,7 +35,13 @@ let
   renderRule = rule: "yabai -m rule --add ${renderAttrs (builtins.attrNames rule) rule}";
 
   displayExtraConfig = import ./display-management.nix {
-    inherit lib pkgs renderAttrs;
+    inherit
+      lib
+      pkgs
+      renderAttrs
+      logging
+      yabaiPackage
+      ;
     yabaiSettings = cfg.config;
     inherit (cfg.displayManagement) targetDesktopsPerDisplay;
   };
@@ -63,16 +74,16 @@ in
   config = lib.mkMerge [
     (lib.mkIf config.services.yabai.enable {
       services.codeSigning.targets.yabai = {
-        source = "${pkgs.yabai}/bin/yabai";
+        source = "${yabaiPackage}/bin/yabai";
         target = signedYabaiPath;
         restartLaunchAgent = "org.nixos.yabai";
       };
 
       services.yabai = {
-        package = if hasSignedYabai then signedYabaiPackage else pkgs.yabai;
+        package = if hasSignedYabai then signedYabaiPackage else yabaiPackage;
         enableScriptingAddition = lib.mkIf cfg.scriptingAddition.enable false;
         extraConfig = lib.mkBefore ''
-          ${lib.optionalString cfg.scriptingAddition.enable "/usr/bin/sudo ${pkgs.yabai}/bin/yabai --load-sa"}
+          ${lib.optionalString cfg.scriptingAddition.enable "/usr/bin/sudo ${yabaiPackage}/bin/yabai --load-sa"}
 
           ${lib.optionalString (cfg.rules != [ ]) ''
             ${lib.concatMapStringsSep "\n" renderRule cfg.rules}
@@ -81,7 +92,7 @@ in
 
           ${lib.optionalString cfg.scriptingAddition.enable ''
             yabai -m signal --remove load-sa-after-dock-restart 2>/dev/null || true
-            yabai -m signal --add label=load-sa-after-dock-restart event=dock_did_restart action=${lib.escapeShellArg "/usr/bin/sudo ${pkgs.yabai}/bin/yabai --load-sa"}
+            yabai -m signal --add label=load-sa-after-dock-restart event=dock_did_restart action=${lib.escapeShellArg "/usr/bin/sudo ${yabaiPackage}/bin/yabai --load-sa"}
           ''}
           ${lib.optionalString cfg.displayManagement.enable displayExtraConfig}
         '';
@@ -96,8 +107,9 @@ in
           readableFileFlags = [ "-c" ];
         };
         serviceConfig = {
-          StandardOutPath = "/tmp/yabai.out.log";
-          StandardErrorPath = "/tmp/yabai.err.log";
+          EnvironmentVariables.DOTFILES_LOG_SOCKET = if logging.enable then logging.socketPath else "";
+          StandardOutPath = "/dev/null";
+          StandardErrorPath = "/dev/null";
         };
       };
     })

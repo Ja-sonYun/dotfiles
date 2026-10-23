@@ -104,7 +104,7 @@ def Jev(
   batch: bool = false
 ): void
   var argv = [
-    'jev', '--model', 'jev-latest', '--timeout', '10s',
+    'jev', '--timeout', '10s',
   ]
   if batch
     extend(argv, ['--batch-items', '.items'])

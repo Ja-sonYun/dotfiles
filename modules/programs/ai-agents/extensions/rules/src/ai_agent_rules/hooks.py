@@ -131,8 +131,22 @@ async def handle_event(
             )
         return None
 
+    registration = asyncio.create_task(asyncio.to_thread(register_session, hook_input))
     try:
-        handle, created = await asyncio.to_thread(register_session, hook_input)
+        try:
+            handle, created = await asyncio.shield(registration)
+        except asyncio.CancelledError:
+            # Finish the SQLite write before owner-exit cleanup can delete its row.
+            while not registration.done():
+                try:
+                    await asyncio.shield(registration)
+                except asyncio.CancelledError:
+                    continue
+                except (OSError, TypeError, ValueError):
+                    break
+            if not registration.cancelled():
+                registration.exception()
+            raise
     except (OSError, TypeError, ValueError):
         handle, created = None, False
         notes.append("[Rules not checked] Session storage is unavailable.")

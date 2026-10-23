@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-n8n-mcp",
-    "version": "2.94.3",
+    "version": "2.96.2",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-n8n-mcp",
-        "version": "2.94.3",
+        "version": "2.96.2",
         "dependencies": {
-          "n8n-mcp": "2.94.3"
+          "n8n-mcp": "2.96.2"
         }
       },
       "node_modules/@hono/node-server": {
@@ -215,18 +215,18 @@
         }
       },
       "node_modules/body-parser": {
-        "version": "2.3.0",
-        "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.3.0.tgz",
-        "integrity": "sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==",
+        "version": "2.4.0",
+        "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.4.0.tgz",
+        "integrity": "sha512-Ifk1KcLrxaGt1occQagQNFNNOqRt1LFuehEnHHzB8Z6cRgIxRU1TBaiIsUiCdA+gy5PL7Y1IX31DNKkRmxtXjQ==",
         "license": "MIT",
         "dependencies": {
           "bytes": "^3.1.2",
-          "content-type": "^2.0.0",
+          "content-type": "^2.1.0",
           "debug": "^4.4.3",
           "http-errors": "^2.0.1",
-          "iconv-lite": "^0.7.2",
+          "iconv-lite": "^0.7.3",
           "on-finished": "^2.4.1",
-          "qs": "^6.15.2",
+          "qs": "^6.16.1",
           "raw-body": "^3.0.2",
           "type-is": "^2.1.0"
         },
@@ -1047,9 +1047,9 @@
         "license": "ISC"
       },
       "node_modules/jose": {
-        "version": "6.2.12",
-        "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.12.tgz",
-        "integrity": "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==",
+        "version": "6.2.13",
+        "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.13.tgz",
+        "integrity": "sha512-7TIg10ZE1x82YediN+lcrPNvGMKge9yFHQD+Qho/b8y2adfugU3AsvvHfxV0fzyFllT6l9xCjf4RWY9g/Z9PJQ==",
         "license": "MIT",
         "funding": {
           "url": "https://github.com/sponsors/panva"
@@ -1172,9 +1172,9 @@
         "license": "MIT"
       },
       "node_modules/n8n-mcp": {
-        "version": "2.94.3",
-        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.94.3.tgz",
-        "integrity": "sha512-VrCwq+MDTWk2Uq1iiZ9WU2lj+voPvUzOkvdTWom6iucLFTHJWKuYD9wYS8G0x7t23XM6EYV26VNTLQpuSIvB0Q==",
+        "version": "2.96.2",
+        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.96.2.tgz",
+        "integrity": "sha512-fnpvAEuXOBRP0J6Uy3BjIyRja3y4Ox9rsmohqPb1qUEshso9aBt4L5/aYgSEl6lq/HoBPJ+DmZV0hP/GS+B/Dg==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/sdk": "1.30.0",
@@ -1194,7 +1194,7 @@
           "n8n-mcp": "dist/mcp/stdio-wrapper.js"
         },
         "engines": {
-          "node": ">=20.0.0"
+          "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
         },
         "optionalDependencies": {
           "better-sqlite3": "^11.10.0"
@@ -1237,9 +1237,9 @@
         }
       },
       "node_modules/node-abi": {
-        "version": "3.99.0",
-        "resolved": "https://registry.npmjs.org/node-abi/-/node-abi-3.99.0.tgz",
-        "integrity": "sha512-lLdwkeg2XUVPTHqWjPltTxH81zbQNbUWC+AEb9ni50KjxkUzAAx1HGtMT21sbntzfUGfIphhcklvs3imJeqDXw==",
+        "version": "3.101.0",
+        "resolved": "https://registry.npmjs.org/node-abi/-/node-abi-3.101.0.tgz",
+        "integrity": "sha512-bkb/RkuWCE64eWu1PCh3Fu2pGc9mKRs+kOE+FU2bGHRYlQa86/D321DSATV54AsCQMKz3/xSt9sRgraZTpqdhQ==",
         "license": "MIT",
         "optional": true,
         "dependencies": {
@@ -1271,15 +1271,19 @@
         }
       },
       "node_modules/on-finished": {
-        "version": "2.4.1",
-        "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.4.1.tgz",
-        "integrity": "sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==",
+        "version": "2.4.2",
+        "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.4.2.tgz",
+        "integrity": "sha512-ATWUv387i+nLD49EiDoOft5scf32Vsdz3ktrQJG9bi7jRFmaXTssvyvj1EmeKVVgvesbqUtvQQvaS2TpTukAZQ==",
         "license": "MIT",
         "dependencies": {
           "ee-first": "1.1.1"
         },
         "engines": {
           "node": ">= 0.8"
+        },
+        "funding": {
+          "type": "opencollective",
+          "url": "https://opencollective.com/express"
         }
       },
       "node_modules/once": {
@@ -1936,5 +1940,5 @@
       }
     }
   },
-  "invalidationHash": "825eafbb812217370a82b8bb517b978ac2b65b4739d4f9a41d887f20c73902ea"
+  "invalidationHash": "d7a031fa3133bd964ab1a77f95edc4bce283863be46ff9634cbbb1098edff20d"
 }

@@ -6,11 +6,13 @@
 }:
 let
   cfg = config.programs.ai-agents;
+  syncLib = import ../sync.nix { inherit lib; };
   jsonFormat = pkgs.formats.json { };
   python = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
   clients =
     lib.optional config.programs.claude-code.enable "claude"
-    ++ lib.optional config.programs.codex.enable "codex";
+    ++ lib.optional config.programs.codex.enable "codex"
+    ++ lib.optional (antigravityAgentNames != [ ]) "antigravity";
   modelMapFile = jsonFormat.generate "ai-agent-model-map.json" (
     lib.filterAttrs (client: _: builtins.elem client clients) cfg.modelMap
   );
@@ -29,6 +31,15 @@ let
           ) (builtins.readDir cfg.agentsDir)
         )
       );
+  antigravityAgentNames =
+    if !config.programs.antigravity-cli.enable then
+      [ ]
+    else
+      builtins.attrNames (
+        syncLib.select "programs.antigravity-cli.sync.agents" config.programs.antigravity-cli.sync.agents (
+          lib.genAttrs agentNames (_: null)
+        )
+      );
   adaptedAgents = pkgs.runCommandLocal "adapted-ai-agents" { } ''
     set -euo pipefail
     shopt -s nullglob
@@ -44,6 +55,10 @@ let
           "--client"
           client
         ]) clients
+        ++ lib.concatMap (name: [
+          "--antigravity-agent"
+          name
+        ]) antigravityAgentNames
       )}
 
     for source in "$out"/codex/*.json; do
@@ -99,6 +114,21 @@ in
         if cfg.enable && cfg.agentsDir != null && clients != [ ] then adaptedAgents else null;
     }
 
+    (lib.mkIf (cfg.enable && config.programs.antigravity-cli.enable) {
+      programs.ai-agents.modelMap.antigravity =
+        lib.genAttrs
+          [
+            "xhigh"
+            "high"
+            "middle"
+            "low"
+          ]
+          (_: {
+            model = lib.mkDefault "inherit";
+          });
+      programs.antigravity-cli.agentNames = agentNames;
+    })
+
     (lib.mkIf (cfg.enable && cfg.adaptedAgents != null) (
       lib.mkMerge [
         (lib.mkIf config.programs.codex.enable {
@@ -109,6 +139,10 @@ in
         (lib.mkIf config.programs.claude-code.enable {
           programs.claude-code.agentsDir = "${cfg.adaptedAgents}/claude";
           programs.claude-code.agentNames = agentNames;
+        })
+
+        (lib.mkIf (antigravityAgentNames != [ ]) {
+          programs.antigravity-cli.agentsDir = "${cfg.adaptedAgents}/antigravity";
         })
       ]
     ))

@@ -6,6 +6,31 @@
 }:
 let
   cfg = config.programs.tmux;
+  loggingLibrary = pkgs.writeText "tmux-logging" (
+    (
+      if config.programs.logging.enable then
+        ''
+          TMUX_LOG_SOCKET=${lib.escapeShellArg config.programs.logging.socketPath}
+          if ! enable -f ${lib.escapeShellArg config.programs.logging.bashLibrary} dotfiles_log 2>/dev/null; then
+            TMUX_LOG_SOCKET=""
+          fi
+        ''
+      else
+        ''
+          TMUX_LOG_SOCKET=""
+        ''
+    )
+    + builtins.readFile ./scripts/lib/logging
+  );
+  runtime = pkgs.runCommand "tmux-agent-runtime" { nativeBuildInputs = [ pkgs.bash ]; } ''
+    mkdir -p $out/extensions/agent $out/extensions/popup
+    cp -R ${./scripts} $out/scripts
+    cp -R ${./extensions/agent/scripts} $out/extensions/agent/scripts
+    cp -R ${./extensions/popup/scripts} $out/extensions/popup/scripts
+    chmod -R u+w $out
+    cp ${loggingLibrary} $out/scripts/lib/logging
+    patchShebangs --host $out
+  '';
 
   caseType = lib.types.submodule {
     options = {
@@ -356,6 +381,19 @@ in
 
   options.programs.tmux = {
     enable = lib.mkEnableOption "tmux";
+
+    loggingShell = lib.mkOption {
+      type = lib.types.lines;
+      readOnly = true;
+      default = "source ${loggingLibrary}";
+      description = "Shell helpers using the shared logger's Bash builtin and socket.";
+    };
+    runtime = lib.mkOption {
+      type = lib.types.package;
+      readOnly = true;
+      default = runtime;
+      description = "Agent and popup scripts with configured logging and a matching Nix Bash interpreter.";
+    };
 
     package = lib.mkOption {
       type = lib.types.package;

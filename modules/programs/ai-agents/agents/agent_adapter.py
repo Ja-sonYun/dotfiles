@@ -8,7 +8,7 @@ from typing import Any
 import yaml
 
 AGENT_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-MODEL_CLIENTS = ("claude", "codex")
+MODEL_CLIENTS = ("claude", "codex", "antigravity")
 MODEL_TIERS = ("xhigh", "high", "middle", "low")
 CODEX_PREAMBLE = (
     "Treat references to CLAUDE.md as references to the nearest applicable "
@@ -54,6 +54,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--client", choices=MODEL_CLIENTS, action="append", required=True
     )
+    parser.add_argument("--antigravity-agent", action="append", default=[])
     return parser.parse_args()
 
 
@@ -266,6 +267,37 @@ def codex_sandbox_mode(agent: Agent) -> str | None:
     return None
 
 
+def render_antigravity(
+    agent: Agent,
+    model_map: ModelMap,
+    output_dir: Path,
+) -> None:
+    if agent.tools is not None:
+        raise ValueError(
+            f"Antigravity cannot preserve MCP tool restrictions in {agent.source}"
+        )
+
+    frontmatter: dict[str, object] = {
+        "name": agent.name,
+        "description": agent.description,
+        "mainAgent": False,
+        "subagent": True,
+    }
+    if agent.permission_mode is not None:
+        frontmatter["permissionMode"] = agent.permission_mode
+    if (model := resolve_model(agent, "antigravity", model_map)) is not None:
+        if model.reasoning_effort is not None:
+            raise ValueError(
+                f"Antigravity reasoning effort is unsupported in {agent.source}"
+            )
+        frontmatter["model"] = model.model
+    rendered = yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False)
+    (output_dir / "antigravity" / agent.source.name).write_text(
+        f"---\n{rendered}---\n{agent.body}",
+        encoding="utf-8",
+    )
+
+
 def codex_mcp_servers(
     agent: Agent,
     servers: dict[str, dict[str, Any]],
@@ -319,6 +351,7 @@ def write_outputs(
     servers: tuple[str, ...],
     codex_servers: dict[str, dict[str, Any]],
     claude_plugin: str,
+    antigravity_agents: list[str],
 ) -> None:
     for directory in model_map:
         (output_dir / directory).mkdir(parents=True, exist_ok=True)
@@ -326,6 +359,12 @@ def write_outputs(
     registry: dict[str, dict[str, dict[str, object]]] = {"agents": {}}
     for path in sorted(source_dir.glob("*.md")):
         if path.name == "README.md":
+            continue
+        if (
+            "claude" not in model_map
+            and "codex" not in model_map
+            and path.stem not in antigravity_agents
+        ):
             continue
         agent = read_agent(path, servers, claude_plugin)
         if "claude" in model_map:
@@ -337,6 +376,8 @@ def write_outputs(
                 model_map,
                 output_dir,
             )
+        if "antigravity" in model_map and agent.name in antigravity_agents:
+            render_antigravity(agent, model_map, output_dir)
 
     if "codex" in model_map:
         (output_dir / "codex" / "agents.json").write_text(
@@ -356,6 +397,7 @@ def main() -> None:
         servers,
         codex_servers,
         args.claude_plugin,
+        args.antigravity_agent,
     )
 
 

@@ -49,22 +49,22 @@ in
 
     "shift-lalt-h" = command [
       "window"
-      "--warp"
+      "--swap"
       "west"
     ];
     "shift-lalt-j" = command [
       "window"
-      "--warp"
+      "--swap"
       "south"
     ];
     "shift-lalt-k" = command [
       "window"
-      "--warp"
+      "--swap"
       "north"
     ];
     "shift-lalt-l" = command [
       "window"
-      "--warp"
+      "--swap"
       "east"
     ];
     "shift-lalt-s" = send { action = "stack-recent"; };

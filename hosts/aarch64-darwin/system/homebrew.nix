@@ -29,7 +29,10 @@ let
       "orbstack"
       "obsidian"
       "appcleaner"
-      "slack"
+      {
+        name = "slack";
+        args.appdir = "/Applications/_Slack";
+      }
       "bambu-studio"
       "visual-studio-code"
       "discord"

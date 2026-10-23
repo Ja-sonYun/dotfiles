@@ -19,6 +19,7 @@ import psutil
 
 from ai_agent_rules.context import HookContext, current
 from ai_agent_rules.hooks import process_event
+from ai_agent_rules.sessions import delete_session, session_key
 
 Owner = tuple[int, float]
 SessionKey = tuple[str, str, Owner]
@@ -91,7 +92,14 @@ def find_owner(pid: int, client: str) -> psutil.Process:
                 executable = (
                     Path(name).name.lstrip(".").removesuffix("-wrapped").lower()
                 )
-                matches = executable == {"Codex": "codex", "Claude": "claude"}[client]
+                matches = (
+                    executable
+                    == {
+                        "Codex": "codex",
+                        "Claude": "claude",
+                        "Antigravity": "agy",
+                    }[client]
+                )
                 if executable == "node" and len(command_line) > 1:
                     matches = (
                         client == "Claude"
@@ -136,6 +144,8 @@ def watch_owner(process: psutil.Process) -> tuple[int, select.kqueue | None]:
 class Session:
     key: SessionKey
     closing: bool = False
+    handle: str | None = None
+    environment: dict[str, str] | None = None
 
 
 class Server:
@@ -146,6 +156,7 @@ class Server:
         self.owners: dict[Owner, tuple[int, select.kqueue | None]] = {}
         self.sessions: dict[SessionKey, Session] = {}
         self.requests: dict[asyncio.Task[None], Session | None] = {}
+        self.cleanups: set[asyncio.Task[None]] = set()
         self.stopped = asyncio.Event()
         self.startup_timer: asyncio.TimerHandle | None = None
         self.stop_reason = "shutdown"
@@ -231,8 +242,13 @@ class Server:
     def owner_exited(self, owner: Owner) -> None:
         self.record("owner_exited", owner_pid=owner[0], owner_created=owner[1])
         self.remove_watch(owner)
+        closing = []
         for key in tuple(self.sessions):
             if key[2] == owner:
+                if key[0] == "Antigravity":
+                    self.sessions[key].closing = True
+                    closing.append(self.sessions[key])
+                    continue
                 del self.sessions[key]
                 self.record(
                     "session_removed",
@@ -241,14 +257,56 @@ class Server:
                     owner_pid=owner[0],
                     reason="owner_exited",
                 )
-        for task, session in tuple(self.requests.items()):
-            if (
-                session is not None
-                and session.key[2] == owner
-                and not task.cancelling()
-            ):
+        requests = [
+            task
+            for task, session in self.requests.items()
+            if session is not None and session.key[2] == owner
+        ]
+        for task in requests:
+            if not task.cancelling():
                 task.cancel()
+        if closing:
+            self.cleanups.add(
+                asyncio.create_task(self.cleanup_sessions(closing, requests))
+            )
         self.stop_if_unused()
+
+    async def cleanup_sessions(
+        self, sessions: list[Session], requests: list[asyncio.Task[None]]
+    ) -> None:
+        try:
+            await asyncio.gather(*requests, return_exceptions=True)
+            for session in sessions:
+                if session.handle is not None and session.environment is not None:
+                    token = current.set(
+                        HookContext(session.environment, time.monotonic())
+                    )
+                    try:
+                        await asyncio.to_thread(delete_session, session.handle)
+                    except (OSError, TypeError, ValueError) as error:
+                        self.record(
+                            "session_cleanup_failed",
+                            client=session.key[0],
+                            session_id=session.key[1],
+                            owner_pid=session.key[2][0],
+                            error_type=type(error).__name__,
+                        )
+                    finally:
+                        current.reset(token)
+                if self.sessions.get(session.key) is session:
+                    del self.sessions[session.key]
+                    self.record(
+                        "session_removed",
+                        client=session.key[0],
+                        session_id=session.key[1],
+                        owner_pid=session.key[2][0],
+                        reason="owner_exited",
+                    )
+        finally:
+            task = asyncio.current_task()
+            if task is not None:
+                self.cleanups.discard(task)
+            self.stop_if_unused()
 
     def stop_if_unused(self) -> None:
         active = {key[2] for key in self.sessions}
@@ -258,7 +316,12 @@ class Server:
         for owner in tuple(self.owners):
             if owner not in active:
                 self.remove_watch(owner)
-        if not self.sessions and not self.requests and self.startup_timer is None:
+        if (
+            not self.sessions
+            and not self.requests
+            and not self.cleanups
+            and self.startup_timer is None
+        ):
             self.stop("no_active_sessions")
 
     async def execute(
@@ -267,6 +330,7 @@ class Server:
         hook_input: dict[str, object],
         api: httpx.AsyncClient,
         evaluations: list[dict[str, object]],
+        session: Session,
     ) -> HookContext:
         environment = request["environment"]
         if not isinstance(environment, dict) or any(
@@ -275,6 +339,14 @@ class Server:
         ):
             raise TypeError("Invalid hook environment.")
         environment = {**environment, "AI_AGENT_CLIENT": str(request["client"])}
+        if session.key[0] == "Antigravity":
+            if session.environment is None:
+                session.environment = {
+                    "AI_AGENT_CLIENT": "Antigravity",
+                    "AI_AGENT_RULES_OWNER": json.dumps(session.key[2]),
+                    "XDG_CACHE_HOME": environment.get("XDG_CACHE_HOME", ""),
+                }
+            environment.update(session.environment)
         environment["PATH"] = (
             os.environ.get("PATH", "") + os.pathsep + environment.get("PATH", "")
         )
@@ -289,6 +361,8 @@ class Server:
         )
         token = current.set(context)
         try:
+            if session.key[0] == "Antigravity":
+                session.handle = session_key(hook_input)
             async with asyncio.timeout(budget):
                 await process_event(hook_input, self.rules, api, self.debug_log)
             return context
@@ -334,7 +408,7 @@ class Server:
                 or not request["configuration"]
             ):
                 raise ValueError("Missing rules server configuration.")
-            if request.get("client") not in ("Codex", "Claude"):
+            if request.get("client") not in ("Codex", "Claude", "Antigravity"):
                 raise ValueError("Unsupported rules client.")
             hook_input = request["input"]
             if not isinstance(hook_input, dict):
@@ -348,7 +422,7 @@ class Server:
             registering = request.get("register_only") is True
             details.update(
                 client=request.get("client")
-                if request.get("client") in ("Codex", "Claude")
+                if request.get("client") in ("Codex", "Claude", "Antigravity")
                 else None,
                 session_id=session_id,
                 hook_event=event,
@@ -390,7 +464,7 @@ class Server:
                 session.closing = True
             stage = "execute_hook"
             work = asyncio.create_task(
-                self.execute(request, hook_input, api, evaluations)
+                self.execute(request, hook_input, api, evaluations, session)
             )
             disconnected = asyncio.create_task(reader.read(1))
             done, _ = await asyncio.wait(
@@ -523,6 +597,7 @@ class Server:
         finally:
             if self.startup_timer is not None:
                 self.startup_timer.cancel()
+            await asyncio.gather(*tuple(self.cleanups), return_exceptions=True)
             self.record("server_stopped", reason=self.stop_reason)
             self.log_queue.put_nowait(None)
             await log_task

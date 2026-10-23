@@ -11,6 +11,9 @@
         "enabled": true,
         "domains": { "*": "allow" }
       }
+    },
+    "antigravity": {
+      "allow": ["read_file(*)"]
     }
   },
   {
@@ -60,6 +63,13 @@
         { "path": ".env.example", "read": "allow", "write": "allow" },
         { "path": ".env.sample", "read": "allow", "write": "allow" }
       ]
+    },
+    "antigravity": {
+      "files": [
+        { "path": ".env.age", "read": "allow", "write": "deny" },
+        { "path": ".env.example", "read": "allow", "write": "allow" },
+        { "path": ".env.sample", "read": "allow", "write": "allow" }
+      ]
     }
   },
   {
@@ -68,6 +78,11 @@
     "description": "Block ~/.ssh access.",
     "files": [{ "path": "~/.ssh/**", "read": "deny", "write": "deny" }],
     "codex": {
+      "files": [
+        { "path": "~/.ssh/known_hosts", "read": "allow", "write": "deny" }
+      ]
+    },
+    "antigravity": {
       "files": [
         { "path": "~/.ssh/known_hosts", "read": "allow", "write": "deny" }
       ]
@@ -81,6 +96,9 @@
       "allow": ["Read(./**/.git/**)", "Edit(./**/.git/**)"]
     },
     "codex": {
+      "files": [{ "path": ".git/**", "read": "allow", "write": "allow" }]
+    },
+    "antigravity": {
       "files": [{ "path": ".git/**", "read": "allow", "write": "allow" }]
     }
   }

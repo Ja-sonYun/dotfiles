@@ -12,6 +12,7 @@
     ./programs/analysis-tools
     ./programs/git
     ./programs/jujutsu
+    ./programs/logging.nix
     ./programs/tmux
     ./programs/direnv
     ./programs/navi
@@ -26,6 +27,7 @@
   ++ lib.optionals (hasTag "ai") [
     ./programs/agent
     ./programs/ai-tools
+    ./programs/antigravity-cli
     ./programs/claude
     ./programs/codex
     ./programs/open-code-review

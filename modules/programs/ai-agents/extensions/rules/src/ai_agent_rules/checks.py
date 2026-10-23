@@ -90,7 +90,11 @@ def questions_for(rules: Sequence[Rule]) -> dict[str, dict[str, object]]:
 def request_size(state: dict[str, str], rules: Sequence[Rule]) -> int:
     return len(
         json.dumps(
-            {"model": "jev-latest", "state": state, "questions": questions_for(rules)},
+            {
+                "model": environment().get("JEV_MODEL") or "jev-latest",
+                "state": state,
+                "questions": questions_for(rules),
+            },
             ensure_ascii=False,
         ).encode("utf-8")
     )
@@ -307,7 +311,10 @@ async def evaluate(
                     stage = "Jev API request"
                     response = await api.post(
                         "https://api.typesafe.ai/v1/systemone",
-                        json={**payload, "model": "jev-latest"},
+                        json={
+                            **payload,
+                            "model": environment().get("JEV_MODEL") or "jev-latest",
+                        },
                         headers={"Authorization": f"Bearer {api_key}"},
                         timeout=timeout,
                         follow_redirects=False,

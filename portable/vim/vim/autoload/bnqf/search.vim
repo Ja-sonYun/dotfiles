@@ -125,7 +125,6 @@ export def Start(): void
   try
     const task = jobs.Job.new([
       'jev',
-      '--model', 'jev-latest',
       '--timeout', '10s',
       '--batch-items', '.items',
     ], {

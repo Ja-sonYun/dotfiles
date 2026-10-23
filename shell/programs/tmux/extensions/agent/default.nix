@@ -88,6 +88,12 @@ lib.mkIf agent.enable {
           key = "p";
         }
         {
+          command = "agy";
+          kind = "antigravity";
+          displayName = "Antigravity";
+          key = "g";
+        }
+        {
           command = "claude";
           args = [ "--chrome" ];
           label = "claude chrome";

@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-firecrawl-mcp",
-    "version": "3.33.4",
+    "version": "3.34.1",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-firecrawl-mcp",
-        "version": "3.33.4",
+        "version": "3.34.1",
         "dependencies": {
-          "firecrawl-mcp": "3.33.4"
+          "firecrawl-mcp": "3.34.1"
         }
       },
       "node_modules/@borewit/text-codec": {
@@ -53,9 +53,9 @@
         }
       },
       "node_modules/@modelcontextprotocol/client/node_modules/jose": {
-        "version": "6.2.12",
-        "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.12.tgz",
-        "integrity": "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==",
+        "version": "6.2.13",
+        "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.13.tgz",
+        "integrity": "sha512-7TIg10ZE1x82YediN+lcrPNvGMKge9yFHQD+Qho/b8y2adfugU3AsvvHfxV0fzyFllT6l9xCjf4RWY9g/Z9PJQ==",
         "license": "MIT",
         "funding": {
           "url": "https://github.com/sponsors/panva"
@@ -114,9 +114,9 @@
         }
       },
       "node_modules/@modelcontextprotocol/sdk/node_modules/jose": {
-        "version": "6.2.12",
-        "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.12.tgz",
-        "integrity": "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==",
+        "version": "6.2.13",
+        "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.13.tgz",
+        "integrity": "sha512-7TIg10ZE1x82YediN+lcrPNvGMKge9yFHQD+Qho/b8y2adfugU3AsvvHfxV0fzyFllT6l9xCjf4RWY9g/Z9PJQ==",
         "license": "MIT",
         "funding": {
           "url": "https://github.com/sponsors/panva"
@@ -283,18 +283,18 @@
         }
       },
       "node_modules/body-parser": {
-        "version": "2.3.0",
-        "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.3.0.tgz",
-        "integrity": "sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==",
+        "version": "2.4.0",
+        "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.4.0.tgz",
+        "integrity": "sha512-Ifk1KcLrxaGt1occQagQNFNNOqRt1LFuehEnHHzB8Z6cRgIxRU1TBaiIsUiCdA+gy5PL7Y1IX31DNKkRmxtXjQ==",
         "license": "MIT",
         "dependencies": {
           "bytes": "^3.1.2",
-          "content-type": "^2.0.0",
+          "content-type": "^2.1.0",
           "debug": "^4.4.3",
           "http-errors": "^2.0.1",
-          "iconv-lite": "^0.7.2",
+          "iconv-lite": "^0.7.3",
           "on-finished": "^2.4.1",
-          "qs": "^6.15.2",
+          "qs": "^6.16.1",
           "raw-body": "^3.0.2",
           "type-is": "^2.1.0"
         },
@@ -913,18 +913,18 @@
         }
       },
       "node_modules/firecrawl-mcp": {
-        "version": "3.33.4",
-        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.33.4.tgz",
-        "integrity": "sha512-A6FF9n5Tqwr014svYil+dp1tHJEYZl5bUVhdIF6aTMnM/zjNzyHq9iP2IJbh9aosgBmD+Ti86bGawPjGgslOSQ==",
+        "version": "3.34.1",
+        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.34.1.tgz",
+        "integrity": "sha512-ccQgYHk+NDw7bQRkITfwmiqU212HAE8Dll8A4PsIIx8UKBouj11Eu2o06eQoWCVznlqEtjEepQdyyazSyBK7Cg==",
         "license": "MIT",
         "dependencies": {
-          "@modelcontextprotocol/sdk": "^1.29.0",
+          "@modelcontextprotocol/sdk": "^1.32.1",
           "dotenv": "^17.2.2",
           "fastmcp": "4.3.2",
           "firecrawl": "4.50.0",
           "fuse.js": "^7.1.0",
           "hono": "^4.12.27",
-          "mcp-proxy": "^6.5.1",
+          "mcp-proxy": "^6.6.0",
           "undici": "^7.28.0",
           "uri-templates": "^0.2.0",
           "xsschema": "^0.4.4",
@@ -1550,9 +1550,9 @@
         }
       },
       "node_modules/mcp-proxy": {
-        "version": "6.7.20",
-        "resolved": "https://registry.npmjs.org/mcp-proxy/-/mcp-proxy-6.7.20.tgz",
-        "integrity": "sha512-FyxuT/38DrtEyl5g1C3jfgUlTcqE05Eki0rSWOFC/h3NH3L5GnJHV2PTW9S0DHPx1bn4lc1k91lAuS3LdZsGYA==",
+        "version": "6.7.21",
+        "resolved": "https://registry.npmjs.org/mcp-proxy/-/mcp-proxy-6.7.21.tgz",
+        "integrity": "sha512-btzC2YoQKgVc6mA8dElcmaX7nz20WcdteJRq8Je/9pufORT+fBikwIne1juyYvRNSLyTw4U2fjUuy9q82O+RaQ==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/client": "^2.0.0",
@@ -1698,15 +1698,19 @@
         }
       },
       "node_modules/on-finished": {
-        "version": "2.4.1",
-        "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.4.1.tgz",
-        "integrity": "sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==",
+        "version": "2.4.2",
+        "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.4.2.tgz",
+        "integrity": "sha512-ATWUv387i+nLD49EiDoOft5scf32Vsdz3ktrQJG9bi7jRFmaXTssvyvj1EmeKVVgvesbqUtvQQvaS2TpTukAZQ==",
         "license": "MIT",
         "dependencies": {
           "ee-first": "1.1.1"
         },
         "engines": {
           "node": ">= 0.8"
+        },
+        "funding": {
+          "type": "opencollective",
+          "url": "https://opencollective.com/express"
         }
       },
       "node_modules/once": {
@@ -2452,5 +2456,5 @@
       }
     }
   },
-  "invalidationHash": "9f26bf73835529a6dd61ec5e9081ed7abbb783a08302b4f39aafe64ce9c0ee5d"
+  "invalidationHash": "5df61edeefe25ccd998ede2d24494bf7dded8bc968c6008ffdaf8cf0cd4ec272"
 }

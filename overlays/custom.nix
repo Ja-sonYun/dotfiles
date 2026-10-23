@@ -2,6 +2,7 @@
   custom-packages = final: _prev: {
     agenix-utils = final.callPackage ../libs/nixlib/pkg/agenix-utils { };
 
+    antigravity-cli = final.callPackage ../pkgs/ai-agents/antigravity-cli { };
     claude-code = final.callPackage ../pkgs/ai-agents/claude-code { };
     codex = final.callPackage ../pkgs/ai-agents/codex { };
 
@@ -34,6 +35,9 @@
     macnotesapp = final.callPackage ../pkgs/darwin/macnotesapp { };
     notifycmd = final.callPackage ../pkgs/darwin/notifycmd { };
     seamtype = final.callPackage ../pkgs/darwin/seamtype { };
+    slack-message-review = final.callPackage ../pkgs/darwin/slack-message-review { };
+    slack-launcher = final.callPackage ../pkgs/darwin/slack-launcher { };
+    slack-thread-summary = final.callPackage ../pkgs/darwin/slack-thread-summary { };
     yabai = final.callPackage ../pkgs/darwin/yabai { };
     yabai-controller = final.callPackage ../pkgs/darwin/yabai-controller { };
 
@@ -48,6 +52,7 @@
     mcp-nixos = final.callPackage ../pkgs/mcp/mcp-nixos { };
     mcp-remote = final.callPackage ../pkgs/mcp/mcp-remote { };
     n8n-mcp = final.callPackage ../pkgs/mcp/n8n-mcp { };
+    notify-mcp = final.callPackage ../pkgs/mcp/notify-mcp { };
     rea = final.callPackage ../pkgs/mcp/rea { };
     tmux-mcp = final.callPackage ../pkgs/mcp/tmux-mcp { };
 

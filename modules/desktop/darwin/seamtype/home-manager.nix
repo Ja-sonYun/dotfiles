@@ -27,7 +27,7 @@ let
     // lib.optionalAttrs (cfg.enable == true) {
       source = "${cfg.package}/Applications/Seamtype.app";
       directory = "${config.home.homeDirectory}/Library/Application Support/Seamtype";
-      inherit (cfg) settings appDefaults;
+      inherit (cfg) settings appDefaults holdSpace;
     }
   );
   activation = pkgs.writeShellApplication {
@@ -56,6 +56,11 @@ in
       '';
     };
     package = lib.mkPackageOption pkgs "seamtype" { };
+    holdSpace = lib.mkOption {
+      type = lib.types.nullOr lib.types.bool;
+      default = null;
+      description = "Set holdSpace for every app on activation; null preserves existing app settings.";
+    };
     settings = lib.mkOption {
       type = lib.types.attrsOf json.type;
       default = { };

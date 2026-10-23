@@ -7,10 +7,23 @@ expected_generation="${4:-}"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/../../../scripts/lib/common"
+export TMUX_LOG_COMPONENT=tmux.agent.status
+
+if [[ "$state" == --hook ]]; then
+	pane_id="${TMUX_PANE:-}"
+	[[ -n "$pane_id" ]] || exit 0
+	shift
+	tmux_lock "__agent_status_$pane_id" || exit 1
+	(
+		tmux_lock_close
+		exec env TMUX_AGENT_STATUS_LOCKED=1 "$@"
+	)
+	exit $?
+fi
 
 schedule_counts() {
 	tmux_unlock
-	"$script_dir/counts" >/dev/null 2>&1 &
+	env -u TMUX_AGENT_STATUS_LOCKED "$script_dir/counts" >/dev/null 2>&1 &
 }
 
 resolve_session_id() {
@@ -84,7 +97,14 @@ clear_pane_state() {
 	tmux_add set-option -p -q -u -t "$target" @agent_path
 	tmux_add set-option -p -q -u -t "$target" @agent_project
 	tmux_add set-option -p -q -u -t "$target" @agent_session_id
-	tmux_flush
+	if [[ "${AI_AGENT_CLIENT:-}" == Antigravity && "${AI_AGENT_EVENT:-}" == SessionEnd ]]; then
+		tmux_add set-option -p -q -u -t "$target" @agent_conversation
+		tmux_add set-option -p -q -u -t "$target" @agent_event_client
+		tmux_add set-option -p -q -u -t "$target" @agent_event_session
+		tmux_add set-option -p -q -u -t "$target" @agent_antigravity_run
+	fi
+	tmux_flush || return
+	tmux_log info pane_cleared "pane_id=$target" "event=${AI_AGENT_EVENT:-$state}"
 }
 
 case "$state" in
@@ -102,17 +122,25 @@ esac
 
 [[ -z "$pane_id" ]] && exit 0
 
-tmux_lock "__agent_status_$pane_id" || exit 1
+if [[ "${TMUX_AGENT_STATUS_LOCKED:-}" != 1 || "${AI_AGENT_CLIENT:-}" != Antigravity ]]; then
+	tmux_lock "__agent_status_$pane_id" || exit 1
+fi
 
 IFS=$'\x1f' read -r pane_id pane_path start_command current_command enabled prev_state stored_agent stored_path stored_session_id stored_display_name stored_launch_name generation command_map event_client event_session current_session current_session_name current_marker < <(
 	tmux display-message -pt "$pane_id" $'#{pane_id}\x1f#{pane_current_path}\x1f#{pane_start_command}\x1f#{pane_current_command}\x1f#{@agent_enabled}\x1f#{@agent_state}\x1f#{@agent_name}\x1f#{@agent_path}\x1f#{@agent_session_id}\x1f#{@agent_display_name}\x1f#{@agent_launch_name}\x1f#{@agent_event_generation}\x1f#{@agent_command_map}\x1f#{@agent_event_client}\x1f#{@agent_event_session}\x1f#{session_id}\x1f#{session_name}\x1f#{E:TMUX_AGENT_STATUS}' 2>/dev/null
 )
 if [[ -z "$pane_id" ]]; then
+	if [[ "$state" == delete ]]; then
+		tmux_log info pane_exited "pane_id=${2:-${TMUX_PANE:-}}" "session_id=$session_id_hint"
+	fi
 	[[ "$state" != delete ]] || schedule_counts
 	exit 0
 fi
 generation="${generation:-0}"
 [[ -z "$expected_generation" || "$expected_generation" == "$generation" ]] || exit 0
+if [[ "${AI_AGENT_CLIENT:-}" == Antigravity && "${AI_AGENT_EVENT:-}" == SessionEnd ]]; then
+	[[ -n "${ANTIGRAVITY_RUN_ID:-}" && "$(tmux show-option -pqv -t "$pane_id" @agent_antigravity_run)" == "$ANTIGRAVITY_RUN_ID" ]] || exit 0
+fi
 if [[ -n "${AI_AGENT_SESSION_ID:-}" && "${AI_AGENT_EVENT:-}" != SessionStart && -n "$event_session" && ("$event_session" != "$AI_AGENT_SESSION_ID" || "$event_client" != "${AI_AGENT_CLIENT:-}") ]]; then
 	exit 0
 fi
@@ -192,5 +220,7 @@ if ! tmux_flush; then
 	exit 1
 fi
 
+tmux_log info state_changed "pane_id=$pane_id" "session_id=$session_id" \
+	"previous=$prev_state" "state=$state" "agent=$agent" "event=${AI_AGENT_EVENT:-init}"
 schedule_counts
 exit 0

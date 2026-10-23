@@ -147,6 +147,31 @@ let
         headers = { };
       };
 
+  antigravityMcpServers = lib.mapAttrs (
+    name: server:
+    let
+      wrapped = stringifyCommand (wrapInstructionsCommand name (wrapSecretEnvCommand name server));
+      enabled = lib.hm.mcp.resolveEnabled server;
+    in
+    mkDefaultValue (
+      (
+        if server.url != null then
+          {
+            serverUrl = server.url;
+          }
+          // lib.optionalAttrs (server.headers != { }) { inherit (server) headers; }
+        else
+          {
+            inherit (wrapped) command args;
+          }
+          // lib.optionalAttrs (wrapped.env != { }) { inherit (wrapped) env; }
+          // lib.optionalAttrs (server ? cwd) { inherit (server) cwd; }
+      )
+      // lib.optionalAttrs (enabled != null) { disabled = !enabled; }
+      // lib.optionalAttrs (server ? disabledTools) { inherit (server) disabledTools; }
+    )
+  ) cfg.mcp.servers;
+
   codexMcpServers = lib.mapAttrs (
     name: server:
     mkDefaultValue (
@@ -239,6 +264,10 @@ in
           ]) cfg.mcp.servers
         );
       }
+
+      (lib.mkIf config.programs.antigravity-cli.enable {
+        programs.antigravity-cli.mcpServers = antigravityMcpServers;
+      })
 
       (lib.mkIf config.programs.codex.enable {
         programs.codex.settings.mcp_servers = codexMcpServers;

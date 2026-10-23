@@ -2,6 +2,7 @@
   apple-sdk_15,
   lib,
   stdenv,
+  logClientSource ? null,
 }:
 stdenv.mkDerivation {
   pname = "audio-process-watcher";
@@ -18,6 +19,7 @@ stdenv.mkDerivation {
     runHook preBuild
 
     $CC \
+      ${lib.optionalString (logClientSource != null) "-DDOTFILES_LOGGING -I${logClientSource}/native"} \
       -fobjc-arc \
       -mmacosx-version-min=14.2 \
       -O2 \

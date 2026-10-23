@@ -3,6 +3,8 @@ import shlex
 import subprocess
 import sys
 
+from diagnostics import log_event
+
 
 def main() -> int:
     picker, session, result_option = sys.argv[1:]
@@ -54,11 +56,18 @@ def main() -> int:
         check=False,
     )
     if selection.returncode:
+        log_event(
+            "tmux.agent.picker",
+            "warning",
+            "selection_ended",
+            exit_code=selection.returncode,
+        )
         return selection.returncode
     target = selection.stdout.strip()
     if not target:
         return 0
     if target not in targets:
+        log_event("tmux.agent.picker", "error", "unknown_target")
         print("Agent picker returned an unknown pane.", file=sys.stderr)
         return 1
 
@@ -77,6 +86,14 @@ def main() -> int:
         ["tmux", "set-option", "-s", result_option, action],
         check=True,
     )
+    log_event(
+        "tmux.agent.picker",
+        "info",
+        "selected",
+        session_id=session,
+        window_id=window,
+        pane_id=pane,
+    )
     return 0
 
 
@@ -84,4 +101,10 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except subprocess.CalledProcessError as error:
+        log_event(
+            "tmux.agent.picker",
+            "error",
+            "command_failed",
+            exit_code=error.returncode,
+        )
         raise SystemExit(error.returncode) from error

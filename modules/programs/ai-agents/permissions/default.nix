@@ -64,7 +64,9 @@ let
   policyFile = (pkgs.formats.json { }).generate "ai-agent-permissions.json" (
     policy // { presets = selectedPresets; }
   );
-  package = pkgs.callPackage ./package.nix { };
+  package = pkgs.callPackage ./package.nix {
+    antigravity = config.programs.antigravity-cli.enable;
+  };
   command = lib.escapeShellArgs [
     (lib.getExe package)
     "--config"
@@ -74,11 +76,18 @@ let
     client:
     pkgs.writeShellScript "${client}-permissions" ''
       exec ${command} --client ${client} \
-        --claude-plugin ${lib.escapeShellArg config.programs.claude-code.mcpPluginName}
+        --claude-plugin ${lib.escapeShellArg config.programs.claude-code.mcpPluginName} ${
+          lib.optionalString (client == "antigravity") (
+            "--home " + lib.escapeShellArg config.home.homeDirectory
+          )
+        }
     '';
   codexRules = pkgs.runCommandLocal "codex-managed.rules" { } ''
     ${command} --client codex --rules > "$out"
   '';
+  antigravityFileRules =
+    lib.concatMap (preset: (preset.files or [ ]) ++ (preset.antigravity.files or [ ])) selectedPresets
+    ++ policy.files.rules;
 in
 {
   options.programs.ai-agents.permissions = lib.mkOption {
@@ -132,7 +141,7 @@ in
       }
     );
     default = { };
-    description = "Shared Claude Code and Codex permissions.";
+    description = "Shared Claude Code, Codex and Antigravity permissions.";
   };
 
   config = lib.mkIf (cfg.enable && policy != null) (
@@ -183,6 +192,27 @@ in
       })
       (lib.mkIf config.programs.claude-code.enable {
         programs.claude-code.settingsTransform = settingsTransform "claude";
+      })
+      (lib.mkIf config.programs.antigravity-cli.enable {
+        programs.antigravity-cli.settingsTransform = settingsTransform "antigravity";
+        programs.ai-agents.hooksByAgent.antigravity.PreToolUse = lib.mkIf (antigravityFileRules != [ ]) [
+          {
+            hooks = [
+              {
+                type = "command";
+                command = lib.escapeShellArgs [
+                  (lib.getExe package)
+                  "--config"
+                  policyFile
+                  "--client"
+                  "antigravity"
+                  "--hook"
+                ];
+                timeout = 5;
+              }
+            ];
+          }
+        ];
       })
     ]
   );

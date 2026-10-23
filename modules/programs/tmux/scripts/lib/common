@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# shellcheck source=/dev/null
+source "${BASH_SOURCE[0]%/*}/logging"
+
 project_for_path() {
 	local path="$1" root superproject
 	case "$path" in
@@ -163,6 +166,9 @@ tmux_flush() {
 	local status=0
 	((${#_TMUX_BATCH[@]})) || return 0
 	tmux "${_TMUX_BATCH[@]}" >/dev/null 2>&1 || status=$?
+	if ((status)) && [[ -n "${TMUX_LOG_COMPONENT:-}" ]]; then
+		tmux_log error batch_failed "operation=${_TMUX_BATCH[0]}" "exit_code=$status"
+	fi
 	_TMUX_BATCH=()
 	return "$status"
 }

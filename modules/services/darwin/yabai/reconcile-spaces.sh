@@ -28,6 +28,7 @@ while read -r display; do
 			spaces_created=1
 			/bin/sleep 0.2
 		else
+			log_event error desktop_creation_failed "display=$display" "missing=$missing"
 			echo "yabai-reconcile-spaces: display $display is missing $missing desktop(s); creation failed" >&2
 			break
 		fi
@@ -96,6 +97,7 @@ while read -r display; do
 	fi
 
 	if ((excess > 0)); then
+		log_event warning excess_desktops_kept "display=$display" "excess=$excess"
 		echo "yabai-reconcile-spaces: display $display kept $excess excess desktop(s); none were safely removable" >&2
 	fi
 done <<<"$displays"
