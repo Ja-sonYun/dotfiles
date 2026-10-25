@@ -2,7 +2,7 @@
   "registry": "npm",
   "name": "n8n-mcp",
   "versions": {
-    "aarch64-darwin": "2.96.2",
+    "aarch64-darwin": "2.99.1",
     "x86_64-linux": "2.87.0"
   }
 }

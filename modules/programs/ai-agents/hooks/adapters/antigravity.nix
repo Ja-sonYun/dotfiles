@@ -42,7 +42,6 @@ in
   );
 
   # Only tool events use matcher blocks in the native hooks file.
-  # https://antigravity.google/docs/hooks#schema-and-file-format
   hooks = lib.zipAttrsWith (_: values: lib.concatLists values) (
     lib.mapAttrsToList (event: blocks: {
       ${if event == "StopFailure" then "Stop" else event} =

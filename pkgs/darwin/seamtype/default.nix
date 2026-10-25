@@ -38,7 +38,10 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-wUaoE38adG9JNQ/gUrXh1A0VEbSnwuYy4qS2U7aOu3U=";
   };
 
-  patches = [ ./patches/composition-tab.patch ];
+  patches = [
+    ./patches/composition-tab.patch
+    ./patches/number-composition.patch
+  ];
 
   swiftpmDeps = fetchSwiftPMDeps {
     inherit (finalAttrs) src;

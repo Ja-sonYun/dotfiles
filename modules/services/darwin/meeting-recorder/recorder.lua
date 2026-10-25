@@ -1239,12 +1239,21 @@ refreshMissingTranscripts = function()
 		if not config.transcriberPath or not hs.fs.attributes(outputDirectory, "mode") then
 			return
 		end
-		for name in hs.fs.dir(outputDirectory) do
-			local path = outputDirectory .. "/" .. name
-			if name:lower():match("%.mov$") and missingTranscript(path) then
-				table.insert(paths, path)
+		local function scanDirectory(directory, depth)
+			for name in hs.fs.dir(directory) do
+				if name ~= "." and name ~= ".." then
+					local path = directory .. "/" .. name
+					if hs.fs.symlinkAttributes(path, "mode") == "directory" then
+						if depth < 3 and name:match(depth == 0 and "^%d%d%d%d$" or "^%d%d$") then
+							scanDirectory(path, depth + 1)
+						end
+					elseif name:lower():match("%.mov$") and missingTranscript(path) then
+						table.insert(paths, path)
+					end
+				end
 			end
 		end
+		scanDirectory(outputDirectory, 0)
 	end)
 	if not scanned then
 		logger:e("missing_transcript_scan_failed", { message = tostring(scanError) })
@@ -1451,11 +1460,12 @@ local function sanitizedEventTitle(title)
 end
 
 local function timestampOutputPath()
+	local timestamp = hs.timer.secondsSinceEpoch()
 	return string.format(
 		"%s/%s-%03d.mov",
 		outputDirectory,
-		os.date("%Y-%m-%d_%H-%M-%S"),
-		math.floor(hs.timer.secondsSinceEpoch() * 1000) % 1000
+		os.date("%Y/%m/%d/%Y-%m-%d_%H-%M-%S", math.floor(timestamp)),
+		math.floor(timestamp * 1000) % 1000
 	)
 end
 
@@ -1466,7 +1476,7 @@ local function eventOutputPath(event)
 		return timestampOutputPath()
 	end
 
-	local base = outputDirectory .. "/" .. os.date("%Y-%m-%d", math.floor(startTimestamp)) .. "_" .. title
+	local base = outputDirectory .. "/" .. os.date("%Y/%m/%d/%Y-%m-%d", math.floor(startTimestamp)) .. "_" .. title
 	local path = base .. ".mov"
 	local suffix = 2
 	while hs.fs.attributes(path) do
@@ -2413,10 +2423,11 @@ if config.transcriberPath then
 					or outputDirectory:sub(1, #path + 1) == path .. "/"
 					or (
 						path:sub(1, #outputDirectory + 1) == outputDirectory .. "/"
-						and not name:find("/", 1, true)
-						and (name:lower():match("%.mov$") or name:match("%.transcript%.json$") or name:match(
-							"%.transcript%.md$"
-						))
+						and (name:match("^%d%d%d%d$") or name:match("^%d%d%d%d/%d%d$") or name:match(
+							"^%d%d%d%d/%d%d/%d%d$"
+						) or ((not name:find("/", 1, true) or name:match("^%d%d%d%d/%d%d/%d%d/[^/]+$")) and (name
+							:lower()
+							:match("%.mov$") or name:match("%.transcript%.json$") or name:match("%.transcript%.md$"))))
 						and not recordingPending(path)
 					)
 				then

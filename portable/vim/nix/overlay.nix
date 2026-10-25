@@ -71,6 +71,8 @@ let
     '';
   };
 
+  terminalImages = pkgs.callPackage ./terminal-images { };
+
   allPlugins =
     with unstable.vimPlugins;
     [
@@ -130,6 +132,7 @@ let
       gnumake
       gawk
       bash
+      terminalImages.uploader
     ]
     ++ pkgs.lib.optionals config.useCopilot [ nodejs_22 ];
 

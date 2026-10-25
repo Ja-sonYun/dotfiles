@@ -3,6 +3,7 @@ local logger = require("logging").new("application-input-sources")
 local configuration = hs.json.decode([==[@configurationJson@]==])
 local activeBundleID
 local gesture
+local siriPID
 
 local function selectSource(application, sourceID, reason)
 	if not sourceID then
@@ -26,6 +27,30 @@ local function selectSource(application, sourceID, reason)
 	})
 end
 
+local watchSiri = logger:wrap("siri_watch_failed", function(application)
+	if module.siriObserver then
+		module.siriObserver:stop()
+		module.siriObserver = nil
+	end
+	siriPID = nil
+	if not application then
+		return
+	end
+
+	-- Siri's search panel emits AX events without regular application activation.
+	local element = hs.axuielement.applicationElement(application)
+	module.siriObserver = hs.axuielement.observer.new(application:pid())
+	module.siriObserver:callback(logger:wrap("siri_focus_failed", function()
+		if element:attributeValue("AXFocusedWindow") then
+			selectSource(application, configuration.rules.Siri, "siri_focus")
+		end
+	end))
+	module.siriObserver:addWatcher(element, "AXFocusedWindowChanged")
+	module.siriObserver:addWatcher(element, "AXWindowCreated")
+	module.siriObserver:start()
+	siriPID = application:pid()
+end)
+
 local application = hs.application.frontmostApplication()
 if application and application:kind() == 1 then
 	activeBundleID = application:bundleID()
@@ -33,8 +58,15 @@ end
 
 module.watcher =
 	hs.application.watcher.new(logger:wrap("application_event_failed", function(appName, event, application)
+		if configuration.rules.Siri and application then
+			if event == hs.application.watcher.launched and application:bundleID() == "com.apple.campo" then
+				watchSiri(application)
+			elseif event == hs.application.watcher.terminated and application:pid() == siriPID then
+				watchSiri(nil)
+			end
+		end
+
 		-- Preserve the last regular app while helper UI is active.
-		-- https://www.hammerspoon.org/docs/hs.application.html#kind
 		if event ~= hs.application.watcher.activated or not application or application:kind() ~= 1 then
 			return
 		end
@@ -53,6 +85,10 @@ module.watcher =
 
 module.watcher:start()
 logger:i("watcher_started")
+
+if configuration.rules.Siri then
+	watchSiri(hs.application.applicationsForBundleID("com.apple.campo")[1])
+end
 
 if configuration.manualSwitch then
 	local eventTypes = hs.eventtap.event.types
@@ -141,6 +177,7 @@ end
 local previousShutdown = hs.shutdownCallback
 hs.shutdownCallback = function()
 	module.watcher:stop()
+	watchSiri(nil)
 	if module.keyWatcher then
 		module.keyWatcher:stop()
 	end

@@ -42,7 +42,7 @@
               import importlib
               import sys
 
-              sys.path.insert(0, ${builtins.toJSON (toString root)})
+              sys.path.insert(0, ${builtins.toJSON "${root}"})
               ${final.lib.optionalString (extraPythonPaths != [ ]) ''
                 sys.path[0:0] = ${builtins.toJSON (map toString extraPythonPaths)}
               ''}

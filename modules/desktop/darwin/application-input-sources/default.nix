@@ -35,8 +35,10 @@ in
       default = { };
       description = ''
         Application names grouped by input source ID. Select the configured source
-        when a different regular application becomes active. This module ignores
-        helper applications and repeated activation of the same application.
+        when a different regular application becomes active. A Siri rule requests
+        its source when com.apple.campo emits a focused-window change or window
+        creation event and reports a focused window. Other helper applications
+        and repeated activation of the same regular application are ignored.
       '';
     };
 

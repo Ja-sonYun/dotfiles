@@ -14,6 +14,7 @@
     vim-pkg
   ];
   environment.shellAliases = {
+    preview = "/usr/bin/open -a Preview";
     vi = "vim";
   };
 }

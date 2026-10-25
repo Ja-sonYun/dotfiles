@@ -129,7 +129,164 @@
     return result;
   }
 
-  function patch(draft, text) {
+  function listFormatting(expected, convert) {
+    const newlines = expected.filter((unit) => unit.insert === "\n");
+    const blocks = [];
+    let block = [];
+    let line = [];
+    let lineIndex = 0;
+    let fence;
+    for (const unit of expected) {
+      if (unit.insert !== "\n") {
+        line.push(unit);
+        continue;
+      }
+      const text = line
+        .map((item) =>
+          typeof item.insert === "string" ? item.insert : "\ufffc",
+        )
+        .join("");
+      let delimiter =
+        unit.attributes.blockquote || unit.attributes["code-block"]
+          ? null
+          : text.match(/^\s*(`{3,}|~{3,})/);
+      if (delimiter) {
+        const end = [...delimiter[0]].length;
+        const start = end - delimiter[1].length;
+        if (line.slice(start, end).some((item) => item.attributes.code))
+          delimiter = null;
+      }
+      const fenced = Boolean(fence || delimiter);
+      if (delimiter) {
+        if (!fence) fence = delimiter[1];
+        else if (
+          delimiter[1][0] === fence[0] &&
+          delimiter[1].length >= fence.length
+        )
+          fence = undefined;
+      }
+      const match = text.match(
+        /^([ \t]*)(?:([・•])[ \t]*|([-*])[ \t]+|(\d+)[.)][ \t]+)(\S.*)$/u,
+      );
+      if (
+        match &&
+        !fenced &&
+        !unit.attributes.list &&
+        !unit.attributes.blockquote &&
+        !unit.attributes["code-block"]
+      ) {
+        const prefix = [...text.slice(0, text.length - match[5].length)];
+        const removed = line.slice(0, prefix.length);
+        if (
+          removed.some(
+            (item) =>
+              item.attributes.link ||
+              item.attributes.slackmention ||
+              item.attributes.code,
+          )
+        ) {
+          if (block.length) blocks.push(block);
+          block = [];
+        } else {
+          const width = [...match[1]].reduce(
+            (total, char) => total + (char === "\t" ? 2 : 1),
+            0,
+          );
+          block.push({
+            newline: unit,
+            lineIndex,
+            removed,
+            depth: width / 2,
+            number: match[4] === undefined ? undefined : Number(match[4]),
+          });
+        }
+      } else {
+        if (block.length) blocks.push(block);
+        block = [];
+      }
+      line = [];
+      lineIndex++;
+    }
+    if (block.length) blocks.push(block);
+    const items = blocks.flatMap((entries) => {
+      // Keep text between native lists from merging their numbering during conversion.
+      if (
+        newlines[entries[0].lineIndex - 1]?.attributes.list ||
+        newlines[entries.at(-1).lineIndex + 1]?.attributes.list
+      )
+        return [];
+      const numbers = [];
+      let previousDepth = -1;
+      for (const entry of entries) {
+        if (
+          !Number.isInteger(entry.depth) ||
+          entry.depth > 4 ||
+          entry.depth > previousDepth + 1
+        )
+          return [];
+        if (entry.number !== undefined) {
+          // Slack resets a depth's counter only when descending directly into an ordered item.
+          if (entry.depth > previousDepth) numbers[entry.depth] = 0;
+          if (entry.number !== (numbers[entry.depth] ?? 0) + 1) return [];
+          numbers[entry.depth] = entry.number;
+        }
+        previousDepth = entry.depth;
+      }
+      return entries;
+    });
+    const removed = new Set();
+    const attributes = new Map();
+    if (!items.length) return { removed, attributes };
+    const id = crypto.randomUUID();
+    let html = "";
+    let tag;
+    for (const [index, item] of items.entries()) {
+      const nextTag = item.number === undefined ? "ul" : "ol";
+      if (tag !== nextTag) {
+        if (tag) html += `</${tag}>`;
+        html += `<${nextTag}>`;
+        tag = nextTag;
+      }
+      // Request explicit clipboard depth and reject conversions that do not preserve it.
+      html += `<li data-stringify-indent="${item.depth}">${id}_${index}</li>`;
+    }
+    html += `</${tag}>`;
+    const converted = convert(html);
+    if (!Array.isArray(converted?.ops))
+      throw new Error("Slack did not return formatted list contents.");
+    let index = 0;
+    let label = "";
+    for (const unit of units(converted.ops)) {
+      if (unit.insert !== "\n") {
+        label += unit.insert;
+        continue;
+      }
+      const item = items[index];
+      if (
+        !item ||
+        label !== `${id}_${index}` ||
+        unit.attributes.list !==
+          (item.number === undefined ? "bullet" : "ordered") ||
+        (unit.attributes.indent ?? 0) !== item.depth
+      )
+        throw new Error("Slack did not preserve the requested list structure.");
+      const formatted = {
+        ...item.newline.attributes,
+        list: unit.attributes.list,
+      };
+      delete formatted.indent;
+      if (unit.attributes.indent) formatted.indent = unit.attributes.indent;
+      attributes.set(item.newline, formatted);
+      for (const prefixUnit of item.removed) removed.add(prefixUnit);
+      index++;
+      label = "";
+    }
+    if (index !== items.length || label)
+      throw new Error("Slack returned an incomplete formatted list.");
+    return { removed, attributes };
+  }
+
+  function patch(draft, text, convert) {
     if (!valid(draft.elements, text))
       throw new Error("Keep protected elements in their original order.");
     const before = draft.text.split(tokenPattern);
@@ -193,7 +350,48 @@
         expected.push({ insert, attributes });
       }
     }
-    return { contents, expected };
+    const formatting = listFormatting(expected, convert);
+    if (!formatting.removed.size) return { contents, expected };
+    // Use source positions to retain existing elements while deleting list markers.
+    const origins = new Map(draft.source.map((unit, index) => [unit, index]));
+    contents.length = 0;
+    cursor = 0;
+    const formatted = [];
+    function removeUntil(end) {
+      while (cursor < end) {
+        const unit = draft.source[cursor++];
+        append({
+          delete: typeof unit.insert === "string" ? unit.insert.length : 1,
+        });
+      }
+    }
+    for (const unit of expected) {
+      if (formatting.removed.has(unit)) continue;
+      const attributes = formatting.attributes.get(unit) ?? unit.attributes;
+      const origin = origins.get(unit);
+      if (origin === undefined)
+        contents.push({ insert: unit.insert, attributes });
+      else {
+        removeUntil(origin);
+        const changed = {};
+        for (const key of new Set([
+          ...Object.keys(unit.attributes),
+          ...Object.keys(attributes),
+        ])) {
+          if (unit.attributes[key] !== attributes[key])
+            changed[key] = attributes[key] ?? null;
+        }
+        const retain = typeof unit.insert === "string" ? unit.insert.length : 1;
+        if (Object.keys(changed).length)
+          contents.push({ retain, attributes: changed });
+        else if (contents.at(-1)?.attributes) contents.push({ retain });
+        else append({ retain });
+        cursor++;
+      }
+      formatted.push({ insert: unit.insert, attributes });
+    }
+    removeUntil(draft.source.length);
+    return { contents, expected: formatted };
   }
 
   function matches(ops, expected) {

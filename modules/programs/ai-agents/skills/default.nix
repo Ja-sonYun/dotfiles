@@ -21,7 +21,13 @@ let
     let
       path = if relativePath == "" then cfg.skillsDir else cfg.skillsDir + "/${relativePath}";
     in
-    if builtins.pathExists (path + "/SKILL.md") then
+    if
+      relativePath != ""
+      && !(lib.hasInfix "/" relativePath)
+      && builtins.pathExists (path + "/default.nix")
+    then
+      [ ]
+    else if builtins.pathExists (path + "/SKILL.md") then
       [ relativePath ]
     else
       lib.concatMap (
@@ -51,7 +57,10 @@ in
     skillsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = "Root directory for skills.";
+      description = ''
+        Root directory for skills. Immediate subdirectories containing default.nix
+        are excluded from discovery and must be imported separately to register their skills.
+      '';
     };
 
     skills = lib.mkOption {

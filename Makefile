@@ -31,7 +31,6 @@ ifdef TRACE
 NIX_TRACE_ARGS := --show-trace
 endif
 
-# ==================================================================================
 ##@ Update
 
 push-secrets: ## Push secrets to git
@@ -56,9 +55,7 @@ update: push-secrets ## Full update with ulimit fix
 	trap "ulimit -n $$orig_ulimit >/dev/null 2>&1 || true" EXIT; \
 	if [ "$$orig_ulimit" -lt 65536 ] 2>/dev/null; then ulimit -n 65536 || true; fi; \
 		$(MAKE) update-raw update-pkgs'
-# ==================================================================================
 
-# ==================================================================================
 ifeq ($(SYSTEM),Linux)
 ##@ Linux
 
@@ -73,9 +70,7 @@ deploy: add lock ## Deploy home-manager config
 	$(NIX) build .#homeConfigurations.$(HOSTNAME).activationPackage $(NIX_TRACE_ARGS)
 	./result/activate
 endif
-# ==================================================================================
 
-# ==================================================================================
 ifeq ($(SYSTEM),Darwin)
 ##@ Darwin
 
@@ -132,9 +127,7 @@ vm-stop: ## Shut down VM
 vm-remove: ## Remove stopped VM, retaining image cache
 	@bash vm/run.sh "$${VM_OS}" remove
 endif
-# ==================================================================================
 
-# ==================================================================================
 ##@ Maintenance
 
 fmt: ## Format nix files
@@ -146,9 +139,7 @@ check: ## Run repository checks
 
 clean: ## Clean nix store
 	nix run nixpkgs#nh clean
-# ==================================================================================
 
-# ==================================================================================
 ##@ Git
 
 init-submodules: ## Initialize all submodules
@@ -165,7 +156,6 @@ fix-submodules: ## Sync and initialize a submodule (SUBMODULE=path)
 
 update-submodules: ## Update all submodules to latest
 	git submodule update --remote --recursive
-# ==================================================================================
 
 #---
 

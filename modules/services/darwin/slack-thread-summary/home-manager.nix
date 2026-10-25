@@ -12,7 +12,6 @@ let
   promptFile = pkgs.writeText "slack-thread-summary-prompt.txt" cfg.prompt;
   launcher = pkgs.writeShellScript "slack-thread-summary-service" ''
     set -e
-    /usr/bin/open -a ${lib.escapeShellArg cfg.slackApp}
     exec ${pkgs.slack-thread-summary}/bin/slack-thread-summary
   '';
 in
@@ -23,11 +22,6 @@ in
       type = lib.types.nonEmptyStr;
       default = "gemini-4-argon-medium";
       description = "Antigravity model used for thread summaries.";
-    };
-    slackApp = lib.mkOption {
-      type = lib.types.str;
-      default = "/Applications/Slack.app";
-      description = "Path to the Slack launcher opened before the summary controller starts.";
     };
     prompt = lib.mkOption {
       type = lib.types.lines;

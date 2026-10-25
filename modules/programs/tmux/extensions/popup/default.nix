@@ -161,7 +161,7 @@ in
           tmux detach-client -t "$client_name" 2>/dev/null
           export TMUX_MENU_CLIENT="$outer"
           export TMUX_MENU_PANE="$outer_pane"
-          exec ${menuCfg.package}/bin/tmux-menu show -x "$((W - 1))" -y "$H" --menu ${menuCfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
+          exec ${menuCfg.package}/bin/tmux-menu show --menu ${menuCfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
         fi
         exec ${menuCfg.package}/bin/tmux-menu show --menu ${menuCfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
       ''

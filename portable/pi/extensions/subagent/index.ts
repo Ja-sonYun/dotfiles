@@ -476,7 +476,7 @@ async function runSingleAgent(
     let wasAborted = false;
 
     const exitCode = await new Promise<number>((resolve, reject) => {
-      const proc = spawn("pi", args, {
+      const proc = spawn(process.env.PI_EXECUTABLE ?? "pi", args, {
         cwd: executionCwd,
         shell: false,
         detached: true,

@@ -24,6 +24,7 @@
     rules = {
       "com.apple.keylayout.ABC" = [
         "Ghostty"
+        "Siri"
         "System Settings"
         "Terminal"
         "Code"

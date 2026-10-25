@@ -12,20 +12,15 @@
     shorten-pwd = {
       description = "Display current path in a shortened format";
       body = ''
-        # Replace the home directory with ~ and split the path into an array using / as the delimiter
         local -a path_parts
         path_parts=("''${(@s:/:)''${PWD/#$HOME/~}}")
 
-        # Process each element
         for i in {1..''$#path_parts}; do
-          # Skip the home directory (~), empty elements, and the last element
           if [[ $path_parts[i] != "~" ]] && [[ -n $path_parts[i] ]] && (( i < $#path_parts )); then
-            # Abbreviate the element to the first three characters and add ' '
             path_parts[i]=''${path_parts[i][1,3]}…
           fi
         done
 
-        # Join the elements back into a string
         local new_path="''${(j:/:)path_parts}"
         echo "$new_path"
       '';
@@ -38,14 +33,11 @@
         shift
         str="$@"
 
-        # If the string length is less than or equal to maxlen, return the string as is
         if (( ''${#str} <= maxlen )); then
           echo $str
         else
-          # Calculate the length to keep at the end of the string
           end_len=$((maxlen / 2))
 
-          # Ensure that the total length is not more than maxlen
           start_len=$((maxlen - end_len - 1))
 
           echo "''${str:0:$start_len}…''${str: -end_len}"
@@ -57,7 +49,7 @@
       description = "Unzip any archive type. `unzipany file.zip`";
       body = ''
         local input_file="$1"
-        local output_dir="''${2:-''${input_file%.*}}" # Default output dir is input filename without extension
+        local output_dir="''${2:-''${input_file%.*}}"
         local output_file="''${input_file##*/}"
         output_file="''${output_file%.*}"
 

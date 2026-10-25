@@ -22,6 +22,7 @@ type window struct {
 type space struct {
 	ID         uint64 `json:"id"`
 	Index      int    `json:"index"`
+	Display    int    `json:"display"`
 	Visible    bool   `json:"is-visible"`
 	Fullscreen bool   `json:"is-native-fullscreen"`
 }
@@ -41,8 +42,12 @@ func focusedWindow(ctx context.Context, socket string) (window, error) {
 	return focused, nil
 }
 
-func displaySpaces(ctx context.Context, socket string) ([]space, error) {
-	data, err := sendYabai(ctx, socket, "query", "--spaces", "id,index,is-native-fullscreen,is-visible", "--display")
+func displaySpaces(ctx context.Context, socket, selector string) ([]space, error) {
+	args := []string{"query", "--spaces", "id,index,display,is-native-fullscreen,is-visible", "--display"}
+	if selector != "" {
+		args = append(args, selector)
+	}
+	data, err := sendYabai(ctx, socket, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +62,7 @@ func displaySpace(ctx context.Context, socket string, number int) (space, error)
 	if number < 1 {
 		return space{}, fmt.Errorf("space number must be positive")
 	}
-	spaces, err := displaySpaces(ctx, socket)
+	spaces, err := displaySpaces(ctx, socket, "")
 	if err != nil {
 		return space{}, err
 	}
@@ -80,7 +85,7 @@ func execute(ctx context.Context, socket string, request action) (uint64, error)
 	case "command":
 		args = request.Args
 		if len(args) == 3 && args[0] == "display" && args[1] == "--space" && (args[2] == "prev" || args[2] == "next") {
-			spaces, err := displaySpaces(ctx, socket)
+			spaces, err := displaySpaces(ctx, socket, "mouse")
 			if err != nil {
 				return 0, err
 			}
@@ -95,7 +100,7 @@ func execute(ctx context.Context, socket string, request action) (uint64, error)
 				// Wrap within the current display, including fullscreen Spaces.
 				target = (target + len(spaces)) % len(spaces)
 				targetSpaceID = spaces[target].ID
-				args = []string{"display", "--space", strconv.Itoa(spaces[target].Index)}
+				args = []string{"display", strconv.Itoa(spaces[target].Display), "--space", strconv.Itoa(spaces[target].Index)}
 				break
 			}
 		}

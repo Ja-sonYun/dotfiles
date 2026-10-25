@@ -12,41 +12,47 @@ in
 lib.mkIf agent.enable {
   programs = {
     tmux-menu = {
-      menus.menu.items = lib.mkOrder 400 [
-        { separator = true; }
-        {
-          menu = {
-            name = "agent";
-            shortcut = "a";
-            command =
-              lib.optionalString config.programs.tmux.extensions.sessionCleanup.enable "_tmux-session-cleanup-register agent && "
-              + "direnv exec . agent";
-            session = true;
-            sessionName = "agent";
-            keyTable =
-              if config.programs.tmux.extensions.popup.enable then "popup-locked-root" else "common-root";
-            sessionOnDir = true;
-            runOnRoot = ".root";
-            runOnGitRoot = true;
-            environment = agent.sessionEnvironment // {
-              CTRL_C_AS_CLOSE = "1";
-              TMUX_REMAP_CTRL_D = "C-n";
+      menus.menu.items = lib.mkOrder 400 (
+        [
+          { separator = true; }
+          {
+            menu = {
+              name = "agent";
+              shortcut = "a";
+              command =
+                lib.optionalString config.programs.tmux.extensions.sessionCleanup.enable "_tmux-session-cleanup-register agent && "
+                + "direnv exec . agent";
+              session = true;
+              sessionName = "agent";
+              keyTable =
+                if config.programs.tmux.extensions.popup.enable then "popup-locked-root" else "common-root";
+              sessionOnDir = true;
+              runOnRoot = ".root";
+              runOnGitRoot = true;
+              environment = agent.sessionEnvironment // {
+                CTRL_C_AS_CLOSE = "1";
+                TMUX_REMAP_CTRL_D = "C-n";
+              };
+              position = {
+                w = "60%";
+                h = "55%";
+                x = "R";
+                y = "P";
+              };
             };
-            position = {
-              w = "60%";
-              h = "55%";
+          }
+        ]
+        ++ lib.optionals (!(agent.orchestration.enable && agent.orchestration.menuKey == "A")) [
+          {
+            menu = {
+              name = "all agents";
+              shortcut = "A";
+              command = "${scripts}/overview";
+              background = true;
             };
-          };
-        }
-        {
-          menu = {
-            name = "all agents";
-            shortcut = "A";
-            command = "${scripts}/overview";
-            background = true;
-          };
-        }
-      ];
+          }
+        ]
+      );
     };
 
     tmux = {

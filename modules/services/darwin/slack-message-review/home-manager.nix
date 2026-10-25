@@ -20,7 +20,6 @@ let
       exit 1
     fi
 
-    /usr/bin/open -a ${lib.escapeShellArg cfg.slackApp}
     exec ${pkgs.slack-message-review}/bin/slack-message-review
   '';
 in
@@ -36,11 +35,6 @@ in
       type = lib.types.nonEmptyStr;
       default = "gemini-4-argon-medium";
       description = "Antigravity model used for reviews and follow-up requests.";
-    };
-    slackApp = lib.mkOption {
-      type = lib.types.str;
-      default = "/Applications/Slack.app";
-      description = "Path to the Slack launcher opened before the review controller starts.";
     };
     prompts = {
       classification = lib.mkOption {

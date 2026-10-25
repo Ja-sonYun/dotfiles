@@ -6,9 +6,7 @@ let b:did_indent = 1
 setlocal indentexpr=GetAmberIndent(v:lnum)
 setlocal indentkeys=0{,0},0],0),o,O,e
 
-" ============================================================================
 " Configuration
-" ============================================================================
 
 let s:operators = {
       \ 'chars': ['+', '-', '*', '/', '%', '<', '>'],
@@ -29,9 +27,7 @@ let s:pairs = [
 
 let s:op_tail_re = '\v(\.\.=?|&&|\|\||==|!=|<=|>=|<|>|[+\-*/%]|\<and\>|\<or\>)\s*$'
 
-" ============================================================================
 " Low-level helpers
-" ============================================================================
 
 function! s:IsEscaped(str, pos) abort
   let i = a:pos - 1
@@ -51,9 +47,7 @@ function! s:RTrim(s) abort
   return substitute(a:s, '\s\+$', '', '')
 endfunction
 
-" ============================================================================
 " Line scanning
-" ============================================================================
 
 function! s:InitPairCounts() abort
   let counts = {}
@@ -118,9 +112,7 @@ function! s:StripComment(line) abort
   return s:ScanLine(a:line).stripped
 endfunction
 
-" ============================================================================
 " Token detection
-" ============================================================================
 
 function! s:IsThen(code) abort
   return a:code =~# '^' . s:keywords.then . '\>'
@@ -170,9 +162,7 @@ function! s:IsOpTail(code_r) abort
 endfunction
 
 
-" ============================================================================
 " Line ending detection
-" ============================================================================
 
 function! s:EndsWithCmdDollar(code_r) abort
   let code = s:RTrim(a:code_r)
@@ -210,9 +200,7 @@ function! s:EndsWithAssign(code_r) abort
   return a:code_r !~# '\v(\.\.=|==|!=|<=|>=)\s*$'
 endfunction
 
-" ============================================================================
 " Indent matching
-" ============================================================================
 
 function! s:FindMatchingOpenerIndent(lnum, open_char, close_char) abort
   let depth = 1
@@ -337,9 +325,7 @@ function! s:FindTernaryChainStartIndent(from_lnum) abort
   return -1
 endfunction
 
-" ============================================================================
 " Context builder
-" ============================================================================
 
 function! s:BuildContext(lnum) abort
   let ctx = {'lnum': a:lnum, 'sw': &l:shiftwidth}
@@ -387,9 +373,7 @@ function! s:BuildContext(lnum) abort
   return ctx
 endfunction
 
-" ============================================================================
 " Indent rules: check functions
-" ============================================================================
 
 function! s:CheckFirstLine(ctx) abort
   return a:ctx.lnum == 1
@@ -494,9 +478,7 @@ function! s:CheckOpenersOrTails(ctx) abort
   return s:EndsWithAssign(a:ctx.prev_r) || a:ctx.prev_op_tail
 endfunction
 
-" ============================================================================
 " Indent rules: calc functions
-" ============================================================================
 
 function! s:CalcZero(ctx) abort
   return 0
@@ -572,9 +554,7 @@ function! s:CalcIndent(ctx) abort
   return a:ctx.prev_ind + a:ctx.sw
 endfunction
 
-" ============================================================================
 " Indent rules list
-" ============================================================================
 
 let s:indent_rules = [
       \ {'check': 's:CheckFirstLine',           'calc': 's:CalcZero'},
@@ -595,9 +575,7 @@ let s:indent_rules = [
       \ {'check': 's:CheckOpenersOrTails',      'calc': 's:CalcIndent'},
       \ ]
 
-" ============================================================================
 " Main indent function
-" ============================================================================
 
 function! GetAmberIndent(lnum) abort
   let ctx = s:BuildContext(a:lnum)

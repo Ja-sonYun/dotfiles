@@ -962,7 +962,37 @@
             "This Slack editor does not support formatted updates.",
           );
         }
-        const patch = draftTools.patch(current.projection, decision.text);
+        const patch = draftTools.patch(
+          current.projection,
+          decision.text,
+          (html) => {
+            const quill = input.instance?.quill ?? input.quill;
+            if (
+              typeof input.convertSlackHTMLToDelta !== "function" ||
+              typeof quill?.getFormat !== "function"
+            ) {
+              throw new Error(
+                "This Slack editor does not support list conversion.",
+              );
+            }
+            const descriptor = Object.getOwnPropertyDescriptor(
+              quill,
+              "getFormat",
+            );
+            // Neutralize cursor formatting only during the synchronous clipboard conversion.
+            Object.defineProperty(quill, "getFormat", {
+              configurable: true,
+              value: () => ({}),
+            });
+            try {
+              return input.convertSlackHTMLToDelta(html);
+            } finally {
+              if (descriptor)
+                Object.defineProperty(quill, "getFormat", descriptor);
+              else delete quill.getFormat;
+            }
+          },
+        );
         applied = true;
         input.updateContents({ contents: patch.contents });
         const latest = JSON.parse(snapshot(record));

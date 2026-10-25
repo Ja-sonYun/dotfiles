@@ -86,7 +86,10 @@ let
     );
 in
 {
-  imports = [ ./hooks.nix ];
+  imports = [
+    ./hooks.nix
+    ./orchestration.nix
+  ];
 
   options.programs.tmux.extensions.agent = {
     enable = lib.mkEnableOption "AI agent integration with tmux";

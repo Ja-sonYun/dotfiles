@@ -55,7 +55,7 @@ def _main() -> int:
         return 0
 
     title, message, sound = fields
-    subprocess.run(
+    result = subprocess.run(
         [
             "/usr/bin/osascript",
             "-e",
@@ -70,7 +70,7 @@ def _main() -> int:
         stderr=subprocess.DEVNULL,
     )
 
-    return 0
+    return 0 if result.returncode == 0 else 1
 
 
 if __name__ == "__main__":

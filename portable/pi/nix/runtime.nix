@@ -15,7 +15,12 @@ pkgs.lib.makeOverridable (
       name = "dotfiles-pi";
       inherit version;
       private = true;
-      dependencies.${spec.name} = version;
+      dependencies = {
+        ${spec.name} = version;
+      }
+      // lib.optionalAttrs (version == "1.4.0") {
+        "@modelcontextprotocol/sdk" = "^1.25.2";
+      };
     };
     wrapperArgs = lib.concatStringsSep " " (
       lib.optional (extraPath != [ ]) ''--prefix PATH : "${lib.makeBinPath extraPath}"''
@@ -59,6 +64,10 @@ pkgs.lib.makeOverridable (
             for patchFile in ${../patches}/*.patch; do
               patch --batch --fuzz=0 -p1 -d "$appRoot" < "$patchFile"
             done
+            ${lib.optionalString (version == "1.4.0") ''
+              ${pkgs.nodejs_22}/bin/node ${./fix-declarations.mjs} \
+                "$out/lib/node_modules/${config.name}/node_modules"
+            ''}
             rm -f "$out/bin/pi"
             makeWrapper "${pkgs.nodejs_22}/bin/node" "$out/bin/pi" \
               --add-flags "$appRoot/dist/cli.js" ${wrapperArgs}

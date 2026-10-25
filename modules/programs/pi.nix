@@ -28,6 +28,7 @@ let
       pkgs.runCommand "pi-environment" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         mkdir -p "$out/bin"
         makeWrapper ${cfg.package}/bin/pi "$out/bin/pi" \
+          --set PI_EXECUTABLE "$out/bin/pi" \
           --run ${lib.escapeShellArg exports} \
           --add-flags ${
             lib.escapeShellArg (

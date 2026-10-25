@@ -1,0 +1,13 @@
+--- a/tupimage
++++ b/tupimage
+@@ -847,8 +847,8 @@
+     # of the terminal we are attached to (please correct me if I'm wrong). So we
+     # use the last client pid of tmux as terminal id.
+     terminal_id="tmux-client-$(tmux display-message -p "#{client_pid}")"
+-    # For the session id we use the tmux server pid with tmux session id.
+-    session_id="tmux-$(tmux display-message -p "#{pid}-#{session_id}")"
++    # Share image IDs across sessions attached to the same tmux server.
++    session_id="tmux-$(tmux display-message -p "#{pid}")"
+     # Get the pty of the current tmux pane to use as the command tty (unless it
+     # was specified by the user).
+     if [[ -z "$command_tty" ]]; then

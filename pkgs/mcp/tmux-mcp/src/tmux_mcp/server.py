@@ -284,7 +284,6 @@ class Tmux:
             raise RequestError("Requested offset must be non-negative.")
         await self.require_pane(pane_id)
         # Join soft-wrapped rows and retain all available context for redaction.
-        # https://github.com/tmux/tmux/blob/master/tmux.1
         raw = await self.command("capture-pane", "-p", "-J", "-t", pane_id, "-S", "-")
         masked = await self.redact(raw)
         await self.require_pane(pane_id)

@@ -1,0 +1,46 @@
+--- a/Sources/SeamtypeCore/InputSession.swift
++++ b/Sources/SeamtypeCore/InputSession.swift
+@@ -689,10 +689,13 @@
+         // picked out of 地, 字, 自…
+         let marked = client.markedRange()
+         var prefixRange: NSRange?
++        var originalMarkedText: String?
+         if marked.location != NSNotFound, let run = passedRun, run.text.last?.isNumber == true,
+            run.text.allSatisfy({ Self.numberCharacters.contains($0) }),
+-           let range = passedRunRange(endingAt: marked.location, client) {
++           let range = passedRunRange(endingAt: marked.location, client),
++           let text = client.text(in: marked), (text as NSString).length == marked.length {
+             prefixRange = NSRange(location: range.location, length: range.length + marked.length)
++            originalMarkedText = text
+             kana = run.text + kana
+         }
+         let numberPrefix = prefixRange == nil ? "" : passedRun!.text
+@@ -721,18 +724,22 @@
+             selected = (i + 1) % candidates.count
+         }
+         liveSuppressed = false
+-        conversion = Conversion(kana: kana, keys: keys, candidates: candidates, selected: selected, userForced: userForced,
+-                                numberPrefix: numberPrefix)
++        let conversion = Conversion(kana: kana, keys: keys, candidates: candidates, selected: selected, userForced: userForced,
++                                    numberPrefix: numberPrefix)
+         keys = ""
+         forced = nil
+         forcedByUser = false
+         pinned = nil
+         syllableStart = nil
+         enginePreview = nil
+-        previousLanguage = .japanese
+-        if let prefixRange {
+-            client.setMarkedText(conversion!.display, replacing: prefixRange) // the number, then the phrase
++        if let prefixRange, let originalMarkedText {
++            // Finish the existing composition before expanding its replacement range.
++            client.insertText(originalMarkedText, replacing: nil)
++            client.setMarkedText(conversion.display, replacing: prefixRange)
+         } else {
+-            client.setMarkedText(conversion!.display)
++            client.setMarkedText(conversion.display)
+         }
++        // Publish the conversion after client calls to avoid committing it on reentry.
++        self.conversion = conversion
++        previousLanguage = .japanese
+     }

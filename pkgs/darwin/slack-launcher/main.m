@@ -52,7 +52,6 @@ static NSString *const vendorID = @"com.tinyspeck.slackmacgap";
         }
         NSURL *target = [NSURL fileURLWithPath:registering ? @"/Applications/Slack.app" : vendorPath];
         // Declaring a URL scheme does not make this app its default handler.
-        // https://developer.apple.com/documentation/appkit/nsworkspace/setdefaultapplication(at:toopenurlswithscheme:completion:)
         [NSWorkspace.sharedWorkspace setDefaultApplicationAtURL:target
                                            toOpenURLsWithScheme:@"slack"
                                               completionHandler:^(NSError *error) {

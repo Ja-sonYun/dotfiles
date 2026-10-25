@@ -286,7 +286,6 @@ module.keyWatcher = hs.eventtap
 		end
 
 		-- Tag both events so synthesized shortcuts cannot trigger this dispatcher again.
-		-- https://www.hammerspoon.org/docs/hs.eventtap.event.html#properties
 		local down = hs.eventtap.event.newKeyEvent(binding.sendKey.modifiers, binding.sendKey.keyCode, true)
 		local up = hs.eventtap.event.newKeyEvent(binding.sendKey.modifiers, binding.sendKey.keyCode, false)
 		down:setProperty(properties.eventSourceUserData, syntheticTag)

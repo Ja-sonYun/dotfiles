@@ -32,9 +32,7 @@ endif
 let s:cpo_save = &cpo
 set cpo&vim
 
-" ============================================================================
 " Configuration
-" ============================================================================
 
 " highlight_all turns on every option except space errors
 let s:all = get(g:, 'python_enhanced_highlight_all', 0) || get(g:, 'python_highlight_all', 0)
@@ -50,9 +48,7 @@ let s:doctests = s:all || get(g:, 'python_highlight_doctests', 1)
 let s:space_errors = get(g:, 'python_highlight_space_errors', 0)
 let s:slow_sync = get(g:, 'python_slow_sync', 0)
 
-" ============================================================================
 " Keywords and Statements
-" ============================================================================
 
 syn keyword pythonStatement     False None True
 syn keyword pythonStatement     as assert break continue del global
@@ -95,9 +91,7 @@ syn match   pythonDefColon      ":" contained
 syn match   pythonDefComment    "#.*$" contained contains=pythonTodo,@Spell
       \ nextgroup=pythonDocstring,pythonDefComment skipwhite skipempty skipnl
 
-" ============================================================================
 " Type expression cluster (only used inside annotation regions)
-" ============================================================================
 
 if s:type_annotations
   " Contained typing names (annotation contexts only)
@@ -174,12 +168,10 @@ if s:type_annotations
         \ pythonTypeUnion,pythonTypeBracket,pythonTypeParen,pythonTypeComma,
         \ pythonTypeEllipsis,pythonTypeNone,pythonTypeString,pythonComment
 
-  " -------------------------------------------------------------------------
   " Brackets: continuation lines inside (...) [...] {...} are expressions, so
   " `key: value` in a multi-line dict/call is never a statement annotation.
   " Defined before the lookbehind regions below (param lists, class bases,
   " type params) so those still win when they start at the same bracket.
-  " -------------------------------------------------------------------------
   syn region  pythonBracketBlock start="(" end=")" transparent
         \ contains=TOP,pythonAnnotatedAssign,pythonAnnotatedAttr
   syn region  pythonBracketBlock start="\[" end="\]" transparent
@@ -187,9 +179,7 @@ if s:type_annotations
   syn region  pythonBracketBlock start="{" end="}" transparent
         \ contains=TOP,pythonAnnotatedAssign,pythonAnnotatedAttr
 
-  " -------------------------------------------------------------------------
   " PEP 695 type parameter lists: def f[T], class C[T], type A[T]
-  " -------------------------------------------------------------------------
   syn region  pythonTypeParamList matchgroup=pythonTypeBracket
         \ start="\%(\%(\%(async\s\+\)\=def\|class\|type\)\s\+\h\w*\s*\)\@<=\["
         \ end="\]"
@@ -199,11 +189,9 @@ if s:type_annotations
 
   syn match   pythonTypeParamStar "[*]\{1,2}" contained nextgroup=pythonTypeName skipwhite
 
-  " -------------------------------------------------------------------------
   " Parameter lists after def / async def (lookbehind so sync cannot drop them)
   " Brackets in defaults (x=f(1, 2), x={"k": v}) are pythonBracketBlock, so
   " their ) , and : cannot end the list or start an annotation.
-  " -------------------------------------------------------------------------
   syn region  pythonParamList matchgroup=pythonParams
         \ start="\%(\%(async\s\+\)\=def\s\+\h\w*\%(\s*\[[^[\]]*\]\)\=\s*\)\@<=("
         \ end=")"
@@ -225,9 +213,7 @@ if s:type_annotations
         \ start="\<lambda\>" matchgroup=NONE end=":" contained oneline
         \ contains=pythonBracketBlock,pythonNumber,pythonString,pythonOperatorSymbol
 
-  " -------------------------------------------------------------------------
   " Return type: -> through header : (not contained — any -> … : is a return type)
-  " -------------------------------------------------------------------------
   syn region  pythonReturnType matchgroup=pythonReturnArrow
         \ start="->" end="\ze\s*:"
         \ contains=@pythonTypeExpr
@@ -237,9 +223,7 @@ if s:type_annotations
   " Always color -> as return arrow (never as operator)
   syn match   pythonReturnArrow "->" display
 
-  " -------------------------------------------------------------------------
   " Class bases: class Foo(Bar, Generic[T])
-  " -------------------------------------------------------------------------
   syn region  pythonClassBases matchgroup=pythonParams
         \ start="\%(class\s\+\h\w*\%(\s*\[[^[\]]*\]\)\=\s*\)\@<=("
         \ end=")"
@@ -247,11 +231,9 @@ if s:type_annotations
         \ nextgroup=pythonDefColon
         \ skipwhite skipnl
 
-  " -------------------------------------------------------------------------
   " Statement annotations: name: Type [= ...]  (self.attr: Type is below,
   " after pythonAttribute)
   " Exclude control-flow keywords
-  " -------------------------------------------------------------------------
   syn match   pythonAnnotatedAssign
         \ "^\s*\%(\%(\%(async\s\+\)\=def\|class\|if\|elif\|else\|while\|for\|with\|try\|except\|match\|case\|type\|return\|yield\|assert\|del\|global\|nonlocal\|import\|from\|raise\|pass\|break\|continue\|await\)\>\)\@!\zs\h\w*\%(\s*,\s*\h\w*\)*\s*\ze:"
         \ nextgroup=pythonStmtAnnotation
@@ -264,9 +246,7 @@ if s:type_annotations
         \ contains=@pythonTypeExpr
         \ oneline
 
-  " -------------------------------------------------------------------------
   " type Alias = ...  RHS is a type expression
-  " -------------------------------------------------------------------------
   syn match   pythonTypeAliasEq "=" contained
         \ nextgroup=pythonTypeAliasValue skipwhite
 
@@ -277,9 +257,7 @@ if s:type_annotations
         \ contains=@pythonTypeExpr,pythonComment
         \ oneline
 
-  " -------------------------------------------------------------------------
   " Type comments: # type: ...  (inside pythonComment; not "# type: ignore")
-  " -------------------------------------------------------------------------
   syn match   pythonTypeComment "\%(#\s*type:\s*\)\@<=\%(ignore\>\)\@!\S.*$"
         \ contained contains=@pythonTypeExpr
 
@@ -296,17 +274,13 @@ syn cluster pythonTypeInternal contains=
       \ pythonTypeAliasEq,pythonTypeAliasValue,pythonTypeComment,
       \ pythonDefColon,pythonDefComment,pythonDocstring
 
-" ============================================================================
 " Class Variables (self, cls, mcs)
-" ============================================================================
 
 if s:class_vars
   syn keyword pythonClassVar    self cls mcs
 endif
 
-" ============================================================================
 " Operators — | is bitwise here (union only inside type regions)
-" ============================================================================
 
 if s:operators
   " One character at a time: runs like **= or //= look the same as a single
@@ -314,18 +288,14 @@ if s:operators
   syn match pythonOperatorSymbol "[-+*/%@<>=~&|^]\|!=\|:=" display
 endif
 
-" ============================================================================
 " Function Calls
-" ============================================================================
 
 if s:func_calls
   syn match   pythonFunctionCall "\h\w*\ze\s*(" display
         \ contains=pythonBuiltin
 endif
 
-" ============================================================================
 " Decorators
-" ============================================================================
 
 syn match   pythonDecorator     "@" display contained
 syn match   pythonDecoratorName "@\s*\h\%(\w\|\.\)*" display contains=pythonDecorator
@@ -336,16 +306,12 @@ syn match   pythonMatrixMultiply
       \ contains=TOP,pythonDecoratorName
       \ transparent
 
-" ============================================================================
 " Comments
-" ============================================================================
 
 syn match   pythonComment       "#.*$" contains=pythonTodo,pythonTypeComment,@Spell
 syn keyword pythonTodo          FIXME NOTE NOTES TODO XXX HACK BUG OPTIMIZE REVIEW contained
 
-" ============================================================================
 " Expression cluster for f-string fields (narrow; not ALLBUT)
-" ============================================================================
 
 syn cluster pythonExpression contains=
       \ pythonStatement,pythonConditional,pythonRepeat,pythonAsync,
@@ -356,9 +322,7 @@ syn cluster pythonExpression contains=
       \ pythonComment,pythonDecoratorName,pythonExceptions,
       \ pythonFStringFieldSkip,pythonFStringDebug
 
-" ============================================================================
 " Strings
-" ============================================================================
 
 syn region  pythonString matchgroup=pythonQuotes
       \ start=+[uU]\=\z(['"]\)+ end="\z1" skip="\\\\\|\\\z1"
@@ -439,9 +403,7 @@ syn match   pythonFStringSkip       /}}/ transparent contained contains=NONE
 " F-string debug specifier: f"{expr=}"
 syn match   pythonFStringDebug      /\h\w*=\ze[}:!]/ contained containedin=pythonFStringField
 
-" ============================================================================
 " Docstrings (nextgroup after header colon + module docstring)
-" ============================================================================
 
 " Function/class docstrings (triggered via nextgroup=pythonDocstring)
 syn region  pythonDocstring
@@ -454,9 +416,7 @@ syn region  pythonDocstring
       \ end="\z1" keepend
       \ contains=pythonEscape,pythonUnicodeEscape,pythonSpaceError,pythonDoctest,@Spell
 
-" ============================================================================
 " String Escapes
-" ============================================================================
 
 syn match   pythonEscape            +\\[abfnrtv'"\\]+ contained
 syn match   pythonEscape            "\\\o\{1,3}" contained
@@ -469,9 +429,7 @@ syn match   pythonBytesEscape       +\\[abfnrtv'"\\]+ contained
 syn match   pythonBytesEscape       "\\\o\{1,3}" contained
 syn match   pythonBytesEscape       "\\x\x\{2}" contained
 
-" ============================================================================
 " String Formatting
-" ============================================================================
 
 if s:string_fmt
   syn match   pythonStrFormatting   "%\%(([^)]\+)\)\=[#0\-+ ]*\%(\*\|\d\+\)\=\%(\.\%(\*\|\d\+\)\)\=[hlL]\=[diouxXeEfFgGcrsab%]" contained containedin=pythonString,pythonRawString
@@ -479,9 +437,7 @@ if s:string_fmt
   syn match   pythonStrTemplate     "\$\$\|\$\h\w*\|\${\h\w*}" contained containedin=pythonString,pythonRawString
 endif
 
-" ============================================================================
 " Numbers
-" ============================================================================
 
 syn match   pythonNumber    "\<0[oO]\%(_\=\o\)\+\>"
 syn match   pythonNumber    "\<0[xX]\%(_\=\x\)\+\>"
@@ -497,9 +453,7 @@ syn match   pythonNumber
 syn keyword pythonNone      None
 syn match   pythonEllipsis  "\.\@1<!\.\.\.\ze\.\@!" display
 
-" ============================================================================
 " Builtins
-" ============================================================================
 
 if s:builtins
   syn keyword pythonBuiltin     False True None
@@ -538,9 +492,7 @@ if s:type_annotations
         \ skipwhite
 endif
 
-" ============================================================================
 " Exceptions
-" ============================================================================
 
 if s:exceptions
   syn keyword pythonExceptions  BaseException Exception
@@ -574,9 +526,7 @@ if s:exceptions
   syn keyword pythonExceptions  UserWarning Warning
 endif
 
-" ============================================================================
 " Space Errors
-" ============================================================================
 
 if s:space_errors
   syn match   pythonSpaceError  display excludenl "\s\+$"
@@ -584,9 +534,7 @@ if s:space_errors
   syn match   pythonSpaceError  display "\t\+ "
 endif
 
-" ============================================================================
 " Doctests
-" ============================================================================
 
 if s:doctests
   syn region  pythonDoctest
@@ -602,16 +550,12 @@ if s:doctests
         \ contained containedin=pythonDoctest
 endif
 
-" ============================================================================
 " Shebang and Encoding
-" ============================================================================
 
 syn match   pythonShebang       "\%^#!.*$"
 syn match   pythonEncoding      "^#.*\%(coding[:=]\s*\)\@<=\S\+" display
 
-" ============================================================================
 " Synchronization
-" ============================================================================
 
 if s:slow_sync
   syn sync fromstart
@@ -623,9 +567,7 @@ else
   syn sync minlines=100
 endif
 
-" ============================================================================
 " Highlight Links (always; palette applied separately when colors enabled)
-" ============================================================================
 
 hi def link pythonStatement         Statement
 hi def link pythonConditional       Conditional

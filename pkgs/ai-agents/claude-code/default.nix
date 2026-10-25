@@ -18,6 +18,7 @@ let
             --set DISABLE_INSTALLATION_CHECKS      1 \
             --set DISABLE_AUTOUPDATER              1 \
             --set CLAUDE_CODE_DISABLE_AUTO_MEMORY  1 \
+            --set CLAUDE_CODE_DISABLE_ARTIFACT     1 \
             --set CLAUDE_CODE_DISABLE_MOUSE_CLICKS 1 \
             --set CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN 1 \
             --set DISABLE_ERROR_REPORTING          1 \

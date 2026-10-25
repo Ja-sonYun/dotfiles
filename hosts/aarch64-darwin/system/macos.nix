@@ -7,8 +7,6 @@
 }:
 
 {
-  # macOS system configuration.
-  # Options: https://daiderd.com/nix-darwin/manual/index.html#sec-options
   system = {
     stateVersion = 5;
     primaryUser = username;
@@ -20,7 +18,7 @@
 
     defaults = {
       applyToCurrentSession = true;
-      menuExtraClock.Show24Hour = true; # show 24 hour clock
+      menuExtraClock.Show24Hour = true;
 
       CustomUserPreferences = {
         NSGlobalDomain = {
@@ -41,7 +39,6 @@
           };
         };
         "kCFPreferencesAnyApplication" = {
-          # Hide the language indicator
           TSMLanguageIndicatorEnabled = false;
 
         };
@@ -50,9 +47,9 @@
       finder = {
         FXRemoveOldTrashItems = true; # Remove items from the Trash after 30 days
         FXPreferredViewStyle = "clmv"; # Column view
-        FXEnableExtensionChangeWarning = false; # Disable warning when changing file extension
-        AppleShowAllFiles = true; # Show hidden files
-        AppleShowAllExtensions = true; # Show all file extensions
+        FXEnableExtensionChangeWarning = false;
+        AppleShowAllFiles = true;
+        AppleShowAllExtensions = true;
       };
 
       NSGlobalDomain = {
@@ -126,7 +123,7 @@
         wvous-br-corner = 1;
         wvous-bl-corner = 1;
 
-        show-recents = false; # Do not show recent applications in Dock
+        show-recents = false;
       };
     };
   };
@@ -142,11 +139,8 @@
     wakeOnLan.enable = true;
   };
 
-  # Add ability to used TouchID for sudo authentication
   security.pam.services.sudo_local.touchIdAuth = true;
 
-  # Create /etc/zshrc that loads the nix-darwin environment.
-  # this is required if you want to use darwin's default shell - zsh
   programs.zsh = {
     enable = true;
     # Home Manager initializes completion after user fpath entries are added

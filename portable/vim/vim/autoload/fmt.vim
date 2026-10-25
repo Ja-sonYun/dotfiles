@@ -26,10 +26,8 @@ function! fmt#RunFmt(ext, cmds) abort
   let tmp = tmp_dir . '/' . bufname . '.' . fmt_ext
   let err = tmp_dir . '/stderr'
 
-  " Build the shell command
   let sc = ['cd ' . shellescape(dir), 'status=0', 'cat >' . shellescape(tmp) . ' || status=$?']
 
-  " Run each formatter command
   for cmd in a:cmds
     call add(sc, '[ $status -ne 0 ] && exit $status')
     let full = substitute(cmd, '{file}', {_ -> shellescape(tmp)}, 'g')
@@ -37,7 +35,6 @@ function! fmt#RunFmt(ext, cmds) abort
   endfor
   call add(sc, '[ $status -ne 0 ] && exit $status')
 
-  " Output formatted file
   call add(sc, 'cat ' . shellescape(tmp) . ' || status=$?')
   call add(sc, 'exit $status')
   let shcmd = 'sh -c ' . shellescape(join(sc, ' ; '), 1)
@@ -48,15 +45,12 @@ function! fmt#RunFmt(ext, cmds) abort
     execute s . ',' . e . '!' . shcmd
     let shell_error = v:shell_error
   catch /^Vim\%((\a\+)\)\=:E/
-    " Handle Vim errors (e.g., command execution failure)
     let shell_error = 1
   endtry
 
-  " Compare with produced tmp file
   let after = filereadable(tmp) ? readfile(tmp) : []
   let nochange = join(before, "\n") ==# join(after, "\n")
 
-  " Report errors
   let has_error = 0
   if filereadable(err)
     let msgs = readfile(err)
