@@ -98,7 +98,8 @@ impl EmbeddedTerminal {
         let (output_tx, output) = mpsc::channel(32);
         let write_errors = output_tx.clone();
         let finished = Arc::new(AtomicBool::new(false));
-        let reading = finished.clone();
+        let read_finished = Arc::new(AtomicBool::new(false));
+        let reading = read_finished.clone();
         let read_task = std::thread::spawn(move || -> Result<()> {
             let mut buffer = [0; 8192];
             while !reading.load(Ordering::Acquire) {
@@ -121,12 +122,8 @@ impl EmbeddedTerminal {
                 match reader.read(&mut buffer) {
                     Ok(0) => break,
                     Ok(size) => {
-                        if output_tx
-                            .blocking_send(Ok(buffer[..size].to_vec()))
-                            .is_err()
-                        {
-                            break;
-                        }
+                        // Keep draining after the UI closes so macOS can finish the viewer's exit.
+                        let _ = output_tx.blocking_send(Ok(buffer[..size].to_vec()));
                     }
                     Err(error) if error.raw_os_error() == Some(libc::EIO) => break,
                     Err(error)
@@ -247,6 +244,7 @@ impl EmbeddedTerminal {
             }
             .await;
             finishing.store(true, Ordering::Release);
+            read_finished.store(true, Ordering::Release);
             let cleanup = adapter(&config, "embedded-cleanup", &request)
                 .await
                 .map(|_| ())
