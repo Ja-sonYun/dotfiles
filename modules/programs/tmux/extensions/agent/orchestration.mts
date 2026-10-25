@@ -42,6 +42,7 @@ interface Registration {
   client: string;
   session_id: string;
   parent: string | null;
+  identity: "root" | "child" | "unknown";
   event: string;
   at: number;
 }
@@ -250,9 +251,11 @@ async function register(request: Registration): Promise<Location> {
     return pattern?.test(name === "node" ? (entrypoint ?? "") : executable);
   });
   if (!owner) return current;
-  if (request.parent !== null) {
+  if (request.identity === "child") {
     return {
       ...current,
+      pane: request.parent === null ? "" : current.pane,
+      window: request.parent === null ? "" : current.window,
       process_id: owner.pid,
       process_started: owner.started,
     };
@@ -267,6 +270,13 @@ async function register(request: Registration): Promise<Location> {
     return current;
   const id = `${request.client}:${request.session_id}`;
   if (
+    request.identity === "unknown" &&
+    (pane.owner?.id !== id ||
+      pane.owner.pid !== owner.pid ||
+      pane.owner.started !== owner.started)
+  )
+    return current;
+  if (
     pane.owner &&
     (pane.owner.at > request.at ||
       (pane.owner.id !== id && request.event !== "SessionStart"))
@@ -279,7 +289,11 @@ async function register(request: Registration): Promise<Location> {
     at: request.at,
   };
   if (request.event === "SessionEnd") {
-    if (pane.owner?.id === id && pane.owner.pid === owner.pid) {
+    if (
+      pane.owner?.id === id &&
+      pane.owner.pid === owner.pid &&
+      pane.owner.started === owner.started
+    ) {
       await command(
         current.socket,
         "set-option",
@@ -311,7 +325,7 @@ async function observe(
   const states: Record<string, boolean | null> = {};
   for (const agent of agents) {
     const target = agent.location;
-    if (agent.parent != null) {
+    if (agent.parent != null || (!target.pane && target.process_id)) {
       states[agent.id] = Boolean(
         target.process_id &&
         target.process_started &&
@@ -831,10 +845,19 @@ if (
         process.stdout.write(JSON.stringify({ detached: true }));
       } else if (operation === "register") {
         const request = object(value);
+        const identity = string(request.identity);
+        if (!["root", "child", "unknown"].includes(identity))
+          throw new Error("Invalid session identity");
         const target: Registration = {
           client: string(request.client),
           session_id: string(request.session_id),
           parent: request.parent == null ? null : string(request.parent),
+          identity:
+            identity === "root"
+              ? "root"
+              : identity === "child"
+                ? "child"
+                : "unknown",
           event: string(request.event),
           at: number(request.at),
         };

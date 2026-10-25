@@ -10,6 +10,25 @@
   uv-as-package = final: prev: {
     uv = prev.uv.overrideAttrs (oldAttrs: {
       passthru = (oldAttrs.passthru or { }) // {
+        asEnv =
+          {
+            root,
+            python ? final.python312,
+          }:
+          let
+            workspace = inputs.uv2nix.lib.workspace.loadWorkspace { workspaceRoot = root; };
+            overlay = workspace.mkPyprojectOverlay { sourcePreference = "wheel"; };
+            pythonSet =
+              (final.callPackage inputs.pyproject-nix.build.packages { inherit python; }).overrideScope
+                (
+                  final.lib.composeManyExtensions [
+                    inputs.pyproject-build-systems.overlays.wheel
+                    overlay
+                  ]
+                );
+          in
+          pythonSet.mkVirtualEnv "${baseNameOf root}-env" workspace.deps.default;
+
         asPackage =
           {
             name,
@@ -27,17 +46,7 @@
               else
                 throw "uv.asPackage entrypoint must be module:function";
             entrypointFunction = builtins.elemAt entrypointParts 1;
-            workspace = inputs.uv2nix.lib.workspace.loadWorkspace { workspaceRoot = root; };
-            overlay = workspace.mkPyprojectOverlay { sourcePreference = "wheel"; };
-            pythonSet =
-              (final.callPackage inputs.pyproject-nix.build.packages { inherit python; }).overrideScope
-                (
-                  final.lib.composeManyExtensions [
-                    inputs.pyproject-build-systems.overlays.wheel
-                    overlay
-                  ]
-                );
-            virtualenv = pythonSet.mkVirtualEnv "${baseNameOf root}-env" workspace.deps.default;
+            virtualenv = final.uv.asEnv { inherit root python; };
             launcher = final.writeText "${name}-entrypoint.py" ''
               import importlib
               import sys

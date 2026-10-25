@@ -170,6 +170,18 @@ async fn publish(root: &Path, report: &Report, start_on_report: bool) -> Result<
     Ok(())
 }
 
+async fn codex_session_meta(path: &str, thread: &str) -> Result<Value> {
+    let file = tokio::fs::File::open(path).await?;
+    let mut reader = BufReader::new(file.take(1024 * 1024));
+    let mut line = String::new();
+    reader.read_line(&mut line).await?;
+    let record: Value = serde_json::from_str(&line)?;
+    if record["type"] != "session_meta" || record["payload"]["id"].as_str() != Some(thread) {
+        bail!("Codex transcript metadata does not match the hook thread");
+    }
+    Ok(record["payload"].clone())
+}
+
 async fn hook(root: &Path, config: &Config) -> Result<()> {
     let received_at = now();
     let mut input = String::new();
@@ -184,19 +196,96 @@ async fn hook(root: &Path, config: &Config) -> Result<()> {
     let session = data["session_id"]
         .as_str()
         .context("hook has no session_id")?;
-    let child = data["agent_id"]
-        .as_str()
-        .filter(|id| client == "claude" && !id.is_empty() && *id != session);
+    let child = data["agent_id"].as_str().filter(|id| {
+        matches!(client.as_str(), "claude" | "codex") && !id.is_empty() && *id != session
+    });
     let session_id = child
-        .map(|id| format!("{session}/{id}"))
+        .map(|id| {
+            if client == "codex" {
+                id.into()
+            } else {
+                format!("{session}/{id}")
+            }
+        })
         .unwrap_or_else(|| session.into());
-    let parent = data["parent_agent_id"]
+    let mut parent = data["parent_agent_id"]
         .as_str()
-        .map(String::from)
-        .or_else(|| child.map(|_| format!("{client}:{session}")))
+        .or_else(|| data["parent_thread_id"].as_str())
+        .filter(|id| !id.is_empty())
+        .map(|id| {
+            if id.starts_with(&format!("{client}:")) {
+                id.into()
+            } else {
+                format!("{client}:{id}")
+            }
+        })
+        .or_else(|| {
+            child
+                .filter(|_| client == "claude")
+                .map(|_| format!("{client}:{session}"))
+        })
         .or_else(|| std::env::var("AGENT_HUB_PARENT_ID").ok());
+    parent = parent.filter(|id| id != &format!("{client}:{session_id}"));
+    let mut identity = if parent.is_some() || child.is_some() {
+        "child"
+    } else if client == "codex" {
+        "unknown"
+    } else {
+        "root"
+    };
+    let mut identity_error = None;
+    if client == "codex" {
+        let metadata = async {
+            let path = data["transcript_path"]
+                .as_str()
+                .context("Missing Codex transcript path")?;
+            tokio::time::timeout(
+                Duration::from_millis(250),
+                codex_session_meta(path, &session_id),
+            )
+            .await
+            .context("Codex transcript metadata timed out")?
+        }
+        .await;
+        match metadata {
+            Ok(metadata) => {
+                let direct_parent = metadata["parent_thread_id"]
+                    .as_str()
+                    .or_else(|| {
+                        metadata
+                            .pointer("/source/subagent/thread_spawn/parent_thread_id")
+                            .and_then(Value::as_str)
+                    })
+                    .filter(|id| !id.is_empty() && *id != session_id);
+                if let Some(id) = direct_parent {
+                    parent = Some(format!("codex:{id}"));
+                    identity = "child";
+                } else if metadata["source"].get("subagent").is_some() {
+                    identity = "child";
+                } else if identity != "child"
+                    && matches!(
+                        metadata["source"].as_str(),
+                        Some("cli" | "vscode" | "exec" | "mcp")
+                    )
+                {
+                    identity = "root";
+                }
+                if identity == "unknown" {
+                    identity_error = Some("Unrecognized Codex session source".to_string());
+                }
+            }
+            Err(error) => identity_error = Some(error.to_string()),
+        }
+    }
     let mut fields = json!({
         "event": data["hook_event_name"],
+        "agent_id": data["agent_id"],
+        "agent_type": data["agent_type"],
+        "source": data["source"],
+        "transcript_path": data["transcript_path"],
+        "root_session_id": session,
+        "identity": identity,
+        "identity_error": identity_error,
         "notification_type": data["notification_type"],
         "phase": data["phase"],
         "resume_state": data["resume_state"],
@@ -205,6 +294,11 @@ async fn hook(root: &Path, config: &Config) -> Result<()> {
             .is_some_and(|message| message.to_lowercase().contains("<proposed_plan>")),
         "is_error": data["tool_failed"] == true || data["is_error"] == true,
     });
+    if data["hook_event_name"] == "Stop" {
+        if let Some(message) = data["last_assistant_message"].as_str() {
+            fields["response_excerpt"] = json!(alerts::excerpt(message));
+        }
+    }
     if let Some(title) = data["session_title"].as_str() {
         fields["title"] = json!(title);
     }
@@ -215,7 +309,7 @@ async fn hook(root: &Path, config: &Config) -> Result<()> {
         fields["summary"] = json!(summary.chars().take(2000).collect::<String>());
     }
     let at = data["reported_at"].as_u64().unwrap_or(received_at);
-    let registered = adapter(config, "register", &json!({"client":client,"session_id":session_id,"parent":parent,"event":data["hook_event_name"],"at":at})).await
+    let registered = adapter(config, "register", &json!({"client":client,"session_id":session_id,"parent":parent,"identity":identity,"event":data["hook_event_name"],"at":at})).await
         .ok().and_then(|value| serde_json::from_value(value).ok()).unwrap_or_default();
     let report = Report {
         id: uuid::Uuid::new_v4().to_string(),

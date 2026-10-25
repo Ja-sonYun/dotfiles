@@ -7,12 +7,13 @@ import (
 
 var commonFields = []string{
 	"agent_id", "agent_type", "cwd", "effort", "hook_event_name",
-	"permission_mode", "prompt_id", "session_id", "transcript_path",
+	"parent_agent_id", "parent_thread_id", "permission_mode", "prompt_id",
+	"session_id", "source", "transcript_path",
 }
 
 var eventFields = map[string][]string{
 	"Notification":     {"message", "notification_type", "title"},
-	"SessionStart":     {"model", "session_title", "source"},
+	"SessionStart":     {"model", "session_title"},
 	"UserPromptSubmit": {"prompt", "session_title"},
 	"PreToolUse":       {"tool_input", "tool_name", "tool_use_id"},
 	"PostToolUse":      {"duration_ms", "tool_input", "tool_name", "tool_response", "tool_use_id"},

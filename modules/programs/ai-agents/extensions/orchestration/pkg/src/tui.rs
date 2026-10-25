@@ -218,24 +218,17 @@ fn chat_message(role: &str, color: Color, text: &str, columns: usize) -> Vec<Lin
     lines
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum CloseIntent {
-    Graph,
-    Popup,
-}
-
 #[derive(Default)]
 enum Connection {
     #[default]
     Idle,
     Starting {
         task: JoinHandle<Result<EmbeddedTerminal>>,
-        close: Option<CloseIntent>,
+        close: bool,
     },
     Attached(EmbeddedTerminal),
     Stopping {
         task: JoinHandle<Result<()>>,
-        intent: CloseIntent,
     },
 }
 
@@ -261,7 +254,7 @@ impl Connection {
     fn is_stopping(&self) -> bool {
         matches!(
             self,
-            Self::Starting { close: Some(_), .. } | Self::Stopping { .. }
+            Self::Starting { close: true, .. } | Self::Stopping { .. }
         )
     }
 
@@ -273,31 +266,13 @@ impl Connection {
         }
     }
 
-    fn stop(&mut self, intent: CloseIntent) {
+    fn stop(&mut self) {
         *self = match std::mem::take(self) {
-            Self::Starting { task, close } => Self::Starting {
-                task,
-                close: Some(if close == Some(CloseIntent::Popup) {
-                    CloseIntent::Popup
-                } else {
-                    intent
-                }),
-            },
+            Self::Starting { task, .. } => Self::Starting { task, close: true },
             Self::Attached(terminal) => Self::Stopping {
                 task: tokio::spawn(terminal.stop()),
-                intent,
             },
-            Self::Stopping {
-                task,
-                intent: previous,
-            } => Self::Stopping {
-                task,
-                intent: if previous == CloseIntent::Popup {
-                    previous
-                } else {
-                    intent
-                },
-            },
+            stopping @ Self::Stopping { .. } => stopping,
             Self::Idle => Self::Idle,
         };
     }
@@ -324,6 +299,7 @@ struct Ui {
     input: Input,
     editing: bool,
     sending: bool,
+    hiding: bool,
     connection: Connection,
     connected: bool,
     message: String,
@@ -343,9 +319,9 @@ struct Ui {
 }
 
 impl Ui {
-    fn stop_agent(&mut self, intent: CloseIntent) {
+    fn stop_agent(&mut self) {
         self.editing = false;
-        self.connection.stop(intent);
+        self.connection.stop();
     }
 
     fn displayed(&self) -> Snapshot {
@@ -534,18 +510,6 @@ impl Ui {
                     self.graph.restore(view);
                 }
                 self.graph.sync(&displayed, area);
-                if let Some(view) = restore {
-                    if view["selected"]
-                        .as_str()
-                        .is_some_and(|id| displayed.agents.contains_key(id))
-                    {
-                        self.graph.pan =
-                            serde_json::from_value(view["pan"].clone()).unwrap_or_default();
-                    } else {
-                        self.graph.pan = (0, 0);
-                        self.graph.reveal(area);
-                    }
-                }
             } else {
                 self.graph.sync(&displayed, area);
             }
@@ -706,6 +670,8 @@ enum Update {
     Snapshot(Result<Snapshot>),
     Prompt(u64, Result<Value>),
     Abort(Result<Value>),
+    Hidden(Result<()>),
+    Saved(Value, Result<()>),
     Shutdown,
 }
 
@@ -758,6 +724,9 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
     let mut last_frame = Instant::now() - frame_interval;
     let mut last_animation = Instant::now();
     let mut dirty = true;
+    let mut hide_task: Option<JoinHandle<()>> = None;
+    let mut save_task: Option<JoinHandle<()>> = None;
+    let mut saving = false;
     let result: Result<()> = async {
         loop {
             while let Ok(update) = receive.try_recv() {
@@ -772,7 +741,7 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                                 .is_some_and(|id| !snapshot.agents.contains_key(id))
                         {
                             ui.message = "Agent session ended".into();
-                            ui.stop_agent(CloseIntent::Graph);
+                            ui.stop_agent();
                         }
                         if snapshot != ui.snapshot || !ui.connected {
                             ui.chat_dirty |= snapshot.chat != ui.snapshot.chat
@@ -800,6 +769,23 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                             Err(error) => ui.message = format!("Send failed: {error}"),
                         }
                     }
+                    Update::Saved(view, result) => {
+                        saving = false;
+                        match result {
+                            Ok(()) => saved_view = view,
+                            Err(error) => {
+                                ui.message = format!("Cannot save view: {error:#}");
+                                dirty = true;
+                            }
+                        }
+                    }
+                    Update::Hidden(result) => {
+                        ui.hiding = false;
+                        if let Err(error) = result {
+                            ui.message = format!("Popup close failed: {error:#}");
+                        }
+                        dirty = true;
+                    }
                     Update::Abort(result) => {
                         dirty = true;
                         ui.message = match result {
@@ -822,14 +808,14 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                                 ui.connection = Connection::Attached(embedded);
                                 ui.editing = false;
                                 ui.message.clear();
-                                if let Some(intent) = close {
-                                    ui.stop_agent(intent);
+                                if close {
+                                    ui.stop_agent();
                                 }
                             }
                             Err(error) => ui.message = format!("Attach failed: {error:#}"),
                         }
                     }
-                    Connection::Stopping { task, intent } => {
+                    Connection::Stopping { task } => {
                         ui.graph_dirty = true;
                         match task
                             .await
@@ -843,16 +829,6 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                                 ui.message
                                     .push_str(&format!("Disconnect failed: {error:#}"));
                             }
-                            Ok(()) if intent == CloseIntent::Popup => {
-                                ui.message = match save_view(&config, &monitor, &ui).await {
-                                    Ok(()) => adapter(&config, "detach", &Value::Null)
-                                        .await
-                                        .err()
-                                        .map(|error| error.to_string())
-                                        .unwrap_or_default(),
-                                    Err(error) => format!("Cannot save view: {error}"),
-                                };
-                            }
                             Ok(()) => {}
                         }
                     }
@@ -864,7 +840,7 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                     Ok(changed) => dirty |= changed,
                     Err(error) => {
                         ui.message = error.to_string();
-                        ui.stop_agent(CloseIntent::Graph);
+                        ui.stop_agent();
                         dirty = true;
                     }
                 }
@@ -887,6 +863,24 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                         }
                     }
                     Event::Key(key) if key.kind != KeyEventKind::Release => {
+                        if key.modifiers.contains(KeyModifiers::CONTROL)
+                            && key.code == KeyCode::Char('f')
+                        {
+                            if let Some(embedded) = ui.connection.terminal_mut() {
+                                embedded.clear_prefix();
+                            }
+                            if !ui.hiding {
+                                ui.hiding = true;
+                                let config = config.clone();
+                                let updates = updates.clone();
+                                hide_task = Some(tokio::spawn(async move {
+                                    let result =
+                                        adapter(&config, "detach", &Value::Null).await.map(|_| ());
+                                    let _ = updates.send(Update::Hidden(result)).await;
+                                }));
+                            }
+                            continue;
+                        }
                         if !ui.editing
                             && ui
                                 .connection
@@ -911,14 +905,10 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                             continue;
                         }
                         if key.modifiers.contains(KeyModifiers::CONTROL)
-                            && matches!(key.code, KeyCode::Char('c' | 'f'))
+                            && key.code == KeyCode::Char('c')
                             && !matches!(ui.connection, Connection::Idle)
                         {
-                            ui.stop_agent(if key.code == KeyCode::Char('f') {
-                                CloseIntent::Popup
-                            } else {
-                                CloseIntent::Graph
-                            });
+                            ui.stop_agent();
                             continue;
                         }
                         if ui.connection.is_stopping() {
@@ -934,7 +924,7 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                         }
                         if key.modifiers.contains(KeyModifiers::CONTROL) {
                             match key.code {
-                                KeyCode::Char('c' | 'f') => {
+                                KeyCode::Char('c') => {
                                     ui.message = match save_view(&config, &monitor, &ui).await {
                                         Ok(()) => adapter(&config, "detach", &Value::Null)
                                             .await
@@ -1028,10 +1018,10 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                             KeyCode::Char('j') => ui.graph.select_direction(0, 1, ui.graph_area),
                             KeyCode::Char('k') => ui.graph.select_direction(0, -1, ui.graph_area),
                             KeyCode::Char('J') => {
-                                ui.graph.zoom(true, ui.graph_area, &ui.displayed())
+                                ui.graph.zoom(false, ui.graph_area, &ui.displayed())
                             }
                             KeyCode::Char('K') => {
-                                ui.graph.zoom(false, ui.graph_area, &ui.displayed())
+                                ui.graph.zoom(true, ui.graph_area, &ui.displayed())
                             }
                             KeyCode::Tab => ui.graph.select(false, ui.graph_area),
                             KeyCode::BackTab => ui.graph.select(true, ui.graph_area),
@@ -1063,7 +1053,7 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                                             area.height,
                                             area.width,
                                         )),
-                                        close: None,
+                                        close: false,
                                     };
                                 }
                             }
@@ -1075,13 +1065,19 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
             }
             if ui.restore_graph.is_none()
                 && ui.restore_chat.is_none()
+                && !saving
                 && saved_at.elapsed() >= Duration::from_millis(500)
                 && ui.view() != saved_view
             {
-                match save_view(&config, &monitor, &ui).await {
-                    Ok(_) => saved_view = ui.view(),
-                    Err(error) => ui.message = format!("Cannot save view: {error}"),
-                }
+                saving = true;
+                let view = ui.view();
+                let request = json!({"scope":monitor["scope"],"view":view});
+                let config = config.clone();
+                let updates = updates.clone();
+                save_task = Some(tokio::spawn(async move {
+                    let result = adapter(&config, "view-save", &request).await.map(|_| ());
+                    let _ = updates.send(Update::Saved(view, result)).await;
+                }));
                 saved_at = Instant::now();
             }
             if ui.connected
@@ -1115,6 +1111,12 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
     .await;
     snapshot_task.abort();
     shutdown_task.abort();
+    if let Some(task) = hide_task {
+        task.abort();
+    }
+    if let Some(task) = save_task {
+        task.abort();
+    }
     receive.close();
     let cleanup = std::mem::take(&mut ui.connection).shutdown().await;
     drop(terminal);

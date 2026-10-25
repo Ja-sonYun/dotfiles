@@ -6,6 +6,7 @@ use ratatui::text::Span;
 use ratatui::widgets::Widget;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::PathBuf;
 
 pub fn width(text: &str) -> usize {
     Span::raw(text).width()
@@ -62,6 +63,7 @@ pub struct Graph {
     nodes: BTreeMap<String, Node>,
     edges: BTreeMap<(i32, i32), (u8, bool)>,
     annotations: Vec<(i32, i32, String, bool)>,
+    directories: Vec<(i32, i32, String)>,
     pub selected: Option<String>,
     pub zoom: u8,
     pub pan: (i32, i32),
@@ -74,6 +76,7 @@ impl Default for Graph {
             nodes: BTreeMap::new(),
             edges: BTreeMap::new(),
             annotations: Vec::new(),
+            directories: Vec::new(),
             selected: None,
             zoom: 1,
             pan: (0, 0),
@@ -100,10 +103,6 @@ impl Graph {
             snapshot.agents.get_mut(&id).unwrap().parent = Some(parent);
         }
         let snapshot = &snapshot;
-        let previous = self
-            .selected
-            .as_ref()
-            .and_then(|id| self.nodes.get(id).map(|node| (id.clone(), node.x, node.y)));
         self.slots.retain(|id, _| snapshot.agents.contains_key(id));
         let mut topology = Vec::new();
         for agent in snapshot.agents.values() {
@@ -156,21 +155,10 @@ impl Graph {
                 .map(|(id, _)| id.clone());
         }
         self.layout(snapshot, area);
-        if let Some((id, x, y)) = previous {
-            if let Some(node) = self.nodes.get(&id) {
-                self.pan.0 = self.pan.0.saturating_add(node.x - x);
-                self.pan.1 = self.pan.1.saturating_add(node.y - y);
-            } else {
-                self.pan = (0, 0);
-                self.reveal(area);
-            }
-        }
     }
 
     fn layout(&mut self, snapshot: &Snapshot, area: Rect) {
         let limit = [28, 40, 52, 72, 92][self.zoom as usize];
-        let mut columns = BTreeMap::<usize, i32>::new();
-        let mut rows = BTreeMap::<usize, i32>::new();
         self.nodes.clear();
         for (id, agent) in &snapshot.agents {
             if !self.slots.contains_key(id) {
@@ -216,14 +204,6 @@ impl Graph {
                 .max()
                 .unwrap_or(4);
             let node_height = lines.len() as i32 + 2;
-            let (column, row) = self.slots[id];
-            columns
-                .entry(column)
-                .and_modify(|w| *w = (*w).max(node_width))
-                .or_insert(node_width);
-            rows.entry(row)
-                .and_modify(|h| *h = (*h).max(node_height))
-                .or_insert(node_height);
             self.nodes.insert(
                 id.clone(),
                 Node {
@@ -236,48 +216,67 @@ impl Graph {
                 },
             );
         }
-        for (id, node) in &mut self.nodes {
-            let (column, row) = self.slots[id];
-            node.x = 1 + columns.range(..column).map(|(_, w)| w + 6).sum::<i32>();
-            node.y = 1 + rows.range(..row).map(|(_, h)| h + 1).sum::<i32>();
-            node.width = columns[&column];
-        }
-        let parents = parents(snapshot);
-        let mut groups = BTreeMap::<String, Vec<String>>::new();
+        let mut groups = BTreeMap::<PathBuf, Vec<String>>::new();
         for id in self.nodes.keys() {
-            let mut root = id;
-            let mut seen = BTreeSet::new();
-            while let Some(parent) = parents.get(root) {
-                if !seen.insert(root) {
-                    break;
-                }
-                root = parent;
-            }
-            groups.entry(root.clone()).or_default().push(id.clone());
+            let directory = PathBuf::from(&snapshot.agents[id].cwd)
+                .components()
+                .collect::<PathBuf>();
+            groups.entry(directory).or_default().push(id.clone());
         }
+        self.directories.clear();
+        let home = std::env::var("HOME").unwrap_or_default();
         let (mut x, mut y, mut row_height) = (1, 1, 0);
-        for ids in groups.values() {
-            let left = ids.iter().map(|id| self.nodes[id].x).min().unwrap_or(0);
-            let top = ids.iter().map(|id| self.nodes[id].y).min().unwrap_or(0);
-            let width = ids
-                .iter()
-                .map(|id| self.nodes[id].x + self.nodes[id].width - left)
-                .max()
-                .unwrap_or(0);
-            let height = ids
-                .iter()
-                .map(|id| self.nodes[id].y + self.nodes[id].height - top)
-                .max()
-                .unwrap_or(0);
+        for (directory, ids) in &mut groups {
+            ids.sort_by_key(|id| (self.slots[id], id.clone()));
+            let mut columns = BTreeMap::<usize, Vec<String>>::new();
+            for id in ids.iter() {
+                columns
+                    .entry(self.slots[id].0)
+                    .or_default()
+                    .push(id.clone());
+            }
+            let (mut column_x, mut height) = (0, 0);
+            for column in columns.values() {
+                let width = column
+                    .iter()
+                    .map(|id| self.nodes[id].width)
+                    .max()
+                    .unwrap_or(0);
+                let mut node_y = 2;
+                for id in column {
+                    let node = self.nodes.get_mut(id).unwrap();
+                    node.x = column_x;
+                    node.y = node_y;
+                    node.width = width;
+                    node_y += node.height + 1;
+                }
+                column_x += width + 6;
+                height = height.max(node_y - 1);
+            }
+            let width = column_x - 6;
             if x > 1 && x + width > i32::from(area.width) {
                 x = 1;
                 y += row_height + 2;
                 row_height = 0;
             }
-            for id in ids {
+            let label = if directory.as_os_str().is_empty() {
+                "Unknown directory".into()
+            } else if !home.is_empty() && directory.starts_with(&home) {
+                let relative = directory.strip_prefix(&home).unwrap();
+                if relative.as_os_str().is_empty() {
+                    "~".into()
+                } else {
+                    format!("~/{}", relative.display())
+                }
+            } else {
+                directory.display().to_string()
+            };
+            self.directories
+                .push((x, y, shorten(&label, width as usize)));
+            for id in ids.iter() {
                 let node = self.nodes.get_mut(id).unwrap();
-                node.x += x - left;
-                node.y += y - top;
+                node.x += x;
+                node.y += y;
             }
             x += width + 4;
             row_height = row_height.max(height);
@@ -418,8 +417,8 @@ impl Graph {
     }
 
     pub fn select(&mut self, backwards: bool, area: Rect) {
-        let mut ids: Vec<_> = self.slots.keys().cloned().collect();
-        ids.sort_by_key(|id| (self.slots[id].1, self.slots[id].0, id.clone()));
+        let mut ids: Vec<_> = self.nodes.keys().cloned().collect();
+        ids.sort_by_key(|id| (self.nodes[id].y, self.nodes[id].x, id.clone()));
         if ids.is_empty() {
             return;
         }
@@ -511,6 +510,18 @@ impl Graph {
                 } else {
                     status_color("idle")
                 }),
+            );
+        }
+        for (x, y, label) in &self.directories {
+            self.text(
+                buf,
+                area,
+                *x,
+                *y,
+                label,
+                Style::default()
+                    .fg(status_color("unknown"))
+                    .add_modifier(Modifier::BOLD),
             );
         }
         for (id, node) in &self.nodes {

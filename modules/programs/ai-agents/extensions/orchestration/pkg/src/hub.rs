@@ -440,11 +440,11 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
                 interval.tick().await;
                 let notices = notify_app.alerts.lock().unwrap().due();
                 let scope = notify_app.store.lock().unwrap().snapshot.scope.clone();
-                for text in notices {
-                    let result = notify_app.notify(&text).await;
+                for notice in notices {
+                    let result = notify_app.notify(&notice.notification).await;
                     let mut store = notify_app.store.lock().unwrap();
                     let result = match result {
-                        Ok(()) => store.chat("notice", &text, Some(&scope)),
+                        Ok(()) => store.chat("notice", &notice.chat, Some(&scope)),
                         Err(error) => store.chat(
                             "error",
                             &format!("Notification request failed: {error}"),
