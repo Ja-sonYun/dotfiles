@@ -18,7 +18,7 @@ let
   );
   mcpServersFile = jsonFormat.generate "ai-agent-mcp-servers.json" {
     servers = builtins.attrNames cfg.mcp.servers;
-    codex_servers = config.programs.codex.settings.mcp_servers or { };
+    codex_servers = cfg.mcp.codexServers;
   };
   agentNames =
     if cfg.agentsDir == null then
@@ -101,6 +101,13 @@ in
       description = "Agent tier models and reasoning effort by client.";
     };
 
+    agentNames = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      readOnly = true;
+      internal = true;
+      default = agentNames;
+    };
+
     adaptedAgents = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       readOnly = true;
@@ -113,38 +120,5 @@ in
       programs.ai-agents.adaptedAgents =
         if cfg.enable && cfg.agentsDir != null && clients != [ ] then adaptedAgents else null;
     }
-
-    (lib.mkIf (cfg.enable && config.programs.antigravity-cli.enable) {
-      programs.ai-agents.modelMap.antigravity =
-        lib.genAttrs
-          [
-            "xhigh"
-            "high"
-            "middle"
-            "low"
-          ]
-          (_: {
-            model = lib.mkDefault "inherit";
-          });
-      programs.antigravity-cli.agentNames = agentNames;
-    })
-
-    (lib.mkIf (cfg.enable && cfg.adaptedAgents != null) (
-      lib.mkMerge [
-        (lib.mkIf config.programs.codex.enable {
-          programs.codex.agentsDir = "${cfg.adaptedAgents}/codex";
-          programs.codex.agentNames = agentNames;
-        })
-
-        (lib.mkIf config.programs.claude-code.enable {
-          programs.claude-code.agentsDir = "${cfg.adaptedAgents}/claude";
-          programs.claude-code.agentNames = agentNames;
-        })
-
-        (lib.mkIf (antigravityAgentNames != [ ]) {
-          programs.antigravity-cli.agentsDir = "${cfg.adaptedAgents}/antigravity";
-        })
-      ]
-    ))
   ];
 }

@@ -11,6 +11,8 @@ import (
 
 func runAntigravity(input map[string]json.RawMessage, event, command string, timeout int) int {
 	output := make(map[string]json.RawMessage)
+	output["reported_at"] = input["reported_at"]
+	output["event_id"] = input["event_id"]
 	setText(output, "hook_event_name", event)
 	setText(output, "session_id", textField(input, "conversationId"))
 	setText(output, "transcript_path", textField(input, "transcriptPath"))

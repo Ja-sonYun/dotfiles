@@ -9,5 +9,7 @@
   "SessionStart"
   "Stop"
   "StopFailure"
+  "SubagentStart"
+  "SubagentStop"
   "UserPromptSubmit"
 ]

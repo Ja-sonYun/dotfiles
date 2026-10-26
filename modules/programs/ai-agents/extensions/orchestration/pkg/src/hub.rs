@@ -23,6 +23,7 @@ struct App {
     token: String,
     commands: mpsc::Sender<Value>,
     stop: Arc<Notify>,
+    reconcile: Arc<Notify>,
     alerts: Arc<Mutex<alerts::Alerts>>,
     notifications: Option<alerts::Settings>,
     deliveries: Arc<Mutex<JoinSet<()>>>,
@@ -62,6 +63,11 @@ impl App {
         let revision = store.snapshot.revision;
         let id = store.report(report.clone())?;
         if revision != store.snapshot.revision {
+            if crate::lifecycle::starts_turn(&report)
+                || crate::lifecycle::requests_children(&report)
+            {
+                self.reconcile.notify_one();
+            }
             self.alerts.lock().unwrap().receive(
                 &report,
                 before.as_ref(),
@@ -253,6 +259,7 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
         token: endpoint.token.clone(),
         commands,
         stop: Arc::new(Notify::new()),
+        reconcile: Arc::new(Notify::new()),
         alerts: Arc::new(Mutex::new(alerts::Alerts::new(
             config.notifications.clone(),
             fresh_since,
@@ -267,7 +274,10 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
         let mut interval = tokio::time::interval(Duration::from_secs(2));
         let mut prune_at = Instant::now();
         loop {
-            interval.tick().await;
+            tokio::select! {
+                _ = interval.tick() => {},
+                _ = observer_app.reconcile.notified() => {},
+            }
             let sampled = observer_app.store.lock().unwrap().snapshot.agents.clone();
             let agents: Vec<_> = sampled.values().collect();
             match crate::adapter(&observer_config, "observe", &json!(agents)).await {
@@ -287,6 +297,22 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
                     }
                 }
                 Err(error) => eprintln!("agent observation unavailable: {error}"),
+            }
+            let candidates = observer_app
+                .store
+                .lock()
+                .unwrap()
+                .reconciliation_candidates();
+            for agent in candidates {
+                let evidence = crate::reconcile::inspect(&agent).await;
+                if let Err(error) = observer_app
+                    .store
+                    .lock()
+                    .unwrap()
+                    .reconciled(&agent, evidence)
+                {
+                    eprintln!("cannot reconcile {}: {error}", agent.id);
+                }
             }
         }
     });

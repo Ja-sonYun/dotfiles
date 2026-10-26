@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -19,6 +20,7 @@ export default function (pi: ExtensionAPI) {
   let running = false;
   let outcome = "completed";
   let prompts = 0;
+  let runId = "";
 
   pi.registerMcpServer("orchestration", {
     command: "@command@",
@@ -34,6 +36,8 @@ export default function (pi: ExtensionAPI) {
     const payload = JSON.stringify({
       hook_event_name: event,
       reported_at: Date.now(),
+      event_id: randomUUID(),
+      run_id: runId,
       session_id: ctx.sessionManager.getSessionId(),
       session_title: ctx.sessionManager.getSessionName() ?? "",
       cwd: ctx.cwd,
@@ -64,10 +68,12 @@ export default function (pi: ExtensionAPI) {
     process.env.AGENT_HUB_CURRENT_ID = `pi:${ctx.sessionManager.getSessionId()}`;
     running = false;
     prompts = 0;
+    runId = "";
     outcome = "completed";
     return publish(ctx, "SessionStart", { source: event.reason });
   });
   pi.on("agent_start", (_event, ctx) => {
+    runId = randomUUID();
     running = true;
     outcome = "completed";
     return publish(ctx, "UserPromptSubmit");

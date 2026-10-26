@@ -1,3 +1,5 @@
+import { parentRequest } from "./child-channel.ts";
+import { RequestContext } from "./request-context.ts";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
@@ -70,64 +72,6 @@ interface DispatchApproval {
 }
 
 const ruleTools = ["rules_check", "rules_request_approval"];
-interface ParentResponse {
-  allow: boolean;
-  reason?: string;
-  result?: Record<string, unknown>;
-}
-
-function parentRequest(
-  call: Call,
-  operation: "check" | "rules" = "check",
-  signal?: AbortSignal,
-): Promise<ParentResponse> {
-  return new Promise((resolve) => {
-    if (!process.send || !process.connected) {
-      resolve({
-        allow: false,
-        reason: "Parent permission channel unavailable",
-      });
-      return;
-    }
-    const id = randomUUID();
-    const finish = (result: ParentResponse) => {
-      if (!result.allow && process.connected)
-        process.send?.({ type: "pi:permission:cancel", id }, () => {});
-      clearTimeout(timeout);
-      process.removeListener("message", receive);
-      process.removeListener("disconnect", disconnected);
-      signal?.removeEventListener("abort", disconnected);
-      resolve(result);
-    };
-    const receive = (message: any) => {
-      if (message?.type !== "pi:permission:result" || message.id !== id) return;
-      finish({
-        allow: message.allow === true,
-        reason: message.reason,
-        result: message.result,
-      });
-    };
-    const disconnected = () =>
-      finish({
-        allow: false,
-        reason: "Parent permission channel closed or cancelled",
-      });
-    const timeout = setTimeout(
-      () => finish({ allow: false, reason: "Parent approval timed out" }),
-      10 * 60 * 1000,
-    );
-    process.on("message", receive);
-    process.once("disconnect", disconnected);
-    signal?.addEventListener("abort", disconnected, { once: true });
-    if (signal?.aborted) {
-      disconnected();
-      return;
-    }
-    process.send({ type: `pi:permission:${operation}`, id, call }, (error) => {
-      if (error) disconnected();
-    });
-  });
-}
 
 export default function (pi: ExtensionAPI): void {
   let executeRuleTool: (
@@ -210,11 +154,7 @@ export default function (pi: ExtensionAPI): void {
 
   const session = new PermissionSession();
   const summaries = toolSummaries(pi);
-  let requests: string[] = [];
-  let inputs: { text: string; source: string }[] = [];
-  let immediate: { text: string; source: string } | undefined;
-  let starting: { prompt: string; input: typeof immediate } | undefined;
-  let unattributed = false;
+  const requestContext = new RequestContext();
   let context: ExtensionContext | undefined;
   let configuration: string | null | undefined;
   let contextVersion = 0;
@@ -291,7 +231,7 @@ export default function (pi: ExtensionAPI): void {
       version === contextVersion &&
       (background
         ? background.active && !background.signal.aborted
-        : request === JSON.stringify(requests));
+        : request === JSON.stringify(requestContext.requests));
     try {
       const { source: serialized, config } = await loadConfig(
         actor.cwd,
@@ -402,7 +342,7 @@ export default function (pi: ExtensionAPI): void {
               file_state: state.file_state,
             };
           }
-          if (approval?.unattributed ?? unattributed) {
+          if (approval?.unattributed ?? requestContext.unattributed) {
             result.errors.push(
               "The consumed user message could not be attributed; inspect this call manually",
             );
@@ -453,7 +393,7 @@ export default function (pi: ExtensionAPI): void {
       version === contextVersion &&
       (approval?.background
         ? approval.background.active && !approval.background.signal.aborted
-        : request === JSON.stringify(requests));
+        : request === JSON.stringify(requestContext.requests));
     const cancellation = signal ?? new AbortController().signal;
     try {
       const { source, config } = await loadConfig(actor.cwd, cancellation);
@@ -553,7 +493,7 @@ export default function (pi: ExtensionAPI): void {
     return ruleTool(
       call,
       { cwd: canonical(ctx.cwd), name: "main", mode: "default", task: "" },
-      JSON.stringify(requests),
+      JSON.stringify(requestContext.requests),
       signal,
     );
   };
@@ -563,26 +503,18 @@ export default function (pi: ExtensionAPI): void {
     context = ctx;
     contextVersion++;
     session.reset();
-    requests = [];
-    inputs = [];
-    immediate = undefined;
-    starting = undefined;
-    unattributed = true;
+    requestContext.reset();
     dispatchApprovals.clear();
   };
   pi.on("session_start", resetContext);
   pi.on("session_tree", resetContext);
   pi.on("session_shutdown", resetContext);
   pi.on("input", (event, ctx) => {
-    if (!ctx.hasPendingMessages()) inputs = [];
-    const input = { text: event.text, source: event.source };
-    if (event.streamingBehavior) inputs.push(input);
-    else immediate = input;
+    requestContext.input(event, ctx.hasPendingMessages());
   });
   pi.on("before_agent_start", (event, ctx) => {
     context = ctx;
-    starting = { prompt: event.prompt, input: immediate };
-    immediate = undefined;
+    requestContext.start(event.prompt);
   });
   pi.on("message_start", (event, ctx) => {
     if (event.message.role !== "user") return;
@@ -594,27 +526,8 @@ export default function (pi: ExtensionAPI): void {
             .filter((part) => part.type === "text")
             .map((part) => part.text)
             .join("\n");
-    // Pi exposes input sources before expansion, but not on consumed messages.
-    // https://github.com/earendil-works/pi/blob/v1.1.0/packages/coding-agent/src/core/agent-session.ts
-    let input: typeof immediate;
-    if (
-      starting &&
-      (text === starting.prompt || text.startsWith(`${starting.prompt}\n\n`))
-    ) {
-      input = starting.input;
-    } else {
-      const matches = inputs.filter((candidate) => candidate.text === text);
-      if (new Set(matches.map((candidate) => candidate.source)).size === 1) {
-        input = matches[0];
-        inputs.splice(inputs.indexOf(input), 1);
-      }
-    }
-    starting = undefined;
-    if (!ctx.hasPendingMessages()) inputs = [];
     session.reset();
-    if (input?.source === "extension") return;
-    unattributed = !input;
-    if (input) requests.push(input.text);
+    requestContext.consume(text, ctx.hasPendingMessages());
   });
   pi.on("tool_call", async (event, ctx) => {
     context = ctx;
@@ -627,12 +540,15 @@ export default function (pi: ExtensionAPI): void {
       mode: "default",
       task: "",
     };
-    const request = JSON.stringify(requests);
+    const request = JSON.stringify(requestContext.requests);
     const version = contextVersion;
     const proposal = proposalContext();
-    const unknownInput = unattributed;
+    const unknownInput = requestContext.unattributed;
     const result = await check(call, actor, request);
-    if (version !== contextVersion || request !== JSON.stringify(requests))
+    if (
+      version !== contextVersion ||
+      request !== JSON.stringify(requestContext.requests)
+    )
       return { block: true, reason: "Permission context changed" };
     if (
       !result &&
@@ -664,7 +580,7 @@ export default function (pi: ExtensionAPI): void {
       !approval ||
       approval.background ||
       approval.version !== contextVersion ||
-      approval.request !== JSON.stringify(requests) ||
+      approval.request !== JSON.stringify(requestContext.requests) ||
       approval.call.input.background === false ||
       !(message.signal instanceof AbortSignal) ||
       message.signal.aborted ||
@@ -711,7 +627,7 @@ export default function (pi: ExtensionAPI): void {
           version !== contextVersion ||
           (approval.background
             ? !approval.background.active || approval.background.signal.aborted
-            : request !== JSON.stringify(requests))
+            : request !== JSON.stringify(requestContext.requests))
         )
           return Promise.resolve({
             block: true,

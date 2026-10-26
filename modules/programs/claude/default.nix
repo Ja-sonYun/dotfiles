@@ -8,7 +8,6 @@ let
   cfg = config.programs.claude-code;
   syncLib = import ../ai-agents/sync.nix { inherit lib; };
   jsonFormat = pkgs.formats.json { };
-
   sourceType =
     with lib.types;
     oneOf [
@@ -17,110 +16,10 @@ let
       str
     ];
 
-  selectSync =
-    instanceName: resource:
-    syncLib.select "programs.claude-code.instances.${instanceName}.sync.${resource}"
-      cfg.instances.${instanceName}.sync.${resource};
-
-  instanceResources = lib.mapAttrs (
-    name: _:
-    let
-      mcpServers = lib.filterAttrs (
-        serverName: _: !(builtins.elem serverName (cfg.settings.disabledMcpjsonServers or [ ]))
-      ) (selectSync name "mcpServers" cfg.mcpServers);
-    in
-    {
-      skills = selectSync name "skills" cfg.skills;
-      agents = selectSync name "agents" (
-        lib.genAttrs cfg.agentNames (agentName: "${cfg.agentsDir}/${agentName}.md")
-      );
-      inherit mcpServers;
-      mcpPlugin = pkgs.runCommand "claude-code-${name}-mcp" { } ''
-        install -Dm444 ${jsonFormat.generate "plugin.json" { name = cfg.mcpPluginName; }} \
-          "$out/.claude-plugin/plugin.json"
-        install -Dm444 ${jsonFormat.generate "mcp.json" { inherit mcpServers; }} \
-          "$out/.mcp.json"
-      '';
-    }
-  ) cfg.instances;
-
-  nodeOnly = pkgs.runCommand "nodejs-24-node-only" { } ''
-    mkdir -p $out/bin
-    ln -s ${pkgs.nodejs_24}/bin/node $out/bin/node
-  '';
-
-  wrappedPackage = pkgs.symlinkJoin (
-    {
-      inherit (cfg.package) name;
-      paths = [ cfg.package ];
-      nativeBuildInputs = [ pkgs.makeWrapper ];
-      postBuild = ''
-        rm "$out/bin/claude"
-        makeWrapper ${cfg.package}/bin/claude "$out/bin/claude" \
-          --prefix PATH : ${lib.makeBinPath ([ nodeOnly ] ++ cfg.extraPath)}
-      '';
-      meta = cfg.package.meta or { };
-    }
-    // lib.optionalAttrs (cfg.package ? version) { inherit (cfg.package) version; }
-  );
-
-  instancePackages = lib.mapAttrs (
-    name: instance:
-    pkgs.writeShellScriptBin name ''
-      set -euo pipefail
-      umask 077
-
-      export CLAUDE_CONFIG_DIR=${lib.escapeShellArg "${config.home.homeDirectory}/${instance.home}"}
-      ${pkgs.coreutils}/bin/mkdir -p "$CLAUDE_CONFIG_DIR"
-
-      exec ${pkgs.state-get}/bin/state-run ${lib.escapeShellArg name} \
-        ${wrappedPackage}/bin/claude ${
-          lib.optionalString (instanceResources.${name}.mcpServers != { }) (
-            lib.escapeShellArgs [
-              "--plugin-dir"
-              (toString instanceResources.${name}.mcpPlugin)
-            ]
-          )
-        } "$@"
-    ''
-  ) cfg.instances;
-
-  baseSettingsFile = jsonFormat.generate "claude-code-settings.json" (
-    cfg.settings
-    // lib.optionalAttrs (cfg.customInstructions != "") {
-      outputStyle = "Shared Instructions";
-    }
-    // {
-      "$schema" = "https://json.schemastore.org/claude-code-settings.json";
-    }
-  );
-  settingsFile =
-    if cfg.settingsTransform == null then
-      baseSettingsFile
-    else
-      pkgs.runCommandLocal "claude-code-settings.json" { } ''
-        ${cfg.settingsTransform} < ${baseSettingsFile} > "$out"
-      '';
-
-  sharedFiles =
-    home:
-    lib.optionalAttrs (cfg.context != null) {
-      "${home}/CLAUDE.md".text = cfg.context;
-    }
-    // lib.optionalAttrs (cfg.customInstructions != "") {
-      "${home}/output-styles/shared-instructions.md".text = ''
-        ---
-        name: Shared Instructions
-        description: Shared personal working and response preferences
-        keep-coding-instructions: true
-        ---
-
-        ${cfg.customInstructions}
-      '';
-    }
-    // lib.optionalAttrs (cfg.keybindings != null) {
-      "${home}/keybindings.json".text = builtins.toJSON cfg.keybindings;
-    };
+  settings = import ./settings.nix { inherit config lib pkgs; };
+  instances = import ./instances.nix { inherit config lib pkgs; };
+  inherit (settings) settingsFile sharedFiles;
+  inherit (instances) instanceResources wrappedPackage instancePackages;
 in
 {
   imports = [

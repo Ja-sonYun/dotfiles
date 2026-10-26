@@ -18,7 +18,7 @@ rustPlatform.buildRustPackage {
     cp pi/runner.mts pi/package.json typescript-src/
     cp ${../pi.ts} typescript-src/extension.ts
     ln -s ${pi-runtime}/lib/node_modules/dotfiles-pi/node_modules typescript-src/node_modules
-    tsc --strict --noEmitOnError --target ES2022 --module NodeNext \
+    tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmitOnError --target ES2022 --module NodeNext \
       --moduleResolution NodeNext --types node --typeRoots typescript-src/node_modules/@types --outDir compiled-pi \
       typescript-src/runner.mts typescript-src/extension.ts
   '';

@@ -249,9 +249,12 @@ export function assess(
         ? [{ server, tool: call.toolName.slice(prefix.length), rules }]
         : [];
   });
+  const singleMcp = mcp.length === 1 ? mcp[0] : undefined;
   const readonlyMcp =
-    mcp.length === 1 &&
-    (policy.mcp_readonly_tools[mcp[0].server] ?? []).includes(mcp[0].tool);
+    singleMcp !== undefined &&
+    (policy.mcp_readonly_tools[singleMcp.server] ?? []).includes(
+      singleMcp.tool,
+    );
   const readTools = ["read", "grep", "find", "ls"];
   if (
     actor.mode === "plan" &&
@@ -337,8 +340,8 @@ export function assess(
         `${file.access} ${file.path}`,
       );
     for (const reason of shell.uncertain) add("ask", reason);
-  } else if (mcp.length === 1) {
-    const { server, tool, rules } = mcp[0];
+  } else if (singleMcp !== undefined) {
+    const { server, tool, rules } = singleMcp;
     add(
       strongest(
         [rules.default, rules.tools[tool]].filter((x): x is Decision => !!x),

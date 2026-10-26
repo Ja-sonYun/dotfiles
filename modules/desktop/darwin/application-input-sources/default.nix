@@ -37,8 +37,12 @@ in
         Application names grouped by input source ID. Select the configured source
         when a different regular application becomes active. A Siri rule requests
         its source when com.apple.campo emits a focused-window change or window
-        creation event and reports a focused window. Other helper applications
-        and repeated activation of the same regular application are ignored.
+        creation event and reports a focused window. Restore the input source
+        saved before opening Siri when its window closes or Siri terminates.
+        When another regular application becomes active, its rule or defaultSource
+        takes precedence over the saved source. Repeated Siri events preserve the
+        original source. Other helper applications are ignored. Outside Siri
+        restoration, repeated activation of the same regular application is ignored.
       '';
     };
 

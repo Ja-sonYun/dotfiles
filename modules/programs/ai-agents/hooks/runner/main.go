@@ -51,6 +51,7 @@ func run() int {
 	if err != nil || input == nil {
 		input = make(map[string]json.RawMessage)
 	}
+	captureLifecycle(input)
 	if os.Args[1] == "antigravity" {
 		return runAntigravity(input, *event, options.Arg(0), *timeout)
 	}

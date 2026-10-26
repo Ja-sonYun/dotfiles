@@ -75,6 +75,8 @@ let
     "SessionEnd"
     "SessionStart"
     "Stop"
+    "SubagentStart"
+    "SubagentStop"
     "UserPromptSubmit"
   ];
   notificationHooks = lib.concatMap (

@@ -6,10 +6,10 @@ import signal
 import subprocess
 import sys
 import time
+import tomllib
 from pathlib import Path
 from types import FrameType
 
-import tomllib
 from ai_agent_hooks.edit_input import EditTarget, edit_targets
 from ai_agent_hooks.hook_input import emit_feedback, load_hook_input
 
@@ -307,6 +307,8 @@ def post_edit_checks(targets: list[EditTarget], deadline: float) -> list[str]:
 def main() -> int:
     hook_input = load_hook_input(sys.stdin.read())
     if hook_input.get("hook_event_name") != "PostToolUse":
+        return 0
+    if hook_input.get("tool_failed") is True or hook_input.get("is_error") is True:
         return 0
     notes = post_edit_checks(edit_targets(hook_input), time.monotonic() + 120)
     if notes:

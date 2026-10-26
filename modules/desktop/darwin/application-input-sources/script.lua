@@ -4,6 +4,8 @@ local configuration = hs.json.decode([==[@configurationJson@]==])
 local activeBundleID
 local gesture
 local siriPID
+local siriSession
+local siriWindow
 
 local function selectSource(application, sourceID, reason)
 	if not sourceID then
@@ -27,7 +29,37 @@ local function selectSource(application, sourceID, reason)
 	})
 end
 
+local function trackSiriWindow(window)
+	if siriWindow == window then
+		return
+	end
+	if siriWindow and siriWindow:isValid() then
+		module.siriObserver:removeWatcher(siriWindow, "AXUIElementDestroyed")
+	end
+	siriWindow = window
+	if window then
+		module.siriObserver:addWatcher(window, "AXUIElementDestroyed")
+	end
+end
+
+local function finishSiri(application)
+	local completed = siriSession
+	siriSession = nil
+	trackSiriWindow(nil)
+	if not completed then
+		return
+	end
+
+	application = application or hs.application.frontmostApplication()
+	local sourceID = completed.sourceID
+	if application and application:kind() == 1 and application:bundleID() ~= completed.bundleID then
+		sourceID = configuration.rules[application:name()] or configuration.defaultSource or sourceID
+	end
+	selectSource(application or completed.application, sourceID, "siri_close")
+end
+
 local watchSiri = logger:wrap("siri_watch_failed", function(application)
+	finishSiri()
 	if module.siriObserver then
 		module.siriObserver:stop()
 		module.siriObserver = nil
@@ -40,10 +72,32 @@ local watchSiri = logger:wrap("siri_watch_failed", function(application)
 	-- Siri's search panel emits AX events without regular application activation.
 	local element = hs.axuielement.applicationElement(application)
 	module.siriObserver = hs.axuielement.observer.new(application:pid())
-	module.siriObserver:callback(logger:wrap("siri_focus_failed", function()
-		if element:attributeValue("AXFocusedWindow") then
-			selectSource(application, configuration.rules.Siri, "siri_focus")
+	module.siriObserver:callback(logger:wrap("siri_focus_failed", function(observer, changedElement, notification)
+		if observer ~= module.siriObserver then
+			return
 		end
+		if notification == "AXUIElementDestroyed" and changedElement ~= siriWindow then
+			return
+		end
+
+		local window = element:attributeValue("AXFocusedWindow")
+		if notification == "AXUIElementDestroyed" and window == changedElement then
+			window = nil
+		end
+		if not window then
+			finishSiri()
+			return
+		end
+
+		if not siriSession then
+			siriSession = {
+				sourceID = hs.keycodes.currentSourceID(),
+				bundleID = activeBundleID,
+				application = application,
+			}
+		end
+		trackSiriWindow(window)
+		selectSource(application, configuration.rules.Siri, "siri_focus")
 	end))
 	module.siriObserver:addWatcher(element, "AXFocusedWindowChanged")
 	module.siriObserver:addWatcher(element, "AXWindowCreated")
@@ -72,7 +126,11 @@ module.watcher =
 		end
 
 		local bundleID = application:bundleID()
-		if not bundleID or bundleID == activeBundleID then
+		if not bundleID then
+			return
+		end
+		finishSiri(application)
+		if bundleID == activeBundleID then
 			return
 		end
 		activeBundleID = bundleID

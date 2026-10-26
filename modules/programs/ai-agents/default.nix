@@ -1,6 +1,7 @@
 {
   imports = [
     ./agents
+    ./clients
     ./enable.nix
     ./environment
     ./extensions

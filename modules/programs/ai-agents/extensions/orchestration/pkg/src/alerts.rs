@@ -55,7 +55,13 @@ pub fn excerpt(text: &str) -> String {
 
 fn progress(agent: &Agent) -> Value {
     let mut value = serde_json::to_value(agent).unwrap();
-    for field in ["last_seen", "last_hook", "last_report"] {
+    for field in [
+        "last_seen",
+        "last_hook",
+        "last_report",
+        "observed_at",
+        "reconcile",
+    ] {
         value.as_object_mut().unwrap().remove(field);
     }
     for field in ["tasks", "steps"] {

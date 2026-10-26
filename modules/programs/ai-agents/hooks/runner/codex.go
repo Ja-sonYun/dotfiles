@@ -8,7 +8,7 @@ import (
 var commonFields = []string{
 	"agent_id", "agent_type", "cwd", "effort", "hook_event_name",
 	"parent_agent_id", "parent_thread_id", "permission_mode", "prompt_id",
-	"session_id", "source", "transcript_path",
+	"session_id", "source", "transcript_path", "turn_id", "reported_at", "event_id",
 }
 
 var eventFields = map[string][]string{
@@ -21,6 +21,8 @@ var eventFields = map[string][]string{
 	"PostCompact":      {"compact_summary", "trigger"},
 	"Stop":             {"background_tasks", "last_assistant_message", "session_crons", "stop_hook_active"},
 	"SessionEnd":       {"reason"},
+	"SubagentStart":    {"model"},
+	"SubagentStop":     {"agent_transcript_path", "last_assistant_message", "stop_hook_active"},
 }
 
 func translateCodex(input map[string]json.RawMessage, event, notification string) map[string]json.RawMessage {

@@ -27,10 +27,12 @@ let
     instructions = "Observe registered agent panes across the user's projects. Never send input.";
   };
   adapterSource = pkgs.replaceVars ./orchestration.mts {
-    tmux = lib.getExe config.programs.tmux.package;
     tmuxMcp = lib.getExe pkgs.tmux-mcp;
     attach = lib.getExe attach;
     inherit tmuxConfig;
+  };
+  observationSource = pkgs.replaceVars ./orchestration-observe.mts {
+    tmux = lib.getExe config.programs.tmux.package;
   };
   adapterPackage =
     pkgs.runCommand "agent-hub-tmux-adapter"
@@ -39,8 +41,9 @@ let
       }
       ''
         cp ${adapterSource} orchestration.mts
+        cp ${observationSource} orchestration-observe.mts
         ln -s ${pkgs.pi-runtime}/lib/node_modules/dotfiles-pi/node_modules node_modules
-        tsc --strict --noEmitOnError --target ES2022 --module NodeNext \
+        tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmitOnError --target ES2022 --module NodeNext \
           --moduleResolution NodeNext --types node --outDir "$out" orchestration.mts
       '';
   adapter = "${adapterPackage}/orchestration.mjs";

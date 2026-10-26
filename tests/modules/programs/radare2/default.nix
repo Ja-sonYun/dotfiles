@@ -1,6 +1,11 @@
 { home-manager, pkgs }:
 let
   inherit (pkgs) lib;
+  fixtures = pkgs.runCommand "radare2-test-fixtures" { nativeBuildInputs = [ pkgs.typescript ]; } ''
+    cp ${./fixtures}/*.ts .
+    tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmitOnError \
+      --target ES2022 --module ESNext --outDir "$out" *.ts
+  '';
   baseModule = {
     home = {
       username = "test-user";
@@ -65,11 +70,11 @@ let
       name = "radare2 plugin";
       module.programs.radare2 = {
         enable = true;
-        plugins."test-plugin.r2.js" = ./fixtures/test-plugin.r2.js;
+        plugins."test-plugin.r2.js" = "${fixtures}/test-plugin.r2.js";
       };
       expected = {
         generatedFiles = [ "~/.local/share/radare2/plugins/test-plugin.r2.js" ];
-        files."~/.local/share/radare2/plugins/test-plugin.r2.js".sameAs = ./fixtures/test-plugin.r2.js;
+        files."~/.local/share/radare2/plugins/test-plugin.r2.js".sameAs = "${fixtures}/test-plugin.r2.js";
       };
     })
     (mkCase {
@@ -78,7 +83,7 @@ let
         enable = true;
         decai = {
           enable = true;
-          package = ./fixtures/decai.r2.js;
+          package = "${fixtures}/decai.r2.js";
           settings = {
             api = "openai";
             cmds = "pdd,pdg";
@@ -97,7 +102,7 @@ let
             cmds=pdd,pdg
             model=test-model
           '';
-          "~/.local/share/radare2/plugins/decai.r2.js".sameAs = ./fixtures/decai.r2.js;
+          "~/.local/share/radare2/plugins/decai.r2.js".sameAs = "${fixtures}/decai.r2.js";
         };
       };
     })

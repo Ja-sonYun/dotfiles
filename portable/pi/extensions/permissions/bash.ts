@@ -41,7 +41,8 @@ export function inspectAst(tree: Node): ShellAnalysis {
       }
       if (
         typeof args[0] === "string" &&
-        (opaque.test(args[0].split("/").at(-1)) || args[0].includes("/"))
+        (opaque.test(args[0].slice(args[0].lastIndexOf("/") + 1)) ||
+          args[0].includes("/"))
       ) {
         result.uncertain.push(
           `Indirect execution or changed shell context: ${args[0]}`,

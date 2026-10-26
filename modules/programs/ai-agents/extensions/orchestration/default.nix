@@ -161,7 +161,15 @@ in
           ];
         };
       hooksByAgent = {
-        claude.StopFailure = [ block ];
+        codex = {
+          SubagentStart = [ block ];
+          SubagentStop = [ block ];
+        };
+        claude = {
+          SubagentStart = [ block ];
+          SubagentStop = [ block ];
+          StopFailure = [ block ];
+        };
         antigravity.StopFailure = [ block ];
       };
     };

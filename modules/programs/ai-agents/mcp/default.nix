@@ -230,9 +230,29 @@ let
   );
 in
 {
-  options.programs.ai-agents.mcp.servers = lib.mkOption {
-    type = lib.types.attrsOf mcpServerType;
-    default = { };
+  options.programs.ai-agents.mcp = {
+    rendered = lib.mkOption {
+      type = lib.types.raw;
+      readOnly = true;
+      internal = true;
+      default = {
+        codex = codexMcpServers;
+        claude = claudeMcpServers;
+        claudeDesktop = claudeDesktopMcpServers;
+        antigravity = antigravityMcpServers;
+        inherit disabledMcpServers;
+      };
+    };
+    codexServers = lib.mkOption {
+      type = lib.types.attrsOf jsonFormat.type;
+      readOnly = true;
+      internal = true;
+      description = "Resolved Codex servers published by the client binding, including native overrides.";
+    };
+    servers = lib.mkOption {
+      type = lib.types.attrsOf mcpServerType;
+      default = { };
+    };
   };
 
   config = lib.mkIf cfg.enable (
@@ -264,25 +284,6 @@ in
           ]) cfg.mcp.servers
         );
       }
-
-      (lib.mkIf config.programs.antigravity-cli.enable {
-        programs.antigravity-cli.mcpServers = antigravityMcpServers;
-      })
-
-      (lib.mkIf config.programs.codex.enable {
-        programs.codex.settings.mcp_servers = codexMcpServers;
-      })
-
-      (lib.mkIf config.programs.claude-code.enable {
-        programs.claude-code = {
-          mcpServers = claudeMcpServers;
-          settings.disabledMcpjsonServers = disabledMcpServers;
-        };
-      })
-
-      (lib.mkIf config.programs.claude-desktop.enable {
-        programs.claude-desktop.settings.mcpServers = claudeDesktopMcpServers;
-      })
     ]
   );
 }

@@ -32,6 +32,10 @@ in
   config = lib.mkIf config.programs.ai-agents.enable (
     lib.mkMerge [
       (lib.mkIf cfg.enable {
+        programs.ai-agents.hooksByAgent = {
+          claude.StopFailure = [ block ];
+          antigravity.StopFailure = [ block ];
+        };
         programs.ai-agents.hooks = {
           Stop = [ block ];
           Notification = map (matcher: block // { inherit matcher; }) [

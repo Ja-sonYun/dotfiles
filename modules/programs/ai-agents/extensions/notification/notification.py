@@ -11,7 +11,21 @@ def notification_for_event(
     client: str,
 ) -> dict[str, str] | None:
     event_name = str(hook_input.get("hook_event_name") or "")
-    if event_name == "Stop":
+    if event_name in {"Stop", "StopFailure"}:
+        outcome = (
+            "error"
+            if event_name == "StopFailure"
+            else str(hook_input.get("outcome") or "")
+        )
+        if outcome in {"aborted", "error"}:
+            return {
+                "type": "desktop-notification",
+                "title": f"{client}: {'Cancelled' if outcome == 'aborted' else 'Error'}",
+                "message": "Work was cancelled"
+                if outcome == "aborted"
+                else "An error was reported",
+                "sound": "Funk",
+            }
         if is_proposed_plan(hook_input):
             return {
                 "type": "desktop-notification",

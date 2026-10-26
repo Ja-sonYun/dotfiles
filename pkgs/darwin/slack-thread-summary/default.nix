@@ -3,10 +3,15 @@
   runCommand,
   makeWrapper,
   nodejs,
+  typescript,
+  pi-runtime,
 }:
 runCommand "slack-thread-summary"
   {
-    nativeBuildInputs = [ makeWrapper ];
+    nativeBuildInputs = [
+      makeWrapper
+      typescript
+    ];
     meta = {
       platforms = lib.platforms.darwin;
       mainProgram = "slack-thread-summary";
@@ -14,12 +19,12 @@ runCommand "slack-thread-summary"
   }
   ''
     mkdir -p "$out/bin" "$out/lib/slack-thread-summary"
-    cp ${./start.mjs} "$out/lib/slack-thread-summary/start.mjs"
-    cp ${./summarize.mjs} "$out/lib/slack-thread-summary/summarize.mjs"
-    cp ${./process.mjs} "$out/lib/slack-thread-summary/process.mjs"
-    cp ${./hook.js} "$out/lib/slack-thread-summary/hook.js"
-    cp ${./timeline.js} "$out/lib/slack-thread-summary/timeline.js"
-    cp ${./store.mjs} "$out/lib/slack-thread-summary/store.mjs"
+    cp ${./.}/*.mts ${./.}/*.ts ${./.}/tsconfig.*.json .
+    ln -s ${pi-runtime}/lib/node_modules/dotfiles-pi/node_modules node_modules
+    tsc -p tsconfig.node.json
+    tsc -p tsconfig.browser.json
+    cp compiled/*.mjs "$out/lib/slack-thread-summary/"
+    cp browser/*.js "$out/lib/slack-thread-summary/"
     makeWrapper ${lib.getExe nodejs} "$out/bin/slack-thread-summary" \
       --add-flags "$out/lib/slack-thread-summary/start.mjs"
   ''

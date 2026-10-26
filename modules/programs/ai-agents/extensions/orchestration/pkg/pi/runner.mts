@@ -108,9 +108,21 @@ const emit = (message: RunnerEvent) =>
   process.stdout.write(
     `${JSON.stringify({ ...message, scope: activeScope })}\n`,
   );
-const tmux: TmuxAdapter | null = config.tmux_adapter
-  ? ((await import(pathToFileURL(config.tmux_adapter).href)) as TmuxAdapter)
+function isTmuxAdapter(value: unknown): value is TmuxAdapter {
+  if (typeof value !== "object" || value === null) return false;
+  return (
+    "capture" in value &&
+    typeof value.capture === "function" &&
+    "close" in value &&
+    typeof value.close === "function"
+  );
+}
+const adapter: unknown = config.tmux_adapter
+  ? await import(pathToFileURL(config.tmux_adapter).href)
   : null;
+if (adapter !== null && !isTmuxAdapter(adapter))
+  throw new Error("Invalid tmux adapter");
+const tmux = adapter;
 let session: AgentSession | undefined;
 let initialization: Promise<void> | undefined;
 let running = false;
