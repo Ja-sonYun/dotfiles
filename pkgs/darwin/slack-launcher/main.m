@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <CoreServices/CoreServices.h>
 
-static NSString *const vendorPath = @"/Applications/_Slack/Slack.app";
+static NSString *const vendorPath = @"/Applications/.Hidden/Slack.app";
 static NSString *const launcherID = @"com.user.slack-launcher";
 static NSString *const vendorID = @"com.tinyspeck.slackmacgap";
 
@@ -87,7 +87,7 @@ static NSString *const vendorID = @"com.tinyspeck.slackmacgap";
     self.busy = YES;
     NSBundle *vendor = [NSBundle bundleWithPath:vendorPath];
     if (![vendor.bundleIdentifier isEqualToString:vendorID] || !vendor.executableURL) {
-        [self fail:@"Slack is missing from /Applications/_Slack/Slack.app. Complete the Homebrew installation before opening this launcher."];
+        [self fail:@"Slack is missing from /Applications/.Hidden/Slack.app. Complete the Homebrew installation before opening this launcher."];
         return;
     }
 
@@ -114,7 +114,12 @@ static NSString *const vendorID = @"com.tinyspeck.slackmacgap";
         self.errorLogPath = logPath;
         self.slack = [[NSTask alloc] init];
         self.slack.executableURL = vendor.executableURL;
-        self.slack.arguments = @[@"--remote-debugging-address=127.0.0.1", @"--remote-debugging-port=9222"];
+        NSString *userDataDirectory = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/Slack-Debug"];
+        self.slack.arguments = @[
+            @"--remote-debugging-address=127.0.0.1",
+            @"--remote-debugging-port=9222",
+            [@"--user-data-dir=" stringByAppendingString:userDataDirectory]
+        ];
         self.slack.standardOutput = NSFileHandle.fileHandleWithNullDevice;
         self.slack.standardError = log;
         BOOL launched = [self.slack launchAndReturnError:&error];

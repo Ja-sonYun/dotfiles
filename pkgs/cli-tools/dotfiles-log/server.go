@@ -66,11 +66,27 @@ func serve(cfg settings) error {
 	if err = removeSocket(cfg.SocketPath); err != nil {
 		return err
 	}
-	output, err := openWriter(cfg)
-	if err != nil {
+	if err = os.MkdirAll(cfg.Directory, 0700); err != nil {
 		return err
 	}
-	defer func() { output.file.Close() }()
+	outputs := make(map[string]*writer)
+	defer func() {
+		for _, output := range outputs {
+			output.file.Close()
+		}
+	}()
+	write := func(entry record) error {
+		output := outputs[entry.Component]
+		if output == nil {
+			var err error
+			output, err = openWriter(cfg, entry.Component)
+			if err != nil {
+				return err
+			}
+			outputs[entry.Component] = output
+		}
+		return output.append(bounded(entry, cfg.MaxBytes))
+	}
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: cfg.SocketPath, Net: "unix"})
 	if err != nil {
 		return err
@@ -119,7 +135,7 @@ func serve(cfg settings) error {
 						return
 					}
 					var entry record
-					if json.Unmarshal(line, &entry) != nil || levels[entry.Level] == 0 {
+					if json.Unmarshal(line, &entry) != nil || levels[entry.Level] == 0 || !componentName.MatchString(entry.Component) {
 						dropped.Add(1)
 						continue
 					}
@@ -160,11 +176,11 @@ func serve(cfg settings) error {
 					PID:       os.Getpid(),
 					Fields:    map[string]string{"count": strconv.FormatUint(count, 10)},
 				}
-				if err := output.append(bounded(summary, cfg.MaxBytes)); err != nil {
+				if err := write(summary); err != nil {
 					return err
 				}
 			}
-			if err := output.append(bounded(entry, cfg.MaxBytes)); err != nil {
+			if err := write(entry); err != nil {
 				return err
 			}
 		}

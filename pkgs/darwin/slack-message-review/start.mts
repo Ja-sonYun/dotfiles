@@ -51,9 +51,8 @@ process.on("SIGINT", () => lifecycle.abort());
 process.on("SIGTERM", () => lifecycle.abort());
 
 for (const name of [
-  "SLACK_REVIEW_AGY",
+  "SLACK_REVIEW_CODEX",
   "SLACK_REVIEW_JEV",
-  "SLACK_REVIEW_MODEL",
   "SLACK_REVIEW_PROMPTS_FILE",
   "SLACK_REVIEW_STATE_DIRECTORY",
 ]) {

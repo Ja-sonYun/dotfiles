@@ -35,6 +35,7 @@
   ];
 
   home.packages = lib.optionals (hasTag "gui") [
+    pkgs.ghidra
     pkgs.macnotesapp
   ];
 

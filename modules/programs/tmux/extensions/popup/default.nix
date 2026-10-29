@@ -6,7 +6,6 @@
 }:
 let
   cfg = config.programs.tmux.extensions.popup;
-  menuCfg = config.programs.tmux-menu;
   tmuxRoot = config.programs.tmux.runtime;
   popupScript = pkgs.writeShellScript "tmux-popup" ''
     ${config.programs.tmux.loggingShell}
@@ -116,55 +115,5 @@ in
       "@popup_default_width" = lib.escapeShellArg cfg.defaultWidth;
       "@popup_default_height" = lib.escapeShellArg cfg.defaultHeight;
     };
-    programs.tmux-menu.showScript = lib.mkIf menuCfg.enable (
-      pkgs.writeShellScript "tmux-menu-show" ''
-        ${config.programs.tmux.loggingShell}
-        TMUX_LOG_COMPONENT=tmux.popup.menu
-        pane_id="$1"
-        window_id="$2"
-        client_name="$3"
-        pane_current_path="$4"
-        if [ -z "$pane_id" ] || [ -z "$window_id" ] || [ -z "$client_name" ]; then
-          exit 0
-        fi
-        if [ -z "$pane_current_path" ]; then
-          pane_current_path=$(tmux display-message -pt "$pane_id" '#{pane_current_path}' 2>/dev/null) || exit 0
-          [ -n "$pane_current_path" ] || exit 0
-        fi
-
-        if [ ! -d "$pane_current_path" ]; then
-          tmux_log warning directory_unavailable "pane_id=$pane_id"
-          tmux display-message -c "$client_name" "tmux-menu: working directory unavailable: $pane_current_path"
-          exit "$?"
-        fi
-
-        export TMUX_MENU_ORIGIN_PANE="$pane_id"
-        tmux_log info menu_opened "pane_id=$pane_id" "window_id=$window_id" "client=$client_name"
-        export TMUX_MENU_ORIGIN_WINDOW="$window_id"
-        export TMUX_MENU_CLIENT="$client_name"
-        export TMUX_MENU_PANE="$pane_id"
-        menu=$(tmux show-options -qv @menu)
-        menu=''${menu:-menu}
-        if [ -n "$(tmux display-message -pt "$pane_id" '#{E:DEFAULT}')" ]; then
-          exec ${menuCfg.package}/bin/tmux-menu show --menu ${menuCfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
-        fi
-
-        session=$(tmux display-message -pt "$pane_id" '#{session_name}' 2>/dev/null)
-        key="''${session//[^A-Za-z0-9]/_}"
-        outer=$(tmux show-options -gqv "@popup_client_$key" 2>/dev/null)
-        W="" H="" outer_pane=""
-        if [ -n "$outer" ] && [ "$outer" != "$client_name" ]; then
-          read -r W H outer_pane < <(tmux list-clients -F $'#{client_name}\t#{client_width} #{client_height} #{pane_id}' 2>/dev/null |
-            awk -F '\t' -v c="$outer" '$1 == c { print $2; exit }')
-        fi
-        if [ -n "$W" ] && [ -n "$H" ] && [ -n "$outer_pane" ]; then
-          tmux detach-client -t "$client_name" 2>/dev/null
-          export TMUX_MENU_CLIENT="$outer"
-          export TMUX_MENU_PANE="$outer_pane"
-          exec ${menuCfg.package}/bin/tmux-menu show --menu ${menuCfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
-        fi
-        exec ${menuCfg.package}/bin/tmux-menu show --menu ${menuCfg.configDir}/menu/"$menu".yaml --working_dir "$pane_current_path"
-      ''
-    );
   };
 }

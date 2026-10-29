@@ -3,10 +3,10 @@
     "sources": {
       "ast-serialize": {
         "is_direct": false,
-        "sha256": "8a32f184ce3e4b1d0b06d642a1243281cf55b99e0323680b1b8f904029fd7700",
+        "sha256": "1b158f1c9e3a0d386913924c57995d6df78224868a4d0f215bdd41587c97b34a",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/1b/d7/c56955934a431a0fa3e4e9aa7af4a53ceab2a61241005427545208945eb4/ast_serialize-0.12.1-cp39-abi3-macosx_11_0_arm64.whl",
-        "version": "0.12.1"
+        "url": "https://files.pythonhosted.org/packages/60/c2/98370845a7f35cb8a25782e78284b48e01bf3128339881d48d613f304f8f/ast_serialize-0.13.1-cp39-abi3-macosx_11_0_arm64.whl",
+        "version": "0.13.1"
       },
       "librt": {
         "is_direct": false,
@@ -17,10 +17,10 @@
       },
       "mypy": {
         "is_direct": false,
-        "sha256": "e05ff2925d8b37ad26c80c1b9dc43ae5d455da2df1e23c24c095a6425917c57e",
+        "sha256": "d63737426a048a27705a4eedb828669f4bc0873612a1b46b0b9fe892b2ebaaaf",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/68/ed/e5d7cf4017e74a1c1e1c4058ce8f614fc1e3e7606564f47166e22bfc9f95/mypy-2.4.0-cp312-cp312-macosx_11_0_arm64.whl",
-        "version": "2.4.0"
+        "url": "https://files.pythonhosted.org/packages/c0/1a/0be9dc6af5e0e04128f18a5e36b4ca44bfb0085857d37aa6a7de1ac2b0cb/mypy-2.4.1-cp312-cp312-macosx_11_0_arm64.whl",
+        "version": "2.4.1"
       },
       "mypy-extensions": {
         "is_direct": false,
@@ -61,5 +61,5 @@
       }
     }
   },
-  "invalidationHash": "6f467c205a9127af875ab8f77c4a52661e1d4cd47ee5023dffab023307b441b5"
+  "invalidationHash": "3bdf212e1722a9981efd2b6fbbe2cbe8699026881124b67f0cfc8382b8726320"
 }

@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-n8n-mcp",
-    "version": "2.99.1",
+    "version": "2.99.2",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-n8n-mcp",
-        "version": "2.99.1",
+        "version": "2.99.2",
         "dependencies": {
-          "n8n-mcp": "2.99.1"
+          "n8n-mcp": "2.99.2"
         }
       },
       "node_modules/@hono/node-server": {
@@ -160,9 +160,9 @@
         "license": "MIT"
       },
       "node_modules/axios": {
-        "version": "1.20.0",
-        "resolved": "https://registry.npmjs.org/axios/-/axios-1.20.0.tgz",
-        "integrity": "sha512-r8aOh8j9cGKpgQAqpzrUHnSIc6a59Y3Xf/cv8sy1DrHCkZHzQGEuoq1tARk6qSyDdtQGSDgpb9kFlruzPvrgwg==",
+        "version": "1.21.0",
+        "resolved": "https://registry.npmjs.org/axios/-/axios-1.21.0.tgz",
+        "integrity": "sha512-YCzXMB53Q9PZBsh7yN7wtapit4WepwcHS2fP8QhGsBxSz5YtgYobV7GGlWlAJi+RxfU77GQTQi2DSLUma42EYA==",
         "license": "MIT",
         "dependencies": {
           "follow-redirects": "^1.16.0",
@@ -751,9 +751,9 @@
         }
       },
       "node_modules/follow-redirects": {
-        "version": "1.16.1",
-        "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.1.tgz",
-        "integrity": "sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==",
+        "version": "1.16.2",
+        "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.2.tgz",
+        "integrity": "sha512-/kVP2U8z596Ia0gwFrwyIeo74ta5aVmSeU1FfAUMAmcEP5EP7zydmag3SLiN64NaRKef3lxsq7i/g7ltJQDGow==",
         "funding": [
           {
             "type": "individual",
@@ -1184,9 +1184,9 @@
         "license": "MIT"
       },
       "node_modules/n8n-mcp": {
-        "version": "2.99.1",
-        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.99.1.tgz",
-        "integrity": "sha512-YeI6VI26usXDiELCYWltd1NoRJxBCaYnpjiFqPmCy1jK6RrxppJNdRmjqjd8Xn1hT4T9o+PqyYExyJewo/kZSw==",
+        "version": "2.99.2",
+        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.99.2.tgz",
+        "integrity": "sha512-Ee+OcH/NeIf33vgRBw/+HORP3TKeuRBpe4NQCS4Oa835ynLchhmhGSj4dzB7T7soJDLaTFvRmK3GYLYdS1tWYw==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/sdk": "1.30.0",
@@ -1411,9 +1411,9 @@
         }
       },
       "node_modules/qs": {
-        "version": "6.16.1",
-        "resolved": "https://registry.npmjs.org/qs/-/qs-6.16.1.tgz",
-        "integrity": "sha512-5Px6J7rfHBAGUhNQ3es4YzcOdBBw0SDcVtThJml4RdnKw4tKs2epA0kPZ+K8X+WiHktT93RHVcQ/3ym5aTCgtg==",
+        "version": "6.17.0",
+        "resolved": "https://registry.npmjs.org/qs/-/qs-6.17.0.tgz",
+        "integrity": "sha512-5LK5BZ2XDHMvcUJaf0CQ5HL3aVgKbpklvByC7qLSxYkfE8COEEbJg5xCHWCTqzqi0Gs4Jn5Mv5v3R38W6edscA==",
         "license": "BSD-3-Clause",
         "dependencies": {
           "es-define-property": "^1.0.1",
@@ -1742,9 +1742,9 @@
         }
       },
       "node_modules/sql.js": {
-        "version": "1.15.1",
-        "resolved": "https://registry.npmjs.org/sql.js/-/sql.js-1.15.1.tgz",
-        "integrity": "sha512-i0M/6s+lcl67Flm/1m8/AeVU5caDramlILXU/udUwpTQym2qKMSe2sJiXB5d5WXFB272aj4B2v1JbtQ93ID3Pg==",
+        "version": "1.15.2",
+        "resolved": "https://registry.npmjs.org/sql.js/-/sql.js-1.15.2.tgz",
+        "integrity": "sha512-ZmMYFsZPZWDKIJUh3A5rdnpRV3hB/r7AijwAzSzLnfv/9CSx4obUmDtA8brAjWJWjGtUVh43nIEJ+6nl6HuOUg==",
         "license": "MIT"
       },
       "node_modules/statuses": {
@@ -1953,5 +1953,5 @@
       }
     }
   },
-  "invalidationHash": "259ce128073cf3ecb4b4553cc8fe598230bcfbe66897400a86216ad0ae020730"
+  "invalidationHash": "04fd3a8d67c29ec09ca55cae88820f36bafe76ed8327b66ad2fbbbcbef4fcf3e"
 }

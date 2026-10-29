@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+set -u
+
+socket=$1 pane=$2 generation=$3 phase=$4
+[[ $pane =~ ^%[0-9]+$ && $generation =~ ^[0-9]+$ ]] || exit 0
+tmux_cmd=("$TMUX_KEYMAP_BIN" -S "$socket")
+
+snapshot() {
+	local value
+	value=$("${tmux_cmd[@]}" display-message -p -t "$pane" \
+		'#{@process-keymap-generation} #{@process-keymap-status} #{pane_dead} #{pane_tty} #{alternate_on}' 2>/dev/null) || return 1
+	read -r current_generation current_status dead tty alternate_on <<<"$value"
+	[[ $current_generation == "$generation" && $dead == 0 ]]
+}
+
+condition="#{&&:#{==:#{@process-keymap-generation},$generation},#{==:#{pane_dead},0}}"
+
+commands='|'
+found_target=0
+found_foreground=0
+found_non_shell=0
+
+add_command() {
+	local name=$1
+	[[ $name =~ ^[A-Za-z0-9_.+-]+$ ]] || return 0
+	[[ $commands == *"|$name|"* ]] || commands+="$name|"
+	[[ $TMUX_KEYMAP_TARGETS != *"|$name|"* ]] || found_target=1
+}
+
+observe() {
+	local rows pid ppid pgid tpgid state executable argv name script
+	commands='|'
+	found_target=0
+	found_foreground=0
+	found_non_shell=0
+	rows=$("$TMUX_KEYMAP_PS" -ww -t "${tty#/dev/}" \
+		-o pid=,ppid=,pgid=,tpgid=,stat=,ucomm=,args= 2>/dev/null) || return 1
+	while read -r pid ppid pgid tpgid state executable argv; do
+		[[ $pid =~ ^[0-9]+$ && $ppid =~ ^[0-9]+$ && $pgid =~ ^[0-9]+$ ]] || continue
+		[[ $pgid == "$tpgid" && $pgid != 0 && $state != *T* && $state != *Z* ]] || continue
+		found_foreground=1
+		name=${executable##*/}
+		name=${name#-}
+		name=${name#.}
+		name=${name%-wrapped}
+		name=${name%.exe}
+		add_command "$name"
+		case $name in
+		zsh | bash | sh | fish | dash | env | direnv) ;;
+		*) found_non_shell=1 ;;
+		esac
+		# Only the launcher's script argument identifies Node applications, never prompt text.
+		if [[ $name == node || $name == nodejs ]]; then
+			read -r executable script _ <<<"$argv"
+			case $script in
+			*/@openai/codex/bin/codex.js) add_command codex ;;
+			*/claude-code/cli.js | */claude-code/cli-wrapper.cjs) add_command claude ;;
+			*/pi-coding-agent/dist/cli.js) add_command pi ;;
+			esac
+		fi
+	done <<<"$rows"
+	((found_foreground))
+}
+
+commit() {
+	local status=$1 replay=''
+	if [[ $status == ready ]]; then
+		# hooks_run rebases queued commands to this pane without asynchronous file reads.
+		# https://github.com/tmux/tmux/blob/3.8/hooks.c#L108-L154
+		replay="set-hook -R -t $pane @process-keymap-queue ; "
+	fi
+	"${tmux_cmd[@]}" if-shell -F -t "$pane" \
+		"#{&&:$condition,#{==:#{@process-keymap-status},pending}}" \
+		"set-option -p -t $pane @process-keymap-commands '$commands' ; set-option -p -t $pane @process-keymap-status $status ; ${replay}if-shell -F -t $pane '$condition' { set-option -p -t $pane @process-keymap-queue '' }" \
+		>/dev/null 2>&1
+}
+
+# OSC 133 C can arrive before the child joins the terminal's foreground group.
+for delay in 0 0.05 0.10 0.20 0.40 0.75 1.50; do
+	[[ $delay == 0 ]] || "$TMUX_KEYMAP_SLEEP" "$delay"
+	snapshot || exit 0
+	[[ $current_status == pending ]] || exit 0
+	if observe; then
+		if [[ $found_target == 1 && $alternate_on == 1 ]] || [[ $found_target == 0 && ($phase == prompt || $phase == refresh) ]]; then
+			commit ready
+			exit 0
+		fi
+	fi
+done
+
+if ((found_foreground && found_non_shell)) || [[ $phase == refresh && $found_foreground == 1 ]]; then
+	commit ready
+else
+	commands='|'
+	commit unknown
+fi

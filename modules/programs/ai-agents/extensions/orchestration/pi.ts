@@ -64,6 +64,52 @@ export default function (pi: ExtensionAPI) {
   pi.on("before_agent_start", (event, ctx) => ({
     systemPrompt: `${event.systemPrompt}\n\nReport task start, step changes, delegation, blockers and completion through orchestration MCP. Your client is pi and your session_id is ${ctx.sessionManager.getSessionId()}. Report only your own session; approval remains in the original CLI.`,
   }));
+  pi.on("context", async (event, ctx) => {
+    await queue;
+    if (!runId) return;
+    const last = event.messages.at(-1);
+    if (
+      last?.role === "toolResult" &&
+      /(?:read_messages|ack_messages|report_status|report_subagent_completion)$/.test(
+        last.toolName,
+      )
+    ) {
+      return;
+    }
+    try {
+      const response = await pi.exec(
+        "@command@",
+        ["inbox", ctx.sessionManager.getSessionId(), runId],
+        { timeout: 1500 },
+      );
+      if (response.code !== 0) {
+        console.error("AgentHub inbox:", response.stderr);
+        return;
+      }
+      if (!response.stdout.trim()) return;
+      const value: unknown = JSON.parse(response.stdout);
+      if (
+        typeof value !== "object" ||
+        value === null ||
+        !("context" in value) ||
+        typeof value.context !== "string"
+      ) {
+        throw new Error("Invalid AgentHub inbox response");
+      }
+      return {
+        messages: [
+          ...event.messages,
+          {
+            role: "user" as const,
+            content: value.context,
+            timestamp: Date.now(),
+          },
+        ],
+      };
+    } catch (error) {
+      console.error("AgentHub inbox:", error);
+    }
+  });
   pi.on("session_start", (event, ctx) => {
     process.env.AGENT_HUB_CURRENT_ID = `pi:${ctx.sessionManager.getSessionId()}`;
     running = false;
@@ -79,23 +125,31 @@ export default function (pi: ExtensionAPI) {
     return publish(ctx, "UserPromptSubmit");
   });
   pi.on("tool_execution_start", (event, ctx) =>
-    publish(ctx, "PreToolUse", { tool_name: event.toolName }),
+    publish(ctx, "PreToolUse", {
+      tool_name: event.toolName,
+      tool_use_id: event.toolCallId,
+    }),
   );
   pi.on("tool_execution_end", (event, ctx) =>
     publish(ctx, "PostToolUse", {
       tool_name: event.toolName,
+      tool_use_id: event.toolCallId,
       is_error: event.isError,
     }),
   );
   pi.on("ui_prompt_start", (_event, ctx) => {
     prompts += 1;
-    return publish(ctx, "Notification", { phase: "start" });
+    return publish(ctx, "Notification", {
+      notification_type: "elicitation_dialog",
+      phase: "start",
+    });
   });
   pi.on("ui_prompt_end", (_event, ctx) => {
     prompts = Math.max(0, prompts - 1);
     if (prompts === 0) {
       return publish(ctx, "Notification", {
         phase: "end",
+        notification_type: "elicitation_dialog",
         resume_state: running ? "running" : "idle",
       });
     }

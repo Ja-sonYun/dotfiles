@@ -93,6 +93,19 @@ in
       description = "Codex instances.";
     };
 
+    commands = lib.mkOption {
+      type = lib.types.attrsOf lib.types.nonEmptyStr;
+      readOnly = true;
+      default =
+        if !cfg.enable then
+          { }
+        else if cfg.instances == { } then
+          { codex = "${wrappedPackage}/bin/codex"; }
+        else
+          lib.mapAttrs (name: package: "${package}/bin/${name}") instancePackages;
+      description = "Executable paths of the configured Codex instance wrappers.";
+    };
+
     settings = lib.mkOption {
       inherit (tomlFormat) type;
       default = { };

@@ -2,7 +2,6 @@ function createDraftTools(): DraftTools {
   type TextChange = ["equal" | "insert" | "delete", string];
   interface ListEntry {
     newline: DeltaUnit;
-    lineIndex: number;
     removed: DeltaUnit[];
     depth: number;
     number: number | undefined;
@@ -62,7 +61,37 @@ function createDraftTools(): DraftTools {
     if (source.at(-1)?.insert !== "\n" || !text.endsWith("\n")) {
       throw new Error("Slack draft has no editable final newline.");
     }
-    return { source, elements, text: text.slice(0, -1) };
+    return {
+      source,
+      elements,
+      text: text.slice(0, -1),
+      lines: source
+        .filter((unit) => unit.insert === "\n")
+        .map((unit) => unit.attributes),
+    };
+  }
+
+  function serialize(text: string, lines: DeltaAttributes[]): string {
+    const numbers: number[] = [];
+    let previousDepth = -1;
+    return text
+      .split("\n")
+      .map((line, index) => {
+        const attributes = lines[index];
+        if (attributes?.blockquote || !attributes?.list) {
+          numbers.length = 0;
+          previousDepth = -1;
+          return attributes?.blockquote ? `> ${line}` : line;
+        }
+        const depth = attributes.indent ?? 0;
+        if (attributes.list === "ordered" && depth > previousDepth)
+          numbers[depth] = 0;
+        const number = (numbers[depth] ?? 0) + 1;
+        if (attributes.list === "ordered") numbers[depth] = number;
+        previousDepth = depth;
+        return `${"  ".repeat(depth)}${attributes.list === "ordered" ? `${number}.` : "-"} ${line}`;
+      })
+      .join("\n");
   }
 
   function diff(before: string[], after: string[]): TextChange[] {
@@ -147,15 +176,15 @@ function createDraftTools(): DraftTools {
     return result;
   }
 
-  function listFormatting(
+  function blockFormatting(
     expected: DeltaUnit[],
     convert: ConvertList,
   ): { removed: Set<DeltaUnit>; attributes: Map<DeltaUnit, DeltaAttributes> } {
-    const newlines = expected.filter((unit) => unit.insert === "\n");
     const blocks: ListEntry[][] = [];
+    const removed = new Set<DeltaUnit>();
+    const attributes = new Map<DeltaUnit, DeltaAttributes>();
     let block: ListEntry[] = [];
     let line: DeltaUnit[] = [];
-    let lineIndex = 0;
     let fence: string | undefined;
     for (const unit of expected) {
       if (unit.insert !== "\n") {
@@ -167,10 +196,9 @@ function createDraftTools(): DraftTools {
           typeof item.insert === "string" ? item.insert : "\ufffc",
         )
         .join("");
-      let delimiter =
-        unit.attributes.blockquote || unit.attributes["code-block"]
-          ? null
-          : text.match(/^\s*(`{3,}|~{3,})/);
+      let delimiter = unit.attributes["code-block"]
+        ? null
+        : text.match(/^\s*(`{3,}|~{3,})/);
       if (delimiter) {
         const end = [...delimiter[0]].length;
         const start = end - at(delimiter, 1).length;
@@ -186,16 +214,35 @@ function createDraftTools(): DraftTools {
         )
           fence = undefined;
       }
+      const quote = text.match(/^[ \t]*>(?:[ \t]|$)/);
+      if (quote && !fenced && !unit.attributes["code-block"]) {
+        const prefix = line.slice(0, [...quote[0]].length);
+        if (
+          !prefix.some(
+            (item) =>
+              item.attributes.code ||
+              item.attributes.link ||
+              item.attributes.slackmention,
+          )
+        ) {
+          if (block.length) blocks.push(block);
+          block = [];
+          const formatted: DeltaAttributes = {
+            ...unit.attributes,
+            blockquote: true,
+          };
+          delete formatted.list;
+          delete formatted.indent;
+          attributes.set(unit, formatted);
+          for (const item of prefix) removed.add(item);
+          line = [];
+          continue;
+        }
+      }
       const match = text.match(
         /^([ \t]*)(?:([・•])[ \t]*|([-*])[ \t]+|(\d+)[.)][ \t]+)(\S.*)$/u,
       );
-      if (
-        match &&
-        !fenced &&
-        !unit.attributes.list &&
-        !unit.attributes.blockquote &&
-        !unit.attributes["code-block"]
-      ) {
+      if (match && !fenced && !unit.attributes["code-block"]) {
         const prefix = [...text.slice(0, text.length - at(match, 5).length)];
         const removed = line.slice(0, prefix.length);
         if (
@@ -215,7 +262,6 @@ function createDraftTools(): DraftTools {
           );
           block.push({
             newline: unit,
-            lineIndex,
             removed,
             depth: width / 2,
             number: match[4] === undefined ? undefined : Number(match[4]),
@@ -226,25 +272,13 @@ function createDraftTools(): DraftTools {
         block = [];
       }
       line = [];
-      lineIndex++;
     }
     if (block.length) blocks.push(block);
     const items = blocks.flatMap((entries) => {
-      // Keep text between native lists from merging their numbering during conversion.
-      if (
-        newlines[at(entries, 0).lineIndex - 1]?.attributes.list ||
-        newlines[at(entries, entries.length - 1).lineIndex + 1]?.attributes.list
-      )
-        return [];
       const numbers: number[] = [];
       let previousDepth = -1;
       for (const entry of entries) {
-        if (
-          !Number.isInteger(entry.depth) ||
-          entry.depth > 4 ||
-          entry.depth > previousDepth + 1
-        )
-          return [];
+        if (!Number.isInteger(entry.depth) || entry.depth > 4) return [];
         if (entry.number !== undefined) {
           // Slack resets a depth's counter only when descending directly into an ordered item.
           if (entry.depth > previousDepth) numbers[entry.depth] = 0;
@@ -255,8 +289,6 @@ function createDraftTools(): DraftTools {
       }
       return entries;
     });
-    const removed = new Set<DeltaUnit>();
-    const attributes = new Map<DeltaUnit, DeltaAttributes>();
     if (!items.length) return { removed, attributes };
     const id = crypto.randomUUID();
     let html = "";
@@ -295,6 +327,7 @@ function createDraftTools(): DraftTools {
         ...item.newline.attributes,
         list: unit.attributes.list,
       };
+      delete formatted.blockquote;
       delete formatted.indent;
       if (unit.attributes.indent) formatted.indent = unit.attributes.indent;
       attributes.set(item.newline, formatted);
@@ -311,20 +344,30 @@ function createDraftTools(): DraftTools {
     draft: DraftProjection,
     text: string,
     convert: ConvertList,
-  ): { contents: DeltaChange[]; expected: DeltaUnit[] } {
+    lines?: DeltaAttributes[],
+  ): DraftPatch {
     if (!valid(draft.elements, text))
       throw new Error("Keep protected elements in their original order.");
     const before = draft.text.split(tokenPattern);
     const after = text.split(tokenPattern);
-    const operations: ["equal" | "insert" | "delete", DeltaInsert][] = [];
+    const operations: ["equal" | "insert" | "delete", DeltaInsert, string?][] =
+      [];
     for (let i = 0; i < before.length; i++) {
       operations.push(...textDiff(at(before, i), at(after, i)));
-      for (const unit of draft.elements[i]?.units ?? [])
-        operations.push(["equal", unit.insert]);
+      const element = draft.elements[i];
+      if (element) {
+        for (const [index, unit] of element.units.entries())
+          operations.push([
+            "equal",
+            unit.insert,
+            index === 0 ? element.token : "",
+          ]);
+      }
     }
     operations.push(["equal", "\n"]);
     const contents: DeltaChange[] = [];
     const expected: DeltaUnit[] = [];
+    const projected = new Map<DeltaUnit, string>();
     let cursor = 0;
     let replacement:
       | { inline: DeltaAttributes | undefined; block: DeltaAttributes }
@@ -353,13 +396,14 @@ function createDraftTools(): DraftTools {
       else if (op.delete && last?.delete) last.delete += op.delete;
       else contents.push(op);
     }
-    for (const [kind, insert] of operations) {
+    for (const [kind, insert, token] of operations) {
       if (kind === "equal") {
         const unit = at(draft.source, cursor++);
         append({
           retain: typeof unit.insert === "string" ? unit.insert.length : 1,
         });
         expected.push(unit);
+        if (token !== undefined) projected.set(unit, token);
         replacement = undefined;
       } else if (kind === "delete") {
         replacement ??= { inline: inlineAt(cursor), block: lineAt(cursor) };
@@ -379,13 +423,36 @@ function createDraftTools(): DraftTools {
         expected.push({ insert, attributes });
       }
     }
-    const formatting = listFormatting(expected, convert);
-    if (!formatting.removed.size) return { contents, expected };
-    // Use source positions to retain existing elements while deleting list markers.
+    const formatting = lines
+      ? {
+          removed: new Set<DeltaUnit>(),
+          attributes: new Map<DeltaUnit, DeltaAttributes>(),
+        }
+      : blockFormatting(expected, convert);
+    let lineIndex = 0;
+    for (const unit of expected) {
+      if (unit.insert !== "\n") continue;
+      const attributes = { ...unit.attributes };
+      if (attributes.list) delete attributes.indent;
+      delete attributes.list;
+      delete attributes.blockquote;
+      if (lines) {
+        const line = at(lines, lineIndex);
+        if (line.list) attributes.list = line.list;
+        if (line.indent) attributes.indent = line.indent;
+        if (line.blockquote) attributes.blockquote = true;
+        formatting.attributes.set(unit, attributes);
+      } else if (!formatting.attributes.has(unit)) {
+        formatting.attributes.set(unit, attributes);
+      }
+      lineIndex++;
+    }
+    // Use source positions to retain existing elements while removing block markers.
     const origins = new Map(draft.source.map((unit, index) => [unit, index]));
     contents.length = 0;
     cursor = 0;
     const formatted: DeltaUnit[] = [];
+    let formattedText = "";
     function removeUntil(end: number): void {
       while (cursor < end) {
         const unit = at(draft.source, cursor++);
@@ -418,9 +485,60 @@ function createDraftTools(): DraftTools {
         cursor++;
       }
       formatted.push({ insert: unit.insert, attributes });
+      formattedText +=
+        projected.get(unit) ??
+        (typeof unit.insert === "string" ? unit.insert : "");
     }
     removeUntil(draft.source.length);
-    return { contents, expected: formatted };
+    return {
+      contents,
+      expected: formatted,
+      text: formattedText.slice(0, -1),
+      lines: formatted
+        .filter((unit) => unit.insert === "\n")
+        .map((unit) => unit.attributes),
+    };
+  }
+
+  function editLines(
+    before: string,
+    after: string,
+    lines: DeltaAttributes[],
+    selection?: { start: number; end: number },
+  ): DeltaAttributes[] {
+    if (before === after) return lines;
+    let start = 0;
+    while (
+      start < (selection?.start ?? before.length) &&
+      start < after.length &&
+      before[start] === after[start]
+    )
+      start++;
+    let suffix = 0;
+    while (
+      before.length - suffix > (selection?.end ?? start) &&
+      after.length - suffix > start &&
+      before[before.length - suffix - 1] === after[after.length - suffix - 1]
+    )
+      suffix++;
+    const firstLine = before.slice(0, start).split("\n").length - 1;
+    const lastLine =
+      before.slice(0, before.length - suffix).split("\n").length - 1;
+    // Preserve the untouched next line when complete preceding lines are removed.
+    if (
+      (start === 0 || before[start - 1] === "\n") &&
+      before[before.length - suffix - 1] === "\n" &&
+      after.length - suffix === start
+    ) {
+      return [...lines.slice(0, firstLine), ...lines.slice(lastLine)];
+    }
+    // Anchor splits and joins to the edited line, not a matching adjacent newline.
+    const inserted = after.slice(start, after.length - suffix).split("\n");
+    return [
+      ...lines.slice(0, firstLine),
+      ...inserted.map(() => ({ ...at(lines, firstLine) })),
+      ...lines.slice(lastLine + 1),
+    ];
   }
 
   function matches(ops: InsertOp[], expected: DeltaUnit[]): boolean {
@@ -441,5 +559,5 @@ function createDraftTools(): DraftTools {
     );
   }
 
-  return { capture, parts, valid, patch, matches };
+  return { capture, parts, valid, serialize, editLines, patch, matches };
 }

@@ -5,7 +5,7 @@ mode=$1
 source_app=$2
 target_user=$3
 target=/Applications/Slack.app
-vendor=/Applications/_Slack/Slack.app
+vendor=/Applications/.Hidden/Slack.app
 bundle_id=com.user.slack-launcher
 
 if [[ -n "${DRY_RUN:-}" ]]; then
@@ -24,7 +24,7 @@ if [[ "$mode" == disable ]]; then
 fi
 
 if [[ ! -x "$vendor/Contents/MacOS/Slack" ]]; then
-	echo 'Slack is not installed at /Applications/_Slack/Slack.app. Quit Slack and reinstall its Homebrew cask with --appdir=/Applications/_Slack before activating.' >&2
+	echo 'Slack is not installed at /Applications/.Hidden/Slack.app. Quit Slack and reinstall its Homebrew cask with --appdir=/Applications/.Hidden before activating.' >&2
 	exit 1
 fi
 if [[ -e "$target" || -L "$target" ]] && [[ "$current_id" != "$bundle_id" ]]; then

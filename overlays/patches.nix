@@ -7,6 +7,22 @@
       swift-format = prev.runCommand "swift-format-dummy" { } "mkdir -p $out/bin";
     };
 
+  ghidra-darwin-launcher =
+    _final: prev:
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+      ghidra = prev.symlinkJoin {
+        name = "ghidra-desktop";
+        inherit (prev.ghidra) version meta passthru;
+        paths = [ prev.ghidra ];
+        nativeBuildInputs = [ prev.makeWrapper ];
+        postBuild = ''
+          rm "$out/Applications/Ghidra.app/Contents/MacOS/Ghidra"
+          makeWrapper "${prev.ghidra}/bin/ghidra" \
+            "$out/Applications/Ghidra.app/Contents/MacOS/Ghidra"
+        '';
+      };
+    };
+
   uv-as-package = final: prev: {
     uv = prev.uv.overrideAttrs (oldAttrs: {
       passthru = (oldAttrs.passthru or { }) // {

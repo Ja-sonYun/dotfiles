@@ -12,7 +12,7 @@ var commonFields = []string{
 }
 
 var eventFields = map[string][]string{
-	"Notification":     {"message", "notification_type", "title"},
+	"Notification":     {"message", "notification_type", "title", "tool_name", "tool_use_id"},
 	"SessionStart":     {"model", "session_title"},
 	"UserPromptSubmit": {"prompt", "session_title"},
 	"PreToolUse":       {"tool_input", "tool_name", "tool_use_id"},

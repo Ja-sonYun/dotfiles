@@ -32,17 +32,32 @@ interface DraftProjection {
   source: DeltaUnit[];
   elements: DraftElement[];
   text: string;
+  lines: DeltaAttributes[];
+}
+interface DraftPatch {
+  contents: DeltaChange[];
+  expected: DeltaUnit[];
+  text: string;
+  lines: DeltaAttributes[];
 }
 type ConvertList = (html: string) => { ops: InsertOp[] };
 interface DraftTools {
   capture(ops: InsertOp[]): DraftProjection;
   parts(text: string): string[];
   valid(elements: ProtectedElement[], text: unknown): text is string;
+  serialize(text: string, lines: DeltaAttributes[]): string;
+  editLines(
+    before: string,
+    after: string,
+    lines: DeltaAttributes[],
+    selection?: { start: number; end: number },
+  ): DeltaAttributes[];
   patch(
     draft: DraftProjection,
     text: string,
     convert: ConvertList,
-  ): { contents: DeltaChange[]; expected: DeltaUnit[] };
+    lines?: DeltaAttributes[],
+  ): DraftPatch;
   matches(ops: InsertOp[], expected: DeltaUnit[]): boolean;
 }
 interface EditorInput {

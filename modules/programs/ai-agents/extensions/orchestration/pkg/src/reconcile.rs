@@ -1,5 +1,4 @@
 use crate::ingest::codex_session_meta;
-use crate::state::Agent;
 use anyhow::{Context, Result};
 use serde_json::Value;
 use std::io::SeekFrom;
@@ -45,18 +44,4 @@ pub async fn codex_run(path: &str, session: &str) -> Result<Evidence> {
         });
     }
     evidence.context("No identified Codex turn in the transcript tail")
-}
-
-pub async fn inspect(agent: &Agent) -> Option<Evidence> {
-    if agent.client != "codex" || agent.transcript_path.is_empty() || agent.run_id.is_empty() {
-        return None;
-    }
-    let evidence = tokio::time::timeout(
-        std::time::Duration::from_secs(1),
-        codex_run(&agent.transcript_path, &agent.session_id),
-    )
-    .await
-    .ok()?
-    .ok()?;
-    (evidence.run_id == agent.run_id).then_some(evidence)
 }

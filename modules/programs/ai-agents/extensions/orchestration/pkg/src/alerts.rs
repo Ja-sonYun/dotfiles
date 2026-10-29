@@ -21,6 +21,7 @@ struct Pending {
     kind: String,
     details: BTreeSet<String>,
     chat_detail: String,
+    turn_completion: Option<(String, String)>,
 }
 
 pub struct Notice {
@@ -33,7 +34,7 @@ pub struct Alerts {
     fresh_since: u64,
     pub version: u64,
     pending: BTreeMap<String, Pending>,
-    completed_at: BTreeMap<String, u64>,
+    completed_turns: BTreeMap<String, String>,
     deferred: BTreeMap<String, (Report, Option<Agent>, Agent)>,
     turns: BTreeMap<String, (Location, u64)>,
 }
@@ -59,8 +60,9 @@ fn progress(agent: &Agent) -> Value {
         "last_seen",
         "last_hook",
         "last_report",
-        "observed_at",
-        "reconcile",
+        "state_at",
+        "observation_pending",
+        "observation_revision",
     ] {
         value.as_object_mut().unwrap().remove(field);
     }
@@ -81,7 +83,7 @@ impl Alerts {
             fresh_since,
             version: 0,
             pending: BTreeMap::new(),
-            completed_at: BTreeMap::new(),
+            completed_turns: BTreeMap::new(),
             deferred: BTreeMap::new(),
             turns: BTreeMap::new(),
         }
@@ -167,16 +169,12 @@ impl Alerts {
             return;
         }
         self.version += 1;
-        if report.kind == "hook" && report.data["event"] == "UserPromptSubmit" {
-            self.completed_at.remove(&after.id);
+        if before.is_some_and(|agent| agent.turn_id != after.turn_id) {
+            self.pending.remove(&format!("{}:completion", after.id));
         }
         let previous = before.map(|agent| agent.status.as_str()).unwrap_or("");
         let status = if previous != after.status {
             after.status.as_str()
-        } else if before.and_then(|agent| agent.task_status.as_ref()) != after.task_status.as_ref()
-            && after.task_status.as_deref() != Some(after.status.as_str())
-        {
-            after.task_status.as_deref().unwrap_or("")
         } else {
             ""
         };
@@ -216,14 +214,13 @@ impl Alerts {
                 }
             }
         }
-        if report.kind == "hook"
-            && report.data["event"] == "Stop"
-            && after.status == "idle"
+        if matches!(
+            report.kind.as_str(),
+            "checked_status" | "report_status" | "report_subagent_completion"
+        ) && after.status == "idle"
             && previous != "idle"
-            && self
-                .completed_at
-                .get(&after.id)
-                .is_none_or(|at| now().saturating_sub(*at) >= 5000)
+            && !after.turn_id.is_empty()
+            && self.completed_turns.get(&after.id) != Some(&after.turn_id)
         {
             self.queue(report, after, "turn_complete", "", true);
         }
@@ -313,7 +310,11 @@ impl Alerts {
             kind: kind.into(),
             details: BTreeSet::new(),
             chat_detail: String::new(),
+            turn_completion: None,
         });
+        if kind == "turn_complete" {
+            entry.turn_completion = Some((agent.id.clone(), agent.turn_id.clone()));
+        }
         if entry.kind != "task_completed" || kind == "task_completed" {
             entry.chat_detail = chat_detail;
         }
@@ -338,8 +339,8 @@ impl Alerts {
         keys.into_iter()
             .map(|key| {
                 let item = self.pending.remove(&key).unwrap();
-                if let Some(agent) = key.strip_suffix(":completion") {
-                    self.completed_at.insert(agent.to_string(), now());
+                if let Some((agent, turn)) = item.turn_completion {
+                    self.completed_turns.insert(agent, turn);
                 }
                 let label = settings
                     .messages

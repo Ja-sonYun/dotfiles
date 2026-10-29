@@ -34,6 +34,11 @@ let
 
   caseType = lib.types.submodule {
     options = {
+      whenCommand = lib.mkOption {
+        type = lib.types.listOf (lib.types.strMatching "[A-Za-z0-9_.+-]+");
+        default = [ ];
+        description = "Match an observed foreground executable or recognized launcher name; requires processKeymaps.enable.";
+      };
       whenEnv = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
@@ -258,6 +263,13 @@ let
     lib.foldl' (acc: value: if acc == "" then value else "#{&&:${acc},${value}}") "" (
       (map (e: "#{!=:#{E:${e}},}") c.whenEnv)
       ++ (map (e: "#{==:#{E:${e}},}") c.unlessEnv)
+      ++ lib.optional (c.whenCommand != [ ]) (
+        lib.foldl' (acc: value: if acc == "" then value else "#{||:${acc},${value}}") "" (
+          map (
+            name: "#{&&:#{==:#{@process-keymap-status},ready},#{m:*|${name}|*,#{@process-keymap-commands}}}"
+          ) c.whenCommand
+        )
+      )
       ++ lib.optional (c.whenFormat != null) c.whenFormat
     );
 
@@ -303,6 +315,17 @@ let
             b.command
         else
           chain;
+      processAction =
+        let
+          # Capture the generation now, but expand action formats only during replay.
+          replay = "if-shell -F '##{&&:##{==:##{@process-keymap-generation},#{@process-keymap-generation}},##{==:##{@process-keymap-status},ready}}' { ${
+            lib.replaceStrings [ "#" ] [ "##" ] action
+          } } ; ";
+        in
+        if lib.any (c: c.whenCommand != [ ]) b.cases then
+          "if-shell -F '#{==:#{@process-keymap-status},pending}' { set-option -paF @process-keymap-queue ${lib.escapeShellArg replay} } { if-shell -F '#{==:#{@process-keymap-status},ready}' { ${action} } }"
+        else
+          action;
     in
     assert lib.assertMsg
       (
@@ -320,7 +343,7 @@ let
       ++ lib.optional b.repeat "-r"
       ++ [
         b.key
-        action
+        processAction
       ]
     );
 
@@ -336,9 +359,9 @@ let
     hooks:
     let
       entries = lib.attrValues hooks;
-      events = lib.unique (map (h: h.event) entries);
+      events = lib.unique (map (h: h.event) entries ++ cfg.processKeymaps.hookEvents);
       unsets = map (e: "set-hook -gu ${e}") events;
-      appends = map (h: "set-hook -ga ${h.event} '${h.command}'") entries;
+      appends = map (h: "set-hook -ga ${h.event} ${lib.escapeShellArg h.command}") entries;
     in
     unsets ++ appends;
 
@@ -375,7 +398,10 @@ let
   );
 in
 {
-  imports = [ ./extensions ];
+  imports = [
+    ./extensions
+    ./process-keymaps.nix
+  ];
 
   disabledModules = [ "programs/tmux.nix" ];
 
@@ -453,7 +479,19 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ cfg.package ];
-    home.file.".tmux.conf".text = configText + "\n";
+    home = {
+      packages = [ cfg.package ];
+      file.".tmux.conf".text = configText + "\n";
+    };
+    assertions = [
+      {
+        assertion =
+          cfg.processKeymaps.enable
+          || lib.all (b: lib.all (c: c.whenCommand == [ ]) b.cases) (
+            lib.attrValues cfg.bindings ++ lib.concatMap lib.attrValues (lib.attrValues cfg.keyTables)
+          );
+        message = "programs.tmux whenCommand bindings require programs.tmux.processKeymaps.enable.";
+      }
+    ];
   };
 }

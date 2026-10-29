@@ -523,6 +523,11 @@
     const host = document.createElement("div");
     host.style.cssText = "position:fixed;z-index:2147483647;display:block";
     const root = host.attachShadow({ mode: "open" });
+    const editorStyle = getComputedStyle(editor);
+    host.style.colorScheme = editorStyle.colorScheme;
+    host.style.setProperty("--message-font", editorStyle.fontFamily);
+    host.style.setProperty("--message-size", editorStyle.fontSize);
+    host.style.setProperty("--message-line-height", editorStyle.lineHeight);
     const style = document.createElement("style");
     style.textContent = `
       :host { color-scheme: light dark; font: 13px/1.45 system-ui, sans-serif; }
@@ -559,8 +564,32 @@
       button:disabled { opacity:.45; cursor:default; }
       footer { justify-content:flex-end; flex-wrap:wrap; }
       .note { font-size:11px; opacity:.65; margin-top:6px; }
-      .assessment { margin-bottom:12px; }
-      .assessment p { margin:4px 0 10px; white-space:pre-wrap; overflow-wrap:anywhere; }
+      .assessment { margin-bottom:16px; overflow-wrap:anywhere; }
+      .assessment > label { margin-top:14px; }
+      .assessment > label:first-child { margin-top:0; }
+      .assessment-text { margin-top:6px; line-height:1.55; }
+      .assessment-text p { margin:0 0 8px; white-space:pre-wrap; }
+      .assessment-text ul, .assessment-text ol { margin:6px 0 10px; padding-inline-start:22px; }
+      .assessment-text li { margin:4px 0; white-space:pre-wrap; }
+      .assessment-text li > ul, .assessment-text li > ol { margin:4px 0; }
+      .assessment-text code { font-family:monospace; background:light-dark(#f3f3f3,#34363b); }
+      .formatting { display:flex; flex-wrap:wrap; gap:4px; margin:0 0 6px; }
+      button:focus-visible, textarea:focus-visible, .mention-editor:focus-visible {
+        outline:2px solid light-dark(#1264a3,#8ac5f2); outline-offset:2px; }
+      button:not(:disabled):hover { background:light-dark(#e8edf2,#41454d); }
+      button[aria-pressed="true"] { background:light-dark(#e4f1fa,#274556);
+        border-color:light-dark(#1264a3,#8ac5f2); }
+      button.primary:not(:disabled):hover { background:#00674c; }
+      .preview-heading { margin:14px 0 6px; }
+      .preview { font-family:var(--message-font); font-size:var(--message-size);
+        line-height:var(--message-line-height); padding:8px; min-width:0;
+        white-space:pre-wrap; overflow-wrap:anywhere; }
+      .preview-line { display:flex; min-width:0; }
+      .preview-marker { flex:none; min-width:1.5em; padding-right:.5em; text-align:right; }
+      .preview-content { min-width:0; flex:1; }
+      .preview a { color:light-dark(#1264a3,#8ac5f2); }
+      .preview code { font-family:monospace; background:light-dark(#f3f3f3,#34363b); }
+      .preview blockquote { margin:0; border-left:2px solid light-dark(#aaa,#777); padding-left:10px; }
     `;
     root.append(style);
     function node<K extends keyof HTMLElementTagNameMap>(
@@ -575,6 +604,82 @@
       parent.append(element);
       return element;
     }
+    function renderAssessment(target: HTMLElement, text: string): void {
+      target.replaceChildren();
+      const lists: {
+        indent: number;
+        list: HTMLUListElement | HTMLOListElement;
+        item: HTMLLIElement;
+      }[] = [];
+      let paragraph: HTMLParagraphElement | undefined;
+      function inline(parent: HTMLElement, value: string): void {
+        let position = 0;
+        for (const match of value.matchAll(/(\*\*|__)(.+?)\1|`([^`]+)`/g)) {
+          parent.append(
+            document.createTextNode(value.slice(position, match.index)),
+          );
+          node(
+            match[3] === undefined ? "strong" : "code",
+            match[3] ?? match[2] ?? "",
+            parent,
+          );
+          position = match.index + match[0].length;
+        }
+        parent.append(document.createTextNode(value.slice(position)));
+      }
+      for (const line of text.split(/\r?\n/)) {
+        if (!line.trim()) {
+          paragraph = undefined;
+          continue;
+        }
+        const match = line.match(
+          /^([ \t]*)(?:[-*+][ \t]+|[•・][ \t]*|(\d+)[.)][ \t]+)(.*)$/,
+        );
+        if (match) {
+          paragraph = undefined;
+          const indent = (match[1] ?? "").replace(/\t/g, "  ").length;
+          const ordered = match[2] !== undefined;
+          while (lists.length && (lists.at(-1)?.indent ?? 0) > indent)
+            lists.pop();
+          let current = lists.at(-1);
+          if (
+            current?.indent === indent &&
+            current.list instanceof HTMLOListElement !== ordered
+          ) {
+            lists.pop();
+            current = lists.at(-1);
+          }
+          if (!current || current.indent !== indent) {
+            const list = node(
+              ordered ? "ol" : "ul",
+              "",
+              current?.item ?? target,
+            );
+            if (list instanceof HTMLOListElement) list.start = Number(match[2]);
+            current = { indent, list, item: node("li", "", list) };
+            lists.push(current);
+          } else {
+            current.item = node("li", "", current.list);
+          }
+          inline(current.item, match[3] ?? "");
+        } else {
+          const current = lists.at(-1);
+          const indent = (line.match(/^[ \t]*/)?.[0] ?? "").replace(
+            /\t/g,
+            "  ",
+          ).length;
+          if (current && indent > current.indent) {
+            current.item.append(document.createElement("br"));
+            inline(current.item, line.trimStart());
+          } else {
+            lists.length = 0;
+            if (paragraph) paragraph.append(document.createElement("br"));
+            else paragraph = node("p", "", target);
+            inline(paragraph, line);
+          }
+        }
+      }
+    }
     const panel = node("section", "", root, "busy");
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-label", "Review message");
@@ -585,9 +690,9 @@
     const assessmentPanel = node("div", "", body, "assessment");
     assessmentPanel.hidden = true;
     node("label", "Question", assessmentPanel);
-    const coreQuestion = node("p", "", assessmentPanel);
+    const coreQuestion = node("div", "", assessmentPanel, "assessment-text");
     node("label", "Draft assessment", assessmentPanel);
-    const assessment = node("p", "", assessmentPanel);
+    const assessment = node("div", "", assessmentPanel, "assessment-text");
     const staleAssessment = node(
       "div",
       "Edited since review. Ask AI to reassess your changes.",
@@ -600,6 +705,14 @@
     label.htmlFor = "suggestion";
     const status = node("span", "Reviewing…", heading, "status");
     status.setAttribute("role", "status");
+    const formatting = node("div", "", body, "formatting");
+    formatting.setAttribute("role", "group");
+    formatting.setAttribute("aria-label", "Message formatting");
+    const bullets = node("button", "Bullets", formatting);
+    const numbers = node("button", "Numbered list", formatting);
+    const quote = node("button", "Quote", formatting);
+    const indent = node("button", "Indent", formatting);
+    const outdent = node("button", "Outdent", formatting);
     const suggestion = node(
       current.elements.length ? "div" : "textarea",
       "",
@@ -610,11 +723,24 @@
     suggestion.setAttribute("role", "textbox");
     suggestion.setAttribute("aria-label", "Message");
     suggestion.setAttribute("aria-multiline", "true");
+    const previewHeading = node(
+      "label",
+      "Message preview",
+      body,
+      "preview-heading",
+    );
+    const preview = node("div", "", body, "preview");
+    preview.setAttribute("role", "region");
+    preview.setAttribute("aria-label", "Message preview");
     let suggestionError: string | undefined;
     let hasSuggestion = false;
     let reviewedSuggestion: string | undefined;
     let suggestionWidth = 0;
     let lastValidText = current.previewOriginal;
+    let lineFormats = current.projection.lines.map((line) => ({ ...line }));
+    let prepared: DraftPatch | undefined;
+    let selectedLines = { start: 0, end: 0 };
+    let inputSelection: { start: number; end: number } | undefined;
     const bottom = node("div", "", panel, "bottom");
     const askRow = node("div", "", bottom, "ask");
     const question = node("input", "", askRow);
@@ -630,20 +756,104 @@
     const note = node("div", "", bottom, "note");
 
     const chips = new WeakMap<Node, string>();
+    function readSuggestionNode(element: Node): string {
+      if (element.nodeType === Node.TEXT_NODE) return element.textContent ?? "";
+      const token = chips.get(element);
+      if (token !== undefined) return token;
+      if (element.nodeName === "BR") return "\n";
+      const text = [...element.childNodes].map(readSuggestionNode).join("");
+      return ["DIV", "P"].includes(element.nodeName) && element !== suggestion
+        ? `${text}\n`
+        : text;
+    }
     function suggestionText(): string {
       if (suggestion instanceof HTMLTextAreaElement) return suggestion.value;
-      function read(element: Node): string {
-        if (element.nodeType === Node.TEXT_NODE)
-          return element.textContent ?? "";
-        const token = chips.get(element);
-        if (token !== undefined) return token;
-        if (element.nodeName === "BR") return "\n";
-        const text = [...element.childNodes].map(read).join("");
-        return ["DIV", "P"].includes(element.nodeName) && element !== suggestion
-          ? `${text}\n`
-          : text;
+      return readSuggestionNode(suggestion);
+    }
+
+    function renderPreview(patch: DraftPatch): void {
+      preview.replaceChildren();
+      let line: DeltaUnit[] = [];
+      const counters: number[] = [];
+      let previousDepth = -1;
+      for (const unit of patch.expected) {
+        if (unit.insert !== "\n") {
+          line.push(unit);
+          continue;
+        }
+        const row = node("div", "", preview, "preview-line");
+        const depth = unit.attributes.indent ?? 0;
+        if (unit.attributes.list) {
+          row.style.paddingInlineStart = `${depth * 24}px`;
+          const ordered = unit.attributes.list === "ordered";
+          if (ordered && depth > previousDepth) counters[depth] = 0;
+          const number = (counters[depth] ?? 0) + 1;
+          if (ordered) counters[depth] = number;
+          previousDepth = depth;
+          node("span", ordered ? `${number}.` : "•", row, "preview-marker");
+        } else {
+          counters.length = 0;
+          previousDepth = -1;
+        }
+        const content = node("div", "", row, "preview-content");
+        const target = unit.attributes["code-block"]
+          ? node("code", "", content)
+          : unit.attributes.blockquote
+            ? node("blockquote", "", content)
+            : content;
+        let run: HTMLElement | undefined;
+        let previousAttributes = "";
+        for (const item of line) {
+          const key = JSON.stringify(item.attributes);
+          if (
+            !run ||
+            key !== previousAttributes ||
+            typeof item.insert !== "string"
+          ) {
+            run = node(
+              item.attributes.link
+                ? "a"
+                : item.attributes.code
+                  ? "code"
+                  : "span",
+              "",
+              target,
+            );
+            if (
+              run instanceof HTMLAnchorElement &&
+              typeof item.attributes.link === "string"
+            ) {
+              run.title = item.attributes.link;
+              if (/^https?:\/\//i.test(item.attributes.link)) {
+                run.href = item.attributes.link;
+                run.target = "_blank";
+                run.rel = "noopener noreferrer";
+              }
+            }
+            if (item.attributes.bold) run.style.fontWeight = "700";
+            if (item.attributes.italic) run.style.fontStyle = "italic";
+            if (item.attributes.strike)
+              run.style.textDecoration = "line-through";
+            if (item.attributes.slackmention) run.className = "mention";
+            previousAttributes = key;
+          }
+          if (typeof item.insert === "string")
+            run.append(document.createTextNode(item.insert));
+          else {
+            const element = current.elements.find((entry) =>
+              entry.units.some(
+                (part) =>
+                  typeof part.insert !== "string" &&
+                  JSON.stringify(part.insert) === JSON.stringify(item.insert),
+              ),
+            );
+            run.textContent = element?.label ?? "[Embedded element]";
+            run = undefined;
+          }
+        }
+        if (!line.length) target.append(document.createElement("br"));
+        line = [];
       }
-      return read(suggestion);
     }
     function resizeSuggestion() {
       if (!suggestion.isConnected) return;
@@ -654,22 +864,82 @@
       suggestionWidth = suggestion.clientWidth;
     }
     function updateSuggestionState() {
-      const valid =
-        !suggestionError && validSuggestion(current, suggestionText());
+      prepared = undefined;
+      let previewError: string | undefined;
+      if (!suggestionError && validSuggestion(current, suggestionText())) {
+        try {
+          prepared = preparePatch(current, suggestionText(), lineFormats);
+          renderPreview(prepared);
+        } catch (error) {
+          prepared = undefined;
+          previewError = error instanceof Error ? error.message : String(error);
+        }
+      }
+      if (!prepared) preview.replaceChildren();
+      const valid = !suggestionError && Boolean(prepared);
       revised.disabled =
         current.busy || current.applyFailed || !hasSuggestion || !valid;
       staleAssessment.hidden =
-        assessmentPanel.hidden || suggestionText() === reviewedSuggestion;
+        assessmentPanel.hidden ||
+        draftTools.serialize(suggestionText(), lineFormats) ===
+          reviewedSuggestion;
       note.textContent =
         suggestionError ||
-        (!valid ? "Keep protected elements in their original order." : "");
+        previewError ||
+        (!valid
+          ? "Keep protected elements in their original order."
+          : /\\(?:r\\n|n)/.test(suggestionText())
+            ? "Literal escape sequences were kept. Replace them with line breaks here if needed."
+            : "");
       note.hidden = !note.textContent;
+      for (const button of [bullets, numbers, quote, indent, outdent])
+        button.disabled =
+          current.busy || current.applyFailed || !hasSuggestion || !valid;
+      const selected = lineFormats.slice(
+        selectedLines.start,
+        selectedLines.end + 1,
+      );
+      bullets.setAttribute(
+        "aria-pressed",
+        String(
+          selected.length > 0 &&
+            selected.every((line) => line.list === "bullet"),
+        ),
+      );
+      numbers.setAttribute(
+        "aria-pressed",
+        String(
+          selected.length > 0 &&
+            selected.every((line) => line.list === "ordered"),
+        ),
+      );
+      quote.setAttribute(
+        "aria-pressed",
+        String(
+          selected.length > 0 &&
+            selected.every((line) => Boolean(line.blockquote)),
+        ),
+      );
       resizeSuggestion();
     }
-    function setSuggestion(text: string): void {
+    function setSuggestion(text: string, normalize = false): void {
+      inputSelection = undefined;
       suggestionError = validSuggestion(current, text)
         ? undefined
         : "The suggestion changed protected elements or is empty. Retry the review.";
+      if (normalize && !suggestionError) {
+        try {
+          const patch = preparePatch(current, text);
+          text = patch.text;
+          lineFormats = patch.lines;
+          selectedLines = { start: 0, end: 0 };
+        } catch (error) {
+          suggestionError =
+            error instanceof Error ? error.message : String(error);
+          updateSuggestionState();
+          return;
+        }
+      }
       if (suggestion instanceof HTMLTextAreaElement) {
         suggestion.value = readableSuggestion(current, text);
       } else {
@@ -688,6 +958,137 @@
           }
         }
       }
+      lastValidText = text;
+      updateSuggestionState();
+    }
+    function rememberSelection(): { start: number; end: number } | undefined {
+      let start: number;
+      let end: number;
+      if (suggestion instanceof HTMLTextAreaElement) {
+        start = suggestion.selectionStart;
+        end = suggestion.selectionEnd;
+      } else {
+        const selection = root.getSelection?.() ?? window.getSelection();
+        if (!selection?.rangeCount) return;
+        const range = selection.getRangeAt(0);
+        if (!suggestion.contains(range.commonAncestorContainer)) return;
+        function offset(container: Node, position: number): number {
+          let total = 0;
+          function visit(element: Node): boolean {
+            if (element === container) {
+              total +=
+                element.nodeType === Node.TEXT_NODE
+                  ? (element.textContent ?? "").slice(0, position).length
+                  : [...element.childNodes]
+                      .slice(0, position)
+                      .map(readSuggestionNode)
+                      .join("").length;
+              return true;
+            }
+            if (!element.contains(container)) {
+              total += readSuggestionNode(element).length;
+              return false;
+            }
+            return [...element.childNodes].some(visit);
+          }
+          visit(suggestion);
+          return total;
+        }
+        start = offset(range.startContainer, range.startOffset);
+        end = offset(range.endContainer, range.endOffset);
+      }
+      const text = suggestionText();
+      selectedLines = {
+        start: text.slice(0, start).split("\n").length - 1,
+        end:
+          text
+            .slice(0, end > start && text[end - 1] === "\n" ? end - 1 : end)
+            .split("\n").length - 1,
+      };
+      return { start, end };
+    }
+    for (const event of ["select", "keyup", "mouseup", "focusout"])
+      suggestion.addEventListener(event, rememberSelection);
+    suggestion.addEventListener("beforeinput", (event) => {
+      inputSelection =
+        event instanceof InputEvent && event.inputType.startsWith("history")
+          ? undefined
+          : rememberSelection();
+    });
+    formatting.onmousedown = (event) => {
+      rememberSelection();
+      event.preventDefault();
+    };
+    function formatLines(
+      action: "bullet" | "ordered" | "quote" | "indent" | "outdent",
+    ): void {
+      if (current.busy || current.applyFailed || !hasSuggestion || !prepared)
+        return;
+      const selected = lineFormats.slice(
+        selectedLines.start,
+        selectedLines.end + 1,
+      );
+      const remove =
+        selected.length > 0 &&
+        selected.every((line) =>
+          action === "quote" ? Boolean(line.blockquote) : line.list === action,
+        );
+      if (selected.some((line) => line["code-block"])) {
+        note.textContent =
+          "List and quote formatting is unavailable inside code blocks.";
+        note.hidden = false;
+        return;
+      }
+      lineFormats = lineFormats.map((line, index) => {
+        if (index < selectedLines.start || index > selectedLines.end)
+          return line;
+        const next = { ...line };
+        if (action === "quote") {
+          delete next.list;
+          delete next.indent;
+          if (remove) delete next.blockquote;
+          else next.blockquote = true;
+        } else if (action === "bullet" || action === "ordered") {
+          delete next.blockquote;
+          if (remove) {
+            delete next.list;
+            delete next.indent;
+          } else {
+            next.list = action;
+          }
+        } else if (next.list) {
+          const depth = Math.max(
+            0,
+            Math.min(4, (next.indent ?? 0) + (action === "indent" ? 1 : -1)),
+          );
+          if (depth) next.indent = depth;
+          else delete next.indent;
+        }
+        return next;
+      });
+      updateSuggestionState();
+    }
+    bullets.onclick = () => formatLines("bullet");
+    numbers.onclick = () => formatLines("ordered");
+    quote.onclick = () => formatLines("quote");
+    indent.onclick = () => formatLines("indent");
+    outdent.onclick = () => formatLines("outdent");
+    function acceptEdit(): void {
+      try {
+        lineFormats = draftTools.editLines(
+          lastValidText,
+          suggestionText(),
+          lineFormats,
+          inputSelection,
+        );
+        lastValidText = suggestionText();
+        suggestionError = undefined;
+      } catch (error) {
+        suggestionError =
+          error instanceof Error ? error.message : String(error);
+      } finally {
+        inputSelection = undefined;
+      }
       updateSuggestionState();
     }
     function insertText(text: string): void {
@@ -701,6 +1102,7 @@
         )
       )
         return;
+      inputSelection = rememberSelection();
       range.deleteContents();
       const inserted = document.createTextNode(text);
       range.insertNode(inserted);
@@ -712,9 +1114,7 @@
         setSuggestion(lastValidText);
         return;
       }
-      lastValidText = suggestionText();
-      suggestionError = undefined;
-      updateSuggestionState();
+      acceptEdit();
     }
     if (current.elements.length) {
       suggestion.addEventListener("beforeinput", (event) => {
@@ -775,6 +1175,10 @@
         suggestion.readOnly = busy || !hasSuggestion;
       if (current.elements.length)
         suggestion.contentEditable = busy || !hasSuggestion ? "false" : "true";
+      formatting.hidden = confirming;
+      preview.hidden = confirming;
+      previewHeading.hidden = confirming;
+      updateSuggestionState();
     }
     function setStage(stage: "loading" | "checking" | "review"): void {
       current.phase = stage;
@@ -807,6 +1211,7 @@
         current.applyFailed ||
         current.phase !== "review" ||
         !instruction ||
+        !validSuggestion(current, suggestionText()) ||
         pending !== current
       )
         return;
@@ -821,7 +1226,7 @@
           id: current.id,
           turn: current.turn,
           instruction,
-          suggestion: suggestionText(),
+          suggestion: draftTools.serialize(suggestionText(), lineFormats),
         });
       } catch {
         current.ui?.receive({
@@ -851,9 +1256,7 @@
         setSuggestion(lastValidText);
         return;
       }
-      lastValidText = suggestionText();
-      suggestionError = undefined;
-      updateSuggestionState();
+      acceptEdit();
     };
     cancel.onclick = () => cancelPending();
     check.onclick = () => {
@@ -869,8 +1272,14 @@
     };
     original.onclick = () =>
       resolve(current.id, { action: "original", text: current.original });
-    revised.onclick = () =>
-      resolve(current.id, { action: "revised", text: suggestionText() });
+    revised.onclick = () => {
+      if (prepared)
+        resolve(current.id, {
+          action: "revised",
+          text: suggestionText(),
+          patch: prepared,
+        });
+    };
 
     // Keep the review outside React's tree while anchoring it to the active composer.
     const saved = new Map<Element, Map<string, string | null>>();
@@ -883,6 +1292,23 @@
         element.setAttribute(attribute, value);
     }
     function refresh() {
+      for (
+        let surface: HTMLElement | null = editor;
+        surface;
+        surface = surface.parentElement
+      ) {
+        const color = getComputedStyle(surface)
+          .backgroundColor.match(/[\d.]+/g)
+          ?.map(Number);
+        if (color && color.length >= 3 && (color[3] ?? 1) === 1) {
+          const [red = 0, green = 0, blue = 0] = color;
+          host.style.colorScheme =
+            red * 0.2126 + green * 0.7152 + blue * 0.0722 < 128
+              ? "dark"
+              : "light";
+          break;
+        }
+      }
       lock(editor, "contenteditable", "false");
       for (const button of composer.querySelectorAll("button")) {
         lock(button, "disabled", "");
@@ -919,6 +1345,8 @@
         errorMessage.hidden = false;
         status.hidden = true;
         if (current.applyFailed) {
+          for (const button of [bullets, numbers, quote, indent, outdent])
+            button.disabled = true;
           original.disabled = true;
           revised.disabled = true;
           ask.disabled = true;
@@ -955,17 +1383,19 @@
           label.textContent = "Suggested message";
           suggestion.setAttribute("aria-label", "Suggested message");
           assessmentPanel.hidden = current.context?.position !== "Thread";
-          coreQuestion.textContent = readableSuggestion(
-            current,
-            result.coreQuestion ?? "",
+          renderAssessment(
+            coreQuestion,
+            readableSuggestion(current, result.coreQuestion ?? ""),
           );
-          assessment.textContent = readableSuggestion(
-            current,
-            result.assessment ?? "",
+          renderAssessment(
+            assessment,
+            readableSuggestion(current, result.assessment ?? ""),
           );
-          setSuggestion(result.suggestion);
-          lastValidText = result.suggestion;
-          reviewedSuggestion = suggestionText();
+          setSuggestion(result.suggestion, true);
+          reviewedSuggestion = draftTools.serialize(
+            suggestionText(),
+            lineFormats,
+          );
           updateSuggestionState();
         }
         setBusy(false);
@@ -1110,7 +1540,7 @@
         args,
         fingerprint,
         original,
-        reviewOriginal: projection.text,
+        reviewOriginal: draftTools.serialize(projection.text, projection.lines),
         previewOriginal: projection.text,
         elements: projection.elements,
         projection,
@@ -1233,10 +1663,51 @@
     }
   }
 
+  function preparePatch(
+    current: PendingReview,
+    text: string,
+    lines?: DeltaAttributes[],
+  ): DraftPatch {
+    const input = inputFor(current.record);
+    return draftTools.patch(
+      current.projection,
+      text,
+      (html) => {
+        const quill = input?.instance?.quill ?? input?.quill;
+        if (
+          typeof input?.convertSlackHTMLToDelta !== "function" ||
+          typeof quill?.getFormat !== "function"
+        ) {
+          throw new Error(
+            "This Slack editor does not support list conversion.",
+          );
+        }
+        const descriptor = Object.getOwnPropertyDescriptor(quill, "getFormat");
+        // Neutralize cursor formatting only during the synchronous clipboard conversion.
+        Object.defineProperty(quill, "getFormat", {
+          configurable: true,
+          value: () => ({}),
+        });
+        try {
+          const converted = input.convertSlackHTMLToDelta(html);
+          if (!isRecord(converted))
+            throw new Error("Unsupported Slack list contents.");
+          return { ops: readOps(converted.ops) };
+        } finally {
+          if (descriptor) Object.defineProperty(quill, "getFormat", descriptor);
+          else delete quill.getFormat;
+        }
+      },
+      lines,
+    );
+  }
+
   function resolve(
     id: string,
     decision:
-      { action: "cancel" } | { action: "original" | "revised"; text: string },
+      | { action: "cancel" }
+      | { action: "original"; text: string }
+      | { action: "revised"; text: string; patch: DraftPatch },
   ): string {
     if (!pending || pending.id !== id) {
       return "expired";
@@ -1255,7 +1726,8 @@
         !["original", "revised"].includes(decision.action) ||
         typeof decision.text !== "string" ||
         (decision.action === "revised" &&
-          !validSuggestion(current, decision.text)) ||
+          (!validSuggestion(current, decision.text) ||
+            decision.patch.text !== decision.text)) ||
         (decision.action === "original" && decision.text !== current.original)
       ) {
         cancelPending();
@@ -1274,41 +1746,7 @@
             "This Slack editor does not support formatted updates.",
           );
         }
-        if (!draftTools) throw new Error("Slack draft tools are unavailable.");
-        const patch = draftTools.patch(
-          current.projection,
-          decision.text,
-          (html) => {
-            const quill = input.instance?.quill ?? input.quill;
-            if (
-              typeof input.convertSlackHTMLToDelta !== "function" ||
-              typeof quill?.getFormat !== "function"
-            ) {
-              throw new Error(
-                "This Slack editor does not support list conversion.",
-              );
-            }
-            const descriptor = Object.getOwnPropertyDescriptor(
-              quill,
-              "getFormat",
-            );
-            // Neutralize cursor formatting only during the synchronous clipboard conversion.
-            Object.defineProperty(quill, "getFormat", {
-              configurable: true,
-              value: () => ({}),
-            });
-            try {
-              const converted = input.convertSlackHTMLToDelta(html);
-              if (!isRecord(converted))
-                throw new Error("Unsupported Slack list contents.");
-              return { ops: readOps(converted.ops) };
-            } finally {
-              if (descriptor)
-                Object.defineProperty(quill, "getFormat", descriptor);
-              else delete quill.getFormat;
-            }
-          },
-        );
+        const patch = decision.patch;
         applied = true;
         input.updateContents({ contents: patch.contents });
         const latest = readSnapshot(snapshot(record));

@@ -1,4 +1,6 @@
-use crate::graph::{clean, status_color, status_label, width, Graph, GraphWidget};
+use crate::graph::{
+    clean, display_status, display_title, status_color, status_label, width, Graph, GraphWidget,
+};
 use crate::state::Snapshot;
 use crate::terminal::{combine_results, EmbeddedTerminal};
 use crate::{adapter, Client, Config};
@@ -301,6 +303,7 @@ struct Ui {
     sending: bool,
     hiding: bool,
     connection: Connection,
+    pending_read: Option<Value>,
     connected: bool,
     message: String,
     graph_area: Rect,
@@ -320,6 +323,7 @@ struct Ui {
 
 impl Ui {
     fn stop_agent(&mut self) {
+        self.pending_read = None;
         self.editing = false;
         self.connection.stop();
     }
@@ -373,26 +377,17 @@ impl Ui {
         } else {
             &self.snapshot.chat
         } {
+            if message["role"] == "tool" {
+                continue;
+            }
             let (role, color) = match message["role"].as_str() {
                 Some("user") => ("You", Color::LightCyan),
                 Some("notice") => ("Notice", status_color("idle")),
                 Some("error") => ("Error", status_color("error")),
                 Some("interrupted") => ("Interrupted", status_color("cancelled")),
-                Some("tool") => ("Tool", status_color("idle")),
                 _ => ("Pi", Color::LightMagenta),
             };
             let text = message["text"].as_str().unwrap_or("");
-            let text = if message["role"] == "tool" {
-                match text {
-                    "get_agents" => "Agent status",
-                    "get_events" => "Recent activity",
-                    "get_pane_output" => "Pane output",
-                    "notify_user" => "Notice",
-                    _ => text,
-                }
-            } else {
-                text
-            };
             lines.extend(chat_message(role, color, text, columns));
         }
         if !self.history && !self.snapshot.pi_text.is_empty() {
@@ -485,7 +480,7 @@ impl Ui {
                 format!(" Agent · {} ", clean(&embedded.title))
             } else {
                 format!(
-                    " {} · Zoom {}/5 · e: {} ({ended}) · d: Details · q: Detach ",
+                    " {} · Zoom {}/5 · e: {} ({ended}) · r: Mark read · d: Details · q: Detach ",
                     if self.history {
                         "History · 30 days"
                     } else {
@@ -552,13 +547,22 @@ impl Ui {
             }) {
                 frame.render_widget(
                     Paragraph::new(format!(
-                        "{}\n{}\n{}\nSession: {}\nPane: {}\nScope: {}\n\nd: Back",
+                        "{}\n{}\n{}\n{} {}\nLast confirmed: {}\n{}\nSession: {}\nPane: {}\nScope: {}\n{}\nd: Back",
                         agent.id,
-                        agent.title,
+                        display_title(agent),
                         agent.cwd,
+                        if agent.observation_pending || display_status(agent) == "running" { ['-', '/', '|', '\\'][self.spinner] } else { ' ' },
+                        status_label(display_status(agent)),
+                        if agent.last_confirmed_status.is_empty() { "None" } else { status_label(&agent.last_confirmed_status) },
+                        agent.observation_error,
                         agent.location.session,
                         agent.location.pane,
-                        agent.location.scope
+                        agent.location.scope,
+                        if !agent.completed && self.graph.selected.as_ref().is_some_and(|id| self.snapshot.stopped_children.contains(id)) {
+                            "Stop observed · Outcome unconfirmed\n"
+                        } else {
+                            ""
+                        }
                     ))
                     .wrap(ratatui::widgets::Wrap { trim: false }),
                     self.graph_area,
@@ -650,13 +654,12 @@ impl Ui {
         }
     }
 
-    fn scroll(&mut self, up: bool) {
+    fn scroll(&mut self, up: bool, lines: usize) {
         let top = self.chat_scroll.unwrap_or(self.chat_bottom);
         let next = if up {
-            top.saturating_sub(self.chat_height.max(1))
+            top.saturating_sub(lines)
         } else {
-            top.saturating_add(self.chat_height.max(1))
-                .min(self.chat_bottom)
+            top.saturating_add(lines).min(self.chat_bottom)
         };
         self.chat_scroll = if next == self.chat_bottom {
             None
@@ -670,6 +673,7 @@ enum Update {
     Snapshot(Result<Snapshot>),
     Prompt(u64, Result<Value>),
     Abort(Result<Value>),
+    Read(Result<Value>),
     Hidden(Result<()>),
     Saved(Value, Result<()>),
     Shutdown,
@@ -732,7 +736,12 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
             while let Ok(update) = receive.try_recv() {
                 match update {
                     Update::Shutdown => return Ok(()),
-                    Update::Snapshot(Ok(snapshot)) => {
+                    Update::Snapshot(Ok(mut snapshot)) => {
+                        for id in &snapshot.stopped_children {
+                            if let Some(agent) = snapshot.agents.remove(id) {
+                                snapshot.history.insert(id.clone(), agent);
+                            }
+                        }
                         if ui.connection.terminal().is_some()
                             && ui
                                 .graph
@@ -793,6 +802,13 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                             Err(error) => format!("Abort failed: {error}"),
                         }
                     }
+                    Update::Read(result) => {
+                        dirty = true;
+                        ui.message = match result {
+                            Ok(_) => "Marked read".into(),
+                            Err(error) => format!("Mark read failed: {error}"),
+                        };
+                    }
                 }
             }
             if ui.connection.is_finished() {
@@ -812,7 +828,10 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                                     ui.stop_agent();
                                 }
                             }
-                            Err(error) => ui.message = format!("Attach failed: {error:#}"),
+                            Err(error) => {
+                                ui.pending_read = None;
+                                ui.message = format!("Attach failed: {error:#}");
+                            }
                         }
                     }
                     Connection::Stopping { task } => {
@@ -924,6 +943,15 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                         }
                         if key.modifiers.contains(KeyModifiers::CONTROL) {
                             match key.code {
+                                KeyCode::Char('y' | 'e' | 'u' | 'd') => {
+                                    let up = matches!(key.code, KeyCode::Char('y' | 'u'));
+                                    let lines = if matches!(key.code, KeyCode::Char('u' | 'd')) {
+                                        ui.chat_height.div_ceil(2).max(1)
+                                    } else {
+                                        1
+                                    };
+                                    ui.scroll(up, lines);
+                                }
                                 KeyCode::Char('c') => {
                                     ui.message = match save_view(&config, &monitor, &ui).await {
                                         Ok(()) => adapter(&config, "detach", &Value::Null)
@@ -950,7 +978,10 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                             continue;
                         }
                         if matches!(key.code, KeyCode::PageUp | KeyCode::PageDown) {
-                            ui.scroll(key.code == KeyCode::PageUp);
+                            ui.scroll(
+                                key.code == KeyCode::PageUp,
+                                ui.chat_height.div_ceil(2).max(1),
+                            );
                             continue;
                         }
                         if ui.editing {
@@ -1009,6 +1040,30 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                                 ui.graph.reveal(ui.graph_area);
                             }
                             KeyCode::Char('d') => ui.details = !ui.details,
+                            KeyCode::Char('r') => {
+                                let displayed = ui.displayed();
+                                if let Some((id, completion)) =
+                                    ui.graph.selected.as_ref().and_then(|id| {
+                                        displayed
+                                            .agents
+                                            .get(id)?
+                                            .unread_completion
+                                            .as_ref()
+                                            .map(|completion| (id, completion))
+                                    })
+                                {
+                                    let request = json!({
+                                        "agent_id": id,
+                                        "completion_id": completion,
+                                    });
+                                    let client = client.clone();
+                                    let updates = updates.clone();
+                                    tokio::spawn(async move {
+                                        let result = client.post("/mark-read", &request).await;
+                                        let _ = updates.send(Update::Read(result)).await;
+                                    });
+                                }
+                            }
                             KeyCode::Left => ui.graph.pan.0 = ui.graph.pan.0.saturating_sub(4),
                             KeyCode::Right => ui.graph.pan.0 = ui.graph.pan.0.saturating_add(4),
                             KeyCode::Down => ui.graph.pan.1 = ui.graph.pan.1.saturating_add(2),
@@ -1038,6 +1093,16 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
                                     .and_then(|id| ui.snapshot.agents.get(id))
                                 {
                                     let location = serde_json::to_value(&agent.location)?;
+                                    ui.pending_read = if agent.parent.is_none() {
+                                        agent.unread_completion.as_ref().map(|completion| {
+                                            json!({
+                                                "agent_id": agent.id,
+                                                "completion_id": completion,
+                                            })
+                                        })
+                                    } else {
+                                        None
+                                    };
                                     let title = if agent.title.is_empty() {
                                         agent.id.clone()
                                     } else {
@@ -1083,8 +1148,14 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
             if ui.connected
                 && ui.connection.terminal().is_none()
                 && !ui.history
-                && !ui.details
-                && ui.graph.has_running(ui.graph_area)
+                && (ui.graph.has_running(ui.graph_area)
+                    || (ui.details
+                        && ui
+                            .graph
+                            .selected
+                            .as_ref()
+                            .and_then(|id| ui.snapshot.agents.get(id))
+                            .is_some_and(|agent| agent.observation_pending)))
                 && last_animation.elapsed() >= Duration::from_millis(100)
             {
                 ui.spinner = (ui.spinner + 1) % 4;
@@ -1093,6 +1164,18 @@ pub async fn run(client: Client, config: Config) -> Result<()> {
             }
             if dirty && last_frame.elapsed() >= frame_interval {
                 terminal.draw(|frame| ui.draw(frame))?;
+                if ui.connection.terminal().is_some_and(|embedded| {
+                    embedded.ready && !embedded.parser.screen().contents().trim().is_empty()
+                }) {
+                    if let Some(request) = ui.pending_read.take() {
+                        let client = client.clone();
+                        let updates = updates.clone();
+                        tokio::spawn(async move {
+                            let result = client.post("/mark-read", &request).await;
+                            let _ = updates.send(Update::Read(result)).await;
+                        });
+                    }
+                }
                 dirty = false;
                 last_frame = Instant::now();
             }

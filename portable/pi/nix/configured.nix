@@ -27,6 +27,20 @@ let
       ${pkgs.coreutils}/bin/cp --no-clobber ${settingsFile} "$profileDir/settings.json"
       ${pkgs.coreutils}/bin/chmod u+w "$profileDir/settings.json"
     fi
+    explicitModel=false
+    for argument in "$@"; do
+      case "$argument" in
+        --) break ;;
+        --model|--model=*|--provider|--provider=*) explicitModel=true ;;
+      esac
+    done
+    ${pkgs.nodejs_22}/bin/node ${../scripts/refresh-model-catalog.mjs} \
+      ${runtime}/lib/node_modules/dotfiles-pi/node_modules/@earendil-works/pi-coding-agent/dist/index.js \
+      "$profileDir" ${lib.escapeShellArg settings.defaultProvider} ${lib.escapeShellArg settings.defaultModel} "$@" || exit "$?"
+    if [ "$explicitModel" = false ]; then
+      set -- --model ${lib.escapeShellArg "${settings.defaultProvider}/${settings.defaultModel}"} "$@"
+    fi
+    set -- --tui-mode regular "$@"
     if [ -n "''${PI_SKILLS_DIR:-}" ]; then
       set -- --skill "$PI_SKILLS_DIR" "$@"
     fi

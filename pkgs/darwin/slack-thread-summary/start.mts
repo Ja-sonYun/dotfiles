@@ -52,8 +52,7 @@ process.on("SIGINT", () => lifecycle.abort());
 process.on("SIGTERM", () => lifecycle.abort());
 
 for (const name of [
-  "SLACK_THREAD_SUMMARY_AGY",
-  "SLACK_THREAD_SUMMARY_MODEL",
+  "SLACK_THREAD_SUMMARY_CODEX",
   "SLACK_THREAD_SUMMARY_PROMPT_FILE",
   "SLACK_THREAD_SUMMARY_STATE_DIRECTORY",
 ]) {

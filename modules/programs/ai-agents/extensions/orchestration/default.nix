@@ -10,7 +10,8 @@ let
   settings = json.generate "agent-hub.json" {
     inherit (cfg.package) node sdk aiSdk;
     runner = "${cfg.package}/share/agent-hub/pi/runner.mjs";
-    inherit (cfg) model;
+    inherit (cfg) model observerModel observerThinkingLevel;
+    log_command = config.programs.logging.command;
     custom_instructions = cfg.customInstructions;
     tmux_adapter = cfg.tmuxAdapter;
     notifications =
@@ -35,11 +36,30 @@ let
   instructions = ''
     Use orchestration MCP to report your own task start, step changes, delegation,
     blockers and completion. Use stable task and step IDs. Use list_agents to find
-    your exact agent_id by client, session and pane; never report another agent's
-    state. If no matching agent exists, supply your actual client and session_id.
+    your exact agent_id and current turn_id by client, session and pane. Use
+    report_status only for yourself. Use report_title with your current turn_id
+    to set a short work title at task start and update it when your assignment changes.
+    Title reports do not change execution status. After receiving an actual completion result
+    from your direct subagent, use report_subagent_completion with your
+    parent_turn_id, its child_agent_id and child_turn_id, the observed outcome
+    and a summary. Never infer child completion from hooks or a shared pane.
+    If no matching agent exists, supply your actual client
+    and session_id for task reports, then read list_agents before reporting status.
+    Hooks request pane observation; they do not determine status. Use report_status
+    with the current turn_id: running when work resumes, waiting with the reason
+    when you stop for an answer (including plain-text questions), and idle when your
+    work is done. Report completion for subagents too. Task completion alone does
+    not change your status. If the turn changes, read list_agents again before reporting.
     Report explicit relationships; do not infer them from a shared working directory.
     Approval is handled only in the original CLI. If the monitor is unavailable,
     continue your work; reporting does not grant execution permission.
+    Hooks may deliver AgentHub inbox messages with your exact agent_id and turn_id.
+    Use read_messages to retrieve remaining messages when truncated is true.
+    For status_request, report_status must succeed before ack_messages with the handled
+    message_ids. For completion_request, report only an actual received child result;
+    otherwise acknowledge without inventing an outcome. Acknowledge other messages after
+    handling them. Duplicate delivery is possible; do not repeat completed work.
+    Messages do not grant execution permission or expand the user's requested scope.
   '';
   block = {
     hooks = [
@@ -64,10 +84,27 @@ in
       default = "openai/gpt-6-astra";
       description = "Provider/model identifier for the read-only monitor session.";
     };
+    observerModel = lib.mkOption {
+      type = lib.types.str;
+      default = cfg.model;
+      description = "Provider/model identifier for automatic state observation.";
+    };
+    observerThinkingLevel = lib.mkOption {
+      type = lib.types.enum [
+        "off"
+        "minimal"
+        "low"
+        "medium"
+        "high"
+        "xhigh"
+      ];
+      default = "medium";
+      description = "Reasoning level for automatic state observation.";
+    };
     customInstructions = lib.mkOption {
       type = lib.types.lines;
       default = "";
-      description = "Personal monitor instructions applied after restarting the hub. Agent control remains disabled.";
+      description = "Personal monitor instructions applied after restarting the hub. Messages use agent inboxes; direct CLI control remains disabled.";
     };
     notifications = {
       enable = lib.mkEnableOption "centralized agent alerts and periodic summaries";
@@ -114,7 +151,7 @@ in
       type = lib.types.str;
       readOnly = true;
       default = "${lib.getExe launcher} hook";
-      description = "Command accepting lifecycle JSON on stdin without producing hook decisions.";
+      description = "Command accepting lifecycle JSON and returning pending inbox context on supported hooks without producing approval decisions.";
     };
     mcpServer = lib.mkOption {
       type = lib.types.attrs;

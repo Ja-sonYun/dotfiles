@@ -21,6 +21,9 @@ pub fn clean(text: &str) -> String {
 pub fn status_label(status: &str) -> &str {
     match status {
         "running" => "Running",
+        "checking" => "Checking",
+        "unobserved" => "—",
+        "unverified" => "Could not verify",
         "waiting" => "Waiting for input",
         "approval" => "Awaiting approval",
         "idle" => "Idle",
@@ -49,6 +52,24 @@ pub fn status_color(status: &str) -> Color {
     }
 }
 
+pub fn display_status(agent: &Agent) -> &str {
+    if agent.observation_pending {
+        "checking"
+    } else if agent.status != "unknown" {
+        &agent.status
+    } else {
+        "unverified"
+    }
+}
+
+pub fn display_title(agent: &Agent) -> &str {
+    if agent.reported_title.is_empty() {
+        &agent.title
+    } else {
+        &agent.reported_title
+    }
+}
+
 struct Node {
     x: i32,
     y: i32,
@@ -56,6 +77,8 @@ struct Node {
     height: i32,
     lines: Vec<(String, Style)>,
     status: String,
+    animate: bool,
+    unread: bool,
 }
 
 pub struct Graph {
@@ -212,7 +235,9 @@ impl Graph {
                     width: node_width,
                     height: node_height,
                     lines,
-                    status: agent.status.clone(),
+                    status: display_status(agent).into(),
+                    animate: display_status(agent) == "running" || agent.observation_pending,
+                    unread: agent.parent.is_none() && agent.unread_completion.is_some(),
                 },
             );
         }
@@ -450,7 +475,7 @@ impl Graph {
 
     pub fn has_running(&self, area: Rect) -> bool {
         self.nodes.values().any(|node| {
-            node.status == "running"
+            node.animate
                 && node.x + node.width > self.pan.0
                 && node.x < self.pan.0 + i32::from(area.width)
                 && node.y + node.height > self.pan.1
@@ -567,7 +592,17 @@ impl Graph {
                     );
                 } else {
                     self.text(buf, area, x + 2, y + 1 + row as i32, line, style);
-                    if row == 1 && node.status == "running" {
+                    if row == 1 && node.unread {
+                        self.text(
+                            buf,
+                            area,
+                            x + 2 + width(line) as i32 - 1,
+                            y + 1 + row as i32,
+                            "●",
+                            Style::default().fg(Color::Yellow),
+                        );
+                    }
+                    if row == 1 && node.animate {
                         if let Some(frame) = spinner {
                             self.text(
                                 buf,
@@ -731,6 +766,7 @@ fn parents(snapshot: &Snapshot) -> BTreeMap<String, String> {
 }
 
 fn node_lines(agent: &Agent, zoom: u8, subagent: bool) -> Vec<(String, Style)> {
+    let status = display_status(agent);
     let mut lines = vec![
         (
             agent_label(agent),
@@ -739,23 +775,30 @@ fn node_lines(agent: &Agent, zoom: u8, subagent: bool) -> Vec<(String, Style)> {
         (
             format!(
                 "{}{}{}",
-                if agent.status == "running" { "  " } else { "" },
-                if agent.status == "unknown" {
-                    ""
+                if status == "running" || agent.observation_pending {
+                    "  "
                 } else {
-                    status_label(&agent.status)
+                    ""
                 },
-                agent
-                    .task_status
-                    .as_ref()
-                    .map(|state| format!(" / Task: {}", status_label(state)))
-                    .unwrap_or_default(),
+                status_label(status),
+                if agent.parent.is_none() && agent.unread_completion.is_some() {
+                    " ●"
+                } else {
+                    ""
+                },
             ),
-            Style::default().fg(status_color(&agent.status)),
+            Style::default().fg(status_color(status)),
         ),
     ];
-    if !agent.title.is_empty() && agent.title != agent.client {
-        lines.push((agent.title.clone(), Style::default()));
+    if !agent.observation_error.is_empty() {
+        lines.push((
+            format!("Check failed: {}", agent.observation_error),
+            Style::default().fg(status_color("error")),
+        ));
+    }
+    let title = display_title(agent);
+    if !title.is_empty() && title != agent.client {
+        lines.push((title.into(), Style::default()));
     }
     if subagent {
         lines.push(("Subagent".into(), Style::default().fg(status_color("idle"))));
@@ -768,12 +811,14 @@ fn node_lines(agent: &Agent, zoom: u8, subagent: bool) -> Vec<(String, Style)> {
     work.sort_by_key(|item| std::cmp::Reverse(item["reported_at"].as_u64().unwrap_or(0)));
     let current = if !agent.summary.is_empty()
         && agent.status != "idle"
-        && agent.task_status.as_deref() != Some("idle")
-        && agent.summary_at
+        && (matches!(
+            agent.status.as_str(),
+            "waiting" | "approval" | "error" | "cancelled"
+        ) || agent.summary_at
             >= work
                 .first()
                 .and_then(|item| item["reported_at"].as_u64())
-                .unwrap_or(0)
+                .unwrap_or(0))
     {
         agent.summary.as_str()
     } else {
@@ -783,10 +828,7 @@ fn node_lines(agent: &Agent, zoom: u8, subagent: bool) -> Vec<(String, Style)> {
             .unwrap_or("")
     };
     if !current.is_empty() {
-        let issue = matches!(
-            agent.task_status.as_deref(),
-            Some("error" | "blocked" | "cancelled")
-        );
+        let issue = matches!(agent.status.as_str(), "error" | "blocked" | "cancelled");
         lines.push((
             format!("{} {current}", if issue { "[!]" } else { "[.]" }),
             Style::default().fg(status_color(if issue { "error" } else { "running" })),

@@ -19,6 +19,8 @@ export function start(
   args: string[],
   environment: NodeJS.ProcessEnv = process.env,
   terminationGraceMs = 800,
+  // Null leaves stdout consumption to the caller without retaining output.
+  maxOutputBytes: number | null = 1024 * 1024,
 ): RunningProcess {
   const child = spawn(command, args, {
     cwd: process.env.SLACK_THREAD_SUMMARY_STATE_DIRECTORY,
@@ -37,15 +39,19 @@ export function start(
       void stop().catch(() => {});
     });
     child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => {
-      bytes += Buffer.byteLength(chunk);
-      if (bytes > 1024 * 1024) {
-        failure = new Error("Process output exceeded 1 MiB.");
-        void stop().catch(() => {});
-        return;
-      }
-      output += chunk;
-    });
+    if (maxOutputBytes !== null) {
+      child.stdout.on("data", (chunk: string) => {
+        bytes += Buffer.byteLength(chunk);
+        if (bytes > maxOutputBytes) {
+          failure = new Error(
+            `Process output exceeded ${maxOutputBytes} bytes.`,
+          );
+          void stop().catch(() => {});
+          return;
+        }
+        output += chunk;
+      });
+    }
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
       diagnostics = (diagnostics + chunk).slice(-4000);

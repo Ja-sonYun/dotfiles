@@ -155,10 +155,15 @@ export async function capture(
   input: unknown,
   offset = 0,
   signal?: AbortSignal,
+  ownerId?: string,
+  viewportOnly = false,
 ): Promise<unknown> {
   const target = readLocation(input);
   signal?.throwIfAborted();
-  await validate(target);
+  if (ownerId !== undefined && !target.scope) {
+    throw new Error("Cannot verify pane ownership without a registered scope");
+  }
+  await validate(target, ownerId);
   let connection = connections.get(target.socket);
   if (!connection) {
     connection = new Connection(target);
@@ -168,7 +173,12 @@ export async function capture(
   const response = object(
     await connection.call("tools/call", {
       name: "capture_pane",
-      arguments: { pane_id: target.pane, lines: 200, offset },
+      arguments: {
+        pane_id: target.pane,
+        lines: 200,
+        offset,
+        viewport_only: viewportOnly,
+      },
     }),
   );
   signal?.throwIfAborted();
@@ -181,7 +191,7 @@ export async function capture(
   if (response.isError) {
     throw new Error(typeof text === "string" ? text : "Capture failed");
   }
-  await validate(target);
+  await validate(target, ownerId);
   if (response.structuredContent) {
     return response.structuredContent;
   }
@@ -376,11 +386,37 @@ async function attachEmbedded(input: unknown): Promise<void> {
         stdio: "inherit",
       });
       marker = child.pid ? `@agent_hub_client_${child.pid}` : null;
-      process.stdout.write(`\x1b]777;agent-hub-ready;${token}\x07`);
-      const code = await new Promise<number>((resolve, reject) => {
-        child.once("error", reject);
-        child.once("close", (code) => resolve(code ?? 1));
+      let finished = false;
+      const exit = new Promise<number | Error>((resolve) => {
+        child.once("error", (error) => {
+          finished = true;
+          resolve(error);
+        });
+        child.once("close", (code) => {
+          finished = true;
+          resolve(code ?? 1);
+        });
       });
+      const deadline = Date.now() + 8000;
+      let attached = false;
+      while (!stopped && !finished && Date.now() < deadline) {
+        const clients = await command(
+          target.socket,
+          "list-clients",
+          "-F",
+          "#{client_pid}\t#{session_name}",
+        );
+        if (clients.split("\n").includes(`${child.pid}\t${view}`)) {
+          attached = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      if (!attached || stopped || finished)
+        throw new Error("Agent viewer did not attach");
+      process.stdout.write(`\x1b]777;agent-hub-ready;${token}\x07`);
+      const code = await exit;
+      if (code instanceof Error) throw code;
       if (code !== 0)
         throw new Error(`Agent connection exited with status ${code}`);
     }

@@ -8,7 +8,6 @@
 let
   cfg = config.services.slackMessageReview;
   stateDirectory = "${config.xdg.stateHome}/slack-message-review";
-  agentPackage = config.programs.antigravity-cli.package;
   promptsFile = (pkgs.formats.json { }).generate "slack-message-review-prompts.json" cfg.prompts;
   launcher = pkgs.writeShellScript "slack-message-review-service" ''
     set -e
@@ -26,15 +25,30 @@ in
 {
   options.services.slackMessageReview = {
     enable = lib.mkEnableOption "Slack pre-send AI review at login";
+    codexCommand = lib.mkOption {
+      type = lib.types.nullOr lib.types.nonEmptyStr;
+      default = null;
+      description = "Absolute path to a Codex CLI or instance wrapper, without arguments. Required when enabled.";
+    };
     apiKeyFile = lib.mkOption {
       type = lib.types.str;
       default = "";
       description = "Runtime TypeSafe API key file, required when enabled. Supports shell expansion in agenix paths; the key is read only at service startup.";
     };
     model = lib.mkOption {
-      type = lib.types.nonEmptyStr;
-      default = "gemini-4-argon-medium";
-      description = "Antigravity model used for reviews and follow-up requests.";
+      type = lib.types.nullOr lib.types.nonEmptyStr;
+      default = null;
+      description = "Codex model for reviews and follow-up requests. Null uses the selected Codex configuration.";
+    };
+    reasoningEffort = lib.mkOption {
+      type = lib.types.nullOr lib.types.nonEmptyStr;
+      default = null;
+      description = "Codex reasoning effort for reviews and follow-up requests. Null uses the selected Codex configuration.";
+    };
+    serviceTier = lib.mkOption {
+      type = lib.types.nullOr lib.types.nonEmptyStr;
+      default = null;
+      description = "Codex service tier for reviews and follow-up requests. Null uses the selected Codex configuration.";
     };
     prompts = {
       classification = lib.mkOption {
@@ -53,6 +67,9 @@ in
       review = lib.mkOption {
         type = lib.types.lines;
         default = ''
+          You must read and apply the communication-coach skill for every review and follow-up request.
+          Use its coaching guidance while preserving the required JSON output schema,
+          original language, and protected elements.
           Review the Slack draft for grammar, clarity, tone, and ambiguity.
           In threads, identify the question or request and assess the draft's relevance,
           misunderstandings, and omissions. State when context or the intended target is unclear.
@@ -62,7 +79,7 @@ in
           Follow the latest revision request and edits. Return the original if no change is needed.
           Do not explain grammar or formatting changes.
         '';
-        description = "Antigravity review instructions used for initial reviews and follow-up requests.";
+        description = "Codex review instructions used for initial reviews and follow-up requests.";
       };
     };
   };
@@ -75,8 +92,12 @@ in
           Label = "com.user.slack-message-review";
           ProgramArguments = [ "${launcher}" ];
           EnvironmentVariables = {
-            SLACK_REVIEW_AGY = if agentPackage == null then "" else "${agentPackage}/bin/agy";
-            SLACK_REVIEW_MODEL = cfg.model;
+            SLACK_CODEX_LOG_COMMAND =
+              if config.programs.logging.command == null then "" else config.programs.logging.command;
+            SLACK_REVIEW_CODEX = if cfg.codexCommand == null then "" else cfg.codexCommand;
+            SLACK_REVIEW_MODEL = if cfg.model == null then "" else cfg.model;
+            SLACK_REVIEW_REASONING_EFFORT = if cfg.reasoningEffort == null then "" else cfg.reasoningEffort;
+            SLACK_REVIEW_SERVICE_TIER = if cfg.serviceTier == null then "" else cfg.serviceTier;
             SLACK_REVIEW_JEV = "${pkgs.jev}/bin/jev";
             SLACK_REVIEW_PROMPTS_FILE = "${promptsFile}";
             SLACK_REVIEW_STATE_DIRECTORY = stateDirectory;
@@ -102,8 +123,9 @@ in
           message = "services.slackMessageReview requires programs.slack.enable in the Darwin configuration.";
         }
         {
-          assertion = config.programs.antigravity-cli.enable && agentPackage != null;
-          message = "services.slackMessageReview requires an enabled programs.antigravity-cli with a package.";
+          assertion =
+            config.programs.codex.enable && cfg.codexCommand != null && lib.hasPrefix "/" cfg.codexCommand;
+          message = "services.slackMessageReview requires programs.codex.enable and an absolute codexCommand path.";
         }
       ];
       home.activation.slackMessageReviewDirectory =

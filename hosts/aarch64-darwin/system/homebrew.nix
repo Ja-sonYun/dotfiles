@@ -31,7 +31,7 @@ let
       "appcleaner"
       {
         name = "slack";
-        args.appdir = "/Applications/_Slack";
+        args.appdir = "/Applications/.Hidden";
       }
       "bambu-studio"
       "visual-studio-code"

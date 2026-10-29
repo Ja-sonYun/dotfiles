@@ -1,0 +1,13 @@
+[project]
+name = "antigravity-mcp"
+version = "0.1.0"
+description = "Call Antigravity CLI through MCP"
+requires-python = ">=3.12"
+dependencies = ["anyio>=4,<5", "mcp>=1,<2"]
+
+[project.scripts]
+antigravity-mcp = "antigravity_mcp.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.4,<0.14.0"]
+build-backend = "uv_build"

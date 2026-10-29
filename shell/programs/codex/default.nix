@@ -1,4 +1,10 @@
 {
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+{
   programs.ai-agents.modelMap.codex = {
     xhigh = {
       model = "gpt-6-astra";
@@ -37,6 +43,19 @@
     };
 
     settings = {
+      mcp_servers.antigravity =
+        lib.mkIf
+          (
+            pkgs.stdenv.hostPlatform.system == "aarch64-darwin"
+            && config.programs.antigravity-cli.enable
+            && config.programs.antigravity-cli.package != null
+          )
+          {
+            command = lib.getExe pkgs.antigravity-mcp;
+            env.ANTIGRAVITY_EXECUTABLE = "${config.programs.antigravity-cli.package}/bin/agy";
+            tool_timeout_sec = 330;
+          };
+
       model = "gpt-6-astra";
       model_reasoning_effort = "medium";
       plan_mode_reasoning_effort = "high";
@@ -73,10 +92,7 @@
         ];
         show_tooltips = false;
         keymap = {
-          pager = {
-            half_page_up = "ctrl-u";
-            half_page_down = "ctrl-n";
-          };
+          global.open_transcript = "ctrl-t";
         };
       };
 

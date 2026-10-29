@@ -8,7 +8,6 @@
 let
   cfg = config.services.slackThreadSummary;
   stateDirectory = "${config.xdg.stateHome}/slack-thread-summary";
-  agentPackage = config.programs.antigravity-cli.package;
   promptFile = pkgs.writeText "slack-thread-summary-prompt.txt" cfg.prompt;
   launcher = pkgs.writeShellScript "slack-thread-summary-service" ''
     set -e
@@ -18,10 +17,15 @@ in
 {
   options.services.slackThreadSummary = {
     enable = lib.mkEnableOption "Slack thread summaries at login";
+    codexCommand = lib.mkOption {
+      type = lib.types.nullOr lib.types.nonEmptyStr;
+      default = null;
+      description = "Absolute path to a Codex CLI or instance wrapper, without arguments. Required when enabled.";
+    };
     model = lib.mkOption {
-      type = lib.types.nonEmptyStr;
-      default = "gemini-4-argon-medium";
-      description = "Antigravity model used for thread summaries.";
+      type = lib.types.nullOr lib.types.nonEmptyStr;
+      default = null;
+      description = "Codex model for thread summaries. Null uses the selected Codex configuration.";
     };
     prompt = lib.mkOption {
       type = lib.types.lines;
@@ -45,8 +49,10 @@ in
           Label = "com.user.slack-thread-summary";
           ProgramArguments = [ "${launcher}" ];
           EnvironmentVariables = {
-            SLACK_THREAD_SUMMARY_AGY = if agentPackage == null then "" else "${agentPackage}/bin/agy";
-            SLACK_THREAD_SUMMARY_MODEL = cfg.model;
+            SLACK_CODEX_LOG_COMMAND =
+              if config.programs.logging.command == null then "" else config.programs.logging.command;
+            SLACK_THREAD_SUMMARY_CODEX = if cfg.codexCommand == null then "" else cfg.codexCommand;
+            SLACK_THREAD_SUMMARY_MODEL = if cfg.model == null then "" else cfg.model;
             SLACK_THREAD_SUMMARY_PROMPT_FILE = "${promptFile}";
             SLACK_THREAD_SUMMARY_STATE_DIRECTORY = stateDirectory;
           };
@@ -67,8 +73,9 @@ in
           message = "services.slackThreadSummary requires programs.slack.enable in the Darwin configuration.";
         }
         {
-          assertion = config.programs.antigravity-cli.enable && agentPackage != null;
-          message = "services.slackThreadSummary requires an enabled programs.antigravity-cli with a package.";
+          assertion =
+            config.programs.codex.enable && cfg.codexCommand != null && lib.hasPrefix "/" cfg.codexCommand;
+          message = "services.slackThreadSummary requires programs.codex.enable and an absolute codexCommand path.";
         }
       ];
       home.activation.slackThreadSummaryDirectory =

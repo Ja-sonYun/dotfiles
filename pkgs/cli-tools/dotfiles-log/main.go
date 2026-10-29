@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,7 +19,7 @@ var configuration []byte
 const maxFrame = logclient.MaxFrame
 
 type settings struct {
-	File       string `json:"file"`
+	Directory  string `json:"directory"`
 	SocketPath string `json:"socketPath"`
 	MaxBytes   int    `json:"maxBytes"`
 	Level      string `json:"level"`
@@ -36,6 +37,7 @@ type record struct {
 }
 
 var levels = map[string]int{"debug": 10, "info": 20, "warning": 30, "error": 40}
+var componentName = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]{0,63}$`)
 
 func encode(entry record) []byte {
 	data, _ := json.Marshal(entry)

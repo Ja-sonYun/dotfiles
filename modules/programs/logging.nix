@@ -7,7 +7,7 @@
 let
   cfg = config.programs.logging;
   package = pkgs.callPackage ../../pkgs/cli-tools/dotfiles-log {
-    logFile = cfg.file;
+    logDirectory = cfg.directory;
     inherit (cfg) maxBytes level socketPath;
   };
   bashPackage = pkgs.callPackage ../../pkgs/cli-tools/dotfiles-log/bash { };
@@ -16,15 +16,15 @@ in
 {
   options.programs.logging = {
     enable = lib.mkEnableOption "shared bounded event logging";
-    file = lib.mkOption {
+    directory = lib.mkOption {
       type = lib.types.str;
-      default = "${config.xdg.stateHome}/dotfiles/events.jsonl";
-      description = "Shared JSONL file. Disabling logging preserves existing records.";
+      default = "${config.xdg.stateHome}/dotfiles";
+      description = "Directory containing one JSONL file per component. Disabling logging preserves existing records.";
     };
     maxBytes = lib.mkOption {
       type = lib.types.ints.between 1024 2147483647;
       default = 1048576;
-      description = "File size limit in bytes, including newlines. Oldest records are discarded.";
+      description = "Size limit per component file in bytes, including newlines. Oldest records in that file are discarded.";
     };
     level = lib.mkOption {
       type = lib.types.enum [

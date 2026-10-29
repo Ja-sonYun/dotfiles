@@ -7,16 +7,15 @@ import (
 )
 
 type writer struct {
-	file *os.File
-	size int64
-	cfg  settings
+	file     *os.File
+	size     int64
+	path     string
+	maxBytes int
 }
 
-func openWriter(cfg settings) (*writer, error) {
-	if err := os.MkdirAll(filepath.Dir(cfg.File), 0700); err != nil {
-		return nil, err
-	}
-	file, err := os.OpenFile(cfg.File, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
+func openWriter(cfg settings, component string) (*writer, error) {
+	path := filepath.Join(cfg.Directory, component+".jsonl")
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -25,11 +24,11 @@ func openWriter(cfg settings) (*writer, error) {
 		file.Close()
 		return nil, err
 	}
-	return &writer{file: file, size: info.Size(), cfg: cfg}, nil
+	return &writer{file: file, size: info.Size(), path: path, maxBytes: cfg.MaxBytes}, nil
 }
 
 func (w *writer) append(data []byte) error {
-	if w.size+int64(len(data)) <= int64(w.cfg.MaxBytes) {
+	if w.size+int64(len(data)) <= int64(w.maxBytes) {
 		n, err := w.file.Write(data)
 		if err != nil {
 			// Roll back a partial append before the service restarts.
@@ -43,7 +42,7 @@ func (w *writer) append(data []byte) error {
 	}
 
 	// Keep headroom so reaching the limit does not force a rewrite for every event.
-	keep := min(int64(w.cfg.MaxBytes/2), int64(w.cfg.MaxBytes-len(data)), w.size)
+	keep := min(int64(w.maxBytes/2), int64(w.maxBytes-len(data)), w.size)
 	retained := make([]byte, keep)
 	if keep > 0 {
 		if _, err := w.file.ReadAt(retained, w.size-keep); err != nil {
@@ -61,7 +60,7 @@ func (w *writer) append(data []byte) error {
 	if err != nil {
 		return err
 	}
-	replacement, err := os.CreateTemp(filepath.Dir(w.cfg.File), ".dotfiles-log-*")
+	replacement, err := os.CreateTemp(filepath.Dir(w.path), ".dotfiles-log-*")
 	if err != nil {
 		return err
 	}
@@ -79,7 +78,7 @@ func (w *writer) append(data []byte) error {
 	if _, err = replacement.Write(contents); err != nil {
 		return err
 	}
-	if err = os.Rename(replacement.Name(), w.cfg.File); err != nil {
+	if err = os.Rename(replacement.Name(), w.path); err != nil {
 		return err
 	}
 	w.file.Close()

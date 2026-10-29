@@ -3,6 +3,7 @@ mod graph;
 mod hub;
 mod ingest;
 mod lifecycle;
+mod logging;
 mod mcp;
 mod reconcile;
 mod state;
@@ -29,6 +30,7 @@ pub struct Config {
     pub model: String,
     pub tmux_adapter: Option<String>,
     pub notifications: Option<alerts::Settings>,
+    pub log_command: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -227,6 +229,29 @@ async fn main() -> Result<()> {
     match std::env::args().nth(1).as_deref().unwrap_or("tui") {
         "serve" => hub::serve(root, config).await,
         "hook" => ingest::hook(&root, &config).await,
+        "inbox" => {
+            let session = std::env::args()
+                .nth(2)
+                .context("inbox requires a Pi session ID")?;
+            let run = std::env::args()
+                .nth(3)
+                .context("inbox requires a Pi run ID")?;
+            let inbox = tokio::time::timeout(
+                Duration::from_millis(500),
+                Client::load(&root)?.post(
+                    "/messages/read",
+                    &json!({
+                        "agent_id": format!("pi:{session}"), "run_id": run,
+                    }),
+                ),
+            )
+            .await
+            .context("Inbox request timed out")??;
+            if let Some(output) = ingest::inbox_output(inbox, None)? {
+                println!("{output}");
+            }
+            Ok(())
+        }
         "mcp" => {
             let context = json!({
                 "client": std::env::var("AI_AGENT_CLIENT").unwrap_or_default().to_lowercase(),
@@ -255,6 +280,6 @@ async fn main() -> Result<()> {
             let client = ensure_runtime(&root, true).await?;
             tui::run(client, config).await
         }
-        _ => bail!("usage: agent-hub [tui|stop|hook|mcp]"),
+        _ => bail!("usage: agent-hub [tui|stop|hook|mcp|inbox <pi-session-id> <run-id>]"),
     }
 }

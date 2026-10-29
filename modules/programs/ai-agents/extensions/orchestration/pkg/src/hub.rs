@@ -8,6 +8,7 @@ use axum::routing::post;
 use axum::{Json, Router};
 use fs2::FileExt;
 use serde_json::{json, Value};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
@@ -27,6 +28,7 @@ struct App {
     alerts: Arc<Mutex<alerts::Alerts>>,
     notifications: Option<alerts::Settings>,
     deliveries: Arc<Mutex<JoinSet<()>>>,
+    logger: crate::logging::Logger,
 }
 
 impl App {
@@ -62,10 +64,11 @@ impl App {
         let before = store.snapshot.agents.get(&id).cloned();
         let revision = store.snapshot.revision;
         let id = store.report(report.clone())?;
+        if let Err(error) = store.request_status(&id) {
+            eprintln!("cannot queue status request: {error}");
+        }
         if revision != store.snapshot.revision {
-            if crate::lifecycle::starts_turn(&report)
-                || crate::lifecycle::requests_children(&report)
-            {
+            if report.kind == "hook" {
                 self.reconcile.notify_one();
             }
             self.alerts.lock().unwrap().receive(
@@ -102,16 +105,89 @@ async fn snapshot(State(app): State<App>, headers: HeaderMap) -> Response {
     response((|| {
         authorize(&app, &headers)?;
         let store = app.store.lock().unwrap();
-        let mut snapshot = serde_json::to_value(store.view())?;
+        let mut view = store.view();
+        for (id, agent) in view.agents.iter().chain(&view.history) {
+            if store.child_stopped(agent)? {
+                view.stopped_children.insert(id.clone());
+            }
+        }
+        let mut snapshot = serde_json::to_value(view)?;
         snapshot["progress_version"] = json!(app.alerts.lock().unwrap().version);
         Ok(snapshot)
+    })())
+}
+
+async fn mark_read(
+    State(app): State<App>,
+    headers: HeaderMap,
+    Json(value): Json<Value>,
+) -> Response {
+    response((|| {
+        authorize(&app, &headers)?;
+        app.store.lock().unwrap().mark_read(&value)?;
+        Ok(json!({}))
     })())
 }
 
 async fn report(State(app): State<App>, headers: HeaderMap, Json(value): Json<Report>) -> Response {
     response((|| {
         authorize(&app, &headers)?;
-        Ok(json!({"agent_id":app.ingest(value)?}))
+        let id = app.ingest(value.clone())?;
+        let store = app.store.lock().unwrap();
+        let agent = store
+            .snapshot
+            .agents
+            .get(&id)
+            .context("Agent is not registered")?;
+        let mut result = json!({"agent_id": id, "turn_id": agent.turn_id});
+        let child_start = value.client == "claude"
+            && value.data["event"] == "SubagentStart"
+            && agent.turn_id == value.id
+            && !agent.provisional
+            && agent.parent.is_some()
+            && agent.parent == value.parent
+            && value.data["agent_id"].as_str() == Some(agent.native_agent_id.as_str());
+        let current_turn = if value.data["event"] == "SubagentStart" {
+            child_start
+        } else {
+            value.data["run_id"].as_str().unwrap_or("") == agent.run_id
+        };
+        if crate::ingest::receives_messages(&value) && agent.last_hook == value.at && current_turn {
+            match store.read_messages(&id, &agent.turn_id) {
+                Ok(inbox) => result["inbox"] = inbox,
+                Err(error) => eprintln!("cannot read hook inbox: {error}"),
+            }
+        }
+        Ok(result)
+    })())
+}
+
+async fn send_message(
+    State(app): State<App>,
+    headers: HeaderMap,
+    Json(value): Json<Value>,
+) -> Response {
+    response((|| {
+        authorize(&app, &headers)?;
+        app.store.lock().unwrap().send_message("agent-hub", &value)
+    })())
+}
+
+async fn read_messages(
+    State(app): State<App>,
+    headers: HeaderMap,
+    Json(value): Json<Value>,
+) -> Response {
+    response((|| {
+        authorize(&app, &headers)?;
+        let id = crate::state::required(&value, "agent_id")?;
+        let run = crate::state::required(&value, "run_id")?;
+        let store = app.store.lock().unwrap();
+        let agent = store.snapshot.agents.get(id).context("Unknown recipient")?;
+        if agent.client != "pi" || agent.run_id != run {
+            anyhow::bail!("Inbox run does not match the current Pi session");
+        }
+        store.read_messages(id, &agent.turn_id)
     })())
 }
 
@@ -137,6 +213,21 @@ async fn mcp_request(
             return Ok(mcp::content(json!(app.store.lock().unwrap().view().agents)));
         }
         let report = mcp::report(&request, &app.store.lock().unwrap().snapshot)?;
+        if matches!(report.kind.as_str(), "read_messages" | "ack_messages") {
+            let id = format!("{}:{}", report.client, report.session_id);
+            let turn = crate::state::required(&report.data, "turn_id")?;
+            let mut store = app.store.lock().unwrap();
+            return if report.kind == "read_messages" {
+                Ok(mcp::content(store.read_messages(&id, turn)?))
+            } else {
+                let ids = report.data["message_ids"]
+                    .as_array()
+                    .filter(|ids| !ids.is_empty())
+                    .context("message_ids must be a nonempty array")?;
+                store.ack_messages(&id, turn, ids)?;
+                Ok(mcp::content(json!({"acknowledged": ids})))
+            };
+        }
         Ok(mcp::content(json!({"agent_id":app.ingest(report)?})))
     })();
     Json(match result {
@@ -221,8 +312,12 @@ async fn scope(State(app): State<App>, headers: HeaderMap, Json(value): Json<Val
         let scope = crate::state::required(&value, "scope")?;
         let mut store = app.store.lock().unwrap();
         if store.snapshot.scope != scope {
-            app.commands.try_send(json!({"type":"abort"}))?;
+            app.commands
+                .try_send(json!({"type":"abort", "reason":"scope_changed"}))?;
             store.set_scope(scope)?;
+            app.logger
+                .record("info", "scope_requeue", &json!({"reason":"scope_changed"}));
+            app.reconcile.notify_one();
             store.snapshot.pi_text.clear();
             store.snapshot.pi_status = "idle".into();
             *app.alerts.lock().unwrap() =
@@ -251,7 +346,9 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
         .ok()
         .and_then(|value| value.parse().ok())
         .unwrap_or_else(crate::state::now);
+    let (logger, log_worker) = crate::logging::Logger::start(config.log_command.clone());
     let app = App {
+        logger,
         store: Arc::new(Mutex::new(Store::open(
             &root.join("state.sqlite3"),
             fresh_since,
@@ -273,6 +370,7 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
     let observer = tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(2));
         let mut prune_at = Instant::now();
+        let mut requested = BTreeMap::<String, (u64, Instant)>::new();
         loop {
             tokio::select! {
                 _ = interval.tick() => {},
@@ -298,20 +396,50 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
                 }
                 Err(error) => eprintln!("agent observation unavailable: {error}"),
             }
-            let candidates = observer_app
-                .store
-                .lock()
-                .unwrap()
-                .reconciliation_candidates();
-            for agent in candidates {
-                let evidence = crate::reconcile::inspect(&agent).await;
-                if let Err(error) = observer_app
-                    .store
-                    .lock()
-                    .unwrap()
-                    .reconciled(&agent, evidence)
+            let mut store = observer_app.store.lock().unwrap();
+            let reports: Vec<_> = store
+                .snapshot
+                .agents
+                .values()
+                .filter(|agent| {
+                    (store.live.contains(&agent.id) && agent.status == "unknown")
+                        || (agent.parent.is_some() && !agent.completed)
+                })
+                .map(|agent| agent.id.clone())
+                .collect();
+            for id in reports {
+                if let Err(error) = store.request_status(&id) {
+                    eprintln!("cannot queue status request: {error}");
+                }
+            }
+            requested.retain(|id, _| store.live.contains(id));
+            for agent in store.snapshot.agents.values().filter(|agent| {
+                store.live.contains(&agent.id)
+                    && agent.parent.is_none()
+                    && !agent.turn_id.is_empty()
+                    && !agent.location.pane.is_empty()
+                    && agent.observation_pending
+            }) {
+                if requested.get(&agent.id).is_some_and(|(revision, at)| {
+                    *revision == agent.observation_revision
+                        && at.elapsed() < Duration::from_secs(30)
+                }) {
+                    continue;
+                }
+                if observer_app
+                    .commands
+                    .try_send(json!({
+                        "type": "observe", "agent_id": agent.id,
+                        "observation_revision": agent.observation_revision,
+                        "turn_id": agent.turn_id,
+                        "priority": agent.observation_priority,
+                    }))
+                    .is_ok()
                 {
-                    eprintln!("cannot reconcile {}: {error}", agent.id);
+                    requested.insert(
+                        agent.id.clone(),
+                        (agent.observation_revision, Instant::now()),
+                    );
                 }
             }
         }
@@ -349,10 +477,56 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
             let Ok(value) = serde_json::from_str::<Value>(&line) else {
                 continue;
             };
+            if value["type"] == "diagnostic" {
+                let level = value["level"].as_str().unwrap_or("debug");
+                let event = value["event"].as_str().unwrap_or("observation");
+                reader_app.logger.record(level, event, &value);
+                continue;
+            }
             let mut store = reader_app.store.lock().unwrap();
             let scope = value["scope"].as_str().unwrap_or("");
             let current = scope == store.snapshot.scope;
             let result = match value["type"].as_str() {
+                Some("observation_failed") => store.observation_failed(&value),
+                Some("checked_state" | "observation_requested") => {
+                    let id = value["sampled"]["id"].as_str().unwrap_or("");
+                    let before = store.snapshot.agents.get(id).cloned();
+                    let revision = store.snapshot.revision;
+                    let checked = store.checked(&value);
+                    reader_app.logger.record(
+                        "info",
+                        "state_checked",
+                        &json!({
+                            "agent_id": id,
+                            "turn_id": value["sampled"]["turn_id"],
+                            "observation_revision": value["sampled"]["observation_revision"],
+                            "outcome": match &checked {
+                                Ok(Some(_)) => "applied",
+                                Ok(None) if store.snapshot.revision != revision => "requeued",
+                                Ok(None) => "rejected",
+                                Err(_) => "error",
+                            },
+                        }),
+                    );
+                    match checked {
+                        Ok(Some(report)) => {
+                            reader_app.alerts.lock().unwrap().receive(
+                                &report,
+                                before.as_ref(),
+                                &store.snapshot.agents[id],
+                                store.live.contains(id),
+                            );
+                            Ok(())
+                        }
+                        Ok(None) => {
+                            if value["type"] == "observation_requested" {
+                                reader_app.reconcile.notify_one();
+                            }
+                            Ok(())
+                        }
+                        Err(error) => Err(error),
+                    }
+                }
                 Some("text_delta") => {
                     partial.push_str(value["delta"].as_str().unwrap_or(""));
                     partial_scope = scope.into();
@@ -497,8 +671,11 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
     let shutdown = app.stop.clone();
     let router = Router::new()
         .route("/snapshot", post(snapshot))
+        .route("/mark-read", post(mark_read))
         .route("/report", post(report))
         .route("/mcp", post(mcp_request))
+        .route("/messages/send", post(send_message))
+        .route("/messages/read", post(read_messages))
         .route("/pi", post(pi_command))
         .route("/notify", post(notify_user))
         .route("/stop", post(stop))
@@ -543,6 +720,10 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
     let _ = child.wait().await;
     writer.abort();
     reader.abort();
+    if let Some((stop, worker)) = log_worker {
+        let _ = stop.send(());
+        let _ = worker.await;
+    }
     std::fs::remove_file(root.join("endpoint.json"))?;
     result?;
     Ok(())

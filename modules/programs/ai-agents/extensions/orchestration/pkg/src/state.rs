@@ -1,6 +1,6 @@
-use crate::lifecycle::{self, ReconcileRequest};
+use crate::lifecycle;
 use anyhow::{bail, Context, Result};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -40,11 +40,40 @@ pub struct Agent {
     pub session_id: String,
     pub client: String,
     pub title: String,
+    #[serde(default)]
+    pub reported_title: String,
     pub cwd: String,
     pub parent: Option<String>,
     pub location: Location,
     pub status: String,
-    pub task_status: Option<String>,
+    #[serde(default)]
+    pub last_confirmed_status: String,
+    #[serde(default)]
+    pub unread_completion: Option<String>,
+    #[serde(default)]
+    pub completed: bool,
+    #[serde(default)]
+    pub turn_id: String,
+    #[serde(default)]
+    pub state_source: String,
+    #[serde(default)]
+    pub state_at: u64,
+    #[serde(default)]
+    pub observation_pending: bool,
+    #[serde(default)]
+    pub observation_revision: u64,
+    #[serde(default)]
+    pub observation_error: String,
+    #[serde(default)]
+    pub observation_priority: bool,
+    #[serde(default)]
+    pub observation_resumed: bool,
+    #[serde(default)]
+    pub prompt_pending: bool,
+    #[serde(default)]
+    pub prompt_tool_id: String,
+    #[serde(default)]
+    pub prompt_tool_name: String,
     pub summary: String,
     #[serde(default)]
     pub summary_at: u64,
@@ -63,10 +92,6 @@ pub struct Agent {
     pub run_id: String,
     #[serde(default)]
     pub transcript_path: String,
-    #[serde(default)]
-    pub observed_at: u64,
-    #[serde(default)]
-    pub reconcile: Option<ReconcileRequest>,
 }
 
 pub fn agent_label(agent: &Agent) -> String {
@@ -105,6 +130,8 @@ pub struct Snapshot {
     #[serde(default)]
     pub history: BTreeMap<String, Agent>,
     #[serde(default)]
+    pub stopped_children: BTreeSet<String>,
+    #[serde(default)]
     pub history_chat: Vec<Value>,
     #[serde(default)]
     pub scope: String,
@@ -133,13 +160,24 @@ impl Store {
              CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, at INTEGER, body TEXT NOT NULL);
              CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY, body TEXT NOT NULL);
              CREATE TABLE IF NOT EXISTS monitor (id INTEGER PRIMARY KEY, scope TEXT NOT NULL);
-             CREATE TABLE IF NOT EXISTS agent_history (id TEXT PRIMARY KEY, body TEXT NOT NULL);",
+             CREATE TABLE IF NOT EXISTS agent_history (id TEXT PRIMARY KEY, body TEXT NOT NULL);
+             CREATE TABLE IF NOT EXISTS inbox (
+                 id TEXT PRIMARY KEY, recipient TEXT NOT NULL, turn_id TEXT,
+                 kind TEXT NOT NULL, body TEXT NOT NULL, acknowledged INTEGER NOT NULL DEFAULT 0
+             );
+             CREATE INDEX IF NOT EXISTS inbox_recipient ON inbox (recipient, acknowledged);",
         )?;
         let mut snapshot = Snapshot::default();
         {
             let mut query = db.prepare("SELECT body FROM agents")?;
             for row in query.query_map([], |row| row.get::<_, String>(0))? {
                 let mut agent: Agent = serde_json::from_str(&row?)?;
+                if agent.state_source.is_empty() {
+                    agent.status = "unknown".into();
+                    agent.completed = false;
+                }
+                agent.observation_pending =
+                    agent.parent.is_none() && !agent.location.pane.is_empty();
                 agent.stale = true;
                 snapshot.agents.insert(agent.id.clone(), agent);
             }
@@ -186,6 +224,249 @@ impl Store {
         })
     }
 
+    pub fn send_message(&mut self, sender: &str, args: &Value) -> Result<Value> {
+        let recipient = required(args, "agent_id")?;
+        let agent = self
+            .snapshot
+            .agents
+            .get(recipient)
+            .context("Unknown recipient")?;
+        if agent.provisional {
+            bail!("Recipient identity is not confirmed");
+        }
+        let kind = required(args, "kind")?;
+        if !matches!(kind, "message" | "status_request" | "completion_request") {
+            bail!("Unsupported message kind");
+        }
+        let body = required(args, "body")?;
+        if body.len() > 4096 {
+            bail!("Message body exceeds 4096 UTF-8 bytes");
+        }
+        let turn = args
+            .get("turn_id")
+            .map(|_| required(args, "turn_id"))
+            .transpose()?;
+        if turn.is_some_and(|turn| turn != agent.turn_id)
+            || (kind == "status_request" && turn.is_none())
+        {
+            bail!("Provide the recipient's current turn_id for a status request");
+        }
+        let tx = self.db.transaction()?;
+        if kind != "message" {
+            let existing: Option<(String, bool)> = tx
+                .query_row(
+                    "SELECT body, acknowledged FROM inbox WHERE recipient = ?1 AND turn_id IS ?2 AND kind = ?3
+                     AND (?3 = 'completion_request' OR acknowledged = 0)
+                     AND (?3 = 'status_request' OR json_extract(body, '$.body') = ?4) LIMIT 1",
+                    params![recipient, turn, kind, body],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .optional()?;
+            if let Some((existing, acknowledged)) = existing {
+                let mut message: Value = serde_json::from_str(&existing)?;
+                message["acknowledged"] = json!(acknowledged);
+                return Ok(message);
+            }
+        }
+        let message = json!({
+            "message_id": uuid::Uuid::new_v4().to_string(),
+            "sender": sender, "agent_id": recipient, "turn_id": turn,
+            "kind": kind, "body": body, "created_at": now(), "acknowledged": false,
+        });
+        let encoded = message.to_string();
+        if encoded.len() > 8 * 1024 {
+            bail!("Serialized message exceeds 8192 UTF-8 bytes");
+        }
+        tx.execute(
+            "INSERT INTO inbox (id, recipient, turn_id, kind, body) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                message["message_id"].as_str(),
+                recipient,
+                turn,
+                kind,
+                encoded
+            ],
+        )?;
+        tx.commit()?;
+        Ok(message)
+    }
+
+    pub fn child_stopped(&self, agent: &Agent) -> Result<bool> {
+        if agent.parent.is_none() || agent.provisional || agent.turn_id.is_empty() {
+            return Ok(false);
+        }
+        self.db
+            .query_row(
+                "SELECT EXISTS (
+                    SELECT 1 FROM events AS stopped JOIN events AS started ON started.id = ?1
+                    WHERE stopped.rowid >= started.rowid AND stopped.at >= started.at
+                    AND stopped.at <= ?2
+                    AND json_extract(stopped.body, '$.kind') = 'hook'
+                    AND json_extract(stopped.body, '$.client') = ?3
+                    AND json_extract(stopped.body, '$.session_id') = ?4
+                    AND json_extract(stopped.body, '$.parent') = ?5
+                    AND json_extract(stopped.body, '$.location.scope') = ?6
+                    AND json_extract(stopped.body, '$.location.process_id') = ?7
+                    AND json_extract(stopped.body, '$.location.process_started') = ?8
+                    AND json_extract(stopped.body, '$.data.event') IN
+                        ('Stop', 'StopFailure', 'SubagentStop', 'SessionEnd')
+                    AND (coalesce(json_extract(stopped.body, '$.data.run_id'), '') = ''
+                         OR json_extract(stopped.body, '$.data.run_id') = ?9)
+                )",
+                params![
+                    agent.turn_id,
+                    agent.last_hook,
+                    agent.client,
+                    agent.session_id,
+                    agent.parent,
+                    agent.location.scope,
+                    agent.location.process_id,
+                    agent.location.process_started,
+                    agent.run_id,
+                ],
+                |row| row.get(0),
+            )
+            .context("Cannot read child termination events")
+    }
+
+    pub fn request_status(&mut self, id: &str) -> Result<()> {
+        let Some(agent) = self.snapshot.agents.get(id).cloned() else {
+            return Ok(());
+        };
+        if agent.provisional || agent.turn_id.is_empty() || agent.completed {
+            return Ok(());
+        }
+        let stopped = self.child_stopped(&agent)?;
+        if !stopped && agent.status == "unknown" && agent.state_source != "mcp" {
+            let body = if let Some(parent) = &agent.parent {
+                format!(
+                    "You are subagent {} for parent {}. Your current turn_id is {}. Report only your own current state through report_status, then acknowledge this message. Your parent reports your completion only after receiving your actual result. This request does not authorize new work.",
+                    agent.id, parent, agent.turn_id,
+                )
+            } else {
+                "Report your current state through report_status, then acknowledge this message. Report only what you know; this request does not authorize new work.".into()
+            };
+            self.send_message(
+                "agent-hub",
+                &json!({
+                    "agent_id": id, "turn_id": agent.turn_id, "kind": "status_request",
+                    "body": body,
+                }),
+            )?;
+        }
+        if !stopped {
+            return Ok(());
+        }
+        if let Some(parent) = agent
+            .parent
+            .as_ref()
+            .and_then(|id| self.snapshot.agents.get(id))
+        {
+            if !parent.provisional && !parent.turn_id.is_empty() {
+                let request = json!({
+                    "agent_id": parent.id, "kind": "completion_request",
+                    "body": format!(
+                        "If you received an actual completion result from child {} for child_turn_id {}, report it with report_subagent_completion and your current parent_turn_id. Otherwise do not infer an outcome. Acknowledge this message after handling it, including when no result is available.",
+                        agent.id, agent.turn_id,
+                    ),
+                });
+                self.send_message("agent-hub", &request)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn read_messages(&self, id: &str, turn: &str) -> Result<Value> {
+        let agent = self.snapshot.agents.get(id).context("Unknown recipient")?;
+        if agent.provisional || turn.is_empty() || agent.turn_id != turn {
+            bail!("Agent turn changed; read list_agents again");
+        }
+        let mut query = self.db.prepare(
+            "SELECT body FROM inbox WHERE recipient = ?1 AND acknowledged = 0
+             AND (turn_id IS NULL OR turn_id = ?2) ORDER BY rowid",
+        )?;
+        let mut messages = Vec::<Value>::new();
+        let mut bytes = 0;
+        let mut truncated = false;
+        for row in query.query_map(params![id, turn], |row| row.get::<_, String>(0))? {
+            let body = row?;
+            if bytes + body.len() > 12 * 1024 {
+                truncated = true;
+                break;
+            }
+            bytes += body.len();
+            messages.push(serde_json::from_str(&body)?);
+        }
+        Ok(json!({"agent_id": id, "turn_id": turn, "messages": messages, "truncated": truncated}))
+    }
+
+    pub fn ack_messages(&mut self, id: &str, turn: &str, ids: &[Value]) -> Result<()> {
+        let agent = self.snapshot.agents.get(id).context("Unknown recipient")?;
+        if agent.provisional || turn.is_empty() || agent.turn_id != turn {
+            bail!("Agent turn changed; read list_agents again");
+        }
+        let tx = self.db.transaction()?;
+        for id in ids {
+            let message_id = id.as_str().context("message_ids must contain strings")?;
+            let (recipient, target_turn, body, acknowledged): (
+                String,
+                Option<String>,
+                String,
+                bool,
+            ) = tx
+                .query_row(
+                    "SELECT recipient, turn_id, body, acknowledged FROM inbox WHERE id = ?1",
+                    [message_id],
+                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+                )
+                .context("Unknown message_id")?;
+            if recipient != agent.id || target_turn.as_deref().is_some_and(|value| value != turn) {
+                bail!("Message belongs to another agent or turn");
+            }
+            let message: Value = serde_json::from_str(&body)?;
+            if !acknowledged
+                && message["kind"] == "status_request"
+                && (agent.state_source != "mcp"
+                    || agent.state_at < message["created_at"].as_u64().unwrap_or(u64::MAX))
+            {
+                bail!("Report your current status before acknowledging this request");
+            }
+            tx.execute(
+                "UPDATE inbox SET acknowledged = 1 WHERE id = ?1",
+                [message_id],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn mark_read(&mut self, value: &Value) -> Result<()> {
+        let id = required(value, "agent_id")?;
+        let completion = required(value, "completion_id")?;
+        let (agents, sql) = if self.snapshot.agents.contains_key(id) {
+            (
+                &mut self.snapshot.agents,
+                "UPDATE agents SET body = ?2 WHERE id = ?1",
+            )
+        } else {
+            (
+                &mut self.snapshot.history,
+                "UPDATE agent_history SET body = ?2 WHERE id = ?1",
+            )
+        };
+        let current = agents.get(id).context("Agent is not registered")?;
+        if current.unread_completion.as_deref() != Some(completion) {
+            bail!("Completion changed; refresh before marking it read");
+        }
+        let mut agent = current.clone();
+        agent.unread_completion = None;
+        self.db
+            .execute(sql, params![id, serde_json::to_string(&agent)?])?;
+        agents.insert(id.into(), agent);
+        self.snapshot.revision += 1;
+        Ok(())
+    }
+
     pub fn view(&self) -> Snapshot {
         let mut view = self.snapshot.clone();
         view.history.extend(
@@ -220,7 +501,9 @@ impl Store {
                 continue;
             }
             if let Some(alive) = states[id].as_bool() {
-                let alive = alive && current.status != "ended";
+                let alive = alive
+                    && current.status != "ended"
+                    && !(current.parent.is_some() && current.completed);
                 let changed = if alive {
                     self.live.insert(id.clone())
                 } else {
@@ -238,10 +521,35 @@ impl Store {
         if self.snapshot.scope == scope {
             return Ok(());
         }
-        self.db.execute(
+        let tx = self.db.transaction()?;
+        tx.execute(
             "INSERT OR REPLACE INTO monitor (id, scope) VALUES (1, ?1)",
             [scope],
         )?;
+        let mut observations = BTreeMap::new();
+        for agent in self.snapshot.agents.values().filter(|agent| {
+            self.live.contains(&agent.id)
+                && agent.parent.is_none()
+                && !agent.provisional
+                && !agent.stale
+                && !agent.turn_id.is_empty()
+                && !agent.location.pane.is_empty()
+                && (agent.observation_pending
+                    || matches!(agent.status.as_str(), "approval" | "running"))
+        }) {
+            let mut agent = agent.clone();
+            agent.observation_revision += 1;
+            agent.observation_pending = true;
+            agent.observation_priority = true;
+            agent.observation_error.clear();
+            tx.execute(
+                "INSERT OR REPLACE INTO agents (id, body) VALUES (?1, ?2)",
+                params![agent.id, serde_json::to_string(&agent)?],
+            )?;
+            observations.insert(agent.id.clone(), agent);
+        }
+        tx.commit()?;
+        self.snapshot.agents.extend(observations);
         self.snapshot.scope = scope.into();
         self.snapshot.chat = self
             .snapshot
@@ -332,7 +640,72 @@ impl Store {
             bail!("client and session_id are required");
         }
         let id = format!("{}:{}", report.client, report.session_id);
+        if report.kind == "report_subagent_completion" {
+            let parent_id = required(&report.data, "parent_agent_id")?;
+            let parent = self
+                .snapshot
+                .agents
+                .get(parent_id)
+                .context("Parent is not registered")?;
+            let child = self
+                .snapshot
+                .agents
+                .get(&id)
+                .context("Child is not registered")?;
+            if required(&report.data, "parent_turn_id")? != parent.turn_id
+                || required(&report.data, "child_turn_id")? != child.turn_id
+            {
+                bail!("Agent turn changed; read list_agents again");
+            }
+            if required(&report.data, "child_agent_id")? != id
+                || child.parent.as_deref() != Some(parent_id)
+                || child.id == parent_id
+            {
+                bail!("Only the registered direct parent may report child completion");
+            }
+            let status = match required(&report.data, "outcome")? {
+                "completed" => "idle",
+                "failed" => "error",
+                "cancelled" => "cancelled",
+                _ => bail!("unsupported child outcome"),
+            };
+            required(&report.data, "summary")?;
+            if child.completed {
+                if child.status == status {
+                    return Ok(id);
+                }
+                bail!("Child already completed with a different outcome");
+            }
+            report.data["status"] = json!(status);
+            report.data["turn_id"] = json!(child.turn_id);
+        }
+        if matches!(
+            report.kind.as_str(),
+            "report_status" | "checked_status" | "report_title"
+        ) {
+            let current = self
+                .snapshot
+                .agents
+                .get(&id)
+                .context("Agent is not registered")?;
+            if required(&report.data, "turn_id")? != current.turn_id {
+                bail!("Agent turn changed; read list_agents again");
+            }
+        }
         if let Some(current) = self.snapshot.agents.get(&id) {
+            if report.kind == "hook"
+                && current.parent.is_some()
+                && matches!(
+                    report.data["event"].as_str(),
+                    Some("Stop" | "StopFailure" | "SubagentStop" | "SessionEnd")
+                )
+                && !current.run_id.is_empty()
+                && report.data["run_id"]
+                    .as_str()
+                    .is_some_and(|run| !run.is_empty() && run != current.run_id)
+            {
+                return Ok(id);
+            }
             if report.kind == "hook"
                 && report.parent.is_some()
                 && current.parent.is_some()
@@ -412,6 +785,9 @@ impl Store {
                 client: report.client.clone(),
                 status: "unknown".into(),
                 provisional,
+                observation_revision: previous
+                    .as_ref()
+                    .map_or(0, |agent| agent.observation_revision + 1),
                 ..Agent::default()
             });
         if let Some(unresolved) = &resolved {
@@ -420,13 +796,6 @@ impl Store {
             agent.provisional = false;
             agent.native_agent_id = unresolved.native_agent_id.clone();
             if unresolved.last_hook > agent.last_hook {
-                if unresolved.last_hook >= agent.observed_at {
-                    agent.status = unresolved.status.clone();
-                    agent.reconcile = unresolved.reconcile.clone();
-                    if let Some(request) = &mut agent.reconcile {
-                        request.child_run = agent.run_id.clone();
-                    }
-                }
                 agent.last_hook = unresolved.last_hook;
             }
             if agent.transcript_path.is_empty() {
@@ -457,7 +826,6 @@ impl Store {
             if unresolved.summary_at > agent.summary_at {
                 agent.summary = unresolved.summary.clone();
                 agent.summary_at = unresolved.summary_at;
-                agent.task_status = unresolved.task_status.clone();
             }
             agent.last_seen = agent.last_seen.max(unresolved.last_seen);
             agent.last_report = agent.last_report.max(unresolved.last_report);
@@ -481,6 +849,16 @@ impl Store {
             }
             match report.kind.as_str() {
                 "hook" => lifecycle::apply(&mut agent, &report),
+                "report_title" => {
+                    let title = required(&report.data, "title")?.trim();
+                    if title.is_empty()
+                        || title.chars().count() > 120
+                        || title.chars().any(char::is_control)
+                    {
+                        bail!("title must contain 1 to 120 characters without control characters");
+                    }
+                    agent.reported_title = title.into();
+                }
                 "report_task" => {
                     let key = required(&report.data, "task_id")?;
                     let mut task = report.data.clone();
@@ -511,17 +889,57 @@ impl Store {
                     });
                     agent.relations.push(report.data.clone());
                 }
-                "report_status" => {
-                    agent.summary = required(&report.data, "summary")?.into();
-                    agent.summary_at = report.at;
+                "report_status" | "checked_status" | "report_subagent_completion" => {
+                    let summary = required(&report.data, "summary")?;
                     let status = required(&report.data, "status")?;
                     if !matches!(
                         status,
-                        "running" | "waiting" | "idle" | "error" | "cancelled"
+                        "running"
+                            | "waiting"
+                            | "approval"
+                            | "idle"
+                            | "error"
+                            | "cancelled"
+                            | "unknown"
                     ) {
                         bail!("unsupported status");
                     }
-                    agent.task_status = Some(status.into());
+                    agent.observation_error.clear();
+                    if report.kind == "checked_status" && status == "unknown" {
+                        agent.observation_pending = false;
+                        agent.observation_error = summary.into();
+                        agent.status = "unknown".into();
+                        agent.state_source = "pane".into();
+                        agent.state_at = report.at;
+                    } else {
+                        agent.summary = summary.into();
+                        agent.summary_at = report.at;
+                        agent.status = status.into();
+                        agent.state_source = if report.kind != "checked_status" {
+                            "mcp"
+                        } else {
+                            "pane"
+                        }
+                        .into();
+                        agent.state_at = report.at;
+                        agent.observation_pending = false;
+                        if report.kind != "checked_status" {
+                            agent.observation_revision += 1;
+                        }
+                        agent.completed = report.kind == "report_subagent_completion"
+                            || matches!(agent.status.as_str(), "idle" | "cancelled");
+                    }
+                    agent.observation_resumed = false;
+                    agent.observation_priority = false;
+                    if agent.parent.is_none()
+                        && agent.status == "idle"
+                        && agent.last_confirmed_status == "running"
+                    {
+                        agent.unread_completion = Some(report.id.clone());
+                    }
+                    if agent.status != "unknown" {
+                        agent.last_confirmed_status = agent.status.clone();
+                    }
                 }
                 _ => bail!("unsupported report kind"),
             }
@@ -564,44 +982,51 @@ impl Store {
             }
             lifecycle::relink(&mut agent, &unresolved.id, &id);
         }
+        if !agent.provisional
+            && report.at >= last_update
+            && (report.kind == "report_subagent_completion"
+                || (report.kind == "hook"
+                    && matches!(
+                        report.data["event"].as_str(),
+                        Some(
+                            "SubagentStart"
+                                | "SubagentStop"
+                                | "SessionStart"
+                                | "Stop"
+                                | "StopFailure"
+                                | "SessionEnd"
+                        )
+                    )))
+        {
+            if let Some(parent) = agent
+                .parent
+                .as_ref()
+                .and_then(|id| self.snapshot.agents.get(id))
+            {
+                if parent.parent.is_none()
+                    && !parent.provisional
+                    && !parent.stale
+                    && !parent.turn_id.is_empty()
+                    && !parent.location.pane.is_empty()
+                    && report.at >= parent.state_at
+                {
+                    let mut parent = linked.get(&parent.id).unwrap_or(parent).clone();
+                    parent.observation_revision += 1;
+                    parent.observation_pending = true;
+                    parent.observation_priority = true;
+                    parent.observation_error.clear();
+                    tx.execute(
+                        "INSERT OR REPLACE INTO agents (id, body) VALUES (?1, ?2)",
+                        params![parent.id, serde_json::to_string(&parent)?],
+                    )?;
+                    linked.insert(parent.id.clone(), parent);
+                }
+            }
+        }
         tx.execute(
             "INSERT OR REPLACE INTO agents (id, body) VALUES (?1, ?2)",
             params![id, serde_json::to_string(&agent)?],
         )?;
-        let mut children = BTreeMap::new();
-        if report.at >= last_update
-            && (lifecycle::requests_children(&report) || lifecycle::starts_turn(&report))
-        {
-            for (child_id, child) in &self.snapshot.agents {
-                let child = linked.get(child_id).unwrap_or(child);
-                if child.parent.as_deref() != Some(id.as_str()) {
-                    continue;
-                }
-                let mut child = child.clone();
-                if matches!(child.status.as_str(), "running" | "unknown") {
-                    if child.reconcile.is_none() {
-                        child.reconcile = Some(ReconcileRequest {
-                            parent_run: agent.run_id.clone(),
-                            child_run: child.run_id.clone(),
-                            requested_at: report.at,
-                            checked_at: 0,
-                        });
-                    }
-                }
-                if lifecycle::starts_turn(&report) {
-                    if let Some(request) = &mut child.reconcile {
-                        request.checked_at = 0;
-                    }
-                }
-                if child.reconcile != self.snapshot.agents[child_id].reconcile {
-                    tx.execute(
-                        "INSERT OR REPLACE INTO agents (id, body) VALUES (?1, ?2)",
-                        params![child_id, serde_json::to_string(&child)?],
-                    )?;
-                    children.insert(child_id.clone(), child);
-                }
-            }
-        }
         tx.commit()?;
         self.snapshot.agents.extend(linked);
         if let Some(unresolved) = resolved {
@@ -620,11 +1045,13 @@ impl Store {
                 }
             }
         }
-        self.snapshot.agents.extend(children);
         if let Some(agent) = previous {
             self.snapshot
                 .history
                 .insert(format!("{}:{}", agent.location.scope, agent.id), agent);
+            self.live.remove(&id);
+        }
+        if agent.parent.is_some() && agent.completed {
             self.live.remove(&id);
         }
         self.snapshot.agents.insert(id.clone(), agent);
@@ -636,84 +1063,88 @@ impl Store {
         Ok(id)
     }
 
-    pub fn reconciliation_candidates(&self) -> Vec<Agent> {
-        let at = now();
-        self.snapshot
-            .agents
-            .values()
-            .filter(|agent| {
-                self.live.contains(&agent.id)
-                    && agent.reconcile.as_ref().is_some_and(|request| {
-                        request.child_run == agent.run_id
-                            && at.saturating_sub(request.checked_at) >= 30_000
-                    })
-            })
-            .cloned()
-            .collect()
-    }
-
-    pub fn reconciled(
-        &mut self,
-        sampled: &Agent,
-        evidence: Option<crate::reconcile::Evidence>,
-    ) -> Result<()> {
-        let Some(current) = self.snapshot.agents.get(&sampled.id) else {
+    pub fn observation_failed(&mut self, value: &Value) -> Result<()> {
+        let id = required(value, "agent_id")?;
+        let Some(agent) = self.snapshot.agents.get_mut(id) else {
             return Ok(());
         };
-        if current.last_hook != sampled.last_hook
-            || current.location != sampled.location
-            || current.run_id != sampled.run_id
-            || current.reconcile != sampled.reconcile
-            || current.reconcile.is_none()
+        if value["turn_id"] != agent.turn_id
+            || value["observation_revision"] != agent.observation_revision
+            || !agent.observation_pending
         {
             return Ok(());
         }
-        let mut agent = current.clone();
-        let at = now();
-        let status = evidence
-            .as_ref()
-            .filter(|evidence| evidence.run_id == agent.run_id)
-            .map(|evidence| evidence.status)
-            .unwrap_or("unknown");
-        if matches!(status, "idle" | "error" | "cancelled")
-            || !matches!(agent.status.as_str(), "approval" | "waiting")
+        agent.observation_pending = false;
+        agent.observation_priority = false;
+        agent.observation_resumed = false;
+        agent.observation_error = required(value, "message")?.into();
+        agent.status = "unknown".into();
+        agent.state_source = "pane".into();
+        agent.state_at = now();
+        self.db.execute(
+            "INSERT OR REPLACE INTO agents (id, body) VALUES (?1, ?2)",
+            params![id, serde_json::to_string(agent)?],
+        )?;
+        self.snapshot.revision += 1;
+        Ok(())
+    }
+
+    pub fn checked(&mut self, value: &Value) -> Result<Option<Report>> {
+        let sampled: Agent = serde_json::from_value(value["sampled"].clone())?;
+        let captured_at = value["captured_at"]
+            .as_u64()
+            .context("Missing capture time")?;
+        let Some(current) = self.snapshot.agents.get(&sampled.id) else {
+            return Ok(None);
+        };
+        if !self.live.contains(&sampled.id)
+            || current.parent.is_some()
+            || current.turn_id != sampled.turn_id
+            || current.observation_revision != sampled.observation_revision
+            || current.location != sampled.location
+            || current.run_id != sampled.run_id
+            || current.state_at != sampled.state_at
+            || captured_at < current.state_at
+            || captured_at > now()
+            || now().saturating_sub(captured_at) > 60_000
         {
-            agent.status = status.into();
+            return Ok(None);
         }
-        if matches!(status, "idle" | "error" | "cancelled") {
-            agent.reconcile = None;
-            agent.observed_at = at;
-        } else if let Some(request) = &mut agent.reconcile {
-            request.checked_at = at;
+        if value["type"] == "observation_requested" {
+            if current.observation_pending {
+                return Ok(None);
+            }
+            let mut agent = current.clone();
+            agent.observation_pending = true;
+            agent.observation_priority = true;
+            agent.observation_revision += 1;
+            agent.observation_error.clear();
+            self.db.execute(
+                "INSERT OR REPLACE INTO agents (id, body) VALUES (?1, ?2)",
+                params![agent.id, serde_json::to_string(&agent)?],
+            )?;
+            self.snapshot.agents.insert(agent.id.clone(), agent);
+            self.snapshot.revision += 1;
+            return Ok(None);
         }
         let report = Report {
             id: uuid::Uuid::new_v4().to_string(),
-            at,
-            client: agent.client.clone(),
-            session_id: agent.session_id.clone(),
-            parent: agent.parent.clone(),
-            cwd: agent.cwd.clone(),
-            location: agent.location.clone(),
-            kind: "observation".into(),
-            data: json!({"event":"Reconciled", "run_id":agent.run_id, "status":agent.status}),
+            at: now(),
+            client: current.client.clone(),
+            session_id: current.session_id.clone(),
+            parent: current.parent.clone(),
+            cwd: current.cwd.clone(),
+            location: current.location.clone(),
+            kind: "checked_status".into(),
+            data: json!({
+                "turn_id": current.turn_id,
+                "status": required(value, "status")?,
+                "summary": required(value, "summary")?,
+                "captured_at": captured_at,
+            }),
         };
-        let tx = self.db.transaction()?;
-        tx.execute(
-            "INSERT OR REPLACE INTO agents (id, body) VALUES (?1, ?2)",
-            params![agent.id, serde_json::to_string(&agent)?],
-        )?;
-        tx.execute(
-            "INSERT INTO events (id, at, body) VALUES (?1, ?2, ?3)",
-            params![report.id, at, serde_json::to_string(&report)?],
-        )?;
-        tx.commit()?;
-        self.snapshot.agents.insert(agent.id.clone(), agent);
-        self.snapshot.events.push(serde_json::to_value(report)?);
-        if self.snapshot.events.len() > 300 {
-            self.snapshot.events.remove(0);
-        }
-        self.snapshot.revision += 1;
-        Ok(())
+        self.report(report.clone())?;
+        Ok(Some(report))
     }
 
     pub fn chat(&mut self, role: &str, text: &str, scope: Option<&str>) -> Result<()> {

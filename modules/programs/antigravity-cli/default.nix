@@ -61,6 +61,11 @@ in
       default = { };
       description = "Named hook sets in Antigravity's native hooks.json format.";
     };
+    keybindings = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf lib.types.str);
+      default = { };
+      description = "Native keybindings by action. An empty key list disables an action's defaults; an empty attribute set leaves the file unmanaged.";
+    };
     lifecycleObserver = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
@@ -90,6 +95,10 @@ in
     ];
 
     home.file = {
+      ".gemini/antigravity-cli/keybindings.json" = lib.mkIf (cfg.keybindings != { }) {
+        force = true;
+        source = jsonFormat.generate "antigravity-keybindings.json" cfg.keybindings;
+      };
       ".gemini/config/hooks.json" = lib.mkIf (cfg.hooks != { }) {
         force = true;
         source = jsonFormat.generate "antigravity-hooks.json" cfg.hooks;

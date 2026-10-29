@@ -8,8 +8,21 @@
       agents.include = [ ];
     };
 
+    keybindings = {
+      "navigation.page_up" = [ ];
+      "navigation.page_down" = [ ];
+      "navigation.half_page_up" = [
+        "pgup"
+        "shift+up"
+      ];
+      "navigation.half_page_down" = [
+        "pgdown"
+        "shift+down"
+      ];
+    };
+
     settings = {
-      altScreenMode = "never";
+      altScreenMode = "always";
       verbosity = "low";
       showTips = false;
       showFeedbackSurvey = false;

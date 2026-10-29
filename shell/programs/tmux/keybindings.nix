@@ -4,6 +4,7 @@ let
 in
 {
   programs.tmux = {
+    processKeymaps.enable = true;
     setGlobalOptions = {
       "@menus_trigger" = "'b'";
       prefix = "C-q";

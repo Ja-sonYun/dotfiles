@@ -18,37 +18,28 @@ let
     ];
 
   # Read secrets at launch to avoid baking them into the store.
-  wrappedPackage =
-    if cfg.env == { } then
-      cfg.package
+  wrapPackage =
+    package:
+    if package == null || cfg.env == { } then
+      package
     else
-      pkgs.runCommand "${cfg.package.name}-wrapped" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
+      pkgs.runCommand "${package.name}-wrapped" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         mkdir -p $out/bin
-        for b in ${cfg.package}/bin/*; do ln -s "$b" "$out/bin/$(basename "$b")"; done
+        for b in ${package}/bin/*; do ln -s "$b" "$out/bin/$(basename "$b")"; done
         for b in r2 radare2; do
           rm -f "$out/bin/$b"
-          makeWrapper ${cfg.package}/bin/$b $out/bin/$b \
+          makeWrapper ${package}/bin/$b $out/bin/$b \
             --run ${lib.escapeShellArg (pkgs.tool.shell.util.shellExports cfg.env)}
         done
       '';
 in
 {
   options.programs.radare2 = {
-    enable = lib.mkEnableOption "radare2";
-
     package = lib.mkOption {
-      type = lib.types.package;
-      default = pkgs.radare2;
-      description = "radare2 package.";
+      apply = wrapPackage;
     };
 
-    extraConfig = lib.mkOption {
-      type = lib.types.lines;
-      default = "";
-      description = "radare2rc content.";
-    };
-
-    plugins = lib.mkOption {
+    pluginFiles = lib.mkOption {
       type = lib.types.attrsOf sourceType;
       default = { };
       example = lib.literalExpression ''{ "r2dec.r2.js" = ./r2dec.r2.js; }'';
@@ -93,15 +84,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ wrappedPackage ];
-
     home.file = lib.mkMerge [
-      (lib.mkIf (cfg.extraConfig != "") {
-        ".config/radare2/radare2rc".text = cfg.extraConfig;
-      })
       (lib.mapAttrs' (
         name: src: lib.nameValuePair ".local/share/radare2/plugins/${name}" { source = src; }
-      ) cfg.plugins)
+      ) cfg.pluginFiles)
       (lib.mkIf cfg.decai.enable {
         ".local/share/radare2/plugins/decai.r2.js".source = cfg.decai.package;
         ".config/r2ai/decai.txt".text = decaiTxt;

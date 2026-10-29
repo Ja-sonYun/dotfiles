@@ -9,6 +9,7 @@ result/
 .direnv
 .tmp/
 node_modules/
+target/
 .pycache
 __pycache__
 .pre-commit-config.yaml

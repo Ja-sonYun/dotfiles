@@ -31,7 +31,6 @@ lib.mkIf agent.enable {
               runOnGitRoot = true;
               environment = agent.sessionEnvironment // {
                 CTRL_C_AS_CLOSE = "1";
-                TMUX_REMAP_CTRL_D = "C-n";
               };
               position = {
                 w = "60%";
@@ -121,7 +120,6 @@ lib.mkIf agent.enable {
             key = "C-c";
             command = "{ ${agent.rememberOverviewAction}; detach-client }";
           };
-          "C-d".command = "send-keys C-n";
         };
 
         all-agents-prefix = {

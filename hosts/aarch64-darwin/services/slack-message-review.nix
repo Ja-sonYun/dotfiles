@@ -1,6 +1,10 @@
+{ config, ... }:
 {
   services.slackMessageReview = {
     enable = true;
-    model = "gemini-4-argon-medium";
+    codexCommand = config.programs.codex.commands.codex-work;
+    model = "gpt-6.1-terra";
+    reasoningEffort = "low";
+    serviceTier = "fast";
   };
 }

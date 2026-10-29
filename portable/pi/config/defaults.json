@@ -2,7 +2,7 @@
   "settings": {
     "quietStartup": true,
     "defaultProvider": "openai",
-    "defaultModel": "gpt-6-astra",
+    "defaultModel": "gpt-6.1-terra",
     "defaultThinkingLevel": "high",
     "defaultTools": ["+codemode", "+tool_search"],
     "enabledModels": ["lmp/**", "openai/**"]

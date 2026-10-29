@@ -7,7 +7,7 @@ use std::path::Path;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 
-async fn publish(root: &Path, report: &Report, start_on_report: bool) -> Result<()> {
+async fn publish(root: &Path, report: &Report, start_on_report: bool) -> Result<Option<Value>> {
     let pending = root.join("pending");
     std::fs::create_dir_all(&pending)?;
     let file = pending.join(format!("{}.json", report.id));
@@ -15,20 +15,18 @@ async fn publish(root: &Path, report: &Report, start_on_report: bool) -> Result<
     std::fs::write(&temp, serde_json::to_vec(report)?)?;
     std::fs::rename(temp, &file)?;
     if let Ok(client) = Client::load(root) {
-        if matches!(
-            tokio::time::timeout(
-                Duration::from_millis(500),
-                client.post("/report", &serde_json::to_value(report)?),
-            )
-            .await,
-            Ok(Ok(_))
-        ) {
+        if let Ok(Ok(response)) = tokio::time::timeout(
+            Duration::from_millis(500),
+            client.post("/report", &serde_json::to_value(report)?),
+        )
+        .await
+        {
             match std::fs::remove_file(file) {
                 Ok(()) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
                 Err(error) => return Err(error.into()),
             }
-            return Ok(());
+            return Ok(Some(response));
         }
     }
     if start_on_report {
@@ -41,7 +39,70 @@ async fn publish(root: &Path, report: &Report, start_on_report: bool) -> Result<
             start(root, report.at)?;
         }
     }
-    Ok(())
+    Ok(None)
+}
+
+pub fn receives_messages(report: &Report) -> bool {
+    let tool = report.data["tool_name"]
+        .as_str()
+        .unwrap_or("")
+        .rsplit(['.', '/'])
+        .next()
+        .unwrap_or("")
+        .rsplit("__")
+        .next()
+        .unwrap_or("");
+    report.kind == "hook"
+        && matches!(report.client.as_str(), "claude" | "codex")
+        && report.data["subject_verified"] == true
+        && (matches!(
+            report.data["event"].as_str(),
+            Some("UserPromptSubmit" | "PreToolUse" | "PostToolUse")
+        ) || (report.client == "claude"
+            && report.data["event"] == "SubagentStart"
+            && report.data["identity"] == "child"
+            && report.parent.is_some()
+            && report.data["agent_id"].as_str().is_some_and(|id| {
+                !id.is_empty() && Some(id) != report.data["root_session_id"].as_str()
+            })
+            && report.data["root_session_id"].as_str() != Some(report.session_id.as_str())))
+        && !matches!(
+            tool,
+            "read_messages" | "ack_messages" | "report_status" | "report_subagent_completion"
+        )
+}
+
+pub fn inbox_output(mut inbox: Value, event: Option<&str>) -> Result<Option<String>> {
+    loop {
+        let messages = inbox["messages"]
+            .as_array()
+            .context("Invalid inbox response")?;
+        if messages.is_empty() && inbox["truncated"] != true {
+            return Ok(None);
+        }
+        let context = format!(
+            "{}\nAgentHub inbox:\n{inbox}",
+            crate::mcp::MESSAGE_INSTRUCTIONS
+        );
+        let output = if let Some(event) = event {
+            json!({"hookSpecificOutput": {"hookEventName": event, "additionalContext": context}})
+        } else {
+            json!({"context": context})
+        };
+        let encoded = serde_json::to_string(&output)?;
+        if encoded.len() + 1 <= 16 * 1024 {
+            return Ok(Some(encoded));
+        }
+        if inbox["messages"]
+            .as_array_mut()
+            .context("Invalid inbox response")?
+            .pop()
+            .is_none()
+        {
+            bail!("Inbox identity exceeds the hook output limit");
+        }
+        inbox["truncated"] = json!(true);
+    }
 }
 
 pub async fn codex_session_meta(path: &str, thread: &str) -> Result<Value> {
@@ -218,6 +279,7 @@ pub async fn hook(root: &Path, config: &Config) -> Result<()> {
         "run_id": run_id,
         "transcript_status": transcript_status,
         "tool_use_id": data["tool_use_id"],
+        "tool_name": data["tool_name"],
         "root_session_id": session,
         "identity": identity,
         "identity_error": identity_error,
@@ -261,5 +323,14 @@ pub async fn hook(root: &Path, config: &Config) -> Result<()> {
         kind: "hook".into(),
         data: fields,
     };
-    publish(root, &report, config.notifications.is_some()).await
+    if let Some(response) = publish(root, &report, config.notifications.is_some()).await? {
+        if let Some(inbox) = response.get("inbox") {
+            match inbox_output(inbox.clone(), Some(event)) {
+                Ok(Some(output)) => println!("{output}"),
+                Ok(None) => {}
+                Err(error) => eprintln!("cannot render inbox: {error}"),
+            }
+        }
+    }
+    Ok(())
 }

@@ -1,4 +1,9 @@
-{ pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 {
   programs = {
     claude-desktop.enable = pkgs.stdenv.hostPlatform.isDarwin;
@@ -27,6 +32,18 @@
       defaultProfileName = "claude-1";
       chromeNativeHost.enable = true;
 
+      mcpServers.antigravity =
+        lib.mkIf
+          (
+            pkgs.stdenv.hostPlatform.system == "aarch64-darwin"
+            && config.programs.antigravity-cli.enable
+            && config.programs.antigravity-cli.package != null
+          )
+          {
+            command = lib.getExe pkgs.antigravity-mcp;
+            env.ANTIGRAVITY_EXECUTABLE = "${config.programs.antigravity-cli.package}/bin/agy";
+          };
+
       instances = {
         claude-1 = {
           home = ".claude";
@@ -45,18 +62,6 @@
         language = "korean";
         promptSuggestionEnabled = false;
         effortLevel = "high";
-      };
-
-      keybindings = {
-        bindings = [
-          {
-            context = "Scroll";
-            bindings = {
-              "ctrl+u" = "scroll:halfPageUp";
-              "ctrl+n" = "scroll:halfPageDown";
-            };
-          }
-        ];
       };
     };
   };

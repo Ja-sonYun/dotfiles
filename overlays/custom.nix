@@ -43,6 +43,7 @@
 
     local-fonts = final.callPackage ../pkgs/fonts/local-fonts { };
 
+    antigravity-mcp = final.callPackage ../pkgs/mcp/antigravity-mcp { };
     aws-documentation-mcp-server = final.callPackage ../pkgs/mcp/aws-documentation-mcp-server { };
     chrome-devtools-mcp = final.callPackage ../pkgs/mcp/chrome-devtools-mcp { };
     context7 = final.callPackage ../pkgs/mcp/context7 { };

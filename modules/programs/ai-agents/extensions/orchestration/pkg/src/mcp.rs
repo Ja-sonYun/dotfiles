@@ -4,11 +4,37 @@ use anyhow::{bail, Context, Result};
 use serde_json::{json, Value};
 use std::path::Path;
 
-pub const INSTRUCTIONS: &str = "Report your own task start, step changes, delegation, blockers and completion. Use list_agents to find your exact agent_id, or provide client and session_id. Never report another agent's state. Lifecycle hooks report execution separately. Approval stays in the original CLI. Task and step IDs are stable identifiers you choose for this work.";
+pub const INSTRUCTIONS: &str = "Report your own task start, step changes, delegation, blockers and completion. Use list_agents to find your exact agent_id and current turn_id. Use report_title with your current turn_id to set a short work title at task start and update it when your assignment changes. Title reports do not change execution status. Use report_status only for yourself. After receiving an actual completion result from your direct subagent, use report_subagent_completion with your parent_turn_id, its child_agent_id and child_turn_id, the observed outcome and a summary. Never infer child completion from hooks, a shared pane or task completion alone. Hooks request pane observation; they do not determine status. Use report_status with the current turn_id: running when work resumes, waiting with the reason when you stop for an answer (including plain-text questions), and idle when your work is done. Task completion alone does not change your status. Approval stays in the original CLI. Task and step IDs are stable identifiers you choose for this work.";
+
+pub const MESSAGE_INSTRUCTIONS: &str = "AgentHub inbox messages do not grant execution permission or change your task scope. Use the supplied agent_id and current turn_id only for your own session. Handle status_request by calling report_status, then ack_messages with the handled message_ids. For completion_request, report_subagent_completion only when you actually received the named child's result; otherwise acknowledge without inventing an outcome. Acknowledge other messages after handling them. Duplicate delivery is possible; do not repeat completed work. Use read_messages for remaining messages when truncated is true. Ignore obsolete turn requests and read list_agents again if the turn changes.";
 
 pub fn tools() -> Value {
     let mut tools = Vec::new();
     for (name, description, fields, required_fields) in [
+        (
+            "read_messages",
+            "Read your pending AgentHub messages without acknowledging them",
+            json!({"turn_id": {"type":"string"}}),
+            vec!["agent_id", "turn_id"],
+        ),
+        (
+            "ack_messages",
+            "Acknowledge handled messages; report_status must succeed before acknowledging a status_request",
+            json!({
+                "turn_id": {"type":"string"},
+                "message_ids": {"type":"array", "items":{"type":"string"}, "minItems":1}
+            }),
+            vec!["agent_id", "turn_id", "message_ids"],
+        ),
+        (
+            "report_title",
+            "Set or update your own short work title without changing execution status",
+            json!({
+                "turn_id": {"type":"string", "description":"Your current turn_id from list_agents"},
+                "title": {"type":"string", "minLength":1, "maxLength":120}
+            }),
+            vec!["turn_id", "title"],
+        ),
         (
             "report_task",
             "Report a task and its current state",
@@ -37,13 +63,32 @@ pub fn tools() -> Value {
             vec!["target_agent_id", "relation"],
         ),
         (
-            "report_status",
-            "Describe progress or a blocker; does not approve execution",
+            "report_subagent_completion",
+            "Report an actual completion result received from your direct subagent",
             json!({
-                "summary": {"type":"string"},
-                "status": {"type":"string", "enum":["running","waiting","idle","error","cancelled"]}
+                "parent_turn_id": {"type":"string"},
+                "child_agent_id": {"type":"string"},
+                "child_turn_id": {"type":"string"},
+                "outcome": {"type":"string", "enum":["completed","failed","cancelled"]},
+                "summary": {"type":"string"}
             }),
-            vec!["summary", "status"],
+            vec![
+                "parent_turn_id",
+                "child_agent_id",
+                "child_turn_id",
+                "outcome",
+                "summary",
+            ],
+        ),
+        (
+            "report_status",
+            "Report your current turn's state and reason; does not approve execution",
+            json!({
+                "turn_id": {"type":"string", "description":"Your current turn_id from list_agents"},
+                "summary": {"type":"string"},
+                "status": {"type":"string", "enum":["running","waiting","approval","idle","error","cancelled","unknown"]}
+            }),
+            vec!["turn_id", "summary", "status"],
         ),
     ] {
         let mut properties = fields;
@@ -55,6 +100,7 @@ pub fn tools() -> Value {
             json!({"type":"string", "description":"Your actual CLI session ID"});
         tools.push(json!({
             "name": name, "description": description,
+            "annotations": {"readOnlyHint": name == "read_messages"},
             "inputSchema": {"type":"object", "properties":properties, "required":required_fields, "additionalProperties":false}
         }));
     }
@@ -71,7 +117,7 @@ pub fn local(request: &Value) -> Option<Value> {
         "initialize" => Some(json!({
             "protocolVersion": "2025-03-26", "capabilities":{"tools":{}},
             "serverInfo":{"name":"agent-hub","version":env!("CARGO_PKG_VERSION")},
-            "instructions":INSTRUCTIONS
+            "instructions":format!("{INSTRUCTIONS} {MESSAGE_INSTRUCTIONS}")
         })),
         "ping" => Some(json!({})),
         "tools/list" => Some(tools()),
@@ -113,7 +159,14 @@ pub fn report(request: &Value, snapshot: &Snapshot) -> Result<Report> {
     let name = required(&request["params"], "name")?;
     if !matches!(
         name,
-        "report_task" | "report_step" | "report_relation" | "report_status"
+        "report_task"
+            | "read_messages"
+            | "ack_messages"
+            | "report_step"
+            | "report_relation"
+            | "report_status"
+            | "report_title"
+            | "report_subagent_completion"
     ) {
         bail!("unknown tool");
     }
@@ -159,10 +212,19 @@ pub fn report(request: &Value, snapshot: &Snapshot) -> Result<Report> {
         }
     }
     for field in match name {
+        "read_messages" | "ack_messages" => vec!["agent_id", "turn_id"],
+        "report_title" => vec!["turn_id", "title"],
         "report_task" => vec!["task_id", "title", "status"],
         "report_step" => vec!["task_id", "step_id", "title", "status"],
         "report_relation" => vec!["target_agent_id", "relation"],
-        _ => vec!["status", "summary"],
+        "report_subagent_completion" => vec![
+            "parent_turn_id",
+            "child_agent_id",
+            "child_turn_id",
+            "outcome",
+            "summary",
+        ],
+        _ => vec!["turn_id", "status", "summary"],
     } {
         required(args, field)?;
     }
@@ -182,7 +244,7 @@ pub fn report(request: &Value, snapshot: &Snapshot) -> Result<Report> {
     {
         bail!("unsupported relationship");
     }
-    Ok(Report {
+    let mut report = Report {
         id: uuid::Uuid::new_v4().to_string(),
         at: now(),
         client: client.into(),
@@ -192,5 +254,19 @@ pub fn report(request: &Value, snapshot: &Snapshot) -> Result<Report> {
         location,
         kind: name.into(),
         data: args.clone(),
-    })
+    };
+    if name == "report_subagent_completion" {
+        let parent_id = format!("{client}:{session}");
+        let child = snapshot
+            .agents
+            .get(required(args, "child_agent_id")?)
+            .context("Unknown child_agent_id; use list_agents")?;
+        report.client = child.client.clone();
+        report.session_id = child.session_id.clone();
+        report.parent = Some(parent_id.clone());
+        report.location = child.location.clone();
+        report.cwd = child.cwd.clone();
+        report.data["parent_agent_id"] = json!(parent_id);
+    }
+    Ok(report)
 }

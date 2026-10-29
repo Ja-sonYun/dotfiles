@@ -2,7 +2,7 @@
   lib,
   buildGoModule,
   writeText,
-  logFile ? "",
+  logDirectory ? "",
   socketPath,
   maxBytes ? 1048576,
   level ? "info",
@@ -17,7 +17,7 @@ buildGoModule {
     cp ${
       writeText "dotfiles-log-config.json" (
         builtins.toJSON {
-          file = logFile;
+          directory = logDirectory;
           inherit maxBytes level socketPath;
         }
       )

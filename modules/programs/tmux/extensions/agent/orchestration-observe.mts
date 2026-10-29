@@ -96,7 +96,10 @@ export async function command(
   return result.stdout.trimEnd();
 }
 
-export async function validate(location: Location): Promise<void> {
+export async function validate(
+  location: Location,
+  ownerId?: string,
+): Promise<void> {
   if (
     !location.socket ||
     !/^\$\d+$/.test(location.session) ||
@@ -131,6 +134,7 @@ export async function validate(location: Location): Promise<void> {
     }
     if (
       !location.process_id ||
+      (ownerId !== undefined && current.owner?.id !== ownerId) ||
       current.owner?.pid !== location.process_id ||
       current.owner.started !== location.process_started
     ) {

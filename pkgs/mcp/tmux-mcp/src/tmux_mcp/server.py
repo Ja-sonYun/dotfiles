@@ -275,7 +275,11 @@ class Tmux:
         )
 
     async def capture_pane(
-        self, pane_id: str, lines: int | None = None, offset: int = 0
+        self,
+        pane_id: str,
+        lines: int | None = None,
+        offset: int = 0,
+        viewport_only: bool = False,
     ) -> Capture:
         count = self.config.capture.defaultLines if lines is None else lines
         if isinstance(count, bool) or not 1 <= count <= self.config.capture.maxLines:
@@ -285,13 +289,29 @@ class Tmux:
         await self.require_pane(pane_id)
         # Join soft-wrapped rows and retain all available context for redaction.
         raw = await self.command("capture-pane", "-p", "-J", "-t", pane_id, "-S", "-")
+        viewport = None
+        if viewport_only:
+            viewport = await self.command("capture-pane", "-p", "-J", "-t", pane_id)
+            if not raw.endswith(viewport):
+                raise RequestError("Pane changed during capture; retry observation.")
         masked = await self.redact(raw)
         await self.require_pane(pane_id)
 
-        # The oldest logical line may have lost its beginning to the history limit.
-        # Discard it after redaction to preserve multiline secret matching context.
-        masked = masked.partition("\n")[2]
-        logical_lines = masked.splitlines()
+        if viewport is not None:
+            # Preserve history context for redaction before selecting the viewport.
+            if len(masked.splitlines()) != len(raw.splitlines()):
+                raise RequestError(
+                    "Redaction changed line boundaries; output withheld."
+                )
+            history_lines = len(raw.splitlines()) - len(viewport.splitlines())
+            start = len(raw) - len(viewport)
+            if start > 0 and raw[start - 1 : start] != b"\n":
+                history_lines += 1
+            logical_lines = masked.splitlines()[max(1, history_lines) :]
+        else:
+            # Discard the oldest logical line, which may begin outside history.
+            logical_lines = masked.partition("\n")[2].splitlines()
+
         end = max(0, len(logical_lines) - offset)
         output = "\n".join(logical_lines[max(0, end - count) : end])
         encoded = output.encode("utf-8")
@@ -299,7 +319,7 @@ class Tmux:
         return Capture(
             pane_id=pane_id,
             output=encoded[-limit:].decode("utf-8", errors="ignore"),
-            truncated=len(encoded) > limit,
+            truncated=len(encoded) > limit or (viewport_only and end > count),
         )
 
     async def send_keys(
@@ -377,6 +397,7 @@ def create_server(config: Config) -> FastMCP:
             "available logical line is withheld because its beginning may have "
             "been trimmed from tmux history. offset skips logical lines from the "
             "newest end (default 0); lines selects how many preceding lines to read. "
+            "viewport_only limits output to the current screen while retaining history for redaction. "
             "If truncated is true, request fewer lines to avoid the output byte limit. "
             "Offsets may shift as new output arrives or old history is discarded."
         ),

@@ -135,7 +135,13 @@ in
             })
         );
         keyTables = {
-          agent-hub-view.Any.command = "send-keys";
+          agent-hub-view = {
+            Any.command = "send-keys";
+            C-u.command = ''copy-mode \; send-keys -X halfpage-up'';
+            C-d.command = "if-shell -F '#{pane_in_mode}' { send-keys -X halfpage-down }";
+            C-y.command = ''copy-mode \; send-keys -X scroll-up'';
+            C-e.command = "if-shell -F '#{pane_in_mode}' { send-keys -X scroll-down }";
+          };
           agent-hub-input.Any.command = "send-keys";
         }
         //

@@ -20,7 +20,7 @@ in
       decai -e model=`%ZDR_LLM_MODEL`
     '';
 
-    plugins = {
+    pluginFiles = {
       "libcore_pdd${extension}" = "${pkgs.r2dec}/lib/radare2/last/libcore_pdd${extension}";
       "libcore_r2ghidra${extension}" = "${pkgs.r2ghidra}/lib/radare2/last/libcore_r2ghidra${extension}";
       "libcore_r2mcp${extension}" = "${pkgs.r2mcp}/lib/radare2/last/libcore_r2mcp${extension}";

@@ -1,12 +1,32 @@
-Subject: Support macOS 27 on the official yabai source
+Subject: Support macOS 27 and 27.2 on the official yabai source
 
 Base: https://github.com/asmvik/yabai/commit/dd845723416f5fe92af49fad5ebab00369e07edd
-Source: https://github.com/AhsanFazal/yabai/commit/ad0a12d63f639534a296a1d065b0d04979f1b4db
-Initial support: https://github.com/AhsanFazal/yabai/commit/49c2d035aa0a7d99f6ebf7f7d327972d6a707bb4
-Scripting addition version: https://github.com/AhsanFazal/yabai/commit/6f4990479f94d0706a327e9571cd6b3adb32be10
-Upstream tracking: https://github.com/asmvik/yabai/issues/2802
+Client version gates: https://github.com/AhsanFazal/yabai/commit/ad0a12d63f639534a296a1d065b0d04979f1b4db
+Dock patterns and API: https://github.com/LCS-Dev-Ergos/Yabai/commit/9da3923176d88e6c44a7802fa7d6374ae40414f4
+Space guards: https://github.com/LCS-Dev-Ergos/Yabai/commit/8135286ece81646f12e6afaf59667e29ae1e1ae9
+Loader requirements: https://github.com/asmvik/yabai/issues/2832#issuecomment-6401082209
+Upstream tracking: https://github.com/asmvik/yabai/issues/2832
+Pattern search tool: https://gist.github.com/AhsanFazal/d18a54b9dc0f259b49e21b8ed70078d2/a853e09ed9d98d1785a5d9ec5f46169258c2590d
 
-Keep the upstream macOS 26.6 changes and omit the fork's local installer.
+Targets: macOS 27.0 and 27.2, Apple Silicon.
+Local OS: macOS 27.2 (26B123); local runtime unverified.
+Source runtime report: macOS 27.0.1 (26A434), M3, in the loader comment above.
+Source runtime report: macOS 27.2 beta (26B5091g), M1 Pro.
+The arm64e.x1 slice has only been examined statically by the source author.
+Space focus, creation and destruction are supported by the source patch;
+moving Spaces remains unsupported because DPPM and move_space are unresolved.
+
+Keep the upstream macOS 26.6 changes and the existing client version gates.
+Use OSAX_VERSION 2.1.32 to replace the earlier forks' 2.1.31 payload.
+Relax loader capability requirements only on macOS 27.
+Use the existing Space selector when available and the 27.2 selector otherwise.
+
+For new OS builds, record the build, Dock SHA-256 and architecture slice.
+Analyze /System/Library/CoreServices/Dock.app/Contents/MacOS/Dock per slice;
+the pattern search tool does not parse universal Mach-O files.
+Trace clearBindingForBundleID:, CGSMoveManagedSpaceToDisplayIndex and
+SLSTransactionDestroySpace in Ghidra before changing signatures.
+A byte-pattern match alone does not establish the target's identity.
 
 diff --git a/src/workspace.h b/src/workspace.h
 --- a/src/workspace.h
@@ -182,142 +202,158 @@ diff --git a/src/window_manager.c b/src/window_manager.c
 diff --git a/src/osax/arm64_payload.m b/src/osax/arm64_payload.m
 --- a/src/osax/arm64_payload.m
 +++ b/src/osax/arm64_payload.m
-@@ -5,7 +5,7 @@
+@@ -5,7 +5,9 @@
      __asm__("mov x0, %0\n""mov x1, %1\n""mov x2, %2\n""mov x20, %3\n" : :"r"(v0), "r"(v1), "r"(v2), "r"(v3) :"x0", "x1", "x2", "x20"); ((void (*)())(func))();
  
  uint64_t get_dock_spaces_offset(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
-+    if (os_version.majorVersion == 26 || os_version.majorVersion == 27) {
++    if (os_version.majorVersion == 27) {
++        return 0x20000;
++    } else if (os_version.majorVersion == 26) {
          return 0x30000;
      } else if (os_version.majorVersion == 15) {
          return os_version.minorVersion >= 4 ? 0x1f0000 : 0x200000;
-@@ -21,7 +21,9 @@
+@@ -21,7 +23,9 @@ uint64_t get_dock_spaces_offset(NSOperatingSystemVersion os_version) {
  }
  
  uint64_t get_dppm_offset(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
 +    if (os_version.majorVersion == 27) {
-+        return 0x40000;
++        return 0;
 +    } else if (os_version.majorVersion == 26) {
          return 0x70000;
      } else if (os_version.majorVersion == 15) {
          return 0x250000;
-@@ -37,7 +39,9 @@
+@@ -37,7 +41,9 @@ uint64_t get_dppm_offset(NSOperatingSystemVersion os_version) {
  }
  
  uint64_t get_fix_animation_offset(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
 +    if (os_version.majorVersion == 27) {
-+        return 0x210000;
++        return 0x160000;
 +    } else if (os_version.majorVersion == 26) {
          return 0x250000;
      } else if (os_version.majorVersion == 15) {
          return 0x250000;
-@@ -53,7 +57,9 @@
+@@ -53,7 +59,9 @@ uint64_t get_fix_animation_offset(NSOperatingSystemVersion os_version) {
  }
  
  uint64_t get_add_space_offset(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
 +    if (os_version.majorVersion == 27) {
-+        return 0x210000;
++        return 0x160000;
 +    } else if (os_version.majorVersion == 26) {
          return 0x250000;
      } else if (os_version.majorVersion == 15) {
          return 0x250000;
-@@ -69,7 +75,9 @@
+@@ -69,7 +77,9 @@ uint64_t get_add_space_offset(NSOperatingSystemVersion os_version) {
  }
  
  uint64_t get_remove_space_offset(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
 +    if (os_version.majorVersion == 27) {
-+        return 0x170000;
++        return 0x120000;
 +    } else if (os_version.majorVersion == 26) {
          return 0x1e0000;
      } else if (os_version.majorVersion == 15) {
          return 0x1c0000;
-@@ -85,7 +93,9 @@
+@@ -85,7 +95,9 @@ uint64_t get_remove_space_offset(NSOperatingSystemVersion os_version) {
  }
  
  uint64_t get_move_space_offset(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
 +    if (os_version.majorVersion == 27) {
-+        return 0x170000;
++        return 0;
 +    } else if (os_version.majorVersion == 26) {
          return 0x1c0000;
      } else if (os_version.majorVersion == 15) {
          return 0x1c0000;
-@@ -101,7 +111,7 @@
+@@ -101,7 +113,9 @@ uint64_t get_move_space_offset(NSOperatingSystemVersion os_version) {
  }
  
  uint64_t get_set_front_window_offset(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
-+    if (os_version.majorVersion == 26 || os_version.majorVersion == 27) {
++    if (os_version.majorVersion == 27) {
++        return 0;
++    } else if (os_version.majorVersion == 26) {
          return 0x10000;
      } else if (os_version.majorVersion == 15) {
          return 0x35000;
-@@ -117,7 +127,7 @@
+@@ -117,7 +131,9 @@ uint64_t get_set_front_window_offset(NSOperatingSystemVersion os_version) {
  }
  
  const char *get_dock_spaces_pattern(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
-+    if (os_version.majorVersion == 26 || os_version.majorVersion == 27) {
++    if (os_version.majorVersion == 27) {
++        return "?8 ?? ?? ?? 08 ?? ?? 91 00 01 40 F9 E2 03 13 AA ?? ?? ?? 94 ?? ?? ?? ?? 08";
++    } else if (os_version.majorVersion == 26) {
          // Pulling out of doBindingCommand:display (search decompiled text in ghidra) function.
          return "?8 ?? ?? ?? 08 ?? ?? 91 00 01 40 F9 E2 03 13 AA ?? ?? ?? 94 ?? ?? ?? ?? 08";
      } else if (os_version.majorVersion == 15) {
-@@ -137,7 +147,7 @@
+@@ -137,7 +153,10 @@ uint64_t get_set_front_window_offset(NSOperatingSystemVersion os_version) {
  }
  
  const char *get_dppm_pattern(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
-+    if (os_version.majorVersion == 26 || os_version.majorVersion == 27) {
++    if (os_version.majorVersion == 27) {
++        // DPDesktopPictureManager no longer exists as of macOS 27.2.
++        return NULL;
++    } else if (os_version.majorVersion == 26) {
          //Pulling from function 'DPRemoteConnection::_handleEvent:'
          return "?? ?? 00 ?? 08 ?? ?? 91 00 01 40 F9 E2 03 16 AA E3 03 19 AA ?? ?? ?? 94";
      } else if (os_version.majorVersion == 15) {
-@@ -157,7 +167,7 @@
+@@ -157,7 +176,9 @@ uint64_t get_set_front_window_offset(NSOperatingSystemVersion os_version) {
  }
  
  const char *get_fix_animation_pattern(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
-+    if (os_version.majorVersion == 26 || os_version.majorVersion == 27) {
++    if (os_version.majorVersion == 27) {
++        return "00 10 6A 1E A8 ?? ?? D1 ?? 01 ?? F8";
++    } else if (os_version.majorVersion == 26) {
          return "00 10 6A 1E A8 ?? ?? D1 ?? 01 ?? F8";
      } else if (os_version.majorVersion == 15) {
          return "00 10 6A 1E A8 ?? ?? D1 ?? 01 ?? F8";
-@@ -173,7 +183,9 @@
+@@ -173,7 +194,10 @@ uint64_t get_set_front_window_offset(NSOperatingSystemVersion os_version) {
  }
  
  const char *get_add_space_pattern(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
 +    if (os_version.majorVersion == 27) {
-+        return "7F 23 03 D5 E1 03 1E AA ?? ?? ?? 97 FE 03 01 AA ?? ?? ?? A9 FD 43 01 91 F3 03 14 AA F5 03 00 AA 96 8E 43 F8";
++        // The first instruction is pacibsp or pacibsppc depending on the arm64e slice.
++        return "?? ?? ?? ?? E1 03 1E AA ?? ?? ?? 97 FE 03 01 AA FD 7B 05 A9 FD 43 01 91 F3 03 14 AA F5 03 00 AA 96 8E 43 F8";
 +    } else if (os_version.majorVersion == 26) {
          if (os_version.minorVersion >= 4) {
              return "7F 23 03 D5 E1 03 1E AA ?? ?? ?? 97 FE 03 01 AA FD 7B 05 A9 FD 43 01 91 F3 03 14 AA F5 03";
          }
-@@ -192,7 +204,7 @@
+@@ -192,7 +216,9 @@ uint64_t get_set_front_window_offset(NSOperatingSystemVersion os_version) {
  }
  
  const char *get_remove_space_pattern(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
-+    if (os_version.majorVersion == 26 || os_version.majorVersion == 27) {
++    if (os_version.majorVersion == 27) {
++        return "?? ?? ?? ?? FF ?? ?? D1 FC ?? ?? A9 FA ?? ?? A9 F8 ?? ?? A9 F6 ?? ?? A9 F4 ?? ?? A9 FD ?? ?? A9 FD ?? ?? 91 ?? 03 03 AA F5 03 02 AA F4 03 01 AA";
++    } else if (os_version.majorVersion == 26) {
          return "7F 23 03 D5 FF ?? ?? D1 FC ?? ?? A9 FA ?? ?? A9 F8 ?? ?? A9 F6 ?? ?? A9 F4 ?? ?? A9 FD ?? ?? A9 FD ?? ?? 91 ?? 03 03 AA F5 03 02 AA F4 03 01 AA";
      } else if (os_version.majorVersion == 15) {
          return "7F 23 03 D5 FF 83 ?? D1 FC 6F ?? A9 FA 67 ?? A9 F8 5F ?? A9 F6 57 ?? A9 F4 4F ?? A9 FD 7B ?? A9 FD 43 ?? 91 ?? 03 03 AA ?? 03 02 AA ?? 03 01 AA ?? 03 00 AA ?? ?? ?? AA";
-@@ -208,7 +220,7 @@
+@@ -208,7 +234,9 @@ uint64_t get_set_front_window_offset(NSOperatingSystemVersion os_version) {
  }
  
  const char *get_move_space_pattern(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
-+    if (os_version.majorVersion == 26 || os_version.majorVersion == 27) {
++    if (os_version.majorVersion == 27) {
++        return NULL;
++    } else if (os_version.majorVersion == 26) {
          return "7F 23 03 D5 E3 03 1E AA ?? ?? ?? 97 FE 03 03 AA FD 7B ?? A9 FD ?? ?? 91 F6 03 14 AA";
      } else if (os_version.majorVersion == 15) {
          return "7F 23 03 D5 E3 03 1E AA ?? ?? FF 97 FE 03 03 AA FD 7B 06 A9 FD 83 01 91 F6 03 14 AA F4 03 02 AA FB 03 01 AA FA 03 00 AA ?? 13 00 ?? E8 ?? ?? F9 19 68 68 F8 E0 03 19 AA E1 03 16 AA";
-@@ -228,7 +240,9 @@
+@@ -228,7 +256,9 @@ uint64_t get_set_front_window_offset(NSOperatingSystemVersion os_version) {
  }
  
  const char *get_set_front_window_pattern(NSOperatingSystemVersion os_version) {
 -    if (os_version.majorVersion == 26) {
 +    if (os_version.majorVersion == 27) {
-+        return "?? ?? ?? 34 7F 23 03 D5 FF C3 01 D1 ?? ?? ?? A9 ?? ?? ?? A9 ?? ?? ?? A9 FD 83 01 91 F3 03 01 AA F5 03 00 AA";
++        return NULL;
 +    } else if (os_version.majorVersion == 26) {
          return "21 ?? ?? 34 7F 23 03 D5 FF ?? 01 D1 F6 ?? 04 A9 F4 ?? 05 A9 FD ?? 06 A9 FD ?? 01 91";
      } else if (os_version.majorVersion == 15) {
@@ -337,18 +373,122 @@ diff --git a/src/osax/payload.m b/src/osax/payload.m
      }
  
      NSLog(@"[yabai-sa] spaces functionality is only supported on macOS Big Sur 11.0.0+, Monterey 12.0.0+, Ventura 13.0.0+, Sonoma 14.0.0+, and Sequoia 15.0");
-@@ -256,6 +261,11 @@
+@@ -256,9 +261,12 @@ static bool verify_os_version(NSOperatingSystemVersion os_version)
          NSLog(@"[yabai-sa] Detected Tahoe Preview... flagging 'macOSSequoia=true.'");
          macOSSequoia = true;
          return true; // Tahoe preview
 +    } else if (os_version.majorVersion == 27) {
-+
-+        NSLog(@"[yabai-sa] Detected Golden Gate Developer Beta (26A5353q, 26A5368g, 26A5378j, 26A5378n, 26A5388g, 26A5406e, 26A5416b)... flagging 'macOSSequoia=true.'");
 +        macOSSequoia = true;
-+        return true; // Golden Gate Developer Beta (26A5353q, 26A5368g, 26A5378j, 26A5378n, 26A5388g, 26A5406e, 26A5416b)
++        return true;
      }
  
-     NSLog(@"[yabai-sa] spaces functionality is only supported on macOS Monterey 12.0.0+, and Ventura 13.0.0+, Sonoma 14.0.0+, and Sequoia 15.0");
+-    NSLog(@"[yabai-sa] spaces functionality is only supported on macOS Monterey 12.0.0+, and Ventura 13.0.0+, Sonoma 14.0.0+, and Sequoia 15.0");
++    NSLog(@"[yabai-sa] spaces functionality is only supported on macOS Monterey 12.0.0+, and Ventura 13.0.0+, Sonoma 14.0.0+, Sequoia 15.0, Tahoe 26.0 and Golden Gate 27.0");
+ #endif
+ 
+     return false;
+@@ -431,6 +439,8 @@ static inline id display_space_for_display_uuid(CFStringRef display_uuid)
+             id display_source_space = get_ivar_value(display_space, "_currentSpace");
+             uint64_t sid = get_space_id(display_source_space);
+             CFStringRef uuid = SLSCopyManagedDisplayForSpace(SLSMainConnectionID(), sid);
++            if (!uuid) continue;
++
+             bool match = CFEqual(uuid, display_uuid);
+             CFRelease(uuid);
+             if (match) {
+@@ -470,10 +480,17 @@ static void do_space_move(char *message)
+     unpack(focus_dest_space);
+ 
+     CFStringRef source_display_uuid = SLSCopyManagedDisplayForSpace(SLSMainConnectionID(), source_space_id);
++    if (!source_display_uuid) return;
++
++    CFStringRef dest_display_uuid = SLSCopyManagedDisplayForSpace(SLSMainConnectionID(), dest_space_id);
++    if (!dest_display_uuid) {
++        CFRelease(source_display_uuid);
++        return;
++    }
++
+     id source_space = space_for_display_with_id(source_display_uuid, source_space_id);
+     id source_display_space = display_space_for_display_uuid(source_display_uuid);
+ 
+-    CFStringRef dest_display_uuid = SLSCopyManagedDisplayForSpace(SLSMainConnectionID(), dest_space_id);
+     id dest_space = space_for_display_with_id(dest_display_uuid, dest_space_id);
+     unsigned dest_display_id = ((unsigned (*)(id, SEL, id)) objc_msgSend)(dock_spaces, @selector(displayIDForSpace:), dest_space);
+     id dest_display_space = display_space_for_display_uuid(dest_display_uuid);
+@@ -521,11 +538,18 @@ static void do_space_destroy(char *message)
+     unpack(space_id);
+ 
+     CFStringRef display_uuid = SLSCopyManagedDisplayForSpace(SLSMainConnectionID(), space_id);
++    if (!display_uuid) return;
++
+     uint64_t active_space_id = SLSManagedDisplayGetCurrentSpace(SLSMainConnectionID(), display_uuid);
+ 
+     id space = space_for_display_with_id(display_uuid, space_id);
+     id display_space = display_space_for_display_uuid(display_uuid);
+ 
++    if (space == nil || display_space == nil) {
++        CFRelease(display_uuid);
++        return;
++    }
++
+     dispatch_sync(dispatch_get_main_queue(), ^{
+         ((remove_space_call) remove_space_fp)(space, display_space, dock_spaces, space_id, space_id);
+     });
+@@ -547,16 +571,37 @@ static void do_space_create(char *message)
+     unpack(space_id);
+ 
+     CFStringRef __block display_uuid = SLSCopyManagedDisplayForSpace(SLSMainConnectionID(), space_id);
++    if (!display_uuid) return;
++
+     dispatch_sync(dispatch_get_main_queue(), ^{
+-        id new_space = macOSSequoia
+-                     ? [[objc_getClass("ManagedSpace") alloc] init]
+-                     : [[objc_getClass("Dock.ManagedSpace") alloc] init];
+         id display_space = display_space_for_display_uuid(display_uuid);
+-        asm__call_add_space(new_space, display_space, add_space_fp);
++        if (display_space != nil) {
++            id new_space = macOSSequoia
++                         ? [[objc_getClass("ManagedSpace") alloc] init]
++                         : [[objc_getClass("Dock.ManagedSpace") alloc] init];
++            asm__call_add_space(new_space, display_space, add_space_fp);
++        }
+         CFRelease(display_uuid);
+     });
+ }
+ 
++static inline id current_space_for_display(CFStringRef display_uuid, uint64_t space_id)
++{
++    SEL selector = macOSSequoia ? @selector(currentSpaceForDisplayUUID:) : @selector(currentSpaceforDisplayUUID:);
++    if ([dock_spaces respondsToSelector:selector]) {
++        return ((id (*)(id, SEL, CFStringRef)) objc_msgSend)(dock_spaces, selector, display_uuid);
++    }
++
++    // macOS 27.2 uses a display ID instead of a display UUID.
++    if ([dock_spaces respondsToSelector:@selector(displayForSPID:)] &&
++        [dock_spaces respondsToSelector:@selector(currentSpaceForDisplay:)]) {
++        uint32_t display_id = ((uint32_t (*)(id, SEL, uint64_t)) objc_msgSend)(dock_spaces, @selector(displayForSPID:), space_id);
++        return ((id (*)(id, SEL, uint32_t)) objc_msgSend)(dock_spaces, @selector(currentSpaceForDisplay:), display_id);
++    }
++
++    return nil;
++}
++
+ static void do_space_focus(char *message)
+ {
+     if (dock_spaces == nil) return;
+@@ -566,9 +611,9 @@ static void do_space_focus(char *message)
+ 
+     if (dest_space_id) {
+         CFStringRef dest_display = SLSCopyManagedDisplayForSpace(SLSMainConnectionID(), dest_space_id);
+-        id source_space = macOSSequoia
+-                        ? ((id (*)(id, SEL, CFStringRef)) objc_msgSend)(dock_spaces, @selector(currentSpaceForDisplayUUID:), dest_display)
+-                        : ((id (*)(id, SEL, CFStringRef)) objc_msgSend)(dock_spaces, @selector(currentSpaceforDisplayUUID:), dest_display);
++        if (!dest_display) return;
++
++        id source_space = current_space_for_display(dest_display, dest_space_id);
+         uint64_t source_space_id = get_space_id(source_space);
+ 
+         if (source_space_id != dest_space_id) {
 diff --git a/src/osax/common.h b/src/osax/common.h
 --- a/src/osax/common.h
 +++ b/src/osax/common.h
@@ -357,7 +497,26 @@ diff --git a/src/osax/common.h b/src/osax/common.h
  #define SA_SOCKET_BUFF_LEN 0x1000
  
 -#define OSAX_VERSION                "2.1.30"
-+#define OSAX_VERSION                "2.1.31"
++#define OSAX_VERSION                "2.1.32"
  
  #define OSAX_ATTRIB_DOCK_SPACES     0x01
  #define OSAX_ATTRIB_DPPM            0x02
+diff --git a/src/sa.m b/src/sa.m
+--- a/src/sa.m
++++ b/src/sa.m
+@@ -279,7 +279,14 @@ static int scripting_addition_perform_validation(void)
+     }
+ 
+     if (string_equals(version, OSAX_VERSION)) {
+-        if ((attrib & OSAX_ATTRIB_ALL) == OSAX_ATTRIB_ALL) {
++        NSOperatingSystemVersion os_version = [[NSProcessInfo processInfo] operatingSystemVersion];
++        uint32_t required_attrib = OSAX_ATTRIB_ALL;
++        if (os_version.majorVersion == 27) {
++            // macOS 27 leaves these entry points unresolved.
++            required_attrib &= ~(OSAX_ATTRIB_SET_WINDOW | OSAX_ATTRIB_DPPM | OSAX_ATTRIB_MOV_SPACE);
++        }
++
++        if ((attrib & required_attrib) == required_attrib) {
+             notify("scripting-addition", "payload v%s", version);
+             return 0;
+         }

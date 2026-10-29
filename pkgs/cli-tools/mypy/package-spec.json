@@ -2,6 +2,6 @@
   "registry": "pypi",
   "name": "mypy",
   "versions": {
-    "aarch64-darwin": "2.4.0"
+    "aarch64-darwin": "2.4.1"
   }
 }
