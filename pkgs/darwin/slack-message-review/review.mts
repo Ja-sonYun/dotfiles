@@ -11,8 +11,8 @@ const directory = requiredSetting("SLACK_REVIEW_STATE_DIRECTORY");
 const schema = {
   type: "object",
   properties: {
-    suggestion: { type: "string" },
-    reason: { type: "string" },
+    suggestion: { type: "string", pattern: "\\S" },
+    reason: { type: "string", pattern: "\\S" },
   },
   required: ["suggestion", "reason"],
   additionalProperties: false,
@@ -30,8 +30,8 @@ export async function review(
         ...schema,
         properties: {
           ...schema.properties,
-          coreQuestion: { type: "string" },
-          assessment: { type: "string" },
+          coreQuestion: { type: "string", pattern: "\\S" },
+          assessment: { type: "string", pattern: "\\S" },
         },
         required: ["suggestion", "reason", "coreQuestion", "assessment"],
       }
@@ -49,6 +49,7 @@ export async function review(
       ? "Return coreQuestion, assessment, suggestion, and reason using the specified JSON schema. coreQuestion identifies the question or request being answered; assessment evaluates the submitted latest suggestion for relevance, misunderstandings, and omissions with brief reasons. Do not assume the last question belongs to the other person. State when there is no question, the intended target is unclear, or history is insufficient. suggestion contains only the complete suggested message. Do not invent facts, intentions, or commitments. Incorporate edits in the latest suggestion and revisionRequest. Assess the submitted draft, not the effect of your proposed rewrite."
       : "Return suggestion and reason using the specified JSON schema. suggestion contains only the complete suggested message, without explanations or assessments. Incorporate the user's edits in the latest suggestion.",
     "reason is a brief user-facing explanation in Korean of the important changes and their purpose, or why no change was needed. It is a separate log field, not part of suggestion or assessment. Do not include hidden reasoning or claim to have used sources you did not read.",
+    "Every required output field must contain non-whitespace text. If no changes are needed, return the complete latest input suggestion unchanged in suggestion; never return an empty string to indicate that no changes are needed.",
     JSON.stringify(request),
   ].join("\n");
   const answer = await generateWithCodex(
@@ -73,26 +74,26 @@ export async function review(
       ))
   ) {
     const logger = process.env.SLACK_CODEX_LOG_COMMAND;
+    const fields = (
+      isThread
+        ? ["suggestion", "reason", "coreQuestion", "assessment"]
+        : ["suggestion", "reason"]
+    ).map((field) => {
+      const value = isRecord(answer) ? answer[field] : undefined;
+      return {
+        field,
+        type:
+          value === null
+            ? "null"
+            : Array.isArray(value)
+              ? "array"
+              : typeof value,
+        length: typeof value === "string" ? value.length : null,
+        blank: typeof value === "string" ? !value.trim() : null,
+        valid: typeof value === "string" && Boolean(value.trim()),
+      };
+    });
     if (logger) {
-      const fields = (
-        isThread
-          ? ["suggestion", "reason", "coreQuestion", "assessment"]
-          : ["suggestion", "reason"]
-      ).map((field) => {
-        const value = isRecord(answer) ? answer[field] : undefined;
-        return {
-          field,
-          type:
-            value === null
-              ? "null"
-              : Array.isArray(value)
-                ? "array"
-                : typeof value,
-          length: typeof value === "string" ? value.length : null,
-          blank: typeof value === "string" ? !value.trim() : null,
-          valid: typeof value === "string" && Boolean(value.trim()),
-        };
-      });
       // Record validation metadata without retaining the generated message.
       try {
         execFile(
@@ -110,7 +111,16 @@ export async function review(
         );
       } catch {}
     }
-    throw new Error("Codex returned an invalid review.");
+    const details = !isRecord(answer)
+      ? "expected an object"
+      : fields
+          .filter(({ valid }) => !valid)
+          .map(
+            ({ field, type, blank }) =>
+              `${field} ${type === "undefined" ? "is missing" : blank ? "is empty" : "must be a string"}`,
+          )
+          .join("; ");
+    throw new Error(`Codex returned an invalid review: ${details}.`);
   }
   const preserveEscapes = [request.original, request.suggestion].some((text) =>
     /\\(?:r\\n|n)/.test(text),

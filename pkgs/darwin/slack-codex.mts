@@ -83,6 +83,7 @@ async function readonlyArgs(
   const pending = new Map<
     number,
     {
+      method: string;
       resolve(value: Record<string, unknown>): void;
       reject(error: Error): void;
     }
@@ -127,9 +128,29 @@ async function readonlyArgs(
       const request = pending.get(message.id);
       if (!request) return;
       pending.delete(message.id);
-      if (message.error || !isRecord(message.result)) {
+      if (message.error) {
+        const details = isRecord(message.error)
+          ? [
+              typeof message.error.code === "number"
+                ? message.error.code
+                : null,
+              typeof message.error.message === "string"
+                ? message.error.message
+                : null,
+            ]
+              .filter((value) => value !== null)
+              .join(": ")
+          : "";
         request.reject(
-          new Error("Codex could not provide its tool permissions."),
+          new Error(
+            `Codex ${request.method} failed${details ? `: ${details}` : "."}`,
+          ),
+        );
+      } else if (!isRecord(message.result)) {
+        request.reject(
+          new Error(
+            `Codex ${request.method} returned an invalid result: expected an object.`,
+          ),
         );
       } else {
         request.resolve(message.result);
@@ -147,7 +168,7 @@ async function readonlyArgs(
     stage = method;
     const id = ++sequence;
     return new Promise((resolve, reject) => {
-      pending.set(id, { resolve, reject });
+      pending.set(id, { method, resolve, reject });
       server.child.stdin.write(`${JSON.stringify({ id, method, params })}\n`);
     });
   }
