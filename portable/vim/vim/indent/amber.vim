@@ -554,37 +554,40 @@ function! s:CalcIndent(ctx) abort
   return a:ctx.prev_ind + a:ctx.sw
 endfunction
 
-" Indent rules list
-
-let s:indent_rules = [
-      \ {'check': 's:CheckFirstLine',           'calc': 's:CalcZero'},
-      \ {'check': 's:CheckNoPrevLine',          'calc': 's:CalcZero'},
-      \ {'check': 's:CheckBraceElseBrace',      'calc': 's:CalcBraceElseBrace'},
-      \ {'check': 's:CheckCloserBrace',         'calc': 's:CalcCloserBrace'},
-      \ {'check': 's:CheckCloserBracket',       'calc': 's:CalcCloserBracket'},
-      \ {'check': 's:CheckCloserParen',         'calc': 's:CalcCloserParen'},
-      \ {'check': 's:CheckCmdEnd',              'calc': 's:CalcCmdEnd'},
-      \ {'check': 's:CheckOpLeadingDedent',     'calc': 's:CalcDedent'},
-      \ {'check': 's:CheckTernaryElseDedent',   'calc': 's:CalcTernaryChainEnd'},
-      \ {'check': 's:CheckBackslashFinalDedent','calc': 's:CalcDedent'},
-      \ {'check': 's:CheckBackslashContinue',   'calc': 's:CalcBackslashContinue'},
-      \ {'check': 's:CheckCurIsThen',           'calc': 's:CalcThen'},
-      \ {'check': 's:CheckCurIsTernaryElse',    'calc': 's:CalcTernaryElse'},
-      \ {'check': 's:CheckCurOpHead',           'calc': 's:CalcOpHead'},
-      \ {'check': 's:CheckTrailingCloser',      'calc': 's:CalcTrailingCloser'},
-      \ {'check': 's:CheckOpenersOrTails',      'calc': 's:CalcIndent'},
-      \ ]
-
-" Main indent function
-
 function! GetAmberIndent(lnum) abort
   let ctx = s:BuildContext(a:lnum)
-
-  for rule in s:indent_rules
-    if call(rule.check, [ctx])
-      return call(rule.calc, [ctx])
-    endif
-  endfor
-
+  if s:CheckFirstLine(ctx)
+    return s:CalcZero(ctx)
+  elseif s:CheckNoPrevLine(ctx)
+    return s:CalcZero(ctx)
+  elseif s:CheckBraceElseBrace(ctx)
+    return s:CalcBraceElseBrace(ctx)
+  elseif s:CheckCloserBrace(ctx)
+    return s:CalcCloserBrace(ctx)
+  elseif s:CheckCloserBracket(ctx)
+    return s:CalcCloserBracket(ctx)
+  elseif s:CheckCloserParen(ctx)
+    return s:CalcCloserParen(ctx)
+  elseif s:CheckCmdEnd(ctx)
+    return s:CalcCmdEnd(ctx)
+  elseif s:CheckOpLeadingDedent(ctx)
+    return s:CalcDedent(ctx)
+  elseif s:CheckTernaryElseDedent(ctx)
+    return s:CalcTernaryChainEnd(ctx)
+  elseif s:CheckBackslashFinalDedent(ctx)
+    return s:CalcDedent(ctx)
+  elseif s:CheckBackslashContinue(ctx)
+    return s:CalcBackslashContinue(ctx)
+  elseif s:CheckCurIsThen(ctx)
+    return s:CalcThen(ctx)
+  elseif s:CheckCurIsTernaryElse(ctx)
+    return s:CalcTernaryElse(ctx)
+  elseif s:CheckCurOpHead(ctx)
+    return s:CalcOpHead(ctx)
+  elseif s:CheckTrailingCloser(ctx)
+    return s:CalcTrailingCloser(ctx)
+  elseif s:CheckOpenersOrTails(ctx)
+    return s:CalcIndent(ctx)
+  endif
   return ctx.prev_ind
 endfunction

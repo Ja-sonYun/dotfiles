@@ -17,6 +17,7 @@ let
     hooks = [
       {
         type = "command";
+        observer = true;
         inherit command timeout;
       }
     ];

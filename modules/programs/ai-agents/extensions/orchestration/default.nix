@@ -66,6 +66,7 @@ let
       {
         type = "command";
         command = "${lib.getExe launcher} hook";
+        observer = true;
         timeout = 3;
       }
     ];

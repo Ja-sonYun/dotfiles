@@ -15,6 +15,7 @@ export interface RunningProcess {
 }
 
 export function start(
+  cwd: string,
   command: string,
   args: string[],
   environment: NodeJS.ProcessEnv = process.env,
@@ -23,7 +24,7 @@ export function start(
   maxOutputBytes: number | null = 1024 * 1024,
 ): RunningProcess {
   const child = spawn(command, args, {
-    cwd: process.env.SLACK_REVIEW_STATE_DIRECTORY,
+    cwd,
     env: environment,
     detached: true,
     stdio: ["pipe", "pipe", "pipe"],

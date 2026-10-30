@@ -21,8 +21,11 @@ type SummaryListener = (
   thread: ThreadIdentity,
   card?: StoredCard,
   deletedId?: string,
+  error?: string,
+  jobId?: string,
 ) => Promise<void>;
 import { requiredSetting } from "./process.mjs";
+import { configureServiceLog } from "./log.mjs";
 import {
   parseTargets,
   parseBinding,
@@ -67,6 +70,9 @@ await mkdir(requiredSetting("SLACK_THREAD_SUMMARY_STATE_DIRECTORY"), {
   recursive: true,
   mode: 0o700,
 });
+configureServiceLog(
+  `${requiredSetting("SLACK_THREAD_SUMMARY_STATE_DIRECTORY")}/service.log`,
+);
 const summaries = new SummaryStore(
   requiredSetting("SLACK_THREAD_SUMMARY_STATE_DIRECTORY"),
 );
@@ -141,6 +147,8 @@ async function connect(target: DebugTarget): Promise<void> {
     thread: ThreadIdentity,
     card?: StoredCard,
     deletedId?: string,
+    error?: string,
+    jobId?: string,
   ): Promise<void> {
     const key = threadKey(thread);
     await Promise.allSettled(
@@ -148,7 +156,7 @@ async function connect(target: DebugTarget): Promise<void> {
         .filter(([, keys]) => keys.has(key))
         .map(([contextId]) =>
           evaluate(
-            `window.__slackThreadSummary?.receiveCards(${JSON.stringify(thread)}, ${JSON.stringify(card ? [card] : [])}, ${JSON.stringify(deletedId ? [deletedId] : [])})`,
+            `window.__slackThreadSummary?.receiveCards(${JSON.stringify(thread)}, ${JSON.stringify(card ? [card] : [])}, ${JSON.stringify(deletedId ? [deletedId] : [])}, ${JSON.stringify(error)}, ${JSON.stringify(jobId)})`,
             contextId,
           ),
         ),
@@ -271,10 +279,32 @@ async function connect(target: DebugTarget): Promise<void> {
       if (threadJobs.get(session.key) === session)
         threadJobs.delete(session.key);
       await Promise.allSettled(
-        [...listeners].map((listener) => listener(request.thread, entry)),
+        [...listeners].map((listener) =>
+          listener(
+            request.thread,
+            entry,
+            undefined,
+            undefined,
+            request.kind === "summarize" ? session.id : undefined,
+          ),
+        ),
       );
       await deliver({ cards: [entry], saveError });
     } catch (error) {
+      if (request.kind === "summarize")
+        await Promise.allSettled(
+          [...listeners].map((listener) =>
+            listener(
+              request.thread,
+              undefined,
+              undefined,
+              session.controller.signal.aborted
+                ? "Summary cancelled."
+                : errorMessage(error),
+              session.id,
+            ),
+          ),
+        );
       if (!session.controller.signal.aborted) {
         if (threadJobs.get(session.key) === session)
           threadJobs.delete(session.key);

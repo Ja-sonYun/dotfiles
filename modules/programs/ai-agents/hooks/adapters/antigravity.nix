@@ -18,7 +18,9 @@ let
   selectedHooks = lib.filterAttrs (event: _: builtins.elem event supportedEvents) canonicalHooks;
   normalizeHook = event: hook: {
     type = "command";
-    command = "export AI_AGENT_CLIENT=Antigravity; exec ${
+    command = "export AI_AGENT_CLIENT=Antigravity AI_AGENT_HOOK_OBSERVER=${
+      if hook.observer or false then "1" else "0"
+    }; exec ${
       lib.escapeShellArgs [
         (lib.getExe runner)
         "antigravity"

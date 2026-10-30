@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline";
+import { setTimeout as delay } from "node:timers/promises";
 import { isRecord } from "./contracts.mjs";
 import { start } from "./process.mjs";
 import type { RunningProcess } from "./process.mjs";
@@ -26,6 +27,7 @@ async function readonlyArgs(
   command: string,
   directory: string,
   signal: AbortSignal,
+  log: (event: string, fields: Record<string, unknown>) => void,
 ): Promise<string[]> {
   type SettingValue =
     string | number | boolean | string[] | Map<string, SettingValue>;
@@ -62,6 +64,7 @@ async function readonlyArgs(
 
   signal.throwIfAborted();
   const server = start(
+    directory,
     command,
     [
       "--config",
@@ -72,6 +75,7 @@ async function readonlyArgs(
     ],
     {
       ...process.env,
+      TYPESAFE_API_KEY: undefined,
       AI_AGENT_SUBAGENT: "1",
     },
     800,
@@ -144,6 +148,20 @@ async function readonlyArgs(
         request.reject(
           new Error(
             `Codex ${request.method} failed${details ? `: ${details}` : "."}`,
+            {
+              cause: isRecord(message.error)
+                ? {
+                    code:
+                      typeof message.error.code === "number"
+                        ? message.error.code
+                        : null,
+                    message:
+                      typeof message.error.message === "string"
+                        ? message.error.message
+                        : null,
+                  }
+                : undefined,
+            },
           ),
         );
       } else if (!isRecord(message.result)) {
@@ -176,7 +194,42 @@ async function readonlyArgs(
     const result: Record<string, unknown>[] = [];
     let cursor: string | null = null;
     do {
-      const page = await request(method, { limit: 100, cursor });
+      let page: Record<string, unknown>;
+      for (let attempt = 1; ; attempt++) {
+        const started = performance.now();
+        try {
+          page = await request(method, { limit: 100, cursor });
+          if (method === "app/list")
+            log("app_list_attempt", {
+              attempt,
+              status: "completed",
+              elapsed_ms: performance.now() - started,
+            });
+          break;
+        } catch (error) {
+          if (method === "app/list")
+            log("app_list_attempt", {
+              attempt,
+              status: signal.aborted ? "cancelled" : "failed",
+              elapsed_ms: performance.now() - started,
+            });
+          signal.throwIfAborted();
+          if (
+            method !== "app/list" ||
+            !(error instanceof Error) ||
+            !isRecord(error.cause) ||
+            error.cause.code !== -32603 ||
+            error.cause.message !==
+              "failed to list apps: Failed to send request"
+          )
+            throw error;
+          if (attempt === 3)
+            throw new Error(`${error.message} (after 3 attempts)`, {
+              cause: error.cause,
+            });
+          await delay(attempt * 500, undefined, { signal });
+        }
+      }
       if (!Array.isArray(page.data) || !page.data.every(isRecord)) {
         throw new Error("Invalid Codex tool catalog.");
       }
@@ -422,7 +475,142 @@ export async function generateWithCodex(
 ): Promise<unknown> {
   const timeout = AbortSignal.timeout(100_000);
   const deadline = AbortSignal.any([signal, timeout]);
-  const prefix = path.join(directory, `codex-${randomUUID()}`);
+  const runId = randomUUID();
+  const prefix = path.join(directory, `codex-${runId}`);
+  const started = performance.now();
+  const log = (event: string, fields: Record<string, unknown>) => {
+    const logger = process.env.SLACK_CODEX_LOG_COMMAND;
+    if (!logger) return;
+    try {
+      execFile(
+        logger,
+        [
+          "slack-codex",
+          "info",
+          event,
+          `run_id=${runId}`,
+          ...Object.entries(fields)
+            .filter(([, value]) => value !== undefined)
+            .map(([key, value]) => `${key}=${String(value)}`),
+        ],
+        { timeout: 1000 },
+        () => {},
+      );
+    } catch {}
+  };
+  let phase = "discovery";
+  let phaseStarted = started;
+  let status = "failed";
+  let incomplete = false;
+  let observedEvents = false;
+  let buffer = "";
+  let dropping = false;
+  const calls = new Map<
+    string,
+    {
+      type: string;
+      server: string | undefined;
+      tool: string | undefined;
+      started?: number;
+      ended: boolean;
+    }
+  >();
+  const observeLine = (line: string) => {
+    try {
+      const event: unknown = JSON.parse(line);
+      if (!isRecord(event) || typeof event.type !== "string") {
+        incomplete = true;
+        return;
+      }
+      observedEvents = true;
+      if (
+        !["item.started", "item.updated", "item.completed"].includes(event.type)
+      )
+        return;
+      const item = event.item;
+      if (
+        !isRecord(item) ||
+        typeof item.id !== "string" ||
+        typeof item.type !== "string"
+      ) {
+        incomplete = true;
+        return;
+      }
+      if (
+        !["mcp_tool_call", "command_execution", "web_search"].includes(
+          item.type,
+        )
+      )
+        return;
+      let call = calls.get(item.id);
+      if (!call) {
+        call = {
+          type: item.type,
+          server: typeof item.server === "string" ? item.server : undefined,
+          tool: typeof item.tool === "string" ? item.tool : undefined,
+          ended: false,
+        };
+        calls.set(item.id, call);
+      }
+      if (call.ended) return;
+      if (event.type === "item.started" && call.started === undefined) {
+        call.started = performance.now();
+        log("tool_call", {
+          call_id: item.id,
+          type: call.type,
+          server: call.server,
+          tool: call.tool,
+          status: "in_progress",
+        });
+      }
+      if (event.type === "item.completed") {
+        call.ended = true;
+        const outcome =
+          item.status === "failed" ||
+          (item.type === "command_execution" &&
+            typeof item.exit_code === "number" &&
+            item.exit_code !== 0)
+            ? "failed"
+            : item.status === "completed" || item.type === "web_search"
+              ? "completed"
+              : "unknown";
+        if (outcome === "unknown") incomplete = true;
+        log("tool_call", {
+          call_id: item.id,
+          type: call.type,
+          server: call.server,
+          tool: call.tool,
+          status: outcome,
+          elapsed_ms:
+            call.started === undefined
+              ? null
+              : performance.now() - call.started,
+        });
+      }
+    } catch {
+      incomplete = true;
+    }
+  };
+  const observe = (chunk: string) => {
+    let offset = 0;
+    while (offset < chunk.length) {
+      const newline = chunk.indexOf("\n", offset);
+      const end = newline < 0 ? chunk.length : newline;
+      const part = chunk.slice(offset, end);
+      if (!dropping) {
+        if (Buffer.byteLength(buffer) + Buffer.byteLength(part) > 1024 * 1024) {
+          buffer = "";
+          dropping = true;
+          incomplete = true;
+        } else buffer += part;
+      }
+      if (newline < 0) break;
+      if (!dropping && buffer.trim()) observeLine(buffer);
+      buffer = "";
+      dropping = false;
+      offset = newline + 1;
+    }
+  };
   const schemaFile = `${prefix}.schema.json`;
   const resultFile = `${prefix}.result.json`;
   let agent: RunningProcess | undefined;
@@ -430,13 +618,21 @@ export async function generateWithCodex(
     void agent?.stop().catch(() => {});
   };
   try {
-    const args = await readonlyArgs(command, directory, deadline);
+    const args = await readonlyArgs(command, directory, deadline, log);
+    log("phase", {
+      phase,
+      status: "completed",
+      elapsed_ms: performance.now() - phaseStarted,
+    });
+    phase = "generation";
+    phaseStarted = performance.now();
     await writeFile(schemaFile, JSON.stringify(schema), {
       mode: 0o600,
       flag: "wx",
     });
     deadline.throwIfAborted();
     agent = start(
+      directory,
       command,
       [
         ...args,
@@ -453,6 +649,7 @@ export async function generateWithCodex(
           ? ["--config", "features.fast_mode=true"]
           : []),
         "exec",
+        "--json",
         "--skip-git-repo-check",
         "--ephemeral",
         "--output-schema",
@@ -462,8 +659,11 @@ export async function generateWithCodex(
         ...(model ? ["--model", model] : []),
         "-",
       ],
-      { ...process.env, AI_AGENT_SUBAGENT: "1" },
+      { ...process.env, TYPESAFE_API_KEY: undefined, AI_AGENT_SUBAGENT: "1" },
+      800,
+      null,
     );
+    agent.child.stdout.on("data", observe);
     deadline.addEventListener("abort", abort, { once: true });
     if (deadline.aborted) abort();
     agent.child.stdin.end(prompt);
@@ -472,16 +672,49 @@ export async function generateWithCodex(
     if ((await stat(resultFile)).size > 1024 * 1024) {
       throw new Error("Codex response exceeded 1 MiB.");
     }
-    return JSON.parse(await readFile(resultFile, "utf8"));
+    const result: unknown = JSON.parse(await readFile(resultFile, "utf8"));
+    status = "completed";
+    return result;
   } catch (error) {
     signal.throwIfAborted();
     if (timeout.aborted) throw new Error("Codex response timed out.");
     throw error;
   } finally {
+    if (signal.aborted) status = "cancelled";
+    else if (timeout.aborted) status = "timed_out";
     deadline.removeEventListener("abort", abort);
     try {
       await agent?.stop();
     } finally {
+      agent?.child.stdout.off("data", observe);
+      if (buffer || dropping || (agent && !observedEvents)) incomplete = true;
+      for (const [id, call] of calls) {
+        if (!call.ended) {
+          incomplete = true;
+          log("tool_call", {
+            call_id: id,
+            type: call.type,
+            server: call.server,
+            tool: call.tool,
+            status: status === "completed" ? "unknown" : status,
+            elapsed_ms:
+              call.started === undefined
+                ? null
+                : performance.now() - call.started,
+          });
+        }
+      }
+      log("phase", {
+        phase,
+        status,
+        elapsed_ms: performance.now() - phaseStarted,
+      });
+      log("run_completed", {
+        status,
+        elapsed_ms: performance.now() - started,
+        tool_calls: calls.size,
+        observation_incomplete: incomplete,
+      });
       await Promise.all([
         rm(schemaFile, { force: true }),
         rm(resultFile, { force: true }),

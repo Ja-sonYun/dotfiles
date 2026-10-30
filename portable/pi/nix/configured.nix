@@ -67,5 +67,5 @@ pkgs.runCommand "pi-configured"
         ]
       } \
       --run ${lib.escapeShellArg selectBundle}
-    makeWrapper ${runtime}/bin/pi-dev "$out/bin/pi-dev" --prefix PATH : "$out/bin"
+    makeWrapper ${runtime}/bin/pi-dev "$out/bin/pi-dev" --set-default PI_EXECUTABLE "$out/bin/pi"
   ''

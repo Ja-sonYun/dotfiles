@@ -299,18 +299,20 @@ class Tmux:
 
         if viewport is not None:
             # Preserve history context for redaction before selecting the viewport.
-            if len(masked.splitlines()) != len(raw.splitlines()):
+            if masked.count("\n") != raw.count(b"\n"):
                 raise RequestError(
                     "Redaction changed line boundaries; output withheld."
                 )
-            history_lines = len(raw.splitlines()) - len(viewport.splitlines())
+            history_lines = raw.count(b"\n") - viewport.count(b"\n")
             start = len(raw) - len(viewport)
             if start > 0 and raw[start - 1 : start] != b"\n":
                 history_lines += 1
-            logical_lines = masked.splitlines()[max(1, history_lines) :]
+            logical_lines = masked.removesuffix("\n").split("\n")[
+                max(1, history_lines) :
+            ]
         else:
             # Discard the oldest logical line, which may begin outside history.
-            logical_lines = masked.partition("\n")[2].splitlines()
+            logical_lines = masked.partition("\n")[2].removesuffix("\n").split("\n")
 
         end = max(0, len(logical_lines) - offset)
         output = "\n".join(logical_lines[max(0, end - count) : end])

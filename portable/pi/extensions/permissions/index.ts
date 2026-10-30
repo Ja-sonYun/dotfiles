@@ -307,7 +307,7 @@ export default function (pi: ExtensionAPI): void {
         }
         return (await runJson(
           [...config.evaluator.slice(0, -1), "state"],
-          evaluationInput,
+          { ...evaluationInput, context: undefined },
           actor.cwd,
           cancellation,
         )) as RuleResult;
@@ -440,7 +440,7 @@ export default function (pi: ExtensionAPI): void {
           throw new Error("Permission context changed");
         return (await runJson(
           [...config.evaluator.slice(0, -1), "state"],
-          input,
+          { ...input, context: undefined, tool_input: { text: "" } },
           actor.cwd,
           abort,
         )) as RuleResult;

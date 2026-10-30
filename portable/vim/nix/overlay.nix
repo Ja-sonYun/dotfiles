@@ -351,7 +351,7 @@ let
       nativeBuildInputs = [ pkgs.makeWrapper ];
       postBuild = ''
         makeWrapper "$out/bin/vim-core" "$out/bin/${name}" \
-          --prefix PATH : ${binPath}
+          --suffix PATH : ${binPath}
 
         ln -sf "$out/bin/${name}" "$out/bin/vim"
         ln -sf "$out/bin/${name}" "$out/bin/vi"

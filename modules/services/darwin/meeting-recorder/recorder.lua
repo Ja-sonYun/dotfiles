@@ -866,7 +866,7 @@ local function restoreTranscriptionQueue()
 	local seen = {}
 	local forced = hs.settings.get(forcedTranscriptionsSetting)
 	for _, path in ipairs(saved) do
-		if type(path) == "string" and not seen[path] and hs.fs.attributes(path, "mode") == "file" then
+		if type(path) == "string" and not seen[path] then
 			seen[path] = true
 			module.forcedTranscriptions[path] = type(forced) == "table" and forced[path] == true or nil
 			table.insert(module.transcriptionQueue, path)
@@ -955,10 +955,8 @@ startNextTranscription = function()
 	while index <= #module.transcriptionQueue and not sourcePath do
 		local candidate = module.transcriptionQueue[index]
 		if hs.fs.attributes(candidate, "mode") ~= "file" then
-			logger:w("queue_item_removed", { source = candidate, reason = "missing_input" })
-			table.remove(module.transcriptionQueue, index)
-			module.failedTranscriptions[candidate] = nil
-			module.forcedTranscriptions[candidate] = nil
+			logger:w("queue_item_waiting", { source = candidate, reason = "missing_input" })
+			index = index + 1
 		elseif module.failedTranscriptions[candidate] then
 			logger:i("queue_item_skipped", { source = candidate, reason = "failed_this_session" })
 			index = index + 1
@@ -1856,6 +1854,7 @@ startRecording = function(sessionType, event)
 		end
 
 		local completedPath = module.currentPath
+		local completedEvent = module.sessionEvent
 		local stopReason = module.stopReason
 		local pendingFailure = module.pendingFailure
 		logger:i("recording_completed", {
@@ -1892,6 +1891,9 @@ startRecording = function(sessionType, event)
 			enqueueTranscription(completedPath)
 		else
 			module.state = "error"
+			if completedEvent then
+				module.notifiedEvents[eventKey(completedEvent)] = nil
+			end
 			module.lastError = pendingFailure
 				or (type(finalPayload.message) == "string" and finalPayload.message ~= "" and finalPayload.message)
 				or recorderError(taskStderr)

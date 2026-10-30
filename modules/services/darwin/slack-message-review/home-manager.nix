@@ -11,6 +11,7 @@ let
   promptsFile = (pkgs.formats.json { }).generate "slack-message-review-prompts.json" cfg.prompts;
   launcher = pkgs.writeShellScript "slack-message-review-service" ''
     set -e
+    exec >>${lib.escapeShellArg "${stateDirectory}/service.log"} 2>&1
     ${pkgs.tool.shell.util.shellExports {
       TYPESAFE_API_KEY._secret = cfg.apiKeyFile;
     }}

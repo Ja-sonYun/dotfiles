@@ -35,6 +35,10 @@ Metadata = dict[str, dict[str, str]]
 
 BLOCKED_OPERATIONS = frozenset(
     {
+        ("bedrock-agent-runtime", "InvokeAgent"),
+        ("bedrock-agent-runtime", "InvokeInlineAgent"),
+        ("bedrock-agent-runtime", "InvokeFlow"),
+        ("s3control", "GetDataAccess"),
         ("sts", "AssumeRole"),
         ("sts", "AssumeRoleWithWebIdentity"),
         ("sts", "AssumeRoleWithSAML"),

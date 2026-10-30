@@ -13,7 +13,10 @@ if [[ "$state" == --hook ]]; then
 	pane_id="${TMUX_PANE:-}"
 	[[ -n "$pane_id" ]] || exit 0
 	shift
-	tmux_lock "__agent_status_$pane_id" || exit 1
+	tmux_lock "__agent_status_$pane_id" 2 || {
+		tmux_log warn lock_timeout "pane=$pane_id"
+		exit 0
+	}
 	(
 		tmux_lock_close
 		exec env TMUX_AGENT_STATUS_LOCKED=1 "$@"
@@ -123,7 +126,10 @@ esac
 [[ -z "$pane_id" ]] && exit 0
 
 if [[ "${TMUX_AGENT_STATUS_LOCKED:-}" != 1 || "${AI_AGENT_CLIENT:-}" != Antigravity ]]; then
-	tmux_lock "__agent_status_$pane_id" || exit 1
+	tmux_lock "__agent_status_$pane_id" 2 || {
+		tmux_log warn lock_timeout "pane=$pane_id"
+		exit 0
+	}
 fi
 
 IFS=$'\x1f' read -r pane_id pane_path start_command current_command enabled prev_state stored_agent stored_path stored_session_id stored_display_name stored_launch_name generation command_map event_client event_session current_session current_session_name current_marker < <(

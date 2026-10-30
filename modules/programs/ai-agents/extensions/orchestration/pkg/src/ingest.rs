@@ -15,12 +15,23 @@ async fn publish(root: &Path, report: &Report, start_on_report: bool) -> Result<
     std::fs::write(&temp, serde_json::to_vec(report)?)?;
     std::fs::rename(temp, &file)?;
     if let Ok(client) = Client::load(root) {
-        if let Ok(Ok(response)) = tokio::time::timeout(
+        let result = tokio::time::timeout(
             Duration::from_millis(500),
             client.post("/report", &serde_json::to_value(report)?),
         )
-        .await
-        {
+        .await;
+        if let Ok(Err(error)) = &result {
+            if error
+                .downcast_ref::<reqwest::Error>()
+                .and_then(|error| error.status())
+                .is_some_and(|status| matches!(status.as_u16(), 400 | 409 | 422))
+            {
+                std::fs::rename(&file, file.with_extension("rejected"))?;
+                eprintln!("report rejected: {error:#}");
+                return Ok(None);
+            }
+        }
+        if let Ok(Ok(response)) = result {
             match std::fs::remove_file(file) {
                 Ok(()) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}

@@ -73,15 +73,7 @@ def GenerateReplacer(prompt: string, system_prompt: string): func<void>
     ctx.SetStatus(MSG_STATUS)
 
     def OnSuccess(result: string): void
-      const lines = split(result, "\n")
-      if !ctx.Replace(lines)
-        ctx.Unlock()
-        EchoWith('WarningMsg', 'AI result discarded because its source range changed.')
-        return
-      endif
-      ApplyIndent(ctx)
-      ctx.Unlock()
-      EchoWith('MoreMsg', MSG_REPLACE_DONE)
+      CompleteEdit(ctx, result, MSG_REPLACE_DONE)
     enddef
 
     def OnError(message: string): void
@@ -112,21 +104,39 @@ def ApplyIndent(ctx: any): void
     return
   endif
 
-  const save_buffer = bufnr('%')
+  const save_window = win_getid()
   const save_view = winsaveview()
+  var temporary_window = false
   try
-    if save_buffer != target_buffer
-      execute 'noautocmd keepalt keepjumps hide buffer ' .. target_buffer
+    if bufnr('%') != target_buffer
+      execute 'noautocmd keepalt keepjumps sbuffer ' .. target_buffer
+      temporary_window = true
     endif
     for lnum in range(start, end_)
       keepjumps call cursor(lnum, 1)
       silent! normal! ==
     endfor
   finally
-    if bufnr('%') != save_buffer
-      execute 'noautocmd keepalt keepjumps hide buffer ' .. save_buffer
+    if temporary_window
+      noautocmd close
     endif
+    win_gotoid(save_window)
     winrestview(save_view)
+  endtry
+enddef
+
+def CompleteEdit(ctx: any, result: string, message: string): void
+  try
+    if trim(result) == ''
+      EchoWith('WarningMsg', MSG_NO_RESPONSE)
+    elseif !ctx.Replace(split(result, "\n", 1))
+      EchoWith('WarningMsg', 'AI result discarded because its source range changed.')
+    else
+      ApplyIndent(ctx)
+      EchoWith('MoreMsg', message)
+    endif
+  finally
+    ctx.Unlock()
   endtry
 enddef
 
@@ -142,20 +152,7 @@ def AskAction(start: number, end: number, instruction: string): void
   const system_prompt = 'You are a concise code assistant. Apply the user instruction to the provided code. Return only the updated source code. Do not use markdown or code fences. Do not include explanations or prose. If the request cannot be satisfied, return a single comment line explaining why.'
 
   def OnSuccess(result: string): void
-    if trim(result) == ''
-      ctx.Unlock()
-      EchoWith('WarningMsg', MSG_NO_RESPONSE)
-      return
-    endif
-    const new_lines = split(result, "\n", 1)
-    if !ctx.Replace(new_lines)
-      ctx.Unlock()
-      EchoWith('WarningMsg', 'AI result discarded because its source range changed.')
-      return
-    endif
-    ApplyIndent(ctx)
-    ctx.Unlock()
-    EchoWith('MoreMsg', MSG_ASK_DONE)
+    CompleteEdit(ctx, result, MSG_ASK_DONE)
   enddef
 
   def OnError(message: string): void

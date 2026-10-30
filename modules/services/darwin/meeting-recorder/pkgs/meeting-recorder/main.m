@@ -131,19 +131,13 @@ static BOOL SendState(NSString *requestID, NSString *statePath, NSString *status
     AVNumberOfChannelsKey: @1,
     AVEncoderBitRateKey: @64000,
   };
-  NSDictionary *microphoneSettings = @{
-    AVFormatIDKey: @(kAudioFormatMPEG4AAC),
-    AVSampleRateKey: @48000,
-    AVNumberOfChannelsKey: @1,
-    AVEncoderBitRateKey: @64000,
-  };
 
   _systemInput = [AVAssetWriterInput
     assetWriterInputWithMediaType:AVMediaTypeAudio
     outputSettings:systemSettings];
   _microphoneInput = [AVAssetWriterInput
     assetWriterInputWithMediaType:AVMediaTypeAudio
-    outputSettings:microphoneSettings];
+    outputSettings:systemSettings];
   _systemInput.expectsMediaDataInRealTime = YES;
   _microphoneInput.expectsMediaDataInRealTime = YES;
 

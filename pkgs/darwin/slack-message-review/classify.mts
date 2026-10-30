@@ -21,6 +21,7 @@ export async function classify(
     review: "A message requiring an Argon review.",
   };
   const agent = start(
+    requiredSetting("SLACK_REVIEW_STATE_DIRECTORY"),
     requiredSetting("SLACK_REVIEW_JEV"),
     ["--model", "jev-latest", "--timeout", "2s"],
     process.env,

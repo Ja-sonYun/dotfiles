@@ -196,7 +196,6 @@ def archive_identity(source: Path) -> dict[str, str | int]:
         "inode": status.st_ino,
         "size": status.st_size,
         "mtime_ns": status.st_mtime_ns,
-        "ctime_ns": status.st_ctime_ns,
         "archive_tag": ARCHIVE_TAG,
     }
 

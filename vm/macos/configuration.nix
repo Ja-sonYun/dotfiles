@@ -97,16 +97,6 @@ inputs.darwin.lib.darwinSystem {
           programs.radare2 = {
             env = lib.mkForce { };
             decai.enable = lib.mkForce false;
-            extraConfig = lib.mkForce ''
-              e scr.color=1
-              e scr.utf8=true
-              e scr.utf8.curvy=true
-              e asm.bytes=false
-              e dbg.hwbp=false
-              e cfg.fortunes=false
-              e bin.cache=true
-              e r2ghidra.sleighhome=${pkgs.r2ghidra}/lib/radare2/last/r2ghidra_sleigh
-            '';
           };
         };
       };

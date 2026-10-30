@@ -366,7 +366,7 @@ function! s:is_python_string(lnum, ...)
     endif
     for cnum in cols
         if match(map(synstack(a:lnum, cnum),
-                    \ "synIDattr(v:val, 'name')"), 'python\S*String') == -1
+                    \ "synIDattr(v:val, 'name')"), 'python\%(\S*String\|Docstring\)') == -1
             return 0
         end
     endfor

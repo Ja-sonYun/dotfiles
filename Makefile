@@ -46,8 +46,11 @@ update-raw: update-vim update-pi ## Update all flakes
 	nix flake update
 
 update-pkgs: ## Update package versions and locks for this system
-	./scripts/update-pkgs
-	./scripts/update-pkgs --path portable/pi
+	@status=0; \
+	./scripts/update-pkgs || status=$$?; \
+	case $$status in 130|143) exit $$status ;; esac; \
+	./scripts/update-pkgs --path portable/pi || status=$$?; \
+	exit $$status
 
 update: push-secrets ## Full update with ulimit fix
 	@sh -c 'set -eu; \
@@ -95,9 +98,13 @@ build: add lock ## Build nix-darwin config
 show-derivations: ## Show derivation details
 	nix show-derivation .#darwinConfigurations.$(HOSTNAME).system
 
-deploy: build ## Deploy nix-darwin config
+deploy: ## Deploy nix-darwin config
+	@set -e; \
+	trap '$(MAKE) linux-builder-down' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) build; \
 	nix run nixpkgs#nh darwin switch .#darwinConfigurations.$(HOSTNAME)
-	@$(MAKE) linux-builder-down
 
 ##@ Virtual Machines
 

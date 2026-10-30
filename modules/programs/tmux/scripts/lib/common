@@ -159,7 +159,7 @@ tmux_flush_if() {
 		command+="\"$argument\" "
 	done
 	_TMUX_BATCH=()
-	[[ "$(tmux if-shell -F -t "$target" "$condition" "$command ; display-message -p 1")" == 1 ]]
+	tmux if-shell -F -t "$target" "$condition" "$command"
 }
 
 tmux_flush() {

@@ -1,4 +1,9 @@
-{ pkgs, config, ... }:
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
 let
   extension = pkgs.stdenv.hostPlatform.extensions.sharedLibrary;
 in
@@ -15,6 +20,8 @@ in
       e cfg.fortunes=false
       e bin.cache=true
       e r2ghidra.sleighhome=${pkgs.r2ghidra}/lib/radare2/last/r2ghidra_sleigh
+    ''
+    + lib.optionalString config.programs.radare2.decai.enable ''
       %OPENAI_API_KEY=`%CAPI_KEY`
       decai -e baseurl=`%LLM_DOMAIN`
       decai -e model=`%ZDR_LLM_MODEL`

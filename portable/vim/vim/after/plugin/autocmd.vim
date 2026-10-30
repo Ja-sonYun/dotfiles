@@ -14,9 +14,21 @@ augroup END
 
 
 " --- Remove trailing whitespace on save ---
+function! s:TrimTrailingWhitespace() abort
+  if !get(b:, 'trimtrail', 0)
+    return
+  endif
+  let view = winsaveview()
+  try
+    keepjumps keeppatterns silent! %s/\s\+$//e
+  finally
+    call winrestview(view)
+  endtry
+endfunction
+
 augroup TrimTrailingWS
   autocmd!
-  autocmd BufWritePre * if get(b:, 'trimtrail', 0) | silent! %s/\s\+$//e | endif
+  autocmd BufWritePre * call <SID>TrimTrailingWhitespace()
 augroup END
 
 

@@ -15,6 +15,11 @@ let
         type = lib.types.nullOr lib.types.ints.positive;
         default = null;
       };
+      observer = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Observe events without changing tool approval on failure.";
+      };
     };
   };
 in

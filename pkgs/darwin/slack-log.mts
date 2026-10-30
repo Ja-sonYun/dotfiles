@@ -1,4 +1,42 @@
 import { execFile } from "node:child_process";
+import { Console } from "node:console";
+import {
+  appendFileSync,
+  copyFileSync,
+  existsSync,
+  statSync,
+  truncateSync,
+} from "node:fs";
+import { Writable } from "node:stream";
+
+export function configureServiceLog(file: string): void {
+  const limit = 10 * 1024 * 1024;
+  const output = new Writable({
+    write(chunk: Buffer, _encoding, done) {
+      try {
+        let offset = 0;
+        while (offset < chunk.length) {
+          let size = existsSync(file) ? statSync(file).size : 0;
+          if (size >= limit) {
+            copyFileSync(file, `${file}.1`);
+            truncateSync(file, 0);
+            size = 0;
+          }
+          const part = chunk.subarray(offset, offset + limit - size);
+          appendFileSync(file, part, { mode: 0o600 });
+          offset += part.length;
+        }
+        done();
+      } catch (error) {
+        done(error instanceof Error ? error : new Error(String(error)));
+      }
+    },
+  });
+  output.on("error", (error) =>
+    process.stderr.write(`Service logging failed: ${error.message}\n`),
+  );
+  globalThis.console = new Console({ stdout: output, stderr: output });
+}
 
 function jsonBytes(value: unknown): number {
   const json = JSON.stringify(value).replace(

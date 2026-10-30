@@ -797,7 +797,14 @@
         }
       }
     },
-    receiveCards(thread, cards, deletedIds = []) {
+    receiveCards(thread, cards, deletedIds = [], error, jobId) {
+      const task = tasks.get(keyFor(thread));
+      if (task && task.id === jobId && (cards.length > 0 || error)) {
+        window.__slackThreadSummary?.receive(
+          task.id,
+          error ? { error } : { cards },
+        );
+      }
       timeline.merge(thread, cards, deletedIds);
       timeline.scan(records.values());
     },

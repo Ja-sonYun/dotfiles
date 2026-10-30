@@ -17,7 +17,6 @@
     trivy
 
     # API Related
-    nmap
     sqlmap
 
     # API - Fuzz

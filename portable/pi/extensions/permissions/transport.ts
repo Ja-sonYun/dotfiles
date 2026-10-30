@@ -5,10 +5,7 @@ export async function exchange(
   signal: AbortSignal,
 ): Promise<unknown> {
   if (frame.type === "redact") {
-    if (
-      typeof frame.value !== "string" ||
-      Buffer.byteLength(frame.value) > 64 * 1024
-    ) {
+    if (typeof frame.value !== "string") {
       throw new Error("Invalid evaluation payload");
     }
     return (await redact(Buffer.from(frame.value), signal)).toString("utf8");
@@ -22,8 +19,6 @@ export async function exchange(
   )
     throw new Error("Invalid evaluation request");
   const body = JSON.stringify(request.json);
-  if (Buffer.byteLength(body) > 64 * 1024)
-    throw new Error("Evaluation payload exceeded");
   const response = await fetch(request.url, {
     method: "POST",
     headers: {

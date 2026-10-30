@@ -11,8 +11,11 @@
     path = "${userhome}/.config/nix/nix-cache.netrc";
     mode = "0600";
   };
-  age.secrets."nix-cache-upload-token".file =
-    "${infraSrc}/modules-nixhm/roles/nix-cache-client/generated/attic-upload-token.age";
+  age.secrets."nix-cache-upload-token" = {
+    file = "${infraSrc}/modules-nixhm/roles/nix-cache-client/generated/attic-upload-token.age";
+    path = "${userhome}/.config/nix/nix-cache-upload-token";
+    mode = "0600";
+  };
 
   nix = {
     enable = true;

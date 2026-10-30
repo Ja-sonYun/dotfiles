@@ -22,6 +22,7 @@ runCommand "slack-thread-summary"
     cp ${./.}/*.mts ${./.}/*.ts ${./.}/tsconfig.*.json .
     cp ${../slack-codex.mts} codex.mts
     cp ${../slack-log.mts} log.mts
+    cp ${../slack-process.mts} process.mts
     ln -s ${pi-runtime}/lib/node_modules/dotfiles-pi/node_modules node_modules
     tsc -p tsconfig.node.json
     tsc -p tsconfig.browser.json

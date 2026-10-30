@@ -22,6 +22,7 @@ interface ReviewSession {
   controller: AbortController | undefined;
 }
 import { requiredSetting } from "./process.mjs";
+import { configureServiceLog } from "./log.mjs";
 import {
   parseTargets,
   parseBinding,
@@ -74,6 +75,9 @@ await mkdir(requiredSetting("SLACK_REVIEW_STATE_DIRECTORY"), {
   recursive: true,
   mode: 0o700,
 });
+configureServiceLog(
+  `${requiredSetting("SLACK_REVIEW_STATE_DIRECTORY")}/service.log`,
+);
 
 async function connect(target: DebugTarget): Promise<void> {
   const owner = randomUUID();

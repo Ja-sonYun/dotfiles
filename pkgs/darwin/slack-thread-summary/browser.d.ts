@@ -128,6 +128,8 @@ interface Window {
       thread: ThreadIdentity,
       cards: StoredCard[],
       deletedIds?: string[],
+      error?: string,
+      jobId?: string,
     ): void;
     stop(): void;
   };

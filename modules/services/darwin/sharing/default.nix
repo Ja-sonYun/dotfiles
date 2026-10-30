@@ -23,7 +23,7 @@ let
       if ! /bin/launchctl print "$target" >/dev/null 2>&1; then
         /bin/launchctl bootstrap system "$plist"
       fi
-      /bin/launchctl kickstart -k "$target"
+      /bin/launchctl kickstart "$target"
     }
 
     disable_system_service() {

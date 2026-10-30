@@ -97,16 +97,21 @@ def _mark_generated(value: Any) -> None:
 
 
 def _is_generated(value: Any) -> bool:
-    if isinstance(value, (Table, OutOfOrderTableProxy)):
+    if isinstance(value, (Table, OutOfOrderTableProxy, AoT)):
         return False
-    if isinstance(value, AoT):
-        return any(_has_comment(table, GENERATED_COMMENT) for table in value)
     return _has_comment(value, GENERATED_COMMENT)
 
 
 def _remove_generated(document: MutableMapping[str, Any]) -> None:
     for key in list(document):
         value = _item(document, key)
+        if isinstance(value, AoT):
+            for index in reversed(range(len(value))):
+                if _has_comment(value[index], GENERATED_COMMENT):
+                    del value[index]
+            if not value:
+                document.pop(key)
+            continue
         if _is_generated(value):
             document.pop(key)
             continue
@@ -122,33 +127,17 @@ def _remove_generated(document: MutableMapping[str, Any]) -> None:
             document.pop(key)
 
 
-def _remove_obsolete_mcp_servers(
-    document: MutableMapping[str, Any],
-    fragment: MutableMapping[str, Any],
-) -> None:
-    servers = document.get("mcp_servers")
-    if not isinstance(servers, MutableMapping):
-        return
-
-    declared = fragment.get("mcp_servers", {})
-    for name in list(servers):
-        server = _item(servers, name)
-        if name in declared or not isinstance(server, MutableMapping):
-            continue
-        if any(
-            key in server and _is_generated(_item(server, key))
-            for key in ("command", "url")
-        ):
-            servers.pop(name)
-
-
 def _merge_generated(
     document: MutableMapping[str, Any],
     fragment: MutableMapping[str, Any],
 ) -> None:
     for key in fragment:
         value = _item(fragment, key)
-        if isinstance(value, MutableMapping) and not _is_generated(value):
+        if isinstance(value, AoT) and isinstance(document.get(key), AoT):
+            for table in document[key]:
+                value.append(table)
+            document[key] = value
+        elif isinstance(value, MutableMapping) and not _is_generated(value):
             current = document.get(key)
             if isinstance(current, InlineTable):
                 current = _expand_inline_table(current)
@@ -260,7 +249,6 @@ def main() -> None:
     _add_hook_state(fragment, target)
     _mark_generated(fragment)
 
-    _remove_obsolete_mcp_servers(document, fragment)
     _remove_generated(document)
     _merge_generated(document, fragment)
 

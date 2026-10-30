@@ -5,7 +5,9 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
+from queue import SimpleQueue
 from types import FrameType
 from typing import BinaryIO
 
@@ -128,20 +130,33 @@ def main() -> int:
 
     pending: set[RequestId] = set()
     lock = threading.Lock()
-    request_thread = threading.Thread(
-        target=forward_requests,
-        args=(sys.stdin.buffer, process.stdin, pending, lock),
-        daemon=True,
-    )
-    request_thread.start()
+    cleanup_requests: SimpleQueue[None] = SimpleQueue()
 
-    def forward_signal(signum: int, _frame: FrameType | None) -> None:
-        terminate_process_group(process, signum)
+    def cleanup() -> None:
+        cleanup_requests.get()
+        terminate_process_group(process, signal.SIGTERM)
+        time.sleep(3)
+        terminate_process_group(process, signal.SIGKILL)
+
+    worker = threading.Thread(target=cleanup, daemon=True)
+    worker.start()
+
+    def forward_signal(_signum: int, _frame: FrameType | None) -> None:
+        # SimpleQueue.put is reentrant when a signal interrupts another request.
+        cleanup_requests.put(None)
 
     previous_handlers = {
         signum: signal.signal(signum, forward_signal)
         for signum in (signal.SIGINT, signal.SIGTERM)
     }
+
+    def requests() -> None:
+        try:
+            forward_requests(sys.stdin.buffer, process.stdin, pending, lock)
+        finally:
+            forward_signal(signal.SIGTERM, None)
+
+    threading.Thread(target=requests, daemon=True).start()
     try:
         try:
             forward_responses(
@@ -152,12 +167,16 @@ def main() -> int:
                 lock,
             )
         except (BrokenPipeError, OSError):
-            terminate_process_group(process, signal.SIGTERM)
-        return_code = process.wait()
-        return 128 - return_code if return_code < 0 else return_code
+            pass
     finally:
-        for signum, handler in previous_handlers.items():
-            signal.signal(signum, handler)
+        try:
+            forward_signal(signal.SIGTERM, None)
+            worker.join()
+            return_code = process.wait()
+        finally:
+            for signum, handler in previous_handlers.items():
+                signal.signal(signum, handler)
+    return 128 - return_code if return_code < 0 else return_code
 
 
 if __name__ == "__main__":

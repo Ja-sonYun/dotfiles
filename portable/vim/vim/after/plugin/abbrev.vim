@@ -4,7 +4,6 @@ endif
 let g:loaded_after_abbrev = 1
 
 cnoreabbrev <expr> term  (getcmdtype() == ':' && getcmdline() =~# '^term$')     ? 'Term'      : 'term'
-cnoreabbrev <expr> make  (getcmdtype() == ':' && getcmdline() =~# '^make$')     ? 'Make'      : 'make'
 
 Abolish teh the
 Abolish adn and

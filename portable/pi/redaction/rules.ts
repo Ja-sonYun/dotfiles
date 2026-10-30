@@ -53,6 +53,7 @@ export function personalRules(env: NodeJS.ProcessEnv): RedactionRule[] {
 export const commonRules: RedactionRule[] = [
   {
     kind: "token",
-    regex: "(?i)\\b(?:Bearer|Basic)[ \\t]+([a-z0-9._~+/=-]+)",
+    regex:
+      "(?i)\\b(?:Proxy-)?Authorization[\"']?[ \\t]*:[ \\t]*[\"']?(?:Bearer|Basic)[ \\t]+([a-z0-9._~+/=-]+)",
   },
 ];

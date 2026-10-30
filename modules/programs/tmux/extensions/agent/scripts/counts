@@ -173,11 +173,6 @@ recompute() {
 			tmux_add set-environment -t "$session_id" TMUX_TITLE_OWNER agent
 			tmux_add set-environment -t "$session_id" TMUX_POPUP_KEEP_OPEN 1
 			changed=1
-		elif [[ -z "$desired_marker" && -n "$current_marker" ]]; then
-			tmux_add set-environment -t "$session_id" -u TMUX_AGENT_STATUS
-			tmux_add set-environment -t "$session_id" -u TMUX_TITLE_OWNER
-			tmux_add set-environment -t "$session_id" -u TMUX_POPUP_KEEP_OPEN
-			changed=1
 		fi
 		[[ "$before" == "${#_TMUX_BATCH[@]}" ]] || refresh_targets[$session_id]=1
 	done

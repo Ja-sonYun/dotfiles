@@ -13,7 +13,7 @@ from pi_rules.debug_log import save_log, start_log
 from pi_rules.rules import Rule
 from pi_rules.transport import Transport
 
-MAX_REQUEST_BYTES = 64 * 1024
+BATCH_TARGET_BYTES = 64 * 1024
 CHOICES = {
     "compliant": "Evidence establishes compliance or inapplicability.",
     "violation": "Evidence establishes applicability and violation.",
@@ -252,27 +252,11 @@ async def evaluate(
 
         batches: list[list[Rule]] = []
         batch: list[Rule] = []
-        if (
-            check_summary
-            and request_size(state, [], check_summary=True) > MAX_REQUEST_BYTES
-        ):
-            result.errors.append(
-                "Summary decision and context exceed the 64 KiB request limit."
-            )
-            check_summary = False
         for rule in rules:
-            if (
-                request_size(state, [rule], check_summary=check_summary)
-                > MAX_REQUEST_BYTES
-            ):
-                result.errors.append(
-                    f"Rule {rule.id} and context exceed the 64 KiB request limit."
-                )
-                continue
             if (
                 batch
                 and request_size(state, [*batch, rule], check_summary=check_summary)
-                > MAX_REQUEST_BYTES
+                > BATCH_TARGET_BYTES
             ):
                 batches.append(batch)
                 batch = []

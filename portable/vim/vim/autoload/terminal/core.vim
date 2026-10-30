@@ -5,11 +5,6 @@ g:_shell_current_wid = -1
 
 g:_term_wids = {}
 
-def ExpandFileMods(s: string): string
-  return substitute(s, '%\%(:[pS]\)\?',
-    (match) => expand(match[0] == '%' ? '%:S' : match[0]), 'g')
-enddef
-
 def CloseBuffer(buf: number, prev_status: number): void
   g:_shell_current_wid = -1
   g:_shell_buffer_opened = false
@@ -150,7 +145,6 @@ def ShTerm(cmd: string, height: number, qf: bool = false): bool
 enddef
 
 export def Term(cmd: string = ''): bool
-  const resolved = ExpandFileMods(cmd)
   new
   const wid = win_getid()
   const buf = bufnr()
@@ -173,7 +167,7 @@ export def Term(cmd: string = ''): bool
         exit_cb: ExitCb,
       })
     else
-      const safecmd = ShellPrompt(resolved)
+      const safecmd = ShellPrompt(cmd)
       term_start(['sh', '-c', safecmd], {
         curwin: true,
         exit_cb: ExitCb,
@@ -195,8 +189,7 @@ export def Term(cmd: string = ''): bool
 enddef
 
 export def Run(cmd: string, height: number = 10, qf: bool = false): void
-  const resolved = ExpandFileMods(cmd)
-  ShTerm(resolved, max([3, height]), qf)
+  ShTerm(cmd, max([3, height]), qf)
 enddef
 
 export def Make(args: string = '', height: number = 10): void
@@ -208,7 +201,9 @@ export def Make(args: string = '', height: number = 10): void
   if !empty(args)
     cmd = cmd .. ' ' .. args
   endif
-  Run(cmd, height, true)
+  const expanded = substitute(cmd, '%\%(:[pS]\)*',
+    (match) => expand(match[0] == '%' ? '%:S' : match[0]), 'g')
+  Run(expanded, height, true)
 enddef
 
 def RunWindowRunning(): void

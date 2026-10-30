@@ -12,12 +12,14 @@
     ./desktop/finder-sidebar.nix
     ./programs/ai-agent-notification.nix
     ./programs/agent-hub.nix
-    ./services/slack-message-review.nix
-    ./services/slack-thread-summary.nix
   ]
   ++ lib.optionals (hasTag "gui") [
     ./desktop/seamtype.nix
     ./programs/freecad
+  ]
+  ++ lib.optionals (hasTag "gui" && hasTag "ai") [
+    ./services/slack-message-review.nix
+    ./services/slack-thread-summary.nix
   ];
 
   home = {

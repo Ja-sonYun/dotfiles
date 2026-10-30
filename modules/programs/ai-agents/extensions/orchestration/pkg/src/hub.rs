@@ -94,10 +94,23 @@ fn authorize(app: &App, headers: &HeaderMap) -> Result<()> {
     Ok(())
 }
 
+fn storage_error(error: &anyhow::Error) -> bool {
+    error.downcast_ref::<std::io::Error>().is_some()
+        || error.downcast_ref::<rusqlite::Error>().is_some()
+}
+
 fn response(result: Result<Value>) -> Response {
     match result {
         Ok(value) => Json(value).into_response(),
-        Err(error) => (StatusCode::BAD_REQUEST, error.to_string()).into_response(),
+        Err(error) => (
+            if storage_error(&error) {
+                StatusCode::INTERNAL_SERVER_ERROR
+            } else {
+                StatusCode::BAD_REQUEST
+            },
+            error.to_string(),
+        )
+            .into_response(),
     }
 }
 
@@ -336,6 +349,7 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
     if lock.try_lock_exclusive().is_err() {
         return Ok(());
     }
+    crate::configure_service_log(&root)?;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
     let endpoint = Endpoint {
         url: format!("http://{}", listener.local_addr()?),
@@ -625,7 +639,16 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
                     Ok(_) => {
                         let _ = std::fs::remove_file(path);
                     }
-                    Err(error) => eprintln!("cannot ingest {}: {error}", path.display()),
+                    Err(error) => {
+                        eprintln!("cannot ingest {}: {error}", path.display());
+                        if !storage_error(&error) {
+                            if let Err(error) =
+                                std::fs::rename(&path, path.with_extension("rejected"))
+                            {
+                                eprintln!("cannot preserve rejected report: {error}");
+                            }
+                        }
+                    }
                 }
             }
         }

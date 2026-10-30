@@ -3,7 +3,7 @@ let
   normalizeHook =
     client: hook:
     lib.filterAttrs (_: value: value != null) (
-      hook
+      (builtins.removeAttrs hook [ "observer" ])
       // {
         command = "export AI_AGENT_CLIENT=${lib.escapeShellArg client}; ${hook.command}";
       }

@@ -132,7 +132,7 @@ export function loadSourceAgents(directory: string): AgentConfig[] {
         model:
           frontmatter.model == null || frontmatter.model === "inherit"
             ? undefined
-            : `${settings.defaultProvider}/${settings.defaultModel}:${settings.defaultThinkingLevel}`,
+            : `${settings.defaultProvider}/${settings.defaultModel}:${frontmatter.model === "middle" ? "medium" : frontmatter.model}`,
         permissionMode: frontmatter.permissionMode ?? undefined,
         tools:
           "tools" in frontmatter

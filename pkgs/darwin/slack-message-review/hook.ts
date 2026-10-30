@@ -723,6 +723,11 @@
     suggestion.setAttribute("role", "textbox");
     suggestion.setAttribute("aria-label", "Message");
     suggestion.setAttribute("aria-multiline", "true");
+    const originalDetails = node("details", "", body);
+    node("summary", "Original message", originalDetails);
+    const originalText = node("textarea", current.original, originalDetails);
+    originalText.readOnly = true;
+    originalText.setAttribute("aria-label", "Original message");
     const previewHeading = node(
       "label",
       "Message preview",
@@ -1497,6 +1502,11 @@
     args: unknown[],
   ): Promise<unknown> {
     if (stopped || pending) {
+      window.alert(
+        stopped
+          ? "Review is unavailable. Restart the review controller before sending."
+          : "Finish or cancel the open review before sending another message.",
+      );
       return Promise.resolve(null);
     }
     let fingerprint: string;
@@ -1504,6 +1514,7 @@
       fingerprint = snapshot(record);
     } catch (error) {
       console.error("[Slack review] Send blocked:", errorMessage(error));
+      window.alert(`Nothing was sent: ${errorMessage(error)}`);
       return Promise.resolve(null);
     }
     const draft = readSnapshot(fingerprint);
@@ -1522,6 +1533,7 @@
         "[Slack review] Draft capture failed:",
         errorMessage(error),
       );
+      window.alert(`Nothing was sent: ${errorMessage(error)}`);
       return Promise.resolve(null);
     }
     const id = crypto.randomUUID();
@@ -1764,7 +1776,7 @@
       } catch (error) {
         current.applyFailed = applied;
         current.ui?.sendFailed(
-          `${errorMessage(error)} Nothing was sent.${applied ? " Cancel and inspect the draft in Slack." : ""}`,
+          `${errorMessage(error)} Nothing was sent.${applied ? " The Slack draft may be partially changed. Copy the preserved Original message before cancelling." : ""}`,
         );
         return "apply-failed";
       }

@@ -11,6 +11,7 @@ let
   promptFile = pkgs.writeText "slack-thread-summary-prompt.txt" cfg.prompt;
   launcher = pkgs.writeShellScript "slack-thread-summary-service" ''
     set -e
+    exec >>${lib.escapeShellArg "${stateDirectory}/service.log"} 2>&1
     exec ${pkgs.slack-thread-summary}/bin/slack-thread-summary
   '';
 in

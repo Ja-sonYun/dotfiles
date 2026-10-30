@@ -23,22 +23,14 @@ def NormalizeWhitespace(text: string): string
   return trim(s)
 enddef
 
-def ReadBufferLine(bufnr: number, lnum: number): string
+def ReadBufferLine(bufnr: number, lnum: number, files: dict<list<string>>): string
   if bufnr > 0 && bufloaded(bufnr)
     try
       return get(getbufline(bufnr, lnum, lnum), 0, '')
     catch
     endtry
   endif
-  const path = bufname(bufnr)
-  if path !=# '' && filereadable(path)
-    try
-      const lines = readfile(path, '', lnum)
-      return get(lines, lnum - 1, '')
-    catch
-    endtry
-  endif
-  return ''
+  return get(get(files, string(bufnr), []), lnum - 1, '')
 enddef
 
 def CollectItems(info: dict<any>): list<dict<any>>
@@ -51,9 +43,28 @@ enddef
 
 def BuildRows(info: dict<any>): list<dict<any>>
   var rows: list<dict<any>> = []
-  const items = CollectItems(info)
+  const entries = CollectItems(info)
+  var limits: dict<number> = {}
+  var files: dict<list<string>> = {}
+  for it in entries[info.start_idx - 1 : info.end_idx - 1]
+    const bufn = <number>get(it, 'bufnr', 0)
+    if bufn > 0 && !bufloaded(bufn)
+      const key = string(bufn)
+      limits[key] = max([get(limits, key, 0), <number>get(it, 'lnum', 0)])
+    endif
+  endfor
+  for [key, limit] in items(limits)
+    const path = bufname(str2nr(key))
+    if path != '' && filereadable(path) && limit > 0
+      try
+        files[key] = readfile(path, '', limit)
+      catch
+        files[key] = []
+      endtry
+    endif
+  endfor
   for idx in range(info.start_idx, info.end_idx)
-    const it = get(items, idx - 1, null_dict)
+    const it = get(entries, idx - 1, null_dict)
     if type(it) != v:t_dict
       break
     endif
@@ -65,7 +76,7 @@ def BuildRows(info: dict<any>): list<dict<any>>
     const ecol  = <number>get(it, 'end_col', 0)
     const pos   = ecol > 0 ? printf('%d:%d-%d', lnum, col, ecol) : printf('%d:%d', lnum, col)
 
-    const raw_code = substitute(ReadBufferLine(bufn, lnum), '\t', '  ', 'g')
+    const raw_code = substitute(ReadBufferLine(bufn, lnum, files), '\t', '  ', 'g')
     const code     = Truncate(raw_code, CODE_TRUNC_COL)
     const normcode = NormalizeWhitespace(code)
 

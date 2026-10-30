@@ -51,7 +51,7 @@ let
         hook.command
       ];
     in
-    hook
+    (builtins.removeAttrs hook [ "observer" ])
     // {
       command = "export AI_AGENT_CLIENT=Codex; exec ${lib.escapeShellArgs adapterArguments}";
       timeout = if event == "SessionEnd" then timeout else timeout + 4;

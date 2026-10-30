@@ -15,11 +15,13 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use state::{now, Location};
+use std::io::Write;
+use std::os::fd::AsRawFd;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
 #[derive(Clone, Deserialize)]
@@ -64,9 +66,10 @@ impl Client {
             .send()
             .await?;
         let status = response.status();
+        let failure = response.error_for_status_ref().err();
         let text = response.text().await?;
-        if !status.is_success() {
-            bail!("hub {status}: {text}");
+        if let Some(error) = failure {
+            return Err(error).with_context(|| format!("hub {status}: {text}"));
         }
         if text.is_empty() {
             return Ok(Value::Null);
@@ -148,8 +151,8 @@ fn start(root: &Path, fresh_since: u64) -> Result<()> {
         .arg("serve")
         .env("AGENT_HUB_FRESH_SINCE", fresh_since.to_string())
         .stdin(Stdio::null())
-        .stdout(log.try_clone()?)
-        .stderr(log);
+        .stdout(Stdio::from(log.try_clone()?))
+        .stderr(Stdio::from(log));
     unsafe {
         command.pre_exec(|| {
             if libc::setsid() == -1 {
@@ -161,6 +164,52 @@ fn start(root: &Path, fresh_since: u64) -> Result<()> {
     let mut child = command.spawn()?;
     tokio::spawn(async move {
         let _ = child.wait().await;
+    });
+    Ok(())
+}
+
+fn configure_service_log(root: &Path) -> Result<()> {
+    let log_path = root.join("hub.log");
+    let mut log = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)?;
+    let (reader, writer) = std::os::unix::net::UnixStream::pair()?;
+    reader.set_nonblocking(true)?;
+    let mut reader = tokio::net::UnixStream::from_std(reader)?;
+    unsafe {
+        if libc::dup2(writer.as_raw_fd(), libc::STDOUT_FILENO) == -1
+            || libc::dup2(writer.as_raw_fd(), libc::STDERR_FILENO) == -1
+        {
+            return Err(std::io::Error::last_os_error().into());
+        }
+    }
+    tokio::spawn(async move {
+        let result: Result<()> = async {
+            let mut size = log.metadata()?.len();
+            let mut buffer = [0u8; 8192];
+            loop {
+                let count = reader.read(&mut buffer).await?;
+                if count == 0 {
+                    break;
+                }
+                if size + count as u64 > 10 * 1024 * 1024 {
+                    std::fs::rename(&log_path, log_path.with_extension("log.1"))?;
+                    log = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&log_path)?;
+                    size = 0;
+                }
+                log.write_all(&buffer[..count])?;
+                size += count as u64;
+            }
+            Ok(())
+        }
+        .await;
+        if let Err(error) = result {
+            let _ = writeln!(log, "hub logging failed: {error:#}");
+        }
     });
     Ok(())
 }

@@ -10,6 +10,14 @@ import (
 )
 
 func runAntigravity(input map[string]json.RawMessage, event, command string, timeout int) int {
+	observer := os.Getenv("AI_AGENT_HOOK_OBSERVER") == "1"
+	failureResponse := func(message string) int {
+		if observer {
+			fmt.Fprintln(os.Stderr, message)
+			return writeAntigravityResponse(event, "allow", "")
+		}
+		return writeAntigravityResponse(event, "deny", message)
+	}
 	output := make(map[string]json.RawMessage)
 	output["reported_at"] = input["reported_at"]
 	output["event_id"] = input["event_id"]
@@ -92,12 +100,12 @@ func runAntigravity(input map[string]json.RawMessage, event, command string, tim
 	}
 	data, err := encodeJSON(output)
 	if err != nil {
-		return writeAntigravityResponse(event, "deny", "Cannot encode Antigravity hook input: "+err.Error())
+		return failureResponse("Cannot encode Antigravity hook input: " + err.Error())
 	}
 	// Capture stdout while retaining the shared runner's process-group cancellation.
 	file, err := os.CreateTemp("", "antigravity-hook-*")
 	if err != nil {
-		return writeAntigravityResponse(event, "deny", "Cannot capture hook response: "+err.Error())
+		return failureResponse("Cannot capture hook response: " + err.Error())
 	}
 	defer os.Remove(file.Name())
 	defer file.Close()
@@ -106,16 +114,16 @@ func runAntigravity(input map[string]json.RawMessage, event, command string, tim
 	responseData, err := io.ReadAll(io.LimitReader(file, 64*1024+1))
 	if err != nil || len(responseData) > 64*1024 || status != 0 {
 		message := fmt.Sprintf("Hook failed or returned invalid output (exit %d); the tool was not approved.", status)
-		return writeAntigravityResponse(event, "deny", message)
+		return failureResponse(message)
 	}
 	var response map[string]json.RawMessage
 	if len(bytes.TrimSpace(responseData)) != 0 && (json.Unmarshal(responseData, &response) != nil || response == nil) {
-		return writeAntigravityResponse(event, "deny", "Hook returned invalid JSON; the tool was not approved.")
+		return failureResponse("Hook returned invalid JSON; the tool was not approved.")
 	}
 	var specific map[string]json.RawMessage
 	if value, exists := response["hookSpecificOutput"]; exists {
 		if json.Unmarshal(value, &specific) != nil || specific == nil {
-			return writeAntigravityResponse(event, "deny", "Hook returned invalid hookSpecificOutput.")
+			return failureResponse("Hook returned invalid hookSpecificOutput.")
 		}
 	}
 	message := strings.TrimSpace(strings.Join([]string{
@@ -133,7 +141,7 @@ func runAntigravity(input map[string]json.RawMessage, event, command string, tim
 	} else if event == "PreToolUse" {
 		var permission string
 		if value, exists := specific["permissionDecision"]; exists && json.Unmarshal(value, &permission) != nil {
-			return writeAntigravityResponse(event, "deny", "Hook returned an invalid permission decision.")
+			return failureResponse("Hook returned an invalid permission decision.")
 		}
 		switch permission {
 		case "", "allow":

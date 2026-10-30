@@ -273,7 +273,11 @@ in
           fi
 
           if [ -n "$del_branch" ] && [ -n "$br" ]; then
-            git branch -D "$br"
+            if [ -n "$force_flag" ]; then
+              git branch -D "$br"
+            else
+              git branch -d "$br"
+            fi
           fi
           exit 0
         '';

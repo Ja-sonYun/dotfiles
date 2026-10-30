@@ -625,9 +625,9 @@ impl Graph {
             return;
         }
         let mut x = x - self.pan.0;
-        for character in text.chars() {
-            let glyph = character.to_string();
-            let size = width(&glyph) as i32;
+        for grapheme in Span::raw(text).styled_graphemes(style) {
+            let glyph = grapheme.symbol;
+            let size = width(glyph) as i32;
             if x >= 0 && x + size <= area.width as i32 && size > 0 {
                 buf.set_string(area.x + x as u16, area.y + y as u16, glyph, style);
             }

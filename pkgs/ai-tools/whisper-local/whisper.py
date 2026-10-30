@@ -99,7 +99,6 @@ def file_identity(path: Path) -> dict[str, str | int]:
         "inode": status.st_ino,
         "size": status.st_size,
         "mtime_ns": status.st_mtime_ns,
-        "ctime_ns": status.st_ctime_ns,
     }
 
 
@@ -1145,6 +1144,14 @@ def main() -> int:
             if outputs_written or not has_saved_work(work_directory):
                 shutil.rmtree(work_directory, ignore_errors=True)
             elif work_directory.is_dir():
+                for audio_path in work_directory.glob("*.wav"):
+                    try:
+                        audio_path.unlink(missing_ok=True)
+                    except OSError as error:
+                        print(
+                            f"whisper: cannot remove {audio_path}: {error}",
+                            file=sys.stderr,
+                        )
                 print(
                     f"whisper: recovery files preserved in {work_directory}",
                     file=sys.stderr,

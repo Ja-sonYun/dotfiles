@@ -3,4 +3,4 @@ set -euo pipefail
 
 export PI_CODING_AGENT_DIR="$HOME/.pi/agent-dev"
 
-exec pi "$@"
+exec "${PI_EXECUTABLE:-pi}" "$@"

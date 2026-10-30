@@ -40,7 +40,7 @@ let
               )
             )
           }
-        makeWrapper ${cfg.package}/bin/pi-dev "$out/bin/pi-dev" --prefix PATH : "$out/bin"
+        makeWrapper ${cfg.package}/bin/pi-dev "$out/bin/pi-dev" --set PI_EXECUTABLE "$out/bin/pi"
       '';
 in
 {
