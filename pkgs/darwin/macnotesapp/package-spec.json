@@ -2,6 +2,6 @@
   "registry": "pypi",
   "name": "macnotesapp",
   "versions": {
-    "aarch64-darwin": "0.8.2"
+    "aarch64-darwin": "0.8.3"
   }
 }

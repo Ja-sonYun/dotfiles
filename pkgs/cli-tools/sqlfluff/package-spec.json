@@ -2,6 +2,6 @@
   "registry": "pypi",
   "name": "sqlfluff",
   "versions": {
-    "aarch64-darwin": "4.4.0"
+    "aarch64-darwin": "4.5.0"
   }
 }

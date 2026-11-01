@@ -10,10 +10,10 @@
       },
       "click": {
         "is_direct": false,
-        "sha256": "e6f9f66136c816745b9d65817da91d61d957fb16e02e4dcd0552553c5a197b76",
+        "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/fb/e2/79c688af8b210d232694e31e59da9f6ec747bae31c3f5946e4e9b98860d5/click-8.4.2-py3-none-any.whl",
-        "version": "8.4.2"
+        "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+        "version": "8.5.0"
       },
       "colorama": {
         "is_direct": false,
@@ -24,10 +24,10 @@
       },
       "diff-cover": {
         "is_direct": false,
-        "sha256": "a701553060f72d59b81f9cb1645b75ef66204427eb9dd99873c91092220e52ce",
+        "sha256": "8b0a5b356d525718ee18c14b163ce179c75ccdc5b8d5474ef22ade6a0e1fa65d",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/47/04/7130707bb385835cca7f168c80d812c9b42af9ae8230a26b3e21c9437c98/diff_cover-10.6.0-py3-none-any.whl",
-        "version": "10.6.0"
+        "url": "https://files.pythonhosted.org/packages/b0/10/97d05eef3876cffab13c3ce3cfd6e51bdd9d0cfb017b46622a9bbfbd91e4/diff_cover-11.0.0-py3-none-any.whl",
+        "version": "11.0.0"
       },
       "jinja2": {
         "is_direct": false,
@@ -52,10 +52,10 @@
       },
       "platformdirs": {
         "is_direct": false,
-        "sha256": "53d3ec4280b815c1e0b02edad7f9ee8fda1ba9c0865dd9c2e6e63849ce82fc1e",
+        "sha256": "1dadfc59a8a5d7565b3d9270ae8fa71c065595352c4277b41c11ee6c222c4b91",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/6c/8a/1d8cb3842909dc193a73835adedf412e32e18f8ffd59f43983949622fe6f/platformdirs-4.13.5-py3-none-any.whl",
-        "version": "4.13.5"
+        "url": "https://files.pythonhosted.org/packages/69/2b/887969ef4bb53e0cb271dc7c3f4a73d50c5d58bb88aeaae311e3340cd57e/platformdirs-4.14.0-py3-none-any.whl",
+        "version": "4.14.0"
       },
       "pluggy": {
         "is_direct": false,
@@ -87,10 +87,10 @@
       },
       "sqlfluff": {
         "is_direct": false,
-        "sha256": "65b1f139534ae1f18ca6e9ec1b24b09598d0b95d1336f927bf39d399ecb39109",
+        "sha256": "471a9abcad8061e36b69f711a6d89393241e30f9d1e0869f79965c0ae2c889c7",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/24/41/436e2d0f2beed494a92f6f9bc1bd87b1a7dbd6bf37038093aa7d353e5153/sqlfluff-4.4.0-py3-none-any.whl",
-        "version": "4.4.0"
+        "url": "https://files.pythonhosted.org/packages/f3/de/78c2f6d023a2dada127baf9a41a7186707d500de89947dd7259d33700bb2/sqlfluff-4.5.0-py3-none-any.whl",
+        "version": "4.5.0"
       },
       "tblib": {
         "is_direct": false,
@@ -139,5 +139,5 @@
       }
     }
   },
-  "invalidationHash": "976adde2fb9636080ecb9cf6c395b6e016a6b9c325497cad4f4c76067c39f8b2"
+  "invalidationHash": "93ef728d822a9496cac23a2d7d1c5f8917210bf244a3bd1ac663836643c18f35"
 }

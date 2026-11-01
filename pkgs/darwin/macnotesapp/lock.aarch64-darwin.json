@@ -10,24 +10,24 @@
       },
       "certifi": {
         "is_direct": false,
-        "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+        "sha256": "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
-        "version": "2026.7.22"
+        "url": "https://files.pythonhosted.org/packages/32/d1/a3652fe2c19134d0d15922177821d863cbd7e842d53a21bbe7e8e3a1b5ac/certifi-2026.10.23-py3-none-any.whl",
+        "version": "2026.10.23"
       },
       "chardet": {
         "is_direct": false,
-        "sha256": "a12023d48d0e207791c01161d03cb3c0d85c6a15f345eb9d3d56063a63d1e40f",
+        "sha256": "7df40e5267a4e9952ecb39cc23109c389fca61fc27a6e807ec9ea894a41e83d7",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/44/99/934fb862d102c8756008597f4398323f32cef329f16e87fbb3bf76d4f4be/chardet-7.6.0-cp312-cp312-macosx_11_0_arm64.whl",
-        "version": "7.6.0"
+        "url": "https://files.pythonhosted.org/packages/49/d2/c920557bd0a621dcf6fb7a96e8746dd70c6b83e7bd6c03036b2c824a59de/chardet-7.7.0-cp312-cp312-macosx_11_0_arm64.whl",
+        "version": "7.7.0"
       },
       "charset-normalizer": {
         "is_direct": false,
-        "sha256": "5b6d1386bf0096d26d3a863dc0a487a5b4eb9aa93cf5ba69683d29dde6b9d60f",
+        "sha256": "ed2a239c0ea213acc1908150a3037257083c7c083128f1a4cec2ec4b97dca491",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/30/27/78873dc8b6a56357517b74b6bb9568b80450e7bb4f6ef7e3fa9d22aa0bd7/charset_normalizer-3.5.1-cp312-cp312-macosx_10_13_universal2.whl",
-        "version": "3.5.1"
+        "url": "https://files.pythonhosted.org/packages/e7/c8/693809898870237d82785a03f3b2b58fe4c9f14669f84a7d4e623c92a59e/charset_normalizer-3.5.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "3.5.2"
       },
       "click": {
         "is_direct": false,
@@ -38,10 +38,10 @@
       },
       "cssselect": {
         "is_direct": false,
-        "sha256": "1d1aded98e82bdde447ded990a191fd6916177c4f0c914fb62eccd58e2ffcdcc",
+        "sha256": "6df6eab9b264c0f2092a6e386b33610e1684a25e27925ecebe25e3d97cbf3525",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/60/e9/6734502f67533a752ea8b1c8f7f227c94eecf300252ba8bf23e3e59d8a36/cssselect-1.5.0-py3-none-any.whl",
-        "version": "1.5.0"
+        "url": "https://files.pythonhosted.org/packages/08/ae/f24b3aac56ba91a29c9d3a31c07a9ad4e9eb500e5d212742bb6d348edaef/cssselect-1.6.0-py3-none-any.whl",
+        "version": "1.6.0"
       },
       "idna": {
         "is_direct": false,
@@ -52,24 +52,24 @@
       },
       "lxml": {
         "is_direct": false,
-        "sha256": "b5aff6f3e818e6bdbbb38e5967520f174b18f539c2b9de867b1e7fde6f8d95a4",
+        "sha256": "0c0710ac085a157b593c38fbcacd950f15c4afa8e2057527185875ab302752bc",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/f8/4c/d101ace719ca6a4ec043eb516fcfcb1b396a9fccc4fcd9ef593df34ba0d5/lxml-5.4.0-cp312-cp312-macosx_10_9_universal2.whl",
-        "version": "5.4.0"
+        "url": "https://files.pythonhosted.org/packages/dd/1f/a180b57d9eeabaab77f9d5aa30356898ea749c4795596a8f66d1eb6bef2e/lxml-6.1.3-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "6.1.3"
       },
       "lxml-html-clean": {
         "is_direct": false,
-        "sha256": "ce2ef506614ecb85ee1c5fe0a2aa45b06a19514ec7949e9c8f34f06925cfabcb",
+        "sha256": "cc037270ba500a65e7235409dcddcae8ef37300f26dea826b61d917bf0236880",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/d9/76/7ffc1d3005cf7749123bc47cb3ea343cd97b0ac2211bab40f57283577d0e/lxml_html_clean-0.4.4-py3-none-any.whl",
-        "version": "0.4.4"
+        "url": "https://files.pythonhosted.org/packages/f5/36/4898b5e3951635846ed0e445e042fadf02b7c5e811a9e43da5b3557bc8d2/lxml_html_clean-0.4.6-py3-none-any.whl",
+        "version": "0.4.6"
       },
       "macnotesapp": {
         "is_direct": false,
-        "sha256": "875aa89b333c546a49b0686a5bd84797b97fb87ee7a362e2dd1fac2f999a408c",
+        "sha256": "850858aeb979c669c73ff5c792ce19a89c6c9ae54fd32d3d049ac78d23a37cda",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/02/a2/e89e03627880b551335af8276493999f3cdb9804d21cb11a70bb586f5398/macnotesapp-0.8.2-py3-none-any.whl",
-        "version": "0.8.2"
+        "url": "https://files.pythonhosted.org/packages/b6/e0/c75f373c5e772b22fa96115dd4f436960550bf87e0e0711795cce429e6ed/macnotesapp-0.8.3-py3-none-any.whl",
+        "version": "0.8.3"
       },
       "markdown-it-py": {
         "is_direct": false,
@@ -129,38 +129,38 @@
       },
       "pyobjc-core": {
         "is_direct": false,
-        "sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7",
+        "sha256": "5818e3d8cc2677a1e767968ebfe3bc0cb7f80c1f7c19c653ee25ef1cc1b3e188",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/86/b2/bbf7f049880ab40d110e66f25122342a1f6c98d6fe3c59bb98985503c660/pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
-        "version": "12.2.2"
+        "url": "https://files.pythonhosted.org/packages/68/ac/783ecf1c5045792fb51ad18e0131ff64e33ed9dee9921766c14e03eb27db/pyobjc_core-13.0-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "13.0"
       },
       "pyobjc-framework-applescriptkit": {
         "is_direct": false,
-        "sha256": "73bf591f02c33d50ee72e876de9afe767c5a35776ac0777e567bb24a0fb08d26",
+        "sha256": "2027f488440ca0d6cd98069a7598501eb8ad22351c000560a4737c0b42cfbcaf",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/d3/d3/648c25c045c10404b91dd670943574bee5f4d1e8c41c7917f4ec7c990b32/pyobjc_framework_applescriptkit-12.2.2-py2.py3-none-any.whl",
-        "version": "12.2.2"
+        "url": "https://files.pythonhosted.org/packages/a6/e3/9fb26ec649771058f2d9d8ab1764c293b1ae84faacf6e3e57e72bc5dd95e/pyobjc_framework_applescriptkit-13.0-py2.py3-none-any.whl",
+        "version": "13.0"
       },
       "pyobjc-framework-applescriptobjc": {
         "is_direct": false,
-        "sha256": "862e3f31d3c1a955326b8f7556194ce6a7703246eec93aacc73892d5860df59e",
+        "sha256": "dd6b6ba85e5b396c6e87cb36d38b5b657c77d1467af3a8f074461b4543d3b460",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/1a/44/a15a313c94d2e0f1793a71783120d0c1d5cf9d5f8e2a6c3f15f682b63cb1/pyobjc_framework_applescriptobjc-12.2.2-py2.py3-none-any.whl",
-        "version": "12.2.2"
+        "url": "https://files.pythonhosted.org/packages/ad/8d/f64041713c7b2b255d62f2be51554a381913d6f93c2b4fc2a8d2d2922006/pyobjc_framework_applescriptobjc-13.0-py2.py3-none-any.whl",
+        "version": "13.0"
       },
       "pyobjc-framework-cocoa": {
         "is_direct": false,
-        "sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d",
+        "sha256": "e1618d315939c9fae57cb858d4db496ec61f82495ce6a877398131ee494fc19d",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/fd/2f/b67e73d8bc367e03fe7861cd9c49fff9dcfa6db83bc0630c0adcfb25b7fa/pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
-        "version": "12.2.2"
+        "url": "https://files.pythonhosted.org/packages/ea/44/98d626726809da517c757d77e2888d34eaf758ebad908effb8d0b60c8118/pyobjc_framework_cocoa-13.0-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "13.0"
       },
       "pyobjc-framework-scriptingbridge": {
         "is_direct": false,
-        "sha256": "03ec7da53a9330d392bb817fdc2397750af5366b3f223c30e14fbc6a3b48e588",
+        "sha256": "9768bfb3e9f609eaab69f308f3c26f153ecc18df0fbb230516219d07094eba57",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/88/63/42a41c5b3ec9dcacb10b798095ba3a25feeb1cb62385b65cb6d04edd9bae/pyobjc_framework_scriptingbridge-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
-        "version": "12.2.2"
+        "url": "https://files.pythonhosted.org/packages/6f/0c/f1fb3df52e599e08ac703a4d3058b1a3c016aae14a81bfc8664f8debb0ce/pyobjc_framework_scriptingbridge-13.0-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "13.0"
       },
       "questionary": {
         "is_direct": false,
@@ -199,10 +199,10 @@
       },
       "soupsieve": {
         "is_direct": false,
-        "sha256": "8089a26fd974ca7a1f30276d3d8492ab266ab15af581642dfe8aa162e0c1c823",
+        "sha256": "8412826614f9c632227067d0985aeb9f584bd15efc852955430e097a9fe7afbf",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/eb/dc/ad025c1ee131eba60c69f4dd5779b18fcf1e6b21a343e2162a84d5d133c7/soupsieve-2.9.2-py3-none-any.whl",
-        "version": "2.9.2"
+        "url": "https://files.pythonhosted.org/packages/07/66/473f7ca0be0b06e38ee8c85ee2db184e3981bd769fac2e7c19c8a8865211/soupsieve-3.0.4-py3-none-any.whl",
+        "version": "3.0.4"
       },
       "toml": {
         "is_direct": false,
@@ -227,17 +227,17 @@
       },
       "validators": {
         "is_direct": false,
-        "sha256": "e8c947097eae7892cb3d26868d637f79f47b4a0554bc6b80065dfe5aac3705dd",
+        "sha256": "c52ad00435e385b95fa4d6dd3081cb20c0660e7fd07b214523c8584dd2edba34",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/fa/6e/3e955517e22cbdd565f2f8b2e73d52528b14b8bcfdb04f62466b071de847/validators-0.35.0-py3-none-any.whl",
-        "version": "0.35.0"
+        "url": "https://files.pythonhosted.org/packages/d5/ce/fc5090ea3789bdfd22e90f2515b237194c5dacfc8f26d2082a0b50b2ca86/validators-0.36.0-py3-none-any.whl",
+        "version": "0.36.0"
       },
       "wcwidth": {
         "is_direct": false,
-        "sha256": "2097bb1d28a0ba8fe177c2eb607317f9b1627b03f33ebebfd3da670b337a65ba",
+        "sha256": "f279f32c8e206a9092fa350e53ca0c2bd8072e45b1c9fd31bb6d476b59b591c4",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/39/cc/9c0adc5861020de426ec71716b6c1bef8d90694b7d6d0a16202cdb1647f5/wcwidth-0.8.4-py3-none-any.whl",
-        "version": "0.8.4"
+        "url": "https://files.pythonhosted.org/packages/04/e9/dfdca30ca36c472de3e260406dee29fc108499ec590c63b3fe279887ee9d/wcwidth-0.9.4-cp310-abi3-macosx_11_0_arm64.whl",
+        "version": "0.9.4"
       },
       "wheel": {
         "is_direct": false,
@@ -324,5 +324,5 @@
       }
     }
   },
-  "invalidationHash": "14df494ec6813b580ac55cb915545c8e1ee25914ce8135b44b641a6c8df9971f"
+  "invalidationHash": "7b18eef56870c5c7043db802b0bb34c77800acfc926e45d2432c1edd0a5a5e7a"
 }

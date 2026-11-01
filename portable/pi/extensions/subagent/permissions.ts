@@ -1,4 +1,5 @@
 import type { ChildProcess } from "node:child_process";
+import type { RuntimeContext } from "../permissions/rules.ts";
 
 export interface PermissionBridge {
   extension: string;
@@ -6,10 +7,12 @@ export interface PermissionBridge {
   check: (
     call: { toolName: string; input: Record<string, unknown> },
     signal: AbortSignal,
+    runtimeContext: RuntimeContext,
   ) => Promise<{ block: true; reason: string } | undefined>;
   rules: (
     call: { toolName: string; input: Record<string, unknown> },
     signal: AbortSignal,
+    runtimeContext: RuntimeContext,
   ) => Promise<Record<string, unknown>>;
 }
 
@@ -24,6 +27,7 @@ export function connectPermissions(
     ...(signal ? [signal] : []),
   ]);
   const pending = new Map<string, AbortController>();
+  let sessionId: string | undefined;
   child.on("message", async (message: any) => {
     if (message?.type === "pi:permission:cancel") {
       pending.get(message.id)?.abort();
@@ -49,10 +53,26 @@ export function connectPermissions(
       ) {
         throw new Error("Invalid child permission request");
       }
+      const runtime = message.runtime_context;
+      const identity = runtime?.session_identity;
+      if (
+        identity?.client !== "pi" ||
+        typeof identity.session_id !== "string" ||
+        !identity.session_id ||
+        identity.agent_id !== `pi:${identity.session_id}` ||
+        (sessionId !== undefined && sessionId !== identity.session_id) ||
+        typeof runtime.runtime_instructions !== "string" ||
+        (runtime.tool_metadata !== null &&
+          (runtime.tool_metadata?.name !== message.call.toolName ||
+            typeof runtime.tool_metadata?.description !== "string"))
+      ) {
+        throw new Error("Invalid child runtime context");
+      }
+      sessionId = identity.session_id;
       if (message.type === "pi:permission:rules") {
-        result = await bridge.rules(message.call, requestSignal);
+        result = await bridge.rules(message.call, requestSignal, runtime);
       } else {
-        outcome = await bridge.check(message.call, requestSignal);
+        outcome = await bridge.check(message.call, requestSignal, runtime);
       }
     } catch {
       outcome = { block: true, reason: "Parent permission check failed" };

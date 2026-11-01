@@ -65,6 +65,7 @@
 
       # Window
       background-opacity = 0.70;
+      background-opacity-cells = true;
       window-padding-x = 10;
       window-padding-y = 10;
 

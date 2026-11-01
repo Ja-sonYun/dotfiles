@@ -23,7 +23,11 @@ import {
   type Policy,
 } from "./policy.ts";
 import { runJson } from "./process.ts";
-import { permissionRules, type PermissionRuleContext } from "./rules.ts";
+import {
+  permissionRules,
+  type PermissionRuleContext,
+  type RuntimeContext,
+} from "./rules.ts";
 import {
   fingerprint,
   PermissionSession,
@@ -74,12 +78,35 @@ interface DispatchApproval {
 const ruleTools = ["rules_check", "rules_request_approval"];
 
 export default function (pi: ExtensionAPI): void {
+  const runtimeContext = (
+    call: Call,
+    ctx: ExtensionContext,
+  ): RuntimeContext => {
+    const sessionId = ctx.sessionManager.getSessionId();
+    const tool = pi.getAllTools().find((item) => item.name === call.toolName);
+    return {
+      session_identity: {
+        client: "pi",
+        session_id: sessionId,
+        agent_id: `pi:${sessionId}`,
+      },
+      runtime_instructions: ctx.getSystemPrompt(),
+      tool_metadata: tool
+        ? { name: tool.name, description: tool.description }
+        : null,
+    };
+  };
   let executeRuleTool: (
     call: Call,
     signal: AbortSignal | undefined,
     ctx: ExtensionContext,
-  ) => Promise<Record<string, unknown>> = async (call, signal) => {
-    const response = await parentRequest(call, "rules", signal);
+  ) => Promise<Record<string, unknown>> = async (call, signal, ctx) => {
+    const response = await parentRequest(
+      call,
+      runtimeContext(call, ctx),
+      "rules",
+      signal,
+    );
     return (
       response.result ?? { status: "unavailable", reason: response.reason }
     );
@@ -122,7 +149,7 @@ export default function (pi: ExtensionAPI): void {
         return { block: true, reason: "Permission configuration unavailable" };
       }
       normalizeFileCall(event, ctx.cwd);
-      const response = await parentRequest(event);
+      const response = await parentRequest(event, runtimeContext(event, ctx));
       return response.allow
         ? undefined
         : {
@@ -224,6 +251,7 @@ export default function (pi: ExtensionAPI): void {
     request: string,
     signal?: AbortSignal,
     approval?: DispatchApproval,
+    childContext?: RuntimeContext,
   ): Promise<Outcome> {
     const version = approval?.version ?? contextVersion;
     const background = approval?.background;
@@ -281,6 +309,8 @@ export default function (pi: ExtensionAPI): void {
         configuredRules: config.configuredRules,
         check_summary: checkSummary,
         context: {
+          runtime_context:
+            childContext ?? (context ? runtimeContext(call, context) : null),
           user_request: request,
           actor: actor.name,
           permission_mode: actor.mode,
@@ -357,6 +387,7 @@ export default function (pi: ExtensionAPI): void {
           if (typeof rules.needs_summary !== "boolean") {
             throw new Error("Summary decision unavailable");
           }
+          if (!rules.needs_summary) return;
           if (config.summaries && summaryContext) {
             summary = await summaries.prepare(
               call,
@@ -385,6 +416,7 @@ export default function (pi: ExtensionAPI): void {
     request: string,
     signal?: AbortSignal,
     approval?: DispatchApproval,
+    childContext?: RuntimeContext,
   ): Promise<Record<string, unknown>> {
     if (!ruleTools.includes(call.toolName))
       return { status: "unavailable", reason: "Unknown rule tool" };
@@ -427,6 +459,8 @@ export default function (pi: ExtensionAPI): void {
         tool_input: call.input,
         configuredRules: config.configuredRules,
         context: {
+          runtime_context:
+            childContext ?? (context ? runtimeContext(call, context) : null),
           user_request: request,
           actor: actor.name,
           permission_mode: actor.mode,
@@ -622,7 +656,11 @@ export default function (pi: ExtensionAPI): void {
     message.reply({
       extension: fileURLToPath(import.meta.url),
       mode: actor.mode,
-      check: (call: Call, signal: AbortSignal) => {
+      check: (
+        call: Call,
+        signal: AbortSignal,
+        childContext: RuntimeContext,
+      ) => {
         if (
           version !== contextVersion ||
           (approval.background
@@ -641,9 +679,10 @@ export default function (pi: ExtensionAPI): void {
             ? AbortSignal.any([signal, approval.background.signal])
             : signal,
           approval,
+          childContext,
         );
       },
-      rules: (call: Call, signal: AbortSignal) =>
+      rules: (call: Call, signal: AbortSignal, childContext: RuntimeContext) =>
         ruleTool(
           call,
           actor,
@@ -652,6 +691,7 @@ export default function (pi: ExtensionAPI): void {
             ? AbortSignal.any([signal, approval.background.signal])
             : signal,
           approval,
+          childContext,
         ),
     });
   });

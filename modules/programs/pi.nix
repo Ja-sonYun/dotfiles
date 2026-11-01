@@ -12,7 +12,7 @@ let
         ${
           if builtins.isAttrs value then
             ''
-              ${name}="$(${pkgs.coreutils}/bin/cat -- ${lib.escapeShellArg value._secret})" || exit "$?"
+              ${name}="$(${pkgs.coreutils}/bin/cat -- "${value._secret}")" || exit "$?"
               export ${name}
             ''
           else

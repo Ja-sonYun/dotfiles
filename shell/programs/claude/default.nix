@@ -54,6 +54,10 @@
       };
 
       settings = {
+        disabledMcpjsonServers = [
+          "rea"
+          "r2mcp"
+        ];
         alwaysThinkingEnabled = true;
         attribution = {
           commit = "";

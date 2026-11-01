@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Call } from "./policy.ts";
+import type { RuntimeContext } from "./rules.ts";
 
 interface ParentResponse {
   allow: boolean;
@@ -9,6 +10,7 @@ interface ParentResponse {
 
 export function parentRequest(
   call: Call,
+  runtimeContext: RuntimeContext,
   operation: "check" | "rules" = "check",
   signal?: AbortSignal,
 ): Promise<ParentResponse> {
@@ -54,8 +56,16 @@ export function parentRequest(
       disconnected();
       return;
     }
-    process.send({ type: `pi:permission:${operation}`, id, call }, (error) => {
-      if (error) disconnected();
-    });
+    process.send(
+      {
+        type: `pi:permission:${operation}`,
+        id,
+        call,
+        runtime_context: runtimeContext,
+      },
+      (error) => {
+        if (error) disconnected();
+      },
+    );
   });
 }

@@ -524,7 +524,7 @@ export default function (pi: ExtensionAPI) {
             const step = params.chain[i];
             const taskWithContext = step.task.replace(
               /\{previous\}/g,
-              previousOutput,
+              () => previousOutput,
             );
 
             // Create update callback that includes all previous results

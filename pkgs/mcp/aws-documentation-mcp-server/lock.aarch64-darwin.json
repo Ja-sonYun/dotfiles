@@ -31,10 +31,10 @@
       },
       "awslabs-aws-documentation-mcp-server": {
         "is_direct": false,
-        "sha256": "d547364e1e73e0ec7ee94e8ed9e2e539a56368bcadebfb69c4b6ba0a52b519e4",
+        "sha256": "f9101573807df4b852201c108ea38bc02c6724d1e51e0de354a38e0779cee0b6",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/2c/12/ad1eccbba6f8e9835efe3433b5cc7e7f4a98bb113adc9e512bfa71e2573c/awslabs_aws_documentation_mcp_server-1.2.3-py3-none-any.whl",
-        "version": "1.2.3"
+        "url": "https://files.pythonhosted.org/packages/12/a7/9f39069ec180bd54c0f4efe9a9c4d13cbb9cb1d04884c3e077a2a05bcd61/awslabs_aws_documentation_mcp_server-1.2.4-py3-none-any.whl",
+        "version": "1.2.4"
       },
       "beautifulsoup4": {
         "is_direct": false,
@@ -45,10 +45,10 @@
       },
       "certifi": {
         "is_direct": false,
-        "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+        "sha256": "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
-        "version": "2026.7.22"
+        "url": "https://files.pythonhosted.org/packages/32/d1/a3652fe2c19134d0d15922177821d863cbd7e842d53a21bbe7e8e3a1b5ac/certifi-2026.10.23-py3-none-any.whl",
+        "version": "2026.10.23"
       },
       "cffi": {
         "is_direct": false,
@@ -87,10 +87,10 @@
       },
       "httpcore2": {
         "is_direct": false,
-        "sha256": "e1e05d4f25f7d7d496bfb96748f6f4b67657b03da069b3a68c36069f3db73d0a",
+        "sha256": "5c4358319f2602d984ad93182c9fee5160f22e9da7babdda870a5e7c4e2dc34f",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/09/ba/a4568248771ce81957bfb7cc600264a40fbcda092391ee1c415c50be4bea/httpcore2-2.13.1-py3-none-any.whl",
-        "version": "2.13.1"
+        "url": "https://files.pythonhosted.org/packages/af/c2/ce417c397afa5181f0e3c6ff01a4d01639414e1adef08730d97571297151/httpcore2-2.16.0-py3-none-any.whl",
+        "version": "2.16.0"
       },
       "httpx": {
         "is_direct": false,
@@ -101,10 +101,10 @@
       },
       "httpx2": {
         "is_direct": false,
-        "sha256": "6dff50fabc270ee5fd25d845d0b078ed20564579744d6d962850975996d2f9a4",
+        "sha256": "fd2c5d7909e8d86fe92d53020c310ca0e4e431b838c207c5754b9bbf0308d49a",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/d8/9c/6fe8931fd9f381042a9e4c7d5a7b4cbf7016b252bec0c99a49fce42c3326/httpx2-2.13.1-py3-none-any.whl",
-        "version": "2.13.1"
+        "url": "https://files.pythonhosted.org/packages/7b/3d/2e4bc4fd1ef9770871669adb348d612a6e4786b303a23f9935b81c48dd60/httpx2-2.16.0-py3-none-any.whl",
+        "version": "2.16.0"
       },
       "idna": {
         "is_direct": false,
@@ -171,31 +171,31 @@
       },
       "opentelemetry-api": {
         "is_direct": false,
-        "sha256": "b31553efa588ae44bc306f863c785c5333a9ecc091248c6ee68b4b6c87fdedfb",
+        "sha256": "2cbd737377e710ee740d261c94e93fa0f08e6d037c18f17513cc0a2d94479a34",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/1e/41/f7dcf80b81ee8e71c1a2b59f14208bc723edbd89ed027a73b175abf6348e/opentelemetry_api-1.45.1-py3-none-any.whl",
-        "version": "1.45.1"
+        "url": "https://files.pythonhosted.org/packages/a9/2d/610db864d7513158cebb8f36cc88e67e73bd6c7aa1905ef18d89e1281c81/opentelemetry_api-1.45.2-py3-none-any.whl",
+        "version": "1.45.2"
       },
       "pycparser": {
         "is_direct": false,
-        "sha256": "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80",
+        "sha256": "a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/90/11/0e6f11117525ff0eec40ebac3d313376f102df93ca44ad9e893ee85e4f89/pycparser-3.11-py3-none-any.whl",
-        "version": "3.11"
+        "url": "https://files.pythonhosted.org/packages/b6/ae/315bbeee126a769cbde43cf4908acb4b40408d8bf8bbf334dd7368d8dadf/pycparser-3.12-py3-none-any.whl",
+        "version": "3.12"
       },
       "pydantic": {
         "is_direct": false,
-        "sha256": "9195d967ec791692a04438115466764fb8b9a27b31f14a760437694f40d6b454",
+        "sha256": "7efbf7507b937931cd32a5755acb00ea1cf5ccb1d4e8067a5850d5069e382118",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/35/ea/a56b9fe5066f3537b7882f77e9c5dfb26d8c2eefdaed9b5fc73d57b4dc22/pydantic-2.14.1-py3-none-any.whl",
-        "version": "2.14.1"
+        "url": "https://files.pythonhosted.org/packages/97/01/c71a71258b58659c72504e5fd65b451f6e36e34dc931d0b237ded213c814/pydantic-2.14.2-py3-none-any.whl",
+        "version": "2.14.2"
       },
       "pydantic-core": {
         "is_direct": false,
-        "sha256": "e8e1d6ce820aa23317e8209a86bd65a540973c12dc7552b48a4f6c8e9926815e",
+        "sha256": "596921489390a002d6a5e303384a0f1f98384f8bb550fbf38a1aafa6093da0f9",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/db/a3/f8b1b39349c33037c73d7a1b794c9c29d8f07d5bd2b74399c1375a529cc6/pydantic_core-2.50.1-cp312-cp312-macosx_11_0_arm64.whl",
-        "version": "2.50.1"
+        "url": "https://files.pythonhosted.org/packages/f9/0b/92463ae7be78d73885487f72c4599902c2cc190378bccaad5718b7495250/pydantic_core-2.50.2-cp312-cp312-macosx_11_0_arm64.whl",
+        "version": "2.50.2"
       },
       "pygments": {
         "is_direct": false,
@@ -262,24 +262,24 @@
       },
       "soupsieve": {
         "is_direct": false,
-        "sha256": "fa30e3ba4809cb81ce1f3209f2fbe3e779fc445f0439bc147a0d7c4601743f21",
+        "sha256": "8412826614f9c632227067d0985aeb9f584bd15efc852955430e097a9fe7afbf",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/49/ca/f639c80449997b88aba7bc9705d25dd76cc0844f45f187862fd8f8bb18fa/soupsieve-3.0.3-py3-none-any.whl",
-        "version": "3.0.3"
+        "url": "https://files.pythonhosted.org/packages/07/66/473f7ca0be0b06e38ee8c85ee2db184e3981bd769fac2e7c19c8a8865211/soupsieve-3.0.4-py3-none-any.whl",
+        "version": "3.0.4"
       },
       "sse-starlette": {
         "is_direct": false,
-        "sha256": "3e6e1070df3f0f5d9cea81496de92dbb72f6721871d99748ece67441dd8b7997",
+        "sha256": "e4dfa4d237d2712cb2b4d4918eda9b457cd6b44bbecdc838af75de836565bafd",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/be/e4/cdda14023c316d71493bc54fdffc3dd006631b88866145c9d3cc33e0f1df/sse_starlette-3.5.0-py3-none-any.whl",
-        "version": "3.5.0"
+        "url": "https://files.pythonhosted.org/packages/cf/49/35053078cdfcf639237e8bee6dc6f34f1b3a3cc8d01800a1e213e1660ff6/sse_starlette-3.6.0-py3-none-any.whl",
+        "version": "3.6.0"
       },
       "starlette": {
         "is_direct": false,
-        "sha256": "dfdd6b29c26483288088d990eee59631dedadd66ce20d203402a7ca8e3c4656f",
+        "sha256": "478c0ab3b4ced6e82719849c118fa406f0278a3499c1a898cd15cd31bdc38ce4",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/c1/b0/5742e4ac7af5eb58ec3470a537a49d7aa507e5539413e504b3a65ef50ba8/starlette-1.8.0-py3-none-any.whl",
-        "version": "1.8.0"
+        "url": "https://files.pythonhosted.org/packages/88/2e/947cfe02def9371c07cd5bf5b6b61c829e9aecb9904db02a66cfafbc1eec/starlette-1.10.0-py3-none-any.whl",
+        "version": "1.10.0"
       },
       "truststore": {
         "is_direct": false,
@@ -406,5 +406,5 @@
       }
     }
   },
-  "invalidationHash": "7848773ab603ede416b32a34f57de05e78731e34fd4b04c9047410af9e750df9"
+  "invalidationHash": "4961289d20f6ac4ecbef0f58752fb926defe1a828388a238b2f574c2e392b7b3"
 }
