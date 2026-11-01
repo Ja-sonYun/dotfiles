@@ -150,6 +150,24 @@ def file_state(request: HookInput) -> str:
     return json.dumps(files, sort_keys=True)
 
 
+def request_report(handle: str, request_id: str) -> dict[str, object]:
+    with state_transaction() as database:
+        require_session(database, handle)
+        row = database.execute(
+            "SELECT request, feedback, status FROM approval_requests "
+            "WHERE id = ? AND session_handle = ?",
+            (request_id, handle),
+        ).fetchone()
+        if row is None:
+            raise ValueError("Unknown request ID for this session.")
+        return {
+            "request_id": request_id,
+            "request": json.loads(row[0]),
+            "feedback": row[1],
+            "status": row[2],
+        }
+
+
 def pending_approval(handle: str, request_id: str) -> ApprovalRequest:
     with state_transaction() as database:
         require_session(database, handle)

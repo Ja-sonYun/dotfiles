@@ -5,7 +5,95 @@ use fs2::FileExt;
 use serde_json::{json, Value};
 use std::path::Path;
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+
+fn public_text(value: &Value) -> String {
+    match value {
+        Value::String(text) => text.clone(),
+        Value::Array(items) => items
+            .iter()
+            .map(public_text)
+            .filter(|text| !text.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        Value::Object(fields) => {
+            if matches!(
+                fields.get("type").and_then(Value::as_str),
+                Some("thinking" | "reasoning" | "image")
+            ) {
+                return String::new();
+            }
+            ["text", "content", "output", "stdout", "stderr", "result"]
+                .iter()
+                .filter_map(|key| fields.get(*key))
+                .map(public_text)
+                .filter(|text| !text.is_empty())
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+        _ => String::new(),
+    }
+}
+
+async fn evidence(config: &Config, data: &Value) -> Value {
+    let mut result = json!({});
+    for key in [
+        "prompt",
+        "last_assistant_message",
+        "tool_response",
+        "message",
+    ] {
+        let text = public_text(&data[key]);
+        if text.is_empty() {
+            continue;
+        }
+        let redacted = tokio::time::timeout(Duration::from_millis(300), async {
+            let mut child = tokio::process::Command::new(&config.redact)
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .kill_on_drop(true)
+                .spawn()?;
+            let mut input = child.stdin.take().context("Missing redact stdin")?;
+            let write = async {
+                input.write_all(text.as_bytes()).await?;
+                drop(input);
+                Ok::<_, anyhow::Error>(())
+            };
+            let ((), output) = tokio::try_join!(write, async {
+                Ok::<_, anyhow::Error>(child.wait_with_output().await?)
+            })?;
+            if !output.status.success() {
+                bail!("Redaction failed");
+            }
+            Ok::<_, anyhow::Error>(String::from_utf8(output.stdout)?)
+        })
+        .await;
+        match redacted {
+            Ok(Ok(mut text)) => {
+                let mut end = text.len().min(2048);
+                while !text.is_char_boundary(end) {
+                    end -= 1;
+                }
+                if end < text.len() {
+                    result["truncated"] = json!(true);
+                    text.truncate(end);
+                }
+                while json!(text).to_string().len() > 2048 {
+                    let mut end = text.len() / 2;
+                    while !text.is_char_boundary(end) {
+                        end -= 1;
+                    }
+                    text.truncate(end);
+                    result["truncated"] = json!(true);
+                }
+                result[key] = json!(text);
+            }
+            _ => result["incomplete"] = json!(true),
+        }
+    }
+    result
+}
 
 async fn publish(root: &Path, report: &Report, start_on_report: bool) -> Result<Option<Value>> {
     let pending = root.join("pending");
@@ -83,7 +171,7 @@ pub fn receives_messages(report: &Report) -> bool {
         )
 }
 
-pub fn inbox_output(mut inbox: Value, event: Option<&str>) -> Result<Option<String>> {
+pub fn inbox_output(mut inbox: Value, event: Option<&str>) -> Result<Option<(String, Value)>> {
     loop {
         let messages = inbox["messages"]
             .as_array()
@@ -95,14 +183,16 @@ pub fn inbox_output(mut inbox: Value, event: Option<&str>) -> Result<Option<Stri
             "{}\nAgentHub inbox:\n{inbox}",
             crate::mcp::MESSAGE_INSTRUCTIONS
         );
+        let receipt = json!({"agent_id": inbox["agent_id"], "turn_id": inbox["turn_id"],
+            "run_id": inbox["run_id"], "message_ids": messages.iter().map(|message| message["message_id"].clone()).collect::<Vec<_>>()});
         let output = if let Some(event) = event {
             json!({"hookSpecificOutput": {"hookEventName": event, "additionalContext": context}})
         } else {
-            json!({"context": context})
+            json!({"context": context, "receipt": receipt})
         };
         let encoded = serde_json::to_string(&output)?;
         if encoded.len() + 1 <= 16 * 1024 {
-            return Ok(Some(encoded));
+            return Ok(Some((encoded, receipt)));
         }
         if inbox["messages"]
             .as_array_mut()
@@ -114,6 +204,16 @@ pub fn inbox_output(mut inbox: Value, event: Option<&str>) -> Result<Option<Stri
         }
         inbox["truncated"] = json!(true);
     }
+}
+
+pub async fn confirm_delivery(root: &Path, receipt: &Value) -> Result<()> {
+    tokio::time::timeout(
+        Duration::from_millis(500),
+        Client::load(root)?.post("/messages/delivered", receipt),
+    )
+    .await
+    .context("Inbox delivery confirmation timed out")??;
+    Ok(())
 }
 
 pub async fn codex_session_meta(path: &str, thread: &str) -> Result<Value> {
@@ -302,15 +402,20 @@ pub async fn hook(root: &Path, config: &Config) -> Result<()> {
             .is_some_and(|message| message.to_lowercase().contains("<proposed_plan>")),
         "is_error": data["tool_failed"] == true || data["is_error"] == true,
     });
+    fields["evidence"] = if subject_verified {
+        evidence(config, &data).await
+    } else {
+        json!({"incomplete": true})
+    };
     if data["hook_event_name"] == "Stop" {
-        if let Some(message) = data["last_assistant_message"].as_str() {
+        if let Some(message) = fields["evidence"]["last_assistant_message"].as_str() {
             fields["response_excerpt"] = json!(alerts::excerpt(message));
         }
     }
     if let Some(title) = data["session_title"].as_str() {
         fields["title"] = json!(title);
     }
-    if let Some(summary) = data["message"]
+    if let Some(summary) = fields["evidence"]["message"]
         .as_str()
         .or_else(|| data["tool_name"].as_str())
     {
@@ -337,7 +442,17 @@ pub async fn hook(root: &Path, config: &Config) -> Result<()> {
     if let Some(response) = publish(root, &report, config.notifications.is_some()).await? {
         if let Some(inbox) = response.get("inbox") {
             match inbox_output(inbox.clone(), Some(event)) {
-                Ok(Some(output)) => println!("{output}"),
+                Ok(Some((output, receipt))) => {
+                    {
+                        use std::io::Write;
+                        let mut stdout = std::io::stdout().lock();
+                        writeln!(stdout, "{output}")?;
+                        stdout.flush()?;
+                    }
+                    if let Err(error) = confirm_delivery(root, &receipt).await {
+                        eprintln!("cannot confirm inbox delivery: {error}");
+                    }
+                }
                 Ok(None) => {}
                 Err(error) => eprintln!("cannot render inbox: {error}"),
             }

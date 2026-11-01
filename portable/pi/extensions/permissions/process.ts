@@ -12,7 +12,12 @@ export async function runJson(
       reject(new Error("Cancelled"));
       return;
     }
-    const child = spawn(command[0], command.slice(1), {
+    const executable = command[0];
+    if (!executable) {
+      reject(new Error("Missing rule evaluator command"));
+      return;
+    }
+    const child = spawn(executable, command.slice(1), {
       cwd,
       detached: true,
       stdio: ["pipe", "pipe", "ignore"],

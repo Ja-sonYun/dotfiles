@@ -3,7 +3,7 @@ RULES_GUIDANCE = (
     "plan or final response, call rules_check with 'User request' (relevant "
     "quotes, constraints, actual approval and scope) and 'Current proposal' "
     "(full current draft). Do not infer approval from quotes or proposals. "
-    "Read status and feedback: completed is not a pass. Fix violations in the "
+    "Read status, findings, errors and feedback: completed is not a pass. Fix violations in the "
     "draft; resolve unclear findings with evidence; recheck the full revised "
     "draft. Unresolved violations or unclear findings require reporting only "
     "the issue and needed information. If checking fails without a violation "
@@ -14,6 +14,7 @@ RULES_GUIDANCE = (
     "requirements. Do not repeat failed checks without progress. Code/tool "
     "checks are automatic hooks; "
     "rules_check checks tasks only.\n"
+    "Use rules_report(session_handle, request_id) for stored details. "
     "Tool, code, and task findings can return a request ID. Call "
     "rules_request_approval with the hook's session_handle and that request_id "
     "to record a one-time exception for the stored request without a UI prompt. "
@@ -24,6 +25,9 @@ RULES_GUIDANCE = (
     "not a passing check or permission to execute tools; you may present that "
     "text while reporting the exception. Other permission checks still "
     "apply. Approvals survive server restarts and expire at session end.\n"
+)
+
+RULE_AUTHORING_GUIDANCE = (
     "Suggest reusable rules for explicit preferences, repeated corrections, or "
     "lasting constraints, not one-off requests. Check existing rules; propose "
     "updates for overlaps. Suggest at most one per turn; never repeat a rejected "

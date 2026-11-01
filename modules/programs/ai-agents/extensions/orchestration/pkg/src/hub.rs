@@ -142,6 +142,17 @@ async fn mark_read(
     })())
 }
 
+async fn observation_context(
+    State(app): State<App>,
+    headers: HeaderMap,
+    Json(value): Json<Value>,
+) -> Response {
+    response((|| {
+        authorize(&app, &headers)?;
+        app.store.lock().unwrap().observation_context(&value)
+    })())
+}
+
 async fn report(State(app): State<App>, headers: HeaderMap, Json(value): Json<Report>) -> Response {
     response((|| {
         authorize(&app, &headers)?;
@@ -166,12 +177,24 @@ async fn report(State(app): State<App>, headers: HeaderMap, Json(value): Json<Re
             value.data["run_id"].as_str().unwrap_or("") == agent.run_id
         };
         if crate::ingest::receives_messages(&value) && agent.last_hook == value.at && current_turn {
-            match store.read_messages(&id, &agent.turn_id) {
+            match store.read_messages(&id, &agent.turn_id, true) {
                 Ok(inbox) => result["inbox"] = inbox,
                 Err(error) => eprintln!("cannot read hook inbox: {error}"),
             }
         }
         Ok(result)
+    })())
+}
+
+async fn delivered(
+    State(app): State<App>,
+    headers: HeaderMap,
+    Json(value): Json<Value>,
+) -> Response {
+    response((|| {
+        authorize(&app, &headers)?;
+        app.store.lock().unwrap().delivered(&value)?;
+        Ok(json!({"status": "recorded"}))
     })())
 }
 
@@ -200,7 +223,7 @@ async fn read_messages(
         if agent.client != "pi" || agent.run_id != run {
             anyhow::bail!("Inbox run does not match the current Pi session");
         }
-        store.read_messages(id, &agent.turn_id)
+        store.read_messages(id, &agent.turn_id, true)
     })())
 }
 
@@ -231,7 +254,7 @@ async fn mcp_request(
             let turn = crate::state::required(&report.data, "turn_id")?;
             let mut store = app.store.lock().unwrap();
             return if report.kind == "read_messages" {
-                Ok(mcp::content(store.read_messages(&id, turn)?))
+                Ok(mcp::content(store.read_messages(&id, turn, false)?))
             } else {
                 let ids = report.data["message_ids"]
                     .as_array()
@@ -429,9 +452,8 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
             requested.retain(|id, _| store.live.contains(id));
             for agent in store.snapshot.agents.values().filter(|agent| {
                 store.live.contains(&agent.id)
-                    && agent.parent.is_none()
+                    && !agent.provisional
                     && !agent.turn_id.is_empty()
-                    && !agent.location.pane.is_empty()
                     && agent.observation_pending
             }) {
                 if requested.get(&agent.id).is_some_and(|(revision, at)| {
@@ -445,6 +467,7 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
                     .try_send(json!({
                         "type": "observe", "agent_id": agent.id,
                         "observation_revision": agent.observation_revision,
+                        "observation_evidence_revision": agent.observation_evidence_revision,
                         "turn_id": agent.turn_id,
                         "priority": agent.observation_priority,
                     }))
@@ -514,6 +537,7 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
                             "agent_id": id,
                             "turn_id": value["sampled"]["turn_id"],
                             "observation_revision": value["sampled"]["observation_revision"],
+                            "observation_evidence_revision": value["sampled"]["observation_evidence_revision"],
                             "outcome": match &checked {
                                 Ok(Some(_)) => "applied",
                                 Ok(None) if store.snapshot.revision != revision => "requeued",
@@ -694,11 +718,13 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
     let shutdown = app.stop.clone();
     let router = Router::new()
         .route("/snapshot", post(snapshot))
+        .route("/observation/context", post(observation_context))
         .route("/mark-read", post(mark_read))
         .route("/report", post(report))
         .route("/mcp", post(mcp_request))
         .route("/messages/send", post(send_message))
         .route("/messages/read", post(read_messages))
+        .route("/messages/delivered", post(delivered))
         .route("/pi", post(pi_command))
         .route("/notify", post(notify_user))
         .route("/stop", post(stop))

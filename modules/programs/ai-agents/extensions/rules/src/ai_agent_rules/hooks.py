@@ -13,7 +13,6 @@ from ai_agent_rules.code_changes import inspections
 from ai_agent_rules.context import current, write_output
 from ai_agent_rules.edit_context import capture_context
 from ai_agent_rules.feedback import emit_feedback
-from ai_agent_rules.guidance import RULES_GUIDANCE
 from ai_agent_rules.rules import effective_rules
 from ai_agent_rules.sessions import (
     consume_approval,
@@ -31,7 +30,7 @@ def is_rules_tool(hook_input: HookInput) -> bool:
     return any(
         isinstance(name, str)
         and re.search(
-            r"(?:^|[._])(?:rules_(?:list|check|request_approval)|project_rules_(?:upsert|list|remove))$",
+            r"(?:^|[._])(?:rules_(?:list|check|report|request_approval)|project_rules_(?:upsert|list|remove))$",
             name,
         )
         for name in names
@@ -151,7 +150,7 @@ async def handle_event(
         handle, created = None, False
         notes.append("[Rules not checked] Session storage is unavailable.")
     if handle is not None and (created or event == "SessionStart"):
-        notes.append(f"Rules session_handle: {handle}\n{RULES_GUIDANCE}")
+        notes.append(f"Rules session_handle: {handle}")
     elif handle is None:
         notes.append("[Rules session unavailable] Missing agent or session ID.")
     cwd = Path(str(hook_input.get("cwd") or Path.cwd()))
@@ -241,11 +240,16 @@ async def handle_event(
             if context is not None and violated:
                 context.rules_decision = "deny"
             if request_id is not None:
+                notes[:] = [
+                    note.replace(
+                        "\nInsufficient evidence; this is not a confirmed violation.",
+                        "",
+                    )
+                    for note in notes
+                ]
                 approval_note = (
                     f"Request ID: {request_id}. "
-                    "Call rules_request_approval with the hook's session_handle "
-                    "and this request_id to record a one-time rule exception. "
-                    "Retry the exact request only if that tool returns approved."
+                    "Details: rules_report. Exception: rules_request_approval."
                 )
                 if violated:
                     return f"Rules rejected this request. {approval_note}"

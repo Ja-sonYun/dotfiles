@@ -75,7 +75,7 @@ interface DispatchApproval {
   };
 }
 
-const ruleTools = ["rules_check", "rules_request_approval"];
+const ruleTools = ["rules_check", "rules_request_approval", "rules_report"];
 
 export default function (pi: ExtensionAPI): void {
   const allModesServers = (): string[] => {
@@ -146,6 +146,15 @@ export default function (pi: ExtensionAPI): void {
     execute: (_id, params, signal, _update, ctx) =>
       runControl("rules_request_approval", params, signal, ctx),
   });
+  pi.registerTool({
+    name: "rules_report",
+    label: "Read rule report",
+    description:
+      "Read details of a stored request for this actor without approving or consuming an exception.",
+    parameters: Type.Object({ request_id: Type.String() }),
+    execute: (_id, params, signal, _update, ctx) =>
+      runControl("rules_report", params, signal, ctx),
+  });
   if (process.env.PI_PERMISSION_CHILD === "1") {
     let configurationReady = process.env.PI_PERMISSION_MODE !== "plan";
     pi.on("tool_call", async (event, ctx) => {
@@ -193,7 +202,7 @@ export default function (pi: ExtensionAPI): void {
       }
     });
     pi.on("session_shutdown", () => {
-      if (process.connected) process.disconnect();
+      if (process.connected) process.disconnect?.();
     });
     return;
   }
@@ -247,7 +256,7 @@ export default function (pi: ExtensionAPI): void {
         signal,
         context,
       },
-      { text: approval.summary },
+      approval.summary === undefined ? {} : { text: approval.summary },
     );
     return choice === "Allow once"
       ? "once"
@@ -395,7 +404,9 @@ export default function (pi: ExtensionAPI): void {
             result = {
               ...result,
               fingerprint: state.fingerprint,
-              file_state: state.file_state,
+              ...(state.file_state === undefined
+                ? {}
+                : { file_state: state.file_state }),
             };
           }
           if (
@@ -409,7 +420,10 @@ export default function (pi: ExtensionAPI): void {
           return result;
         },
         (approval, cancellation) =>
-          approve({ ...approval, summary }, cancellation),
+          approve(
+            { ...approval, ...(summary === undefined ? {} : { summary }) },
+            cancellation,
+          ),
         signal,
         async (rules, cancellation) => {
           if (!checkSummary) return;
@@ -466,6 +480,16 @@ export default function (pi: ExtensionAPI): void {
       if (!current())
         return { status: "unavailable", reason: "Permission context changed" };
       const selected = approval?.background?.session ?? session;
+      if (call.toolName === "rules_report") {
+        if (typeof call.input.request_id !== "string")
+          return { status: "unavailable", reason: "Missing request ID" };
+        return selected.reportRules(
+          call.input.request_id,
+          actor,
+          request,
+          fingerprint(config),
+        );
+      }
       if (call.toolName === "rules_request_approval") {
         if (typeof call.input.request_id !== "string")
           return { status: "unavailable", reason: "Missing request ID" };
@@ -531,7 +555,9 @@ export default function (pi: ExtensionAPI): void {
         rules = {
           ...rules,
           fingerprint: state.fingerprint,
-          file_state: state.file_state,
+          ...(state.file_state === undefined
+            ? {}
+            : { file_state: state.file_state }),
         };
       }
       return await selected.checkTask(
@@ -577,7 +603,7 @@ export default function (pi: ExtensionAPI): void {
   });
   pi.on("before_agent_start", (event, ctx) => {
     context = ctx;
-    requestContext.start(event.prompt);
+    if (event.messageType === "user") requestContext.start(event.prompt);
   });
   pi.on("message_start", (event, ctx) => {
     if (event.message.role !== "user") return;

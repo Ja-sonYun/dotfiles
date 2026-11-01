@@ -30,6 +30,7 @@ pub struct Config {
     pub runner: String,
     pub sdk: String,
     pub model: String,
+    pub redact: String,
     pub tmux_adapter: Option<String>,
     pub notifications: Option<alerts::Settings>,
     pub log_command: Option<String>,
@@ -296,10 +297,18 @@ async fn main() -> Result<()> {
             )
             .await
             .context("Inbox request timed out")??;
-            if let Some(output) = ingest::inbox_output(inbox, None)? {
+            if let Some((output, _)) = ingest::inbox_output(inbox, None)? {
                 println!("{output}");
             }
             Ok(())
+        }
+        "delivered" => {
+            let receipt: Value = serde_json::from_str(
+                &std::env::args()
+                    .nth(2)
+                    .context("Missing delivery receipt")?,
+            )?;
+            ingest::confirm_delivery(&root, &receipt).await
         }
         "mcp" => {
             let context = json!({

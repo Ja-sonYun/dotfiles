@@ -63,6 +63,8 @@ pub struct Agent {
     #[serde(default)]
     pub observation_revision: u64,
     #[serde(default)]
+    pub observation_evidence_revision: u64,
+    #[serde(default)]
     pub observation_error: String,
     #[serde(default)]
     pub observation_priority: bool,
@@ -70,6 +72,8 @@ pub struct Agent {
     pub observation_resumed: bool,
     #[serde(default)]
     pub prompt_pending: bool,
+    #[serde(default)]
+    pub approval_pending: bool,
     #[serde(default)]
     pub prompt_tool_id: String,
     #[serde(default)]
@@ -92,6 +96,8 @@ pub struct Agent {
     pub run_id: String,
     #[serde(default)]
     pub transcript_path: String,
+    #[serde(default)]
+    pub terminal_status: String,
 }
 
 pub fn agent_label(agent: &Agent) -> String {
@@ -165,7 +171,8 @@ impl Store {
                  id TEXT PRIMARY KEY, recipient TEXT NOT NULL, turn_id TEXT,
                  kind TEXT NOT NULL, body TEXT NOT NULL, acknowledged INTEGER NOT NULL DEFAULT 0
              );
-             CREATE INDEX IF NOT EXISTS inbox_recipient ON inbox (recipient, acknowledged);",
+             CREATE INDEX IF NOT EXISTS inbox_recipient ON inbox (recipient, acknowledged);
+             CREATE TABLE IF NOT EXISTS inbox_deliveries (id TEXT PRIMARY KEY);",
         )?;
         let mut snapshot = Snapshot::default();
         {
@@ -176,8 +183,7 @@ impl Store {
                     agent.status = "unknown".into();
                     agent.completed = false;
                 }
-                agent.observation_pending =
-                    agent.parent.is_none() && !agent.location.pane.is_empty();
+                agent.observation_pending = !agent.provisional && !agent.completed;
                 agent.stale = true;
                 snapshot.agents.insert(agent.id.clone(), agent);
             }
@@ -337,23 +343,6 @@ impl Store {
             return Ok(());
         }
         let stopped = self.child_stopped(&agent)?;
-        if !stopped && agent.status == "unknown" && agent.state_source != "mcp" {
-            let body = if let Some(parent) = &agent.parent {
-                format!(
-                    "You are subagent {} for parent {}. Your current turn_id is {}. Report only your own current state through report_status, then acknowledge this message. Your parent reports your completion only after receiving your actual result. This request does not authorize new work.",
-                    agent.id, parent, agent.turn_id,
-                )
-            } else {
-                "Report your current state through report_status, then acknowledge this message. Report only what you know; this request does not authorize new work.".into()
-            };
-            self.send_message(
-                "agent-hub",
-                &json!({
-                    "agent_id": id, "turn_id": agent.turn_id, "kind": "status_request",
-                    "body": body,
-                }),
-            )?;
-        }
         if !stopped {
             return Ok(());
         }
@@ -376,19 +365,20 @@ impl Store {
         Ok(())
     }
 
-    pub fn read_messages(&self, id: &str, turn: &str) -> Result<Value> {
+    pub fn read_messages(&self, id: &str, turn: &str, deliver: bool) -> Result<Value> {
         let agent = self.snapshot.agents.get(id).context("Unknown recipient")?;
         if agent.provisional || turn.is_empty() || agent.turn_id != turn {
             bail!("Agent turn changed; read list_agents again");
         }
         let mut query = self.db.prepare(
             "SELECT body FROM inbox WHERE recipient = ?1 AND acknowledged = 0
-             AND (turn_id IS NULL OR turn_id = ?2) ORDER BY rowid",
+             AND (turn_id IS NULL OR turn_id = ?2)
+             AND (?3 = 0 OR id NOT IN (SELECT id FROM inbox_deliveries)) ORDER BY rowid",
         )?;
         let mut messages = Vec::<Value>::new();
         let mut bytes = 0;
         let mut truncated = false;
-        for row in query.query_map(params![id, turn], |row| row.get::<_, String>(0))? {
+        for row in query.query_map(params![id, turn, deliver], |row| row.get::<_, String>(0))? {
             let body = row?;
             if bytes + body.len() > 12 * 1024 {
                 truncated = true;
@@ -397,7 +387,39 @@ impl Store {
             bytes += body.len();
             messages.push(serde_json::from_str(&body)?);
         }
-        Ok(json!({"agent_id": id, "turn_id": turn, "messages": messages, "truncated": truncated}))
+        Ok(
+            json!({"agent_id": id, "turn_id": turn, "run_id": agent.run_id, "messages": messages, "truncated": truncated}),
+        )
+    }
+
+    pub fn delivered(&mut self, value: &Value) -> Result<()> {
+        let id = required(value, "agent_id")?;
+        let turn = required(value, "turn_id")?;
+        let agent = self.snapshot.agents.get(id).context("Unknown recipient")?;
+        if agent.provisional || agent.turn_id != turn || value["run_id"] != agent.run_id {
+            bail!("Inbox recipient changed");
+        }
+        let ids = value["message_ids"]
+            .as_array()
+            .context("Missing message IDs")?;
+        let tx = self.db.transaction()?;
+        for id in ids {
+            let message_id = id.as_str().context("Invalid message ID")?;
+            let (recipient, target_turn): (String, Option<String>) = tx.query_row(
+                "SELECT recipient, turn_id FROM inbox WHERE id = ?1",
+                [message_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )?;
+            if recipient != agent.id || target_turn.as_deref().is_some_and(|value| value != turn) {
+                bail!("Message belongs to another agent or turn");
+            }
+            tx.execute(
+                "INSERT OR IGNORE INTO inbox_deliveries (id) VALUES (?1)",
+                [message_id],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
     }
 
     pub fn ack_messages(&mut self, id: &str, turn: &str, ids: &[Value]) -> Result<()> {
@@ -529,11 +551,9 @@ impl Store {
         let mut observations = BTreeMap::new();
         for agent in self.snapshot.agents.values().filter(|agent| {
             self.live.contains(&agent.id)
-                && agent.parent.is_none()
                 && !agent.provisional
                 && !agent.stale
                 && !agent.turn_id.is_empty()
-                && !agent.location.pane.is_empty()
                 && (agent.observation_pending
                     || matches!(agent.status.as_str(), "approval" | "running"))
         }) {
@@ -858,6 +878,7 @@ impl Store {
                         bail!("title must contain 1 to 120 characters without control characters");
                     }
                     agent.reported_title = title.into();
+                    agent.observation_revision += 1;
                 }
                 "report_task" => {
                     let key = required(&report.data, "task_id")?;
@@ -905,11 +926,21 @@ impl Store {
                         bail!("unsupported status");
                     }
                     agent.observation_error.clear();
+                    if report.kind == "checked_status" {
+                        if let Some(title) = report.data["title"].as_str().filter(|title| {
+                            !title.trim().is_empty()
+                                && title.chars().count() <= 120
+                                && !title.chars().any(char::is_control)
+                        }) {
+                            agent.reported_title = title.trim().into();
+                        }
+                    }
                     if report.kind == "checked_status" && status == "unknown" {
                         agent.observation_pending = false;
                         agent.observation_error = summary.into();
                         agent.status = "unknown".into();
-                        agent.state_source = "pane".into();
+                        agent.state_source =
+                            report.data["source"].as_str().unwrap_or("pane").into();
                         agent.state_at = report.at;
                     } else {
                         agent.summary = summary.into();
@@ -918,7 +949,7 @@ impl Store {
                         agent.state_source = if report.kind != "checked_status" {
                             "mcp"
                         } else {
-                            "pane"
+                            report.data["source"].as_str().unwrap_or("pane")
                         }
                         .into();
                         agent.state_at = report.at;
@@ -927,7 +958,17 @@ impl Store {
                             agent.observation_revision += 1;
                         }
                         agent.completed = report.kind == "report_subagent_completion"
-                            || matches!(agent.status.as_str(), "idle" | "cancelled");
+                            || (agent.parent.is_none()
+                                && matches!(agent.status.as_str(), "idle" | "cancelled"));
+                    }
+                    if report.kind == "checked_status"
+                        && report.data["observation_evidence_revision"]
+                            .as_u64()
+                            .is_some_and(|revision| revision < agent.observation_evidence_revision)
+                    {
+                        agent.observation_pending = true;
+                        agent.observation_revision += 1;
+                        agent.completed = false;
                     }
                     agent.observation_resumed = false;
                     agent.observation_priority = false;
@@ -1074,12 +1115,21 @@ impl Store {
         {
             return Ok(());
         }
-        agent.observation_pending = false;
+        agent.observation_pending = value["observation_evidence_revision"]
+            .as_u64()
+            .is_some_and(|revision| revision < agent.observation_evidence_revision);
+        if agent.observation_pending {
+            agent.observation_revision += 1;
+        }
         agent.observation_priority = false;
         agent.observation_resumed = false;
         agent.observation_error = required(value, "message")?.into();
-        agent.status = "unknown".into();
-        agent.state_source = "pane".into();
+        agent.status = if agent.terminal_status.is_empty() {
+            "unknown".into()
+        } else {
+            agent.terminal_status.clone()
+        };
+        agent.state_source = "observation".into();
         agent.state_at = now();
         self.db.execute(
             "INSERT OR REPLACE INTO agents (id, body) VALUES (?1, ?2)",
@@ -1098,7 +1148,8 @@ impl Store {
             return Ok(None);
         };
         if !self.live.contains(&sampled.id)
-            || current.parent.is_some()
+            || current.provisional
+            || (current.parent.is_some() && value["source"] != "events")
             || current.turn_id != sampled.turn_id
             || current.observation_revision != sampled.observation_revision
             || current.location != sampled.location
@@ -1109,6 +1160,37 @@ impl Store {
             || now().saturating_sub(captured_at) > 60_000
         {
             return Ok(None);
+        }
+        if value["source"] == "events" {
+            let ids = value["evidence_ids"]
+                .as_array()
+                .context("Missing evidence IDs")?;
+            if ids.is_empty() || ids.len() > 64 {
+                bail!("Provide 1 to 64 evidence IDs");
+            }
+            for id in ids {
+                let body: String = self.db.query_row(
+                    "SELECT body FROM events WHERE id = ?1",
+                    [id.as_str().context("Invalid evidence ID")?],
+                    |row| row.get(0),
+                )?;
+                let event: Report = serde_json::from_str(&body)?;
+                if event.client != current.client
+                    || event.session_id != current.session_id
+                    || event.parent != current.parent
+                    || event.location != current.location
+                    || event.kind != "hook"
+                    || event.data["subject_verified"] != true
+                {
+                    bail!("Evidence belongs to another session");
+                }
+            }
+            if value["status"] == "approval" && !current.approval_pending {
+                bail!("No current approval prompt evidence");
+            }
+        }
+        if !current.terminal_status.is_empty() && value["status"] != current.terminal_status {
+            bail!("A confirmed failure or cancellation cannot be overwritten");
         }
         if value["type"] == "observation_requested" {
             if current.observation_pending {
@@ -1141,10 +1223,93 @@ impl Store {
                 "status": required(value, "status")?,
                 "summary": required(value, "summary")?,
                 "captured_at": captured_at,
+                "observation_evidence_revision": sampled.observation_evidence_revision,
+                "source": value["source"],
+                "title": value["title"],
             }),
         };
         self.report(report.clone())?;
         Ok(Some(report))
+    }
+
+    pub fn observation_context(&self, value: &Value) -> Result<Value> {
+        let sampled: Agent = serde_json::from_value(value["sampled"].clone())?;
+        let current = self
+            .snapshot
+            .agents
+            .get(&sampled.id)
+            .context("Unknown agent")?;
+        if current.provisional
+            || current.stale
+            || !self.live.contains(&current.id)
+            || current.turn_id != sampled.turn_id
+            || current.run_id != sampled.run_id
+            || current.location != sampled.location
+            || current.observation_revision != sampled.observation_revision
+        {
+            bail!("Observation changed");
+        }
+        let before = value["before"].as_i64().unwrap_or(i64::MAX);
+        let mut query = self.db.prepare(
+            "SELECT rowid, body FROM events WHERE rowid < ?1
+             AND json_extract(body, '$.client') = ?2
+             AND json_extract(body, '$.session_id') = ?3
+             AND json_extract(body, '$.kind') = 'hook'
+             AND json_extract(body, '$.data.subject_verified') = 1
+             AND json_extract(body, '$.location') = ?4 ORDER BY rowid DESC LIMIT 33",
+        )?;
+        let mut page = json!({"events": [], "truncated": false, "next_before": null,
+            "summary": current.summary.chars().take(500).collect::<String>(), "status": current.status, "latest_request": null});
+        let latest: Option<String> = self
+            .db
+            .query_row(
+                "SELECT json_extract(body, '$.data.evidence.prompt') FROM events
+             WHERE json_extract(body, '$.client') = ?1 AND json_extract(body, '$.session_id') = ?2
+             AND json_extract(body, '$.location') = ?3
+             AND json_type(body, '$.data.evidence.prompt') = 'text' ORDER BY rowid DESC LIMIT 1",
+                params![
+                    current.client,
+                    current.session_id,
+                    serde_json::to_string(&current.location)?
+                ],
+                |row| row.get(0),
+            )
+            .optional()?;
+        page["latest_request"] = json!(latest);
+        let mut cursor = None;
+        for row in query.query_map(
+            params![
+                before,
+                current.client,
+                current.session_id,
+                serde_json::to_string(&current.location)?
+            ],
+            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
+        )? {
+            let (position, body) = row?;
+            let event: Report = serde_json::from_str(&body)?;
+            if event.parent != current.parent {
+                continue;
+            }
+            let item = json!({"id":event.id,"at":event.at,"data": {
+                "event":event.data["event"], "run_id":event.data["run_id"],
+                "tool_use_id":event.data["tool_use_id"],
+                "tool_name":event.data["tool_name"].as_str().unwrap_or("").chars().take(200).collect::<String>(),
+                "is_error":event.data["is_error"], "outcome":event.data["outcome"],
+                "notification_type":event.data["notification_type"], "phase":event.data["phase"],
+                "evidence":event.data["evidence"]
+            }});
+            if page["events"].as_array().unwrap().len() >= 32
+                || page.to_string().len() + item.to_string().len() + 128 > 16 * 1024
+            {
+                page["truncated"] = json!(true);
+                page["next_before"] = json!(cursor);
+                break;
+            }
+            page["events"].as_array_mut().unwrap().push(item);
+            cursor = Some(position);
+        }
+        Ok(page)
     }
 
     pub fn chat(&mut self, role: &str, text: &str, scope: Option<&str>) -> Result<()> {

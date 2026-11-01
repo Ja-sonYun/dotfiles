@@ -41,12 +41,14 @@ pub fn apply(agent: &mut Agent, report: &Report) {
         agent.state_at = 0;
         agent.completed = false;
         agent.summary.clear();
+        agent.terminal_status.clear();
         agent.summary_at = 0;
         agent.observation_revision += 1;
         agent.observation_error.clear();
         agent.observation_priority = false;
         agent.observation_resumed = false;
         agent.prompt_pending = false;
+        agent.approval_pending = false;
         agent.prompt_tool_id.clear();
         agent.prompt_tool_name.clear();
     }
@@ -100,6 +102,7 @@ pub fn apply(agent: &mut Agent, report: &Report) {
             });
     if (prompt && report.data["phase"] != "end") || (event == "PreToolUse" && question) {
         agent.prompt_pending = true;
+        agent.approval_pending = prompt;
         agent.observation_resumed = false;
         if !tool_id.is_empty() {
             agent.prompt_tool_id = tool_id.into();
@@ -110,6 +113,7 @@ pub fn apply(agent: &mut Agent, report: &Report) {
     }
     if resumed {
         agent.prompt_pending = false;
+        agent.approval_pending = false;
         agent.observation_resumed = true;
     }
     let needs_observation = resumed
@@ -124,11 +128,46 @@ pub fn apply(agent: &mut Agent, report: &Report) {
                 tool,
                 "AskUserQuestion" | "request_user_input" | "request_user_input_async"
             ),
+            "PostToolUse" => {
+                report.data["is_error"] == true
+                    || report.at.saturating_sub(agent.state_at) >= 15_000
+            }
             _ => false,
         };
-    if needs_observation && agent.parent.is_none() && !agent.location.pane.is_empty() {
+    if event == "StopFailure" || report.data["outcome"] == "error" {
+        agent.terminal_status = "error".into();
+    } else if matches!(
+        report.data["outcome"].as_str(),
+        Some("aborted" | "cancelled")
+    ) {
+        agent.terminal_status = "cancelled".into();
+    }
+    let evidence = report.data["evidence"]
+        .as_object()
+        .is_some_and(|value| !value.is_empty());
+    if !agent.provisional && report.data["subject_verified"] == true && evidence {
+        agent.observation_evidence_revision += 1;
+    }
+    if !agent.provisional
+        && report.data["subject_verified"] == true
+        && (needs_observation
+            || (agent.observation_pending
+                && report.data["evidence"]
+                    .as_object()
+                    .is_some_and(|evidence| !evidence.is_empty())))
+    {
+        let interrupt = prompt
+            || resumed
+            || question
+            || matches!(
+                event,
+                "SessionStart" | "UserPromptSubmit" | "Stop" | "StopFailure" | "SessionEnd"
+            )
+            || !agent.terminal_status.is_empty();
+        if !agent.observation_pending || interrupt {
+            agent.observation_revision += 1;
+        }
         agent.observation_pending = true;
-        agent.observation_revision += 1;
         agent.observation_error.clear();
         agent.observation_priority |= prompt || resumed || question;
     }

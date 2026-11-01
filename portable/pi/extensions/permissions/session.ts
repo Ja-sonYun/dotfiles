@@ -34,6 +34,7 @@ interface RuleRequest {
   rules: RuleResult;
   snapshot: Snapshot;
   approved: boolean;
+  consumed: boolean;
 }
 
 export function fingerprint(value: unknown): string {
@@ -86,7 +87,7 @@ export class PermissionSession {
       return undefined;
     const key = this.ruleKey(call, actor, request, policyVersion, rules);
     for (const [id, pending] of this.ruleRequests) {
-      if (pending.key === key) return id;
+      if (pending.key === key && !pending.consumed) return id;
     }
     const id = randomUUID();
     this.ruleRequests.set(id, {
@@ -102,6 +103,7 @@ export class PermissionSession {
       rules: structuredClone(rules),
       snapshot,
       approved: false,
+      consumed: false,
     });
     return id;
   }
@@ -116,16 +118,47 @@ export class PermissionSession {
   ): Promise<boolean> {
     const key = this.ruleKey(call, actor, request, policyVersion, rules);
     for (const [id, pending] of this.ruleRequests) {
-      if (!pending.approved || pending.key !== key) continue;
+      if (!pending.approved || pending.consumed || pending.key !== key)
+        continue;
       const state = await pending.snapshot(signal);
-      if (signal.aborted || this.ruleRequests.get(id) !== pending) return false;
-      this.ruleRequests.delete(id);
+      if (
+        signal.aborted ||
+        pending.consumed ||
+        this.ruleRequests.get(id) !== pending
+      )
+        return false;
+      pending.consumed = true;
       return (
         state.fingerprint === rules.fingerprint &&
         state.file_state === rules.file_state
       );
     }
     return false;
+  }
+
+  reportRules(
+    id: string,
+    actor: Actor,
+    request: string,
+    policyVersion: string,
+  ): Record<string, unknown> {
+    const pending = this.ruleRequests.get(id);
+    if (
+      !pending ||
+      pending.owner !== fingerprint([actor, request, policyVersion])
+    ) {
+      return {
+        status: "unavailable",
+        reason: "Unknown or expired request ID for this actor",
+      };
+    }
+    return {
+      request_id: id,
+      approved: pending.approved,
+      consumed: pending.consumed,
+      reasons: structuredClone(pending.approval.reasons),
+      rules: structuredClone(pending.rules),
+    };
   }
 
   async requestRuleApproval(
@@ -144,6 +177,7 @@ export class PermissionSession {
     if (
       !pending ||
       pending.approved ||
+      pending.consumed ||
       pending.owner !== fingerprint([actor, request, policyVersion])
     ) {
       return {
@@ -212,8 +246,13 @@ export class PermissionSession {
       (rule) => rule.verdict !== "compliant",
     );
     const response: Record<string, unknown> = {
-      ...rules,
       status: rules.status ?? "incomplete",
+      findings: findings.map(({ id, verdict, message }) => ({
+        id,
+        verdict,
+        message,
+      })),
+      errors: rules.errors,
     };
     if (findings.length || rules.errors.length) {
       response.request_id = this.recordRules(

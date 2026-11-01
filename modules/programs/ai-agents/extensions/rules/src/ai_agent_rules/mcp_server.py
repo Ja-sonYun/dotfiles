@@ -8,7 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ai_agent_rules.checks import evaluate
 from ai_agent_rules.debug_log import save_log, start_log
-from ai_agent_rules.guidance import RULES_GUIDANCE
+from ai_agent_rules.guidance import RULE_AUTHORING_GUIDANCE, RULES_GUIDANCE
 from ai_agent_rules.process import with_termination
 from ai_agent_rules.rule_files import (
     project_root,
@@ -27,6 +27,7 @@ from ai_agent_rules.sessions import (
     consume_approval,
     pending_approval,
     record_rejection,
+    request_report,
     require_session,
     state_transaction,
 )
@@ -70,6 +71,11 @@ def create_server(
     server = FastMCP("rules", instructions=RULES_GUIDANCE)
 
     @server.tool()
+    async def rules_report(session_handle: str, request_id: str) -> dict[str, object]:
+        """Read a stored report without approving or consuming its exception."""
+        return await asyncio.to_thread(request_report, session_handle, request_id)
+
+    @server.tool()
     async def rules_request_approval(
         session_handle: str, request_id: str
     ) -> dict[str, object]:
@@ -89,7 +95,7 @@ def create_server(
             raise RuntimeError("Rule storage is unavailable.") from error
         return {"rules": [rule.record() for rule in rules]}
 
-    @server.tool()
+    @server.tool(description=RULE_AUTHORING_GUIDANCE)
     async def project_rules_upsert(
         session_handle: str, id: str, rule: RuleDefinition
     ) -> dict[str, object]:
@@ -152,8 +158,8 @@ def create_server(
 
         Intent uses supplied evidence and project instructions. Status: completed
         (not a pass), incomplete (check failed), skipped (no applicable rules).
-        Feedback reports violations, uncertainty, or failures, with a debug log
-        path when enabled. Fix findings and recheck before presenting the draft.
+        Findings and errors report violations, uncertainty, or failures.
+        Use rules_report for stored details. Fix findings and recheck the draft.
         A one-time exception returns overridden, not a passing check.
         """
         try:
@@ -203,8 +209,13 @@ def create_server(
             status = "completed"
         response: dict[str, object] = {"status": status}
         feedback = result.feedback("task check")
-        if feedback:
-            response["feedback"] = feedback
+        response["findings"] = [
+            {key: item[key] for key in ("id", "verdict", "message") if key in item}
+            for item in result.results
+            if item["verdict"] != "compliant"
+        ]
+        if result.errors:
+            response["errors"] = result.errors
         if (
             result.errors
             or result.halted
@@ -216,13 +227,6 @@ def create_server(
                 record_rejection, session_handle, request, "\n\n".join(feedback)
             )
             response["request_id"] = request_id
-            response["approval_tool"] = {
-                "name": "rules_request_approval",
-                "arguments": {
-                    "session_handle": session_handle,
-                    "request_id": request_id,
-                },
-            }
         return response
 
     return server

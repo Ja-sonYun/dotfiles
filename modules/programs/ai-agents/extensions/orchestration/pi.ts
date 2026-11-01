@@ -31,6 +31,7 @@ export default function (pi: ExtensionAPI) {
   let outcome = "completed";
   let prompts = 0;
   let runId = "";
+  let prompt = "";
 
   pi.registerMcpServer("orchestration", {
     exposure: "direct",
@@ -56,25 +57,105 @@ export default function (pi: ExtensionAPI) {
       ...fields,
     });
     const env = { ...process.env, AI_AGENT_CLIENT: "Pi" };
-    queue = queue.then(
-      () =>
-        new Promise<void>((resolve) => {
-          const child = spawn("@command@", ["hook"], {
-            env,
-            stdio: ["pipe", "ignore", "inherit"],
-          });
-          child.on("error", () => resolve());
-          child.on("close", () => resolve());
-          child.stdin.on("error", () => {});
-          child.stdin.end(payload);
-        }),
-    );
+    queue = queue
+      .then(
+        () =>
+          new Promise<void>((resolve) => {
+            const child = spawn("@command@", ["hook"], {
+              env,
+              detached: true,
+              stdio: ["pipe", "ignore", "inherit"],
+            });
+            let finished = false;
+            let closed = false;
+            let cleaning = false;
+            let groupGone = false;
+            let killTimer: ReturnType<typeof setTimeout> | undefined;
+            let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+            let poll: ReturnType<typeof setInterval> | undefined;
+            const signalGroup = (signal: NodeJS.Signals | 0): boolean => {
+              if (!child.pid || groupGone) return false;
+              try {
+                process.kill(-child.pid, signal);
+                return true;
+              } catch (error) {
+                if (!(
+                  error instanceof Error &&
+                  "code" in error &&
+                  error.code === "ESRCH"
+                )) {
+                  console.error("AgentHub hook process group:", error);
+                  return true;
+                }
+                groupGone = true;
+                return false;
+              }
+            };
+            const finish = () => {
+              if (finished) return;
+              finished = true;
+              clearTimeout(timeout);
+              clearTimeout(killTimer);
+              clearTimeout(cleanupTimer);
+              clearInterval(poll);
+              child.stdin.destroy();
+              child.unref();
+              resolve();
+            };
+            const timeout = setTimeout(() => {
+              cleaning = true;
+              console.error("AgentHub hook timed out after 3 seconds");
+              child.stdin.destroy();
+              signalGroup("SIGTERM");
+              killTimer = setTimeout(() => {
+                if (signalGroup(0)) signalGroup("SIGKILL");
+              }, 500);
+              cleanupTimer = setTimeout(() => {
+                if (signalGroup(0) || !closed) {
+                  console.error("AgentHub hook cleanup exceeded 1 second");
+                }
+                finish();
+              }, 1000);
+            }, 3000);
+            child.on("error", (error) => {
+              console.error("AgentHub hook:", error);
+              if (!child.pid) finish();
+            });
+            child.on("close", (code, signal) => {
+              closed = true;
+              if (!cleaning && (code !== 0 || signal !== null)) {
+                console.error("AgentHub hook failed:", code, signal);
+              }
+              if (finished) return;
+              if (!signalGroup(0)) {
+                finish();
+              } else {
+                poll = setInterval(() => {
+                  if (!signalGroup(0)) finish();
+                }, 25);
+              }
+            });
+            child.stdin.on("error", () => {});
+            child.stdin.end(payload);
+          }),
+      )
+      .catch((error: unknown) => {
+        console.error("AgentHub hook:", error);
+      });
     return queue;
   }
 
-  pi.on("before_agent_start", (event, ctx) => ({
-    systemPrompt: `${event.systemPrompt}\n\nReport task start, step changes, delegation, blockers and completion through orchestration MCP. Call the exposed mcp__orchestration__* tools directly; do not use tool_search or codemode solely to call AgentHub. Your client is pi and your session_id is ${ctx.sessionManager.getSessionId()}. Report only your own session; approval remains in the original CLI.`,
-  }));
+  pi.on("before_agent_start", (event) => {
+    if (event.messageType === "user") prompt = event.prompt;
+  });
+  pi.on("message_end", (event, ctx) => {
+    if (event.message.role !== "assistant") return;
+    return publish(ctx, "AssistantMessage", {
+      last_assistant_message: event.message.content.filter(
+        (part) => part.type === "text",
+      ),
+    });
+  });
   pi.on("context", async (event, ctx) => {
     await queue;
     if (!runId) return;
@@ -107,7 +188,7 @@ export default function (pi: ExtensionAPI) {
       ) {
         throw new Error("Invalid AgentHub inbox response");
       }
-      return {
+      const prepared = {
         messages: [
           ...event.messages,
           {
@@ -117,6 +198,19 @@ export default function (pi: ExtensionAPI) {
           },
         ],
       };
+      if (!("receipt" in value)) throw new Error("Missing inbox receipt");
+      try {
+        const confirmed = await pi.exec(
+          "@command@",
+          ["delivered", JSON.stringify(value.receipt)],
+          { timeout: 1500 },
+        );
+        if (confirmed.code !== 0)
+          console.error("AgentHub inbox delivery:", confirmed.stderr);
+      } catch (error) {
+        console.error("AgentHub inbox delivery:", error);
+      }
+      return prepared;
     } catch (error) {
       console.error("AgentHub inbox:", error);
     }
@@ -130,10 +224,11 @@ export default function (pi: ExtensionAPI) {
     return publish(ctx, "SessionStart", { source: event.reason });
   });
   pi.on("agent_start", (_event, ctx) => {
+    if (running) return;
     runId = randomUUID();
     running = true;
     outcome = "completed";
-    return publish(ctx, "UserPromptSubmit");
+    return publish(ctx, "UserPromptSubmit", { prompt });
   });
   pi.on("tool_execution_start", (event, ctx) =>
     publish(ctx, "PreToolUse", {
@@ -146,6 +241,7 @@ export default function (pi: ExtensionAPI) {
       tool_name: event.toolName,
       tool_use_id: event.toolCallId,
       is_error: event.isError,
+      tool_response: event.result,
     }),
   );
   pi.on("ui_prompt_start", (_event, ctx) => {

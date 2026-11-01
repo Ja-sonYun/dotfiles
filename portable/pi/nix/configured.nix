@@ -34,8 +34,10 @@ let
         --model|--model=*|--provider|--provider=*) explicitModel=true ;;
       esac
     done
-    ${pkgs.nodejs_22}/bin/node ${../scripts/refresh-model-catalog.mjs} \
+    ${pkgs.nodejs_22}/bin/node --experimental-strip-types ${../scripts/refresh-model-catalog.ts} \
       ${runtime}/lib/node_modules/dotfiles-pi/node_modules/@earendil-works/pi-coding-agent/dist/index.js \
+      ${runtime}/lib/node_modules/dotfiles-pi/node_modules/@earendil-works/pi-ai/dist/providers/all.js \
+      "$PI_RESOURCE_PACKAGE/extensions/providers/definitions.ts" \
       "$profileDir" ${lib.escapeShellArg settings.defaultProvider} ${lib.escapeShellArg settings.defaultModel} "$@" || exit "$?"
     if [ "$explicitModel" = false ]; then
       set -- --model ${lib.escapeShellArg "${settings.defaultProvider}/${settings.defaultModel}"} "$@"

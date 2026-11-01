@@ -202,13 +202,18 @@ export function toolSummaries(pi: ExtensionAPI) {
     summaries.clear();
   });
 
-  pi.events.on(
-    "tool-summaries:get",
-    (request: {
-      toolCallId: string;
-      reply: (text: string | undefined) => void;
-    }) => request.reply(summaries.get(request.toolCallId)?.text),
-  );
+  pi.events.on("tool-summaries:get", (request: unknown) => {
+    if (
+      typeof request !== "object" ||
+      request === null ||
+      !("toolCallId" in request) ||
+      typeof request.toolCallId !== "string" ||
+      !("reply" in request) ||
+      typeof request.reply !== "function"
+    )
+      return;
+    request.reply(summaries.get(request.toolCallId)?.text);
+  });
 
   pi.registerToolRenderer((toolName, next) => {
     const renderers = next();
