@@ -274,6 +274,7 @@ export class PermissionSession {
         throw new Error("Invalid rule evaluation");
       }
       if (
+        !assessment.requestScopeExempt &&
         !rules.results.some((rule) => rule.id === "permission_request_scope")
       ) {
         rules.errors.push("Request scope was not checked");

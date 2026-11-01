@@ -78,6 +78,11 @@ interface DispatchApproval {
 const ruleTools = ["rules_check", "rules_request_approval"];
 
 export default function (pi: ExtensionAPI): void {
+  const allModesServers = (): string[] => {
+    const servers = new Set<string>();
+    pi.events.emit("permissions:mcp-all-modes", { servers });
+    return [...servers];
+  };
   const runtimeContext = (
     call: Call,
     ctx: ExtensionContext,
@@ -163,8 +168,22 @@ export default function (pi: ExtensionAPI): void {
         try {
           const { config } = await loadConfig(ctx.cwd);
           const allowed = [...readonlyTools(config.policy), ...ruleTools];
+          const servers = allModesServers();
           pi.setActiveTools(
-            pi.getActiveTools().filter((name) => allowed.includes(name)),
+            pi
+              .getActiveTools()
+              .filter(
+                (name) =>
+                  allowed.includes(name) ||
+                  assess(
+                    config.policy,
+                    { toolName: name, input: {} },
+                    { cwd: ctx.cwd, name: "child", mode: "plan", task: "" },
+                    undefined,
+                    undefined,
+                    servers,
+                  ).requestScopeExempt === true,
+              ),
           );
           configurationReady = true;
         } catch (error) {
@@ -283,6 +302,7 @@ export default function (pi: ExtensionAPI): void {
         actor,
         shell,
         context?.cwd,
+        allModesServers(),
       );
       if (call.toolName === "grep" && assessment.decision !== "deny") {
         const search = await assessSearch(
@@ -305,7 +325,13 @@ export default function (pi: ExtensionAPI): void {
         cwd: actor.cwd,
         tool_name: call.toolName,
         tool_input: call.input,
-        additionalRules: permissionRules,
+        additionalRules: assessment.requestScopeExempt
+          ? Object.fromEntries(
+              Object.entries(permissionRules).filter(
+                ([id]) => id !== "permission_request_scope",
+              ),
+            )
+          : permissionRules,
         configuredRules: config.configuredRules,
         check_summary: checkSummary,
         context: {
@@ -372,7 +398,10 @@ export default function (pi: ExtensionAPI): void {
               file_state: state.file_state,
             };
           }
-          if (approval?.unattributed ?? requestContext.unattributed) {
+          if (
+            !assessment.requestScopeExempt &&
+            (approval?.unattributed ?? requestContext.unattributed)
+          ) {
             result.errors.push(
               "The consumed user message could not be attributed; inspect this call manually",
             );
@@ -656,6 +685,7 @@ export default function (pi: ExtensionAPI): void {
     message.reply({
       extension: fileURLToPath(import.meta.url),
       mode: actor.mode,
+      additionalTools: allModesServers().map((server) => `mcp__${server}__*`),
       check: (
         call: Call,
         signal: AbortSignal,

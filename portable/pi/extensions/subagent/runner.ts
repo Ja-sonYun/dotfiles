@@ -101,8 +101,6 @@ export async function runSingleAgent(
   if (inheritsDispatchConfig && dispatchDefaults.thinkingLevel) {
     args.push("--thinking", dispatchDefaults.thinkingLevel);
   }
-  if (agent.tools && agent.tools.length > 0)
-    args.push("--tools", agent.tools.join(","));
 
   let tmpPromptDir: string | null = null;
   let tmpPromptPath: string | null = null;
@@ -137,6 +135,14 @@ export async function runSingleAgent(
     return currentResult;
   }
   args.push("--extension", permissions.extension);
+  if (agent.tools && agent.tools.length > 0) {
+    args.push(
+      "--tools",
+      [
+        ...new Set([...agent.tools, ...(permissions.additionalTools ?? [])]),
+      ].join(","),
+    );
+  }
 
   const emitUpdate = () => {
     if (onUpdate) {

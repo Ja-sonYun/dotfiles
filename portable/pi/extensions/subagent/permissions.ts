@@ -4,6 +4,7 @@ import type { RuntimeContext } from "../permissions/rules.ts";
 export interface PermissionBridge {
   extension: string;
   mode: "default" | "plan";
+  additionalTools?: string[];
   check: (
     call: { toolName: string; input: Record<string, unknown> },
     signal: AbortSignal,

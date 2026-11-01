@@ -41,6 +41,7 @@ export interface Assessment {
   decision: Decision;
   reasons: string[];
   projectRead?: boolean;
+  requestScopeExempt?: boolean;
 }
 
 export function mcpName(server: string, tool: string): string {
@@ -63,6 +64,7 @@ export function readonlyTools(policy: Policy): string[] {
     "ls",
     "codemode",
     "tool_search",
+    ...resourceTools,
     ...Object.entries(policy.mcp_readonly_tools).flatMap(([server, tools]) =>
       tools.map((tool) => mcpName(server, tool)),
     ),
@@ -216,12 +218,19 @@ export async function assessSearch(
   return { decision: strongest(decisions, "allow"), reasons, projectRead };
 }
 
+const resourceTools = [
+  "list_mcp_resources",
+  "list_mcp_resource_templates",
+  "read_mcp_resource",
+];
+
 export function assess(
   policy: Policy,
   call: Call,
   actor: Actor,
   shell?: ShellAnalysis,
   projectRoot?: string,
+  allModesServers: string[] = [],
 ): Assessment {
   const reasons: string[] = [];
   const decisions: Decision[] = [];
@@ -236,6 +245,11 @@ export function assess(
   ]);
   const mcp = [...servers].flatMap((server) => {
     const rules = policy.mcp[server] ?? { default: null, tools: {} };
+    if (resourceTools.includes(call.toolName)) {
+      return call.input.server === server
+        ? [{ server, tool: call.toolName, rules }]
+        : [];
+    }
     const prefix = `mcp__${server.replace(/[^A-Za-z0-9_]/g, "_")}__`;
     const configured = [
       ...new Set([
@@ -250,6 +264,13 @@ export function assess(
         : [];
   });
   const singleMcp = mcp.length === 1 ? mcp[0] : undefined;
+  const mcpDecision = singleMcp
+    ? strongest(
+        [singleMcp.rules.default, singleMcp.rules.tools[singleMcp.tool]].filter(
+          (value): value is Decision => !!value,
+        ),
+      )
+    : "ask";
   const readonlyMcp =
     singleMcp !== undefined &&
     (policy.mcp_readonly_tools[singleMcp.server] ?? []).includes(
@@ -259,7 +280,13 @@ export function assess(
   if (
     actor.mode === "plan" &&
     ![...readTools, "codemode", "tool_search"].includes(call.toolName) &&
-    !readonlyMcp
+    !readonlyMcp &&
+    !resourceTools.includes(call.toolName) &&
+    !(
+      singleMcp &&
+      mcpDecision === "allow" &&
+      allModesServers.includes(singleMcp.server)
+    )
   ) {
     return {
       decision: "deny",
@@ -341,13 +368,8 @@ export function assess(
       );
     for (const reason of shell.uncertain) add("ask", reason);
   } else if (singleMcp !== undefined) {
-    const { server, tool, rules } = singleMcp;
-    add(
-      strongest(
-        [rules.default, rules.tools[tool]].filter((x): x is Decision => !!x),
-      ),
-      `MCP ${server}/${tool}`,
-    );
+    const { server, tool } = singleMcp;
+    add(mcpDecision, `MCP ${server}/${tool}`);
   } else if (mcp.length > 1) {
     add("deny", "Ambiguous MCP namespace");
   } else if (["codemode", "tool_search"].includes(call.toolName)) {
@@ -361,5 +383,6 @@ export function assess(
     decision,
     reasons,
     projectRead: projectRead && decision === "allow",
+    requestScopeExempt: singleMcp !== undefined && decision === "allow",
   };
 }

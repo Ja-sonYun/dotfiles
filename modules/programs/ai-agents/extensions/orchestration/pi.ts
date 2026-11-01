@@ -13,6 +13,16 @@ const runtime: typeof globalThis & {
 } = globalThis;
 
 export default function (pi: ExtensionAPI) {
+  pi.events.on("permissions:mcp-all-modes", (event: unknown) => {
+    if (
+      typeof event === "object" &&
+      event !== null &&
+      "servers" in event &&
+      event.servers instanceof Set
+    ) {
+      event.servers.add("orchestration");
+    }
+  });
   const { parentId } = (runtime[parentStateKey] ??= {
     parentId: process.env.AGENT_HUB_CURRENT_ID,
   });
@@ -23,6 +33,7 @@ export default function (pi: ExtensionAPI) {
   let runId = "";
 
   pi.registerMcpServer("orchestration", {
+    exposure: "direct",
     command: "@command@",
     args: ["mcp"],
     env: { AI_AGENT_CLIENT: "pi" },
@@ -62,7 +73,7 @@ export default function (pi: ExtensionAPI) {
   }
 
   pi.on("before_agent_start", (event, ctx) => ({
-    systemPrompt: `${event.systemPrompt}\n\nReport task start, step changes, delegation, blockers and completion through orchestration MCP. Your client is pi and your session_id is ${ctx.sessionManager.getSessionId()}. Report only your own session; approval remains in the original CLI.`,
+    systemPrompt: `${event.systemPrompt}\n\nReport task start, step changes, delegation, blockers and completion through orchestration MCP. Call the exposed mcp__orchestration__* tools directly; do not use tool_search or codemode solely to call AgentHub. Your client is pi and your session_id is ${ctx.sessionManager.getSessionId()}. Report only your own session; approval remains in the original CLI.`,
   }));
   pi.on("context", async (event, ctx) => {
     await queue;
