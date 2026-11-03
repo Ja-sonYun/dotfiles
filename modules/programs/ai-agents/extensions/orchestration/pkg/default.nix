@@ -31,7 +31,7 @@ rustPlatform.buildRustPackage {
   passthru = {
     node = "${nodejs_22}/bin/node";
     sdk = "${pi-runtime}/lib/node_modules/dotfiles-pi/node_modules/@earendil-works/pi-coding-agent/dist/index.js";
-    aiSdk = "${pi-runtime}/lib/node_modules/dotfiles-pi/node_modules/@earendil-works/pi-ai/dist/index.js";
+    typeboxSdk = "${pi-runtime}/lib/node_modules/dotfiles-pi/node_modules/typebox/build/index.mjs";
   };
 
   meta = {

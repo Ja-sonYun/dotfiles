@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-mcp-remote",
-    "version": "0.15.2",
+    "version": "0.16.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-mcp-remote",
-        "version": "0.15.2",
+        "version": "0.16.0",
         "dependencies": {
-          "mcp-remote": "0.15.2"
+          "mcp-remote": "0.16.0"
         }
       },
       "node_modules/accepts": {
@@ -233,12 +233,16 @@
         "license": "MIT"
       },
       "node_modules/encodeurl": {
-        "version": "2.0.0",
-        "resolved": "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.0.tgz",
-        "integrity": "sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==",
+        "version": "2.0.1",
+        "resolved": "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.1.tgz",
+        "integrity": "sha512-Ev/hIyePLZtpL98x562lvPtenrUfGr0lfaf44HFZ+hDEwso7ccV9QAZrEVLg0hxNAzygaAFxy2dYaAKKM0G06A==",
         "license": "MIT",
         "engines": {
           "node": ">= 0.8"
+        },
+        "funding": {
+          "type": "opencollective",
+          "url": "https://opencollective.com/express"
         }
       },
       "node_modules/es-define-property": {
@@ -555,9 +559,9 @@
         }
       },
       "node_modules/mcp-remote": {
-        "version": "0.15.2",
-        "resolved": "https://registry.npmjs.org/mcp-remote/-/mcp-remote-0.15.2.tgz",
-        "integrity": "sha512-3PrXMgjJew6xbZH21D7AbtOoHwhvjWt1IY6wepHjKTZLPSkTPifdMVBFuoxsuF6WK6nUlZIgpSj5o5NscJ+XXw==",
+        "version": "0.16.0",
+        "resolved": "https://registry.npmjs.org/mcp-remote/-/mcp-remote-0.16.0.tgz",
+        "integrity": "sha512-LvEbfF8fEjDKPoD+9ELThgaBPAThiq/pEBUfUXmlAZ1oxRiduP+dJ3NQvsaiFbWSoNqfKFoan49i3x9HYvD27g==",
         "license": "MIT",
         "dependencies": {
           "express": "^4.21.2",
@@ -724,9 +728,9 @@
         }
       },
       "node_modules/qs": {
-        "version": "6.16.1",
-        "resolved": "https://registry.npmjs.org/qs/-/qs-6.16.1.tgz",
-        "integrity": "sha512-5Px6J7rfHBAGUhNQ3es4YzcOdBBw0SDcVtThJml4RdnKw4tKs2epA0kPZ+K8X+WiHktT93RHVcQ/3ym5aTCgtg==",
+        "version": "6.16.2",
+        "resolved": "https://registry.npmjs.org/qs/-/qs-6.16.2.tgz",
+        "integrity": "sha512-VYdnB5S7/0IeXzBacUtwNAaM6d7Y/PgYnNC7bJCI6meqA/OgnsQbZMtVW8Dt2D1PHgbHGtYmhSoEIgvt7xZ2ZA==",
         "license": "BSD-3-Clause",
         "dependencies": {
           "es-define-property": "^1.0.1",
@@ -1014,5 +1018,5 @@
       }
     }
   },
-  "invalidationHash": "caba02fd786b331e572fcc35636e9057f004e2b4bb4b056e19f6b9052ff1395f"
+  "invalidationHash": "5b3e57c1837411d88d9db142045590886ce0d8110dde9ce3d5ed1632cacef159"
 }

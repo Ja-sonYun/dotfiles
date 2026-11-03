@@ -8,7 +8,7 @@ let
   cfg = config.programs.ai-agents.extensions.orchestration;
   json = pkgs.formats.json { };
   settings = json.generate "agent-hub.json" {
-    inherit (cfg.package) node sdk aiSdk;
+    inherit (cfg.package) node sdk typeboxSdk;
     redact = lib.getExe pkgs.redact;
     runner = "${cfg.package}/share/agent-hub/pi/runner.mjs";
     inherit (cfg) model observerModel observerThinkingLevel;

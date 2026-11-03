@@ -158,7 +158,7 @@ const settings = object(
 );
 const config = {
   sdk: string(settings.sdk),
-  aiSdk: string(settings.aiSdk),
+  typeboxSdk: string(settings.typeboxSdk),
   model: string(settings.model),
   observerModel: string(settings.observerModel),
   observerThinkingLevel: string(settings.observerThinkingLevel),
@@ -337,8 +337,8 @@ async function initialize(history: ChatMessage[]): Promise<void> {
     pathToFileURL(config.sdk).href
   )) as typeof import("@earendil-works/pi-coding-agent");
   const { Type } = (await import(
-    pathToFileURL(config.aiSdk).href
-  )) as typeof import("@earendil-works/pi-ai");
+    pathToFileURL(config.typeboxSdk).href
+  )) as typeof import("typebox");
   const settingsManager = SettingsManager.inMemory({});
   const resourceOptions = {
     cwd: root,

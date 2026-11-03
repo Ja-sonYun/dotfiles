@@ -18,7 +18,7 @@ pkgs.lib.makeOverridable (
       dependencies = {
         ${spec.name} = version;
       }
-      // lib.optionalAttrs (version == "1.4.0") {
+      // lib.optionalAttrs (version == "1.5.0") {
         "@modelcontextprotocol/sdk" = "^1.25.2";
       };
     };
@@ -65,7 +65,7 @@ pkgs.lib.makeOverridable (
             for patchFile in ${../patches}/*.patch; do
               patch --batch --fuzz=0 -p1 -d "$appRoot" < "$patchFile"
             done
-            ${lib.optionalString (version == "1.4.0") ''
+            ${lib.optionalString (version == "1.5.0") ''
               mkdir -p declarations-helper
               cp ${./fix-declarations.mts} declarations-helper/fix-declarations.mts
               ln -s "$out/lib/node_modules/${config.name}/node_modules" declarations-helper/node_modules
