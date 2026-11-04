@@ -1,9 +1,8 @@
+import ctypes
 import fcntl
 import hashlib
 import json
 import os
-import plistlib
-import shutil
 import signal
 import stat
 import subprocess
@@ -27,16 +26,13 @@ def save(path: Path, value: dict) -> None:
     temporary.replace(path)
 
 
-def command(
-    args: list[str], *, input: str | None = None, env: dict[str, str] | None = None
-) -> str:
+def command(args: list[str], *, input: str | None = None) -> str:
     with subprocess.Popen(
         args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=env,
         start_new_session=True,
     ) as child:
         try:
@@ -58,25 +54,41 @@ def command(
         return output
 
 
-def tags(path: Path) -> list[str]:
-    key = "com.apple.metadata:_kMDItemUserTags"
-    if key not in os.listxattr(path):
-        return []
-    return plistlib.loads(os.getxattr(path, key))
-
-
-def add_tags(config: dict, path: Path, names: list[str]) -> None:
-    data = json.dumps({"path": str(path), "tags": names}, ensure_ascii=False)
+def tag_request(config: dict, request: dict, operation: str) -> str:
+    data = json.dumps(request, ensure_ascii=False)
     delimiter = "="
     while f"]{delimiter}]" in data:
         delimiter += "="
     literal = f"[{delimiter}[{data}]{delimiter}]"
-    script = (
-        f"local request = hs.json.decode({literal}); "
-        "assert(hs.fs.tagsAdd(request.path, request.tags)); "
-        "return 'file-organizer-tagged'"
+    script = f"local request = hs.json.decode({literal}); " + operation
+    return command([config["hammerspoon"], "-a", "-q", "-n", "-c", script])
+
+
+def tags(config: dict, path: Path) -> list[str]:
+    response = json.loads(
+        tag_request(
+            config,
+            {"path": str(path)},
+            "local names = hs.fs.tagsGet(request.path); "
+            "if names == nil or #names == 0 then return '{\"tags\":[]}' end; "
+            "return hs.json.encode({tags = names})",
+        )
     )
-    result = command([config["hammerspoon"], "-a", "-q", "-n", "-c", script])
+    if not isinstance(response, dict):
+        raise TypeError("Invalid Finder tag response")
+    names = response.get("tags")
+    if not isinstance(names, list) or not all(isinstance(name, str) for name in names):
+        raise TypeError("Invalid Finder tag list")
+    return sorted(set(names))
+
+
+def add_tags(config: dict, path: Path, names: list[str]) -> None:
+    result = tag_request(
+        config,
+        {"path": str(path), "tags": names},
+        "assert(hs.fs.tagsAdd(request.path, request.tags)); "
+        "return 'file-organizer-tagged'",
+    )
     if result.strip() != "file-organizer-tagged":
         raise RuntimeError("Finder tag update failed")
 
@@ -110,10 +122,6 @@ def classify(config: dict, path: Path) -> list[str]:
         }
         for name, description in config["tags"].items()
     }
-    env = os.environ.copy()
-    env["TYPESAFE_API_KEY"] = Path(config["apiKeyFile"]).read_text().strip()
-    if not env["TYPESAFE_API_KEY"]:
-        raise RuntimeError("Missing API key")
 
     response = json.loads(
         command(
@@ -123,13 +131,12 @@ def classify(config: dict, path: Path) -> list[str]:
                     "state": {
                         "filename": path.name,
                         "extension": path.suffix,
-                        "tags": tags(path),
+                        "tags": tags(config, path),
                         "text": text,
                     },
                     "questions": questions,
                 }
             ),
-            env=env,
         )
     )
     if not isinstance(response, dict):
@@ -192,33 +199,53 @@ def settle_copy(record: dict, destination: Path, persist: Callable[[], None]) ->
     return True
 
 
+def copy_metadata(path: Path, temporary: Path, identity: list[int]) -> None:
+    library = ctypes.CDLL("/usr/lib/libSystem.B.dylib", use_errno=True)
+    copyfile = library.fcopyfile
+    copyfile.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32]
+    copyfile.restype = ctypes.c_int
+    # copyfile.h: COPYFILE_ALL combines ACL, stat, xattr and data (1 | 2 | 4 | 8).
+    copyfile_all = 15
+
+    with path.open("rb") as source, temporary.open("r+b") as target:
+        info = os.fstat(target.fileno())
+        if [info.st_dev, info.st_ino] != identity:
+            raise RuntimeError("Temporary copy ownership changed; original retained")
+        target.truncate(0)
+        if copyfile(source.fileno(), target.fileno(), None, copyfile_all) < 0:
+            error = ctypes.get_errno()
+            raise OSError(error, os.strerror(error), str(path))
+        os.fsync(target.fileno())
+
+
 def move(
-    path: Path, destination: Path, record: dict, persist: Callable[[], None]
+    config: dict,
+    path: Path,
+    destination: Path,
+    record: dict,
+    persist: Callable[[], None],
 ) -> None:
     if "copy" not in record:
         destination.mkdir(parents=True, exist_ok=True)
-        fd, name = tempfile.mkstemp(prefix=".file-organizer-", dir=destination)
-        info = os.fstat(fd)
-        os.close(fd)
-        record["copy"] = name
-        record["copyIdentity"] = [info.st_dev, info.st_ino]
-        persist()
+        with tempfile.NamedTemporaryFile(
+            prefix=".file-organizer-", dir=destination, delete=False
+        ) as temporary_file:
+            info = os.fstat(temporary_file.fileno())
+            record["copy"] = temporary_file.name
+            record["copyIdentity"] = [info.st_dev, info.st_ino]
+            persist()
 
     temporary = owned_copy(record, destination)
     if temporary is None:
         raise RuntimeError("Recorded temporary copy is missing; original retained")
     if not record.get("copied", False):
-        shutil.copy2(path, temporary)
+        copy_metadata(path, temporary, record["copyIdentity"])
         if fingerprint(path) != record["fingerprint"] or digest(path) != digest(
             temporary
         ):
             raise RuntimeError("Source changed during copy")
-        for key in os.listxattr(path):
-            os.setxattr(temporary, key, os.getxattr(path, key))
-        if tags(path) != tags(temporary):
+        if tags(config, path) != tags(config, temporary):
             raise RuntimeError("Tags were not preserved")
-        with temporary.open("rb") as copied:
-            os.fsync(copied.fileno())
         record["copied"] = True
         persist()
 
@@ -232,7 +259,7 @@ def move(
             persist()
         target = Path(record["target"])
         try:
-            os.link(temporary, target)
+            target.hardlink_to(temporary)
             break
         except FileExistsError:
             if not target.is_symlink() and temporary.samefile(target):
@@ -244,7 +271,7 @@ def move(
     if (
         fingerprint(path) != record["fingerprint"]
         or digest(path) != digest(target)
-        or tags(path) != tags(target)
+        or tags(config, path) != tags(config, target)
     ):
         raise RuntimeError("Source or destination changed; originals retained")
     if fingerprint(path) != record["fingerprint"]:
@@ -281,7 +308,7 @@ def run(config: dict, state: dict, persist: Callable[[], None]) -> None:
             if record["stage"] == "cleanup_failed":
                 continue
             if record["stage"] == "ignored":
-                if not os.path.lexists(source / name):
+                if not (source / name).exists(follow_symlinks=False):
                     del files[name]
                     persist()
                 continue
@@ -372,6 +399,7 @@ def run(config: dict, state: dict, persist: Callable[[], None]) -> None:
                 add_tags(config, path, record["tags"])
                 if not large:
                     move(
+                        config,
                         path,
                         Path(policy["destination"]) / record["month"],
                         record,

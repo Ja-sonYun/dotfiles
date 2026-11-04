@@ -10,6 +10,18 @@ let
   absolutePath = lib.types.addCheck lib.types.nonEmptyStr (lib.hasPrefix "/");
   tagName =
     name: name != "" && !(lib.hasInfix "," name || lib.hasInfix "\n" name || lib.hasInfix "\r" name);
+  jev = pkgs.writeShellScript "file-organizer-jev" ''
+    set -e
+    ${pkgs.tool.shell.util.shellExports {
+      TYPESAFE_API_KEY._secret = cfg.apiKeyFile;
+    }}
+    if [ -z "$TYPESAFE_API_KEY" ]; then
+      echo "File organizer API key file is missing, unreadable, or empty." >&2
+      exit 1
+    fi
+
+    exec ${pkgs.jev}/bin/jev "$@"
+  '';
   settings = pkgs.writeText "file-organizer.json" (
     builtins.toJSON {
       inherit (cfg)
@@ -17,10 +29,9 @@ let
         tags
         extensions
         model
-        apiKeyFile
         ;
       stateDirectory = "${userhome}/.local/state/file-organizer";
-      jev = "${pkgs.jev}/bin/jev";
+      jev = "${jev}";
       pdftotext = "${pkgs.poppler-utils}/bin/pdftotext";
       refresh = cfg.onMonthlyFoldersReady;
     }

@@ -3,7 +3,6 @@
   fetchFromGitHub,
   fetchurl,
   lib,
-  makeWrapper,
   stdenv,
   swift,
 }:
@@ -35,10 +34,7 @@ stdenv.mkDerivation {
     rev = "d9e934bf25c8f30a620f659268faa9acc4f24e04";
     sha256 = "0nwn3iz87csdi2s0l4vp8nq90sy9w3x540kxc5imr0j7ngqq60kx";
   };
-  nativeBuildInputs = [
-    swift
-    makeWrapper
-  ];
+  nativeBuildInputs = [ swift ];
   buildInputs = [ apple-sdk_15 ];
   buildPhase = ''
     runHook preBuild
@@ -68,7 +64,11 @@ stdenv.mkDerivation {
     cp -R plugins .agents "$app/Resources/"
     printf '%s\n' 'portable-user' > "$app/Resources/remctl-capability-host-socket-path"
     printf '%s\n' '${runtimeExecutable}' > "$app/Resources/remctl-capability-python-path"
-    makeWrapper '${runtimeExecutable}' "$out/bin/remctl" --add-flags "$client/remctl"
+    cat > "$out/bin/remctl" <<EOF
+    #!${stdenv.shell}
+    exec ${lib.escapeShellArg runtimeExecutable} "$client/remctl" "\$@"
+    EOF
+    chmod +x "$out/bin/remctl"
     runHook postInstall
   '';
   passthru = { inherit runtime runtimePath; };
