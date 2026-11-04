@@ -8,6 +8,10 @@
 }:
 let
   cfg = config.services.apple-mcp;
+  start = pkgs.writeShellScript "apple-mcp-start" ''
+    export APPLE_MCP_TOKEN_FILE="${cfg.tokenFile}"
+    exec ${pkgs.apple-mcp}/bin/apple-mcp "$@"
+  '';
 in
 {
   options.services.apple-mcp = {
@@ -43,9 +47,8 @@ in
       launchd.agents.apple-mcp = {
         enable = true;
         config = {
-          ProgramArguments = [ "${pkgs.apple-mcp}/bin/apple-mcp" ];
+          ProgramArguments = [ "${start}" ];
           EnvironmentVariables = {
-            APPLE_MCP_TOKEN_FILE = cfg.tokenFile;
             APPLE_MCP_ALLOWED_HOSTS = builtins.toJSON cfg.allowedHosts;
             APPLE_MCP_ALLOWED_ORIGINS = builtins.toJSON cfg.allowedOrigins;
           };
