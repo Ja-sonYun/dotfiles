@@ -51,7 +51,7 @@ in
           lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "installSignedTargets" ]
             ''
               run /bin/mkdir -p ${lib.escapeShellArg "${userhome}/Library/Application Support/RemCTL"}
-              run ${pkgs.python3}/bin/python3 ${./http-config.py} ${lib.escapeShellArg cfg.tokenFile} ${lib.escapeShellArg "${userhome}/.config/remctl/mcp-http.json"}
+              run ${pkgs.python3}/bin/python3 ${./http-config.py} "${cfg.tokenFile}" ${lib.escapeShellArg "${userhome}/.config/remctl/mcp-http.json"}
             '';
         launchd.agents = {
           apple-reminders-host = {
