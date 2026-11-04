@@ -7,6 +7,7 @@
 }:
 {
   imports = [
+    ./services/file-organizer.nix
     ./system/nix.nix
     ./system/macos.nix
     ./system/users.nix
@@ -17,6 +18,7 @@
     ./desktop/spotlight
     ./services/docker-compose.nix
     ./services/sharing.nix
+    ./services/apple-mcp.nix
   ]
   ++ lib.optionals (hasTag "gui") [
     ./programs/slack.nix

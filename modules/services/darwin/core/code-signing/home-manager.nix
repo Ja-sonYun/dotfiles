@@ -12,7 +12,9 @@ let
     lib.mapAttrsToList (
       name: target:
       let
-        sourceFingerprint = builtins.hashString "sha256" target.source;
+        sourceFingerprint = builtins.hashString "sha256" (
+          target.source + lib.optionalString target.deep ":deep"
+        );
       in
       ''
         install_signed_target \
@@ -21,9 +23,10 @@ let
           ${lib.escapeShellArg target.target} \
           ${lib.escapeShellArg target.identity} \
           ${lib.escapeShellArg sourceFingerprint} \
-          ${lib.escapeShellArg (
-            if target.restartLaunchAgent == null then "" else target.restartLaunchAgent
-          )}
+          ${
+            lib.escapeShellArg (if target.restartLaunchAgent == null then "" else target.restartLaunchAgent)
+          } \
+          ${lib.escapeShellArg (lib.optionalString target.deep "--deep")}
       ''
     ) cfg.targets
   );
@@ -52,6 +55,11 @@ in
           identity="$4"
           source_fingerprint="$5"
           restart_agent="$6"
+          deep_flag="$7"
+          signing_flags=()
+          if [[ -n "$deep_flag" ]]; then
+            signing_flags+=("$deep_flag")
+          fi
           marker_path="$target_path.source"
           target_directory=$(/usr/bin/dirname "$target_path")
           target_name=$(/usr/bin/basename "$target_path")
@@ -83,7 +91,7 @@ in
 
           if [[ ( -e "$target_path" || -L "$target_path" ) \
             && "$current_fingerprint" == "$fingerprint" ]] \
-            && /usr/bin/codesign --verify --strict "$target_path" 2>/dev/null; then
+            && /usr/bin/codesign --verify --strict "''${signing_flags[@]}" "$target_path" 2>/dev/null; then
             return
           fi
 
@@ -91,7 +99,7 @@ in
           run /bin/rm -rf "$staging_path" "$backup_path"
           run /usr/bin/ditto "$source_path" "$staging_path"
           run /bin/chmod -R u+w "$staging_path"
-          if ! run /usr/bin/codesign --force --timestamp=none --sign "$identity_hash" "$staging_path"; then
+          if ! run /usr/bin/codesign --force --timestamp=none "''${signing_flags[@]}" --sign "$identity_hash" "$staging_path"; then
             run /bin/rm -rf "$staging_path"
             exit 1
           fi

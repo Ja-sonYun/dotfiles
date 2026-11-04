@@ -297,6 +297,7 @@ export class PermissionSession {
       return { block: true, reason: "Permission check cancelled" };
     if (assessment.decision === "deny")
       return { block: true, reason: assessment.reasons.join("\n") };
+
     const reasons = [...assessment.reasons];
     let rules: RuleResult;
     try {
@@ -329,6 +330,7 @@ export class PermissionSession {
     }
     if (cancellation.aborted || generation !== this.generation)
       return { block: true, reason: "Permission context changed" };
+
     const violations = rules.results.filter(
       (rule) => rule.verdict === "violation",
     );
@@ -368,6 +370,7 @@ export class PermissionSession {
         ].join("\n"),
       };
     }
+
     // Standing project-read authorization covers only request-scope uncertainty.
     const unclearRules = rules.results.filter(
       (rule) =>
@@ -407,6 +410,7 @@ export class PermissionSession {
         ].join("\n"),
       };
     }
+
     try {
       await prepare?.(rules, cancellation);
     } catch {

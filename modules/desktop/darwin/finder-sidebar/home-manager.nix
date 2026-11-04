@@ -29,6 +29,12 @@ let
 in
 {
   options.services.finderSidebar = {
+    refreshCommand = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${sidebar}";
+      description = "Command to refresh sidebar items after folders are prepared.";
+    };
     enable = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
@@ -66,6 +72,10 @@ in
           options = {
             path = lib.mkOption { type = absolutePath; };
             after = lib.mkOption { type = itemName; };
+            format = lib.mkOption {
+              type = lib.types.str;
+              default = "%Y.%m";
+            };
           };
         }
       );
@@ -93,12 +103,6 @@ in
             ProgramArguments = [ "${sidebar}" ];
             LimitLoadToSessionType = "Aqua";
             RunAtLoad = true;
-            StartCalendarInterval = [
-              {
-                Hour = 0;
-                Minute = 5;
-              }
-            ];
             StandardOutPath = "/tmp/finder-sidebar.log";
             StandardErrorPath = "/tmp/finder-sidebar.log";
           };

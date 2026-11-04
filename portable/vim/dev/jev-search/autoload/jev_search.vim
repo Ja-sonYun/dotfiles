@@ -229,6 +229,7 @@ def Collect(ctx: dict<any>, result: dict<any>): void
       if filename ==# ctx.filename && lnum >= ctx.first && lnum <= ctx.last
         continue
       endif
+
       const normalized = tolower(text)
       var exact = false
       for identifier in split(normalized, '[^[:alnum:]_-]\+')
@@ -248,6 +249,7 @@ def Collect(ctx: dict<any>, result: dict<any>): void
       if !exact && word_count < 2
         continue
       endif
+
       const original = substitute(text, '\r\?\n$', '', '')
       var snippet = original
       if strchars(original) > MAX_CANDIDATE_CHARS
@@ -266,6 +268,7 @@ def Collect(ctx: dict<any>, result: dict<any>): void
         exact: exact,
       }
     endfor
+
     var candidates: list<dict<any>> = []
     for key in sort(keys(matches))
       add(candidates, matches[key])
@@ -278,6 +281,7 @@ def Collect(ctx: dict<any>, result: dict<any>): void
       echom 'Jev search: no local matches; quickfix unchanged.'
       return
     endif
+
     echom printf('Jev search: classifying %d candidates (%d outside limit)...',
       len(ctx.candidates), ctx.omitted)
     Classify(ctx)

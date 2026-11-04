@@ -441,8 +441,11 @@ window.renderPanel = (id, data) => {
     } else {
         add('label', 'Title').htmlFor = 'title';
         const input = add('input');
-        input.type = 'text'; input.id = 'title'; input.required = true;
-        input.placeholder = 'e.g. Design sync'; input.autocomplete = 'off';
+        input.type = 'text';
+        input.id = 'title';
+        input.required = true;
+        input.placeholder = 'e.g. Design sync';
+        input.autocomplete = 'off';
     }
     panel.style.opacity = '1';
     if (!reducedMotion.matches) {
@@ -461,7 +464,10 @@ function send(action, value) {
 }
 document.querySelector('#secondary').addEventListener('click', () => send('secondary'));
 document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') { event.preventDefault(); send('secondary'); }
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        send('secondary');
+    }
 });
 document.querySelector('form').addEventListener('submit', event => {
     event.preventDefault();
@@ -472,7 +478,11 @@ document.querySelector('form').addEventListener('submit', event => {
     }
     const input = document.querySelector('#title');
     const value = input.value.trim();
-    if (!value) { input.value = ''; input.reportValidity(); return; }
+    if (!value) {
+        input.value = '';
+        input.reportValidity();
+        return;
+    }
     send('primary', value);
 });
 window.openPanel = id => {

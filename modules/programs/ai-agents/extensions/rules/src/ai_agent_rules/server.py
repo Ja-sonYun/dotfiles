@@ -442,6 +442,7 @@ class Server:
                 response["retry_registration"] = True
                 status = "retry_registration"
                 return
+
             stage = "register_session"
             session = await self.register(
                 int(request["pid"]),
@@ -462,6 +463,7 @@ class Server:
                 return
             if ending:
                 session.closing = True
+
             stage = "execute_hook"
             work = asyncio.create_task(
                 self.execute(request, hook_input, api, evaluations, session)
@@ -473,6 +475,7 @@ class Server:
             if disconnected in done:
                 status = "disconnected"
                 return
+
             context = await work
             rules_decision = context.rules_decision
             response["stdout"] = "".join(context.stdout)

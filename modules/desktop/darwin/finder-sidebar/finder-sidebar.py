@@ -23,6 +23,7 @@ class HiddenItem(TypedDict):
 class MonthlyFolders(TypedDict):
     path: str
     after: str
+    format: str
 
 
 class Settings(TypedDict):
@@ -104,7 +105,7 @@ def update_sidebar(settings: Settings) -> None:
         if available_root.is_dir():
             first = datetime.now(timezone.utc).astimezone().date().replace(day=1)
             month_paths = [
-                root / day.strftime("%Y.%m")
+                root / day.strftime(monthly["format"])
                 for day in (first, first - timedelta(days=1))
             ]
 
@@ -116,7 +117,7 @@ def update_sidebar(settings: Settings) -> None:
                 if (
                     path is not None
                     and path.parent == root
-                    and re.fullmatch(r"[0-9]{4}\.(0[1-9]|1[0-2])", path.name)
+                    and re.fullmatch(r"[0-9]{4}[._-](0[1-9]|1[0-2])", path.name)
                     and path not in month_paths
                 ):
                     remove_item(settings["mysides"], items, name, uri)
@@ -137,8 +138,8 @@ def update_sidebar(settings: Settings) -> None:
             add_item(settings["mysides"], items, folder["name"], path.as_uri())
         if monthly is not None and folder["name"] == monthly["after"]:
             for path in month_paths:
-                path.mkdir(parents=True, exist_ok=True)
-                add_item(settings["mysides"], items, path.name, path.as_uri())
+                if path.is_dir():
+                    add_item(settings["mysides"], items, path.name, path.as_uri())
 
 
 def main() -> int:

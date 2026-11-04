@@ -1,6 +1,11 @@
 { lib }:
 lib.types.submodule {
   options = {
+    deep = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Sign nested application executables.";
+    };
     source = lib.mkOption {
       type = lib.types.nonEmptyStr;
       description = "Source store path.";

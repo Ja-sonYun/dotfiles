@@ -31,6 +31,8 @@
 
     dismiss-notifications = final.callPackage ../pkgs/darwin/dismiss-notifications { };
     icalPal = final.callPackage ../pkgs/darwin/icalPal { };
+    ical = final.callPackage ../pkgs/darwin/ical { };
+    remctl = final.callPackage ../pkgs/darwin/remctl { };
     macism = final.callPackage ../pkgs/darwin/macism { };
     macnotesapp = final.callPackage ../pkgs/darwin/macnotesapp { };
     notifycmd = final.callPackage ../pkgs/darwin/notifycmd { };
@@ -44,6 +46,8 @@
     local-fonts = final.callPackage ../pkgs/fonts/local-fonts { };
 
     antigravity-mcp = final.callPackage ../pkgs/mcp/antigravity-mcp { };
+    calendar-mcp = final.callPackage ../pkgs/mcp/calendar-mcp { };
+    apple-mcp = final.callPackage ../pkgs/mcp/apple-mcp { };
     aws-documentation-mcp-server = final.callPackage ../pkgs/mcp/aws-documentation-mcp-server { };
     chrome-devtools-mcp = final.callPackage ../pkgs/mcp/chrome-devtools-mcp { };
     context7 = final.callPackage ../pkgs/mcp/context7 { };

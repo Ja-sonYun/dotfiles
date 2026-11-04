@@ -1000,6 +1000,7 @@ def query(config: Settings, args: argparse.Namespace) -> None:
         raise ValueError("--to must be later than --from within the selected day")
     if args.limit < 1 or args.offset < 0:
         raise ValueError("--limit must be positive and --offset non-negative")
+
     events = load_events(config, day)
     contexts: dict[str, dict[str, Any]] = {}
     starts = {
@@ -1041,6 +1042,7 @@ def query(config: Settings, args: argparse.Namespace) -> None:
         ):
             continue
         matches.append(item)
+
     page = matches[args.offset : args.offset + args.limit]
     next_offset = args.offset + len(page)
     print(

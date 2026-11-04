@@ -1,6 +1,7 @@
 {
   hasTag,
   userhome,
+  osConfig,
   ...
 }:
 let
@@ -30,7 +31,8 @@ in
       }
     ];
     monthlyFolders = {
-      path = "${icloudDrive}/Documents/MyFiles";
+      path = (builtins.head osConfig.services.fileOrganizer.policies).destination;
+      format = (builtins.head osConfig.services.fileOrganizer.policies).monthFormat;
       after = "Documents";
     };
   };

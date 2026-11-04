@@ -107,6 +107,7 @@ export async function runJson(
         active.delete(frame.id);
       }
     };
+
     const timeout = setTimeout(stop, 35000);
     signal.addEventListener("abort", stop, { once: true });
     child.stdin.on("error", stop);
@@ -146,6 +147,7 @@ export async function runJson(
         reject(error);
       }
     });
+
     write(input).catch(stop);
     if (signal.aborted) stop();
   });

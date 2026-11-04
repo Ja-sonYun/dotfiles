@@ -220,7 +220,13 @@ func sendRequest(ctx context.Context, connection net.Conn, request []byte) (serv
 	if len(data) == 0 {
 		return response, io.EOF
 	}
-	if len(data) > 1024*1024 || json.Unmarshal(data, &response) != nil || response.Stdout == nil || response.Stderr == nil || response.ExitCode == nil || *response.ExitCode < 0 || *response.ExitCode > 255 {
+	if len(data) > 1024*1024 ||
+		json.Unmarshal(data, &response) != nil ||
+		response.Stdout == nil ||
+		response.Stderr == nil ||
+		response.ExitCode == nil ||
+		*response.ExitCode < 0 ||
+		*response.ExitCode > 255 {
 		return response, errors.New("invalid server response")
 	}
 	return response, nil

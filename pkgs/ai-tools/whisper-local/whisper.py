@@ -1068,6 +1068,7 @@ def main() -> int:
         else:
             work_directory, work_lock, results = recovered
             diagnostic("transcription_recovered", directory=str(work_directory))
+
         emit_event(arguments.progress_json, "progress", phase="preparing", progress=0)
         if len(results) < len(arguments.track):
             with log_stage("transcribing"):
@@ -1088,6 +1089,7 @@ def main() -> int:
         if (work_directory / "pending.json").is_file():
             # Publish recovery only after every track has completed successfully.
             os.replace(work_directory / "pending.json", work_directory / "ready.json")
+
         segments = merged_segments(results, arguments.suppress_echo)
         with log_stage("saving", segment_count=len(segments)):
             write_outputs(
@@ -1114,6 +1116,7 @@ def main() -> int:
                 ),
             )
         outputs_written = True
+
         diagnostic("job_finished", elapsed_seconds=time.monotonic() - started)
         emit_event(
             arguments.progress_json,

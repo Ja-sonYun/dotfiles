@@ -36,6 +36,7 @@ func runCommand(command string, input []byte, timeout int, failure bool) int {
 		defer writePipe.Close()
 		cmd.Stdout = writePipe
 	}
+
 	signals := make(chan os.Signal, 2)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(signals)
@@ -68,6 +69,7 @@ func runCommand(command string, input []byte, timeout int, failure bool) int {
 		deadline = timer.C
 		defer timer.Stop()
 	}
+
 	forced := 0
 	var forwarding syscall.Signal
 	for (exitWatch != nil || copied != nil || sent != nil) && forced == 0 {
@@ -92,6 +94,7 @@ func runCommand(command string, input []byte, timeout int, failure bool) int {
 			forced, forwarding = 124, syscall.SIGTERM
 		}
 	}
+
 	if forced != 0 {
 		_ = syscall.Kill(-cmd.Process.Pid, forwarding)
 		// Keep the leader unreaped until group cleanup prevents PID reuse.
@@ -103,6 +106,7 @@ func runCommand(command string, input []byte, timeout int, failure bool) int {
 		}
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
+
 	err = cmd.Wait()
 	if forced != 0 && readPipe != nil {
 		_ = readPipe.Close()
@@ -119,6 +123,7 @@ func runCommand(command string, input []byte, timeout int, failure bool) int {
 	if failure {
 		_, _ = os.Stdout.Write(restoreFailure(output.Bytes()))
 	}
+
 	if forced != 0 {
 		return forced
 	}
