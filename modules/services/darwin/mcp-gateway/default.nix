@@ -8,6 +8,15 @@
 }:
 let
   cfg = config.services.mcp-gateway;
+  start = pkgs.writeShellScript "mcp-gateway-start" ''
+    exec ${pkgs.mcp-gateway}/bin/mcp-gateway \
+      --credentials "${cfg.credentialsFile}" \
+      --state ${lib.escapeShellArg "${userhome}/Library/Application Support/mcp-gateway"} \
+      --owner-sub ${lib.escapeShellArg cfg.ownerSub} \
+      --firecrawl-key "${cfg.firecrawlKeyFile}" \
+      --n8n-url "${cfg.n8nUrlFile}" \
+      --n8n-key "${cfg.n8nKeyFile}"
+  '';
 in
 {
   options.services.mcp-gateway = {
@@ -44,21 +53,7 @@ in
     home-manager.users.${username}.launchd.agents.mcp-gateway = {
       inherit (cfg) enable;
       config = lib.mkIf cfg.enable {
-        ProgramArguments = [
-          "${pkgs.mcp-gateway}/bin/mcp-gateway"
-          "--credentials"
-          cfg.credentialsFile
-          "--state"
-          "${userhome}/Library/Application Support/mcp-gateway"
-          "--owner-sub"
-          cfg.ownerSub
-          "--firecrawl-key"
-          cfg.firecrawlKeyFile
-          "--n8n-url"
-          cfg.n8nUrlFile
-          "--n8n-key"
-          cfg.n8nKeyFile
-        ];
+        ProgramArguments = [ "${start}" ];
         RunAtLoad = true;
         KeepAlive = true;
         ThrottleInterval = 10;
