@@ -74,7 +74,10 @@ def main() -> None:
     server = FastMCP("Internal MCP", auth=auth)
     server.add_middleware(AuthMiddleware(auth=owner_only))
 
-    server.mount(create_proxy("http://127.0.0.1:7364/mcp"), namespace="apple")
+    server.mount(
+        create_proxy("http://127.0.0.1:7364/mcp", mode="legacy"),
+        namespace="apple",
+    )
     server.mount(
         create_proxy(
             Client(
