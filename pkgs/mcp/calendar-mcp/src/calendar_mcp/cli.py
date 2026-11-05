@@ -62,22 +62,26 @@ def flags(values: dict[str, str | bool | int | list[str] | None]) -> list[str]:
 
 
 async def list_calendars() -> Any:
+    """List available Apple calendars to identify a calendar before querying events."""
     return await run(["calendars", "list"])
 
 
 async def list_events(start: str, end: str, calendar_id: str | None = None) -> Any:
+    """List Apple Calendar events in a date range, optionally limited to one calendar."""
     return await run(
         ["list", "--from", start, "--to", end, *flags({"calendar_id": calendar_id})]
     )
 
 
 async def search_events(query: str, start: str, end: str, limit: int = 100) -> Any:
+    """Search Apple Calendar events by text within a date range, up to the given limit."""
     return await run(
         ["search", "--from", start, "--to", end, "--limit", str(limit), "--", query]
     )
 
 
 async def get_event(event_id: str) -> Any:
+    """Read an Apple Calendar event using an ID returned by listing or searching events."""
     return await run(["show", "--id", event_id])
 
 
@@ -97,6 +101,10 @@ async def create_event(
     repeat_count: int | None = None,
     repeat_days: str | None = None,
 ) -> Any:
+    """Create an Apple Calendar event with optional alerts and recurrence.
+
+    Recurrence details require an explicit daily, weekly, monthly, or yearly repeat.
+    """
     if repeat is None and (
         repeat_interval != 1
         or any(value is not None for value in (repeat_until, repeat_count, repeat_days))
@@ -144,18 +152,25 @@ async def update_event(
 
 
 async def delete_event(event_id: str, span: Literal["this", "future", "all"]) -> Any:
+    """Delete an Apple Calendar event with an explicit recurrence scope.
+
+    Use this for one occurrence, future for this and following occurrences,
+    or all for the entire recurring series.
+    """
     return await run(
         ["delete", "--id", event_id, "--span", span, "--force"], write=True
     )
 
 
 async def create_calendar(title: str, source: str, color: str | None = None) -> Any:
+    """Create an Apple calendar in the specified source, optionally setting its color."""
     return await run(["calendars", "create", *flags(locals())], write=True)
 
 
 async def update_calendar(
     name: str, title: str | None = None, color: str | None = None
 ) -> Any:
+    """Rename an Apple calendar or change its color, selecting it by its current name."""
     return await run(
         ["calendars", "update", *flags({"title": title, "color": color}), "--", name],
         write=True,
@@ -163,6 +178,7 @@ async def update_calendar(
 
 
 async def delete_calendar(name: str) -> Any:
+    """Delete the named Apple calendar and its events."""
     return await run(["calendars", "delete", "--force", "--", name], write=True)
 
 
