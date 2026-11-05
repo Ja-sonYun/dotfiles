@@ -3,6 +3,7 @@
     ./file-organizer
     ./apple-calendar
     ./apple-mcp
+    ./mcp-gateway
     ./apple-reminders
     ./activity-history
     ./core

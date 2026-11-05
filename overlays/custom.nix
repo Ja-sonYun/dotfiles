@@ -55,6 +55,7 @@
     firecrawl-mcp = final.callPackage ../pkgs/mcp/firecrawl-mcp { };
     freecad-mcp = final.callPackage ../pkgs/mcp/freecad-mcp { };
     mcp-nixos = final.callPackage ../pkgs/mcp/mcp-nixos { };
+    mcp-gateway = final.callPackage ../pkgs/mcp/mcp-gateway { };
     mcp-remote = final.callPackage ../pkgs/mcp/mcp-remote { };
     n8n-mcp = final.callPackage ../pkgs/mcp/n8n-mcp { };
     notify-mcp = final.callPackage ../pkgs/mcp/notify-mcp { };
