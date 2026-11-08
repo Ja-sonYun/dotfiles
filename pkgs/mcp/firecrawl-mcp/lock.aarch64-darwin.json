@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-firecrawl-mcp",
-    "version": "3.37.0",
+    "version": "3.38.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-firecrawl-mcp",
-        "version": "3.37.0",
+        "version": "3.38.0",
         "dependencies": {
-          "firecrawl-mcp": "3.37.0"
+          "firecrawl-mcp": "3.38.0"
         }
       },
       "node_modules/@modelcontextprotocol/core": {
@@ -193,9 +193,9 @@
         }
       },
       "node_modules/firecrawl-mcp": {
-        "version": "3.37.0",
-        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.37.0.tgz",
-        "integrity": "sha512-1SVtn+sJnYKmqi8C0WmLOgiVn7UzXKQZwmnoIDGQr5/FW22eI9tHN9eWZLcc6YAtBUxcs7iGrxqbHcmCIcxS8Q==",
+        "version": "3.38.0",
+        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.38.0.tgz",
+        "integrity": "sha512-eEhSgD7u7iWA0xXMm+0xPzP1VVxVDI78PBdWyVcDG2sxC7GrpUoS7YRS2GxGJyf8UvXVwG7j5gQPjbZeQZJzGA==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/server": "2.3.1",
@@ -354,9 +354,9 @@
         }
       },
       "node_modules/hono": {
-        "version": "4.13.16",
-        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.16.tgz",
-        "integrity": "sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==",
+        "version": "4.13.17",
+        "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.17.tgz",
+        "integrity": "sha512-vZIcbkvjOR5hHRWERbGkr8fGfF0GGM1ooYkuH448iO3b2AdVEr3AXZSw4Z3Kn+1L5z0CVoVeyV29VGYmFh05kQ==",
         "license": "MIT",
         "engines": {
           "node": ">=16.9.0"
@@ -480,5 +480,5 @@
       }
     }
   },
-  "invalidationHash": "626d9b309da4dfe90b8df6eebb04bc90da3fdf3da3c3e6596db61fdabf9d79a7"
+  "invalidationHash": "acc16e031a5ea3c620be41fc230eb8e6cd5eb0a94f032841c86a75e1e1845253"
 }

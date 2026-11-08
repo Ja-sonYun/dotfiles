@@ -43,6 +43,11 @@ let
         inherit home-manager pkgs;
       };
       pre-commit-check = git-hooks.lib.${system}.run {
+        package = pkgs.pre-commit.overridePythonAttrs (old: {
+          doCheck = false;
+          dontUsePytestCheck = true;
+          env = builtins.removeAttrs old.env [ "DOTNET_ROOT" ];
+        });
         src = ../.;
         excludes = excludeRegexes;
         hooks = {

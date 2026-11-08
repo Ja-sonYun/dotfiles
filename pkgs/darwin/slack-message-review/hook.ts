@@ -254,6 +254,7 @@
   }
 
   const owner = "@controllerId@";
+  const ignoreConversations: string[] = /* @ignoreConversations@ */ [];
   // The controller substitutes the compiled draft factory before injection.
   const injectedDraft = /* @draft@ */ null as DraftTools | null;
   if (!injectedDraft) throw new Error("Slack draft tools were not installed.");
@@ -1501,6 +1502,14 @@
     record: ComposerRecord,
     args: unknown[],
   ): Promise<unknown> {
+    const props = { ...record.parent?.props, ...record.raw };
+    const conversation = props.channelDisplayName ?? props.channel?.name;
+    if (conversation && ignoreConversations.includes(conversation)) {
+      return Promise.resolve(
+        Reflect.apply(record.raw.sendMessage, record.raw, args),
+      );
+    }
+
     if (stopped || pending) {
       window.alert(
         stopped

@@ -13,6 +13,8 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 
+DOWNLOAD_SUFFIXES = (".download", ".crdownload", ".part", ".partial")
+
 
 def fingerprint(path: Path) -> list[int]:
     info = path.stat()
@@ -280,7 +282,7 @@ def move(
     cleanup_copy(record, destination)
 
 
-def run(config: dict, state: dict, persist: Callable[[], None]) -> None:
+def run(config: dict, state: dict, persist: Callable[[], None]) -> float | None:
     now = datetime.now().astimezone()
     first = now.date().replace(day=1)
     monthly_key = now.strftime("%Y.%m")
@@ -340,23 +342,67 @@ def run(config: dict, state: dict, persist: Callable[[], None]) -> None:
                 record["stage"] = "done"
                 persist()
 
-        for path in source.iterdir():
+        previous_temporary = records.get("temporaryFiles", {})
+        temporary_files = {}
+        paths = list(source.iterdir())
+        for path in paths:
+            if path.name.startswith(".") or path.is_symlink():
+                continue
+            if path.suffix.lower() not in DOWNLOAD_SUFFIXES:
+                continue
+            try:
+                if path.is_file():
+                    temporary_files[path.name] = fingerprint(path)
+                elif path.suffix.lower() == ".download" and path.is_dir():
+                    for child in path.iterdir():
+                        if (
+                            not child.name.startswith(".")
+                            and not child.is_symlink()
+                            and child.is_file()
+                        ):
+                            temporary_files[str(child.relative_to(source))] = (
+                                fingerprint(child)
+                            )
+            except FileNotFoundError:
+                continue
+        records["temporaryFiles"] = temporary_files
+        persist()
+
+        for path in paths:
             if path.name.startswith(".") or path.is_symlink() or not path.is_file():
                 continue
-            if path.suffix.lower() in (
-                ".download",
-                ".crdownload",
-                ".part",
-                ".partial",
-                ".tmp",
-            ):
+            if path.suffix.lower() in (*DOWNLOAD_SUFFIXES, ".tmp"):
                 continue
 
             record = files.get(path.name)
-            if record and record["stage"] in ("ignored", "cleanup_failed"):
+            if record and record["stage"] == "cleanup_failed":
                 continue
 
-            signature = fingerprint(path)
+            try:
+                signature = fingerprint(path)
+            except FileNotFoundError:
+                continue
+            if (
+                record
+                and record["stage"] == "ignored"
+                and record["fingerprint"][:2] == signature[:2]
+            ):
+                continue
+            matches = []
+            for name, temporary_signature in previous_temporary.items():
+                temporary_path = Path(name)
+                final_name = (
+                    temporary_path.stem
+                    if temporary_path.parent == Path(".")
+                    else temporary_path.name
+                )
+                if (
+                    final_name == path.name
+                    and temporary_signature[:2] == signature[:2]
+                    and not (source / name).exists(follow_symlinks=False)
+                ):
+                    matches.append(name)
+            completed_download = len(matches) == 1
             if record is None or record["fingerprint"] != signature:
                 if record and not settle_copy(
                     record, Path(policy["destination"]) / record["month"], persist
@@ -373,13 +419,14 @@ def run(config: dict, state: dict, persist: Callable[[], None]) -> None:
                 files[path.name] = record
                 persist()
 
-            if (
-                record["stage"] in ("ignored", "done", "failed")
-                or time.time() - record["seen"] < 10
+            if record["stage"] in ("ignored", "done", "failed") or (
+                not completed_download and time.time() - record["seen"] < 10
             ):
                 continue
 
             try:
+                if fingerprint(path) != signature:
+                    continue
                 selected = config["extensions"].get(path.suffix.lower(), [])
                 large = signature[2] > policy["maxFileSize"]
                 if "tags" not in record:
@@ -423,6 +470,33 @@ def run(config: dict, state: dict, persist: Callable[[], None]) -> None:
             records["initialized"] = True
             persist()
 
+    next_scan_in = None
+    for policy in config["policies"]:
+        source = Path(policy["source"])
+        for name, record in state["sources"][str(source)]["files"].items():
+            if record["stage"] != "pending":
+                continue
+            path = source / name
+            if (
+                path.name.startswith(".")
+                or path.suffix.lower() in (*DOWNLOAD_SUFFIXES, ".tmp")
+                or path.is_symlink()
+                or not path.is_file()
+            ):
+                continue
+            try:
+                signature = fingerprint(path)
+            except FileNotFoundError:
+                continue
+            delay = (
+                max(0.0, record["seen"] + 10 - time.time())
+                if signature == record["fingerprint"]
+                else 0.0
+            )
+            if next_scan_in is None or delay < next_scan_in:
+                next_scan_in = delay
+    return next_scan_in
+
 
 def main() -> None:
     def stop(signum: int, frame: object) -> None:
@@ -444,7 +518,11 @@ def main() -> None:
                         record["stage"] = "pending"
             save(path, state)
             print(json.dumps({"event": "resume-complete"}), flush=True)
-        run(config, state, lambda: save(path, state))
+        next_scan_in = run(config, state, lambda: save(path, state))
+        response: dict[str, str | float] = {"event": "scan-complete"}
+        if next_scan_in is not None:
+            response["nextScanIn"] = next_scan_in
+        print(json.dumps(response), flush=True)
 
 
 if __name__ == "__main__":

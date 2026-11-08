@@ -345,7 +345,10 @@ async function readonlyArgs(
       }
     }
 
-    const apps = await pages("app/list");
+    const [apps, servers] = await Promise.all([
+      pages("app/list"),
+      pages("mcpServerStatus/list"),
+    ]);
     for (const app of apps) {
       if (typeof app.id !== "string" || typeof app.name !== "string") {
         throw new Error("Invalid Codex app catalog.");
@@ -380,7 +383,6 @@ async function readonlyArgs(
       }
     }
 
-    const servers = await pages("mcpServerStatus/list");
     const configuredServers = isRecord(configuration.config.mcp_servers)
       ? configuration.config.mcp_servers
       : {};
@@ -473,8 +475,8 @@ export async function generateWithCodex(
   reasoningEffort?: string,
   serviceTier?: string,
 ): Promise<unknown> {
-  const timeout = AbortSignal.timeout(100_000);
-  const deadline = AbortSignal.any([signal, timeout]);
+  let timeout = AbortSignal.timeout(120_000);
+  let deadline = AbortSignal.any([signal, timeout]);
   const runId = randomUUID();
   const prefix = path.join(directory, `codex-${runId}`);
   const started = performance.now();
@@ -619,6 +621,7 @@ export async function generateWithCodex(
   };
   try {
     const args = await readonlyArgs(command, directory, deadline, log);
+    deadline.throwIfAborted();
     log("phase", {
       phase,
       status: "completed",
@@ -626,6 +629,8 @@ export async function generateWithCodex(
     });
     phase = "generation";
     phaseStarted = performance.now();
+    timeout = AbortSignal.timeout(100_000);
+    deadline = AbortSignal.any([signal, timeout]);
     await writeFile(schemaFile, JSON.stringify(schema), {
       mode: 0o600,
       flag: "wx",

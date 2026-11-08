@@ -26,6 +26,11 @@ in
 {
   options.services.slackMessageReview = {
     enable = lib.mkEnableOption "Slack pre-send AI review at login";
+    ignoreConversations = lib.mkOption {
+      type = lib.types.listOf lib.types.nonEmptyStr;
+      default = [ ];
+      description = "Exact conversation display names that bypass AI review and confirmation before sending.";
+    };
     codexCommand = lib.mkOption {
       type = lib.types.nullOr lib.types.nonEmptyStr;
       default = null;
@@ -101,6 +106,7 @@ in
             SLACK_REVIEW_SERVICE_TIER = if cfg.serviceTier == null then "" else cfg.serviceTier;
             SLACK_REVIEW_JEV = "${pkgs.jev}/bin/jev";
             SLACK_REVIEW_PROMPTS_FILE = "${promptsFile}";
+            SLACK_REVIEW_IGNORE_CONVERSATIONS = builtins.toJSON cfg.ignoreConversations;
             SLACK_REVIEW_STATE_DIRECTORY = stateDirectory;
           };
           RunAtLoad = true;

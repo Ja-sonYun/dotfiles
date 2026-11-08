@@ -21,6 +21,7 @@ use tokio::task::JoinSet;
 #[derive(Clone)]
 struct App {
     store: Arc<Mutex<Store>>,
+    runtime: String,
     token: String,
     commands: mpsc::Sender<Value>,
     stop: Arc<Notify>,
@@ -112,6 +113,13 @@ fn response(result: Result<Value>) -> Response {
         )
             .into_response(),
     }
+}
+
+async fn health(State(app): State<App>, headers: HeaderMap) -> Response {
+    response((|| {
+        authorize(&app, &headers)?;
+        Ok(json!({ "runtime": app.runtime }))
+    })())
 }
 
 async fn snapshot(State(app): State<App>, headers: HeaderMap) -> Response {
@@ -386,6 +394,7 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
     let (logger, log_worker) = crate::logging::Logger::start(config.log_command.clone());
     let app = App {
         logger,
+        runtime: crate::runtime()?,
         store: Arc::new(Mutex::new(Store::open(
             &root.join("state.sqlite3"),
             fresh_since,
@@ -401,7 +410,7 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
         notifications: config.notifications.clone(),
         deliveries: Arc::new(Mutex::new(JoinSet::new())),
     };
-    app.store.lock().unwrap().snapshot.runtime = crate::runtime()?;
+    app.store.lock().unwrap().snapshot.runtime = app.runtime.clone();
     let observer_app = app.clone();
     let observer_config = config.clone();
     let observer = tokio::spawn(async move {
@@ -717,6 +726,7 @@ pub async fn serve(root: PathBuf, config: Config) -> Result<()> {
     });
     let shutdown = app.stop.clone();
     let router = Router::new()
+        .route("/health", post(health))
         .route("/snapshot", post(snapshot))
         .route("/observation/context", post(observation_context))
         .route("/mark-read", post(mark_read))

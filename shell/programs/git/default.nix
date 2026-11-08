@@ -123,6 +123,7 @@
       ".direnv"
       ".tmp"
       ".root"
+      ".worktree"
 
       ".ccls-cache"
       "compile_commands.json"

@@ -234,15 +234,36 @@ async fn ensure_runtime(root: &Path, replace: bool) -> Result<Client> {
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
     let mut started = false;
+    let mut last_error = String::from("health check was not attempted before the startup deadline");
     while tokio::time::Instant::now() < deadline {
-        if let Ok(client) = Client::load(root) {
-            if let Ok(Ok(snapshot)) = tokio::time::timeout(
+        let health = async {
+            let client = Client::load(root).context("cannot load hub endpoint")?;
+            let health = tokio::time::timeout(
                 Duration::from_millis(500),
-                client.post("/snapshot", &Value::Null),
+                client.post("/health", &Value::Null),
             )
             .await
-            {
-                if !replace || snapshot["runtime"].as_str() == Some(expected.as_str()) {
+            .context("hub /health timed out after 500ms")?
+            .context("hub /health request failed");
+            let reusable = match health {
+                Ok(health) => !replace || health["runtime"].as_str() == Some(expected.as_str()),
+                Err(error)
+                    if replace
+                        && error
+                            .downcast_ref::<reqwest::Error>()
+                            .and_then(|error| error.status())
+                            == Some(reqwest::StatusCode::NOT_FOUND) =>
+                {
+                    false
+                }
+                Err(error) => return Err(error),
+            };
+            Ok::<_, anyhow::Error>((client, reusable))
+        }
+        .await;
+        match health {
+            Ok((client, reusable)) => {
+                if reusable {
                     return Ok(client);
                 }
                 client.post("/stop", &Value::Null).await?;
@@ -262,6 +283,7 @@ async fn ensure_runtime(root: &Path, replace: bool) -> Result<Client> {
                 }
                 started = false;
             }
+            Err(error) => last_error = format!("{error:#}"),
         }
         if !started {
             start(root, now())?;
@@ -269,7 +291,10 @@ async fn ensure_runtime(root: &Path, replace: bool) -> Result<Client> {
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
-    bail!("hub did not start; see {}", root.join("hub.log").display())
+    bail!(
+        "hub unavailable after 30s: {last_error}; see {}",
+        root.join("hub.log").display()
+    )
 }
 
 #[tokio::main]

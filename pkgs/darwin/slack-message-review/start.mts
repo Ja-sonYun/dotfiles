@@ -37,16 +37,29 @@ import { review } from "./review.mjs";
 import { classify } from "./classify.mjs";
 
 const endpoint = "http://127.0.0.1:9222";
+const ignoreConversations: unknown = JSON.parse(
+  requiredSetting("SLACK_REVIEW_IGNORE_CONVERSATIONS"),
+);
+if (
+  !Array.isArray(ignoreConversations) ||
+  !ignoreConversations.every(
+    (name: unknown) => typeof name === "string" && name.length > 0,
+  )
+) {
+  throw new Error("Invalid ignored conversations.");
+}
 const draftSource = await readFile(
   new URL("./draft.js", import.meta.url),
   "utf8",
 );
-const source = (
-  await readFile(new URL("./hook.js", import.meta.url), "utf8")
-).replace(
-  "/* @draft@ */ null",
-  () => `(() => {\n${draftSource}\nreturn createDraftTools();\n})()`,
-);
+const source = (await readFile(new URL("./hook.js", import.meta.url), "utf8"))
+  .replace(
+    "/* @draft@ */ null",
+    () => `(() => {\n${draftSource}\nreturn createDraftTools();\n})()`,
+  )
+  .replace("/* @ignoreConversations@ */ []", () =>
+    JSON.stringify(ignoreConversations),
+  );
 const lifecycle = new AbortController();
 process.on("SIGINT", () => lifecycle.abort());
 process.on("SIGTERM", () => lifecycle.abort());

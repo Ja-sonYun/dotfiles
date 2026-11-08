@@ -240,7 +240,8 @@ function ancestry(
 
 export async function register(request: Registration): Promise<Location> {
   const current = await location();
-  const chain = ancestry(await processes(), process.ppid);
+  const processMap = await processes();
+  const chain = ancestry(processMap, process.ppid);
   const patterns: Record<string, RegExp | undefined> = {
     codex: /(?:^|\/)\.?codex(?:[\s/.-]|$)|@openai\/codex\//,
     claude: /(?:^|\/)\.?claude(?:[\s/.-]|$)|@anthropic-ai\/claude-code\//,
@@ -284,7 +285,10 @@ export async function register(request: Registration): Promise<Location> {
   if (
     pane.owner &&
     (pane.owner.at > request.at ||
-      (pane.owner.id !== id && request.event !== "SessionStart"))
+      (pane.owner.id !== id &&
+        request.event !== "SessionStart" &&
+        (request.identity !== "root" ||
+          processMap.get(pane.owner.pid)?.started === pane.owner.started)))
   )
     return current;
   const identity = {

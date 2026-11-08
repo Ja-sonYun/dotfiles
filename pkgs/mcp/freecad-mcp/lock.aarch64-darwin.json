@@ -17,10 +17,10 @@
       },
       "anyio": {
         "is_direct": false,
-        "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+        "sha256": "c66ae634e0b8228396b801741beb3294326d4b6102f7bba4041c0dfb58c29026",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl",
-        "version": "4.15.1"
+        "url": "https://files.pythonhosted.org/packages/a9/16/7757fb84c819accc7d7e9af5291b261e4abb8627ee040f99e7d35ef2457a/anyio-4.16.0-py3-none-any.whl",
+        "version": "4.16.0"
       },
       "attrs": {
         "is_direct": false,
@@ -45,10 +45,10 @@
       },
       "click": {
         "is_direct": false,
-        "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+        "sha256": "8bb5376d2006950386f8c6427613334a2acadc5f559cb80e638d00b4df957e37",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
-        "version": "8.5.0"
+        "url": "https://files.pythonhosted.org/packages/31/7d/164b7ffc8624fe9efb4221bf9af485d5c1e41b9ae118045d2b6dc5457d8b/click-8.5.1-py3-none-any.whl",
+        "version": "8.5.1"
       },
       "cryptography": {
         "is_direct": false,
@@ -59,10 +59,10 @@
       },
       "freecad-mcp": {
         "is_direct": false,
-        "sha256": "9912ad05bf2a08888bb208ed080b3402bf9b468ba778c70e18382586aecbabb4",
+        "sha256": "2bf70ce0baf517ce90e737a665b4cfdfdd93c135fcd3b55f50191c3237c14a67",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/e4/30/3e61e062b843b29cff614b87397ee85e1300cdca28e9e6d7cbe54bea5a2f/freecad_mcp-0.1.28-py3-none-any.whl",
-        "version": "0.1.28"
+        "url": "https://files.pythonhosted.org/packages/7e/6d/16c7ee4639010b82a489609ade7550ea29ef62e2dc350085925c2ce189b0/freecad_mcp-0.1.30-py3-none-any.whl",
+        "version": "0.1.30"
       },
       "h11": {
         "is_direct": false,
@@ -136,10 +136,10 @@
       },
       "opentelemetry-api": {
         "is_direct": false,
-        "sha256": "b31553efa588ae44bc306f863c785c5333a9ecc091248c6ee68b4b6c87fdedfb",
+        "sha256": "2cbd737377e710ee740d261c94e93fa0f08e6d037c18f17513cc0a2d94479a34",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/1e/41/f7dcf80b81ee8e71c1a2b59f14208bc723edbd89ed027a73b175abf6348e/opentelemetry_api-1.45.1-py3-none-any.whl",
-        "version": "1.45.1"
+        "url": "https://files.pythonhosted.org/packages/a9/2d/610db864d7513158cebb8f36cc88e67e73bd6c7aa1905ef18d89e1281c81/opentelemetry_api-1.45.2-py3-none-any.whl",
+        "version": "1.45.2"
       },
       "pycparser": {
         "is_direct": false,
@@ -150,17 +150,17 @@
       },
       "pydantic": {
         "is_direct": false,
-        "sha256": "9195d967ec791692a04438115466764fb8b9a27b31f14a760437694f40d6b454",
+        "sha256": "3f7b347782ab7e4cf4c798496ae3a82787d9f21ec12676a9c564355eeef8daa8",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/35/ea/a56b9fe5066f3537b7882f77e9c5dfb26d8c2eefdaed9b5fc73d57b4dc22/pydantic-2.14.1-py3-none-any.whl",
-        "version": "2.14.1"
+        "url": "https://files.pythonhosted.org/packages/72/b8/b864503789ef5c58597d2a7b4adbee62c26440ab1e682581fc6838df8947/pydantic-2.14.3-py3-none-any.whl",
+        "version": "2.14.3"
       },
       "pydantic-core": {
         "is_direct": false,
-        "sha256": "e8e1d6ce820aa23317e8209a86bd65a540973c12dc7552b48a4f6c8e9926815e",
+        "sha256": "1e20cbde2b6deb33a51d08cd168454dd9044ec7d4474056f4d98d63f51578783",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/db/a3/f8b1b39349c33037c73d7a1b794c9c29d8f07d5bd2b74399c1375a529cc6/pydantic_core-2.50.1-cp312-cp312-macosx_11_0_arm64.whl",
-        "version": "2.50.1"
+        "url": "https://files.pythonhosted.org/packages/c1/39/6618e541658d5a687a8d4962fc304350073a8f322bc4c62e8ed4c2d514d6/pydantic_core-2.50.4-cp312-cp312-macosx_11_0_arm64.whl",
+        "version": "2.50.4"
       },
       "pygments": {
         "is_direct": false,
@@ -185,10 +185,10 @@
       },
       "python-multipart": {
         "is_direct": false,
-        "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+        "sha256": "8f16c07b36add9da6b2ee87d3efcaf0a45a6de9c3d0a5dd94e9ccf7675a7bc45",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl",
-        "version": "0.0.32"
+        "url": "https://files.pythonhosted.org/packages/dd/1b/6b1b4164ec734cac911460ab599bfbe46afedd42c5c9627fe4235942c314/python_multipart-0.0.33-py3-none-any.whl",
+        "version": "0.0.33"
       },
       "referencing": {
         "is_direct": false,
@@ -220,10 +220,10 @@
       },
       "sse-starlette": {
         "is_direct": false,
-        "sha256": "a6cdcfec47b952911b1d99a7b8056429b5984039b875bf6575174220364b551f",
+        "sha256": "f1d3136caa12d129284fca3d2ded79bc9af943320b6472712955fea52a6d3eea",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/61/98/658d1681bc6dc0b0f7f695aee4337de79decd0ccaec6d000a76b5cbdca6d/sse_starlette-3.5.1-py3-none-any.whl",
-        "version": "3.5.1"
+        "url": "https://files.pythonhosted.org/packages/6a/11/25cabac0a24fa76f58637d8671b549c90d818d69d26beecf0c59a3b186e0/sse_starlette-3.7.0-py3-none-any.whl",
+        "version": "3.7.0"
       },
       "starlette": {
         "is_direct": false,
@@ -241,10 +241,10 @@
       },
       "typer": {
         "is_direct": false,
-        "sha256": "e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff",
+        "sha256": "afd18929180b706c5e9a239f53c3c8136903553c0c2d460598bbaa924191d4ab",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl",
-        "version": "0.27.3"
+        "url": "https://files.pythonhosted.org/packages/19/98/8ef60c7cd773dbab9d276a4c7bff505913a25b61acd8a9ef01ceeb70f554/typer-0.28.0-py3-none-any.whl",
+        "version": "0.28.0"
       },
       "typing-extensions": {
         "is_direct": false,
@@ -255,10 +255,10 @@
       },
       "typing-inspection": {
         "is_direct": false,
-        "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+        "sha256": "bc210535442b39e1bf2805e0c7a17dfd6a4ace760c84c7f7d16245d23a6b1c39",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl",
-        "version": "0.4.4"
+        "url": "https://files.pythonhosted.org/packages/de/0c/ea2544850a7c135e15033a5c7a8e7211136184b7ae63e2239d557c2b3019/typing_inspection-0.4.5-py3-none-any.whl",
+        "version": "0.4.5"
       },
       "uvicorn": {
         "is_direct": false,
@@ -352,8 +352,8 @@
     }
   },
   "freecadAddon": {
-    "url": "https://files.pythonhosted.org/packages/58/b3/239b8bb1c84eaad23fd147520434ebb8f6d0894359c302dc72d68fc36105/freecad_mcp-0.1.28.tar.gz",
-    "sha256": "06a8fc611220a8a1003cee437e40ec79089878830a2666b9e7c6aa4bc3ee82b1"
+    "url": "https://files.pythonhosted.org/packages/7c/23/3906b0d3fce890311643a81f0012bb1d8c861ef5f0cd2572e95f76704412/freecad_mcp-0.1.30.tar.gz",
+    "sha256": "be5da7ace0d1068547b51f36c4a79ba0e8a2bdf394706bc339128eb773383323"
   },
-  "invalidationHash": "da048fc5c16031c6b85570dc532f1b98e7bad55b0a364be604f173c2a1189b9b"
+  "invalidationHash": "9f18e0b59c59de8df79dae15e7f4987351e446bfc1baf124d81100f830fc1df1"
 }
