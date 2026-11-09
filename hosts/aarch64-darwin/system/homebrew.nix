@@ -62,6 +62,7 @@ let
       "alcove"
       "cleanshot"
       "microsoft-remote-desktop"
+      "amazon-workspaces"
       "protonvpn"
       "autodesk-fusion"
       "macfuse"

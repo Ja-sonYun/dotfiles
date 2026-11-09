@@ -19,6 +19,8 @@ local function query(domain, callback)
 		started = hs.timer.absoluteTime(),
 		stdoutBytes = 0,
 		stderrBytes = 0,
+		outputComplete = false,
+		finalStreamSeen = false,
 	}
 	module.query = request
 	local stdoutChunks, stderrChunks = {}, {}
@@ -40,6 +42,12 @@ local function query(domain, callback)
 				exit_code = request.code,
 				stdout_bytes = request.stdoutBytes,
 				stderr_bytes = request.stderrBytes,
+				stream_stdout_bytes = request.streamStdoutBytes,
+				stream_stderr_bytes = request.streamStderrBytes,
+				termination_stdout_bytes = #(request.stdoutEnd or ""),
+				termination_stderr_bytes = #(request.stderrEnd or ""),
+				output_complete = request.outputComplete,
+				final_stream_seen = request.finalStreamSeen,
 			})
 		end
 		module.query = nil
@@ -50,12 +58,17 @@ local function query(domain, callback)
 		if module.query ~= request then
 			return
 		end
-		local stdout = table.concat(stdoutChunks) .. (request.stdoutEnd or "")
-		local stderr = table.concat(stderrChunks) .. (request.stderrEnd or "")
+		local stdout = table.concat(stdoutChunks)
+		local stderr = table.concat(stderrChunks)
+		request.streamStdoutBytes = #stdout
+		request.streamStderrBytes = #stderr
+		stdout = stdout .. (request.stdoutEnd or "")
+		stderr = stderr .. (request.stderrEnd or "")
 		request.stdoutBytes = #(stdout or "")
 		request.stderrBytes = #(stderr or "")
 		request.stdoutTail = (stdout or ""):sub(-512)
 		request.stderr = (stderr or ""):sub(-1024)
+		request.outputComplete = stdout:match("^%s*%[.*%]%s*$") ~= nil
 		if request.code == nil then
 			return
 		end
@@ -68,10 +81,16 @@ local function query(domain, callback)
 			finish(nil, "exit")
 			return
 		end
+		-- hs.task has no EOF callback; these scalar-only queries end with the outer array.
+		if not request.outputComplete then
+			return
+		end
 		local output = (stdout or ""):gsub(":inf,", ":0,")
 		local ok, result = pcall(hs.json.decode, output)
 		if ok and type(result) == "table" then
 			finish(result)
+		else
+			finish(nil, "invalid-json")
 		end
 	end
 
@@ -82,7 +101,10 @@ local function query(domain, callback)
 		request.stdoutEnd = stdout
 		request.stderrEnd = stderr
 		complete()
-	end, function(_, stdout, stderr)
+	end, function(task, stdout, stderr)
+		if task == nil then
+			request.finalStreamSeen = true
+		end
 		stdoutChunks[#stdoutChunks + 1] = stdout or ""
 		stderrChunks[#stderrChunks + 1] = stderr or ""
 		complete()
@@ -360,8 +382,10 @@ local function refreshOccupancy()
 				refreshSafely()
 			end
 		end
-		if module.pending then
+		if module.pending and occupancy then
 			refreshOccupancy()
+		else
+			module.pending = false
 		end
 	end
 	query("--spaces", function(spaces)

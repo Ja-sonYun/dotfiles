@@ -344,6 +344,17 @@ export async function observe(
     }
     if (!target?.socket || !target.scope || !target.process_id) {
       states[agent.id] = false;
+      console.error(
+        JSON.stringify({
+          event: "agent_observation_excluded",
+          id: agent.id,
+          reason: "missing_location",
+          socket_present: Boolean(target?.socket),
+          pane: target?.pane ?? null,
+          scope: target?.scope ?? null,
+          process_id: target?.process_id ?? null,
+        }),
+      );
       continue;
     }
     if (!sockets.has(target.socket)) {
@@ -367,17 +378,56 @@ export async function observe(
       (pane) => pane.pane === target.pane && pane.scope === target.scope,
     );
     const process = processMap.get(target.process_id);
-    states[agent.id] = Boolean(
-      pane &&
-      !pane.dead &&
-      pane.owner?.id === agent.id &&
-      pane.owner.pid === target.process_id &&
-      pane.owner.started === target.process_started &&
-      process?.started === target.process_started &&
-      ancestry(processMap, target.process_id).some(
+    const candidate = rows.find((row) => row.pane === target.pane);
+    let reason: string | null = null;
+    if (!candidate) {
+      reason = "pane_missing";
+    } else if (!pane) {
+      reason = "scope_mismatch";
+    } else if (pane.dead) {
+      reason = "pane_dead";
+    } else if (pane.owner?.id !== agent.id) {
+      reason = "owner_id_mismatch";
+    } else if (pane.owner.pid !== target.process_id) {
+      reason = "owner_pid_mismatch";
+    } else if (pane.owner.started !== target.process_started) {
+      reason = "owner_start_mismatch";
+    } else if (process?.started !== target.process_started) {
+      reason = "process_start_mismatch";
+    } else if (
+      !ancestry(processMap, target.process_id).some(
         (item) => item.pid === pane.pane_pid,
-      ),
-    );
+      )
+    ) {
+      reason = "ancestry_mismatch";
+    }
+
+    states[agent.id] = reason === null;
+    if (reason !== null) {
+      console.error(
+        JSON.stringify({
+          event: "agent_observation_excluded",
+          id: agent.id,
+          reason,
+          expected: {
+            pane: target.pane,
+            scope: target.scope,
+            pid: target.process_id,
+            started: target.process_started ?? null,
+          },
+          actual: {
+            scope: candidate?.scope ?? null,
+            pane_pid: candidate?.pane_pid ?? null,
+            dead: candidate?.dead ?? null,
+            owner: candidate?.owner ?? null,
+            started: process?.started ?? null,
+            ancestry: ancestry(processMap, target.process_id).map(
+              ({ pid, parent }) => ({ pid, parent }),
+            ),
+          },
+        }),
+      );
+    }
   }
   return states;
 }

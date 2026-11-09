@@ -127,6 +127,9 @@ pub async fn adapter(config: &Config, operation: &str, value: &Value) -> Result<
     if !output.status.success() {
         bail!("{}", String::from_utf8_lossy(&output.stderr));
     }
+    if operation == "observe" && !output.stderr.is_empty() {
+        eprint!("{}", String::from_utf8_lossy(&output.stderr));
+    }
     Ok(serde_json::from_slice(&output.stdout)?)
 }
 
