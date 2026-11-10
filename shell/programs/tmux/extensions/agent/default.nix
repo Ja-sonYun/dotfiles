@@ -41,7 +41,7 @@ lib.mkIf agent.enable {
             };
           }
         ]
-        ++ lib.optionals (!(agent.orchestration.enable && agent.orchestration.menuKey == "A")) [
+        ++ [
           {
             menu = {
               name = "all agents";

@@ -28,6 +28,7 @@ stdenv.mkDerivation {
     ./patches/fullscreen-transition-waits.patch
     ./patches/ax-geometry-errors.patch
     ./patches/response-shutdown.patch
+    ./patches/mouse-drop-warp-frame-capture.patch
   ]
   ++ lib.optional (logClientSource != null) ./patches/shared-logging.patch;
 

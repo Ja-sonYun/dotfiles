@@ -88,7 +88,6 @@ in
 {
   imports = [
     ./hooks.nix
-    ./orchestration.nix
   ];
 
   options.programs.tmux.extensions.agent = {

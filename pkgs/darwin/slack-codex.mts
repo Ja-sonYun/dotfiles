@@ -8,19 +8,9 @@ import { isRecord } from "./contracts.mjs";
 import { start } from "./process.mjs";
 import type { RunningProcess } from "./process.mjs";
 
-// Keep policy checks and session reporting available without granting data mutations.
+// Keep policy checks available without granting data mutations.
 const controlTools: Record<string, string[]> = {
   rules: ["rules_check"],
-  orchestration: [
-    "list_agents",
-    "read_messages",
-    "ack_messages",
-    "report_status",
-    "report_title",
-    "report_task",
-    "report_step",
-    "report_subagent_completion",
-  ],
 };
 
 async function readonlyArgs(

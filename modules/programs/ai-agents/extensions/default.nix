@@ -3,6 +3,5 @@
     ./format-lint
     ./rules
     ./notification
-    ./orchestration
   ];
 }

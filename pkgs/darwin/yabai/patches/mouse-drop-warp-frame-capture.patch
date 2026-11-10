@@ -1,0 +1,16 @@
+Capture destination frames when a mouse drop empties the source space.
+
+Base: https://github.com/asmvik/yabai/commit/dd845723416f5fe92af49fad5ebab00369e07edd
+Source: https://github.com/asmvik/yabai/issues/2817
+
+An empty source returns NULL, which can equal the destination root's parent.
+Capture the destination when no source node was captured, while preserving
+duplicate capture suppression when a source node exists.
+
+--- a/src/mouse_handler.c
++++ b/src/mouse_handler.c
+@@ -188,3 +188,3 @@
+-    if (src_node_rm != src_node_add && src_node_rm != src_node_add->parent) {
++    if (!src_node_rm || (src_node_rm != src_node_add && src_node_rm != src_node_add->parent)) {
+         window_node_capture_windows(src_node_add, &window_list);
+     }

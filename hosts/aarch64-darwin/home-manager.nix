@@ -11,7 +11,6 @@
   imports = [
     ./desktop/finder-sidebar.nix
     ./programs/ai-agent-notification.nix
-    ./programs/agent-hub.nix
   ]
   ++ lib.optionals (hasTag "gui") [
     ./desktop/seamtype.nix
