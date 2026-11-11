@@ -8,6 +8,8 @@ let
   inherit (agent) scripts;
   popupScripts = config.programs.tmux.extensions.popup.scripts;
   sharedRootBindings = import ../../shared-root.nix;
+  dashboardAction =
+    action: "run-shell -b '${agent.dashboardCommand} #{q:socket_path} #{q:session_id} ${action}' ";
 in
 lib.mkIf agent.enable {
   programs = {
@@ -87,6 +89,7 @@ lib.mkIf agent.enable {
           command = "claude-work";
           args = [ "--chrome" ];
           key = "a";
+          kind = "claude";
         }
         {
           command = "pi";
@@ -106,6 +109,12 @@ lib.mkIf agent.enable {
         }
       ];
 
+      bindings.A.command =
+        "run-shell -b 'cd -- #{q:pane_current_path} && exec env "
+        + "TMUX_MENU_CLIENT=#{q:client_name} TMUX_MENU_PANE=#{q:pane_id} "
+        + "TMUX_MENU_ORIGIN_PANE=#{q:pane_id} TMUX_MENU_ORIGIN_WINDOW=#{q:window_id} "
+        + "${scripts}/overview'";
+
       bindings.c.cases = lib.mkBefore [
         {
           whenEnv = [ "TMUX_AGENT_STATUS" ];
@@ -114,45 +123,49 @@ lib.mkIf agent.enable {
       ];
 
       keyTables = {
+        all-agents-view-root.Any.command = "send-keys";
         all-agents-root = sharedRootBindings // {
           "C-q".command = "switch-client -T all-agents-prefix";
+          Left.command = dashboardAction "focus sidebar";
           menuCtrlC = {
             key = "C-c";
-            command = "{ ${agent.rememberOverviewAction}; detach-client }";
+            command = "detach-client";
           };
         };
 
         all-agents-prefix = {
+          A.command = dashboardAction "focus viewer";
           "C-c".command = "send-keys C-c";
-          d.command = "{ ${agent.rememberOverviewAction}; detach-client }";
-          f.command = "{ ${agent.rememberOverviewAction}; detach-client }";
-          "C-f".command = "{ ${agent.rememberOverviewAction}; detach-client }";
-          "C-r".command = "{ ${agent.rememberOverviewAction}; detach-client }";
-          w.command = "{ ${agent.rememberOverviewAction}; detach-client }";
-          s.command = "{ ${agent.rememberOverviewAction}; detach-client }";
-          k.command = "{ ${agent.rememberOverviewAction}; run-shell -b '${config.programs.tmux-menu.showScript} #{q:pane_id} #{q:window_id} #{q:client_name} #{q:pane_current_path}' }";
-          t.command = "{ ${agent.pickerAction} }";
-          n.command = "next-window";
+          d.command = "detach-client";
+          f.command = "detach-client";
+          "C-f".command = "detach-client";
+          "C-r".command = "detach-client";
+          w.command = "detach-client";
+          s.command = "detach-client";
+          k.command = dashboardAction "project-menu #{q:client_name}";
+          c.command = dashboardAction "menu #{q:client_name}";
+          t.command = dashboardAction "focus sidebar";
+          n.command = dashboardAction "select next";
           "C-n" = {
             repeat = true;
-            command = "next-window";
+            command = dashboardAction "select next";
           };
-          p.command = "previous-window";
+          p.command = dashboardAction "select previous";
           "C-p" = {
             repeat = true;
-            command = "previous-window";
+            command = dashboardAction "select previous";
           };
-          l.command = "last-window";
-          "0".command = "select-window -t :=0";
-          "1".command = "select-window -t :=1";
-          "2".command = "select-window -t :=2";
-          "3".command = "select-window -t :=3";
-          "4".command = "select-window -t :=4";
-          "5".command = "select-window -t :=5";
-          "6".command = "select-window -t :=6";
-          "7".command = "select-window -t :=7";
-          "8".command = "select-window -t :=8";
-          "9".command = "select-window -t :=9";
+          l.command = dashboardAction "select last";
+          "0".command = dashboardAction "select 0";
+          "1".command = dashboardAction "select 1";
+          "2".command = dashboardAction "select 2";
+          "3".command = dashboardAction "select 3";
+          "4".command = dashboardAction "select 4";
+          "5".command = dashboardAction "select 5";
+          "6".command = dashboardAction "select 6";
+          "7".command = dashboardAction "select 7";
+          "8".command = dashboardAction "select 8";
+          "9".command = dashboardAction "select 9";
           Up.command = "select-pane -U";
           Down.command = "select-pane -D";
           Left.command = "select-pane -L";
@@ -160,14 +173,14 @@ lib.mkIf agent.enable {
           q.command = "display-panes";
           copy = {
             key = "[";
-            command = "copy-mode";
+            command = dashboardAction "copy";
           };
           paste = {
             key = "]";
             command = "paste-buffer -p";
           };
-          PPage.command = "copy-mode -u";
-          z.command = "resize-pane -Z";
+          PPage.command = dashboardAction "copy page-up";
+          z.command = dashboardAction "focus viewer";
           m = lib.mkIf config.programs.tmux.extensions.popup.enable {
             command = "switch-client -T popupmove";
           };
@@ -182,6 +195,17 @@ lib.mkIf agent.enable {
     tmux-customize = {
       sessions.agent.group = "agent";
       groups = {
+        agent-dashboard = {
+          match.env = "TMUX_AGENT_DASHBOARD";
+          priority = 30;
+          status.enable = false;
+        };
+        agent-view = {
+          match.env = "TMUX_AGENT_VIEW";
+          priority = 20;
+          status.enable = false;
+          window = agent.windowStyles;
+        };
         normal.status.right = lib.mkBefore [ "reconcile" ];
         agent = {
           match.env = "TMUX_AGENT_STATUS";

@@ -25,6 +25,7 @@
     state-get = final.callPackage ../pkgs/cli-tools/state-get { };
     templates-cli = final.callPackage ../pkgs/cli-tools/templates-cli { };
     tmux-menu = final.callPackage ../pkgs/cli-tools/tmux-menu { };
+    tmux-agent-dashboard = final.callPackage ../pkgs/cli-tools/tmux-agent-dashboard { };
 
     awsdac = final.callPackage ../pkgs/cloud/awsdac { };
     cf-tunnel = final.callPackage ../pkgs/cloud/cf-tunnel { };

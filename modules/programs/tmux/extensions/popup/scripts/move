@@ -149,10 +149,9 @@ fi
 	tmux_log_run display-popup -c "$outer" -x "$x" -y "$y" -w "$w" -h "$h" \
 		${border:+-b "$border"} -E "tmux attach -t $(printf '%q' "$session_id")"
 	if [[ "$inner" == _popup_all_agents ]]; then
-		tmux_lock "__popup_lock_$key" || exit 1
-		if [[ -z "$(tmux list-clients -t "$session_id" -F '#{client_name}' 2>/dev/null)" ]]; then
-			tmux kill-session -t "$session_id" 2>/dev/null || true
-		fi
+		finish="$(tmux show-options -gqv @agent_overview_finish_command)"
+		[[ -n "$finish" ]] || exit 1
+		"$finish" "$session_id"
 	fi
 ) &
 popup_pid=$!

@@ -2,6 +2,7 @@ local service = { watchers = {}, task = nil, prepare = 1, prepared = 0, startup 
 local paths = hs.json.decode([==[@paths@]==])
 service.pendingScan = false
 service.stopping = false
+local schedule
 
 local function run()
 	if service.stopping then
@@ -27,7 +28,6 @@ local function run()
 	end
 	service.task = hs.task.new("@command@", function(code, stdout, stderr)
 		service.task = nil
-		local nextScanIn = nil
 		for line in stdout:gmatch("[^\r\n]+") do
 			local ok, response = pcall(hs.json.decode, line)
 			if ok and type(response) == "table" then
@@ -35,8 +35,6 @@ local function run()
 					service.startup = false
 				elseif response.event == "prepare-complete" then
 					service.prepared = math.max(service.prepared, preparation)
-				elseif response.event == "scan-complete" then
-					nextScanIn = response.nextScanIn
 				end
 			end
 		end
@@ -44,15 +42,7 @@ local function run()
 			hs.printf("file-organizer: %s", stderr)
 		end
 		if service.pendingScan then
-			run()
-		elseif
-			not service.stopping
-			and code == 0
-			and type(nextScanIn) == "number"
-			and nextScanIn >= 0
-			and nextScanIn < math.huge
-		then
-			service.scanTimer = hs.timer.doAfter(nextScanIn, run)
+			schedule()
 		end
 	end, arguments)
 	if not service.task:start() then
@@ -61,8 +51,19 @@ local function run()
 	end
 end
 
+schedule = function()
+	if service.stopping then
+		return
+	end
+	if service.task then
+		service.pendingScan = true
+	elseif not service.scanTimer then
+		service.scanTimer = hs.timer.doAfter(1, run)
+	end
+end
+
 for _, path in ipairs(paths) do
-	table.insert(service.watchers, hs.pathwatcher.new(path, run):start())
+	table.insert(service.watchers, hs.pathwatcher.new(path, schedule):start())
 end
 service.daily = hs.timer.doAt("00:05", "1d", function()
 	service.prepare = service.prepare + 1

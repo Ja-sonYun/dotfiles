@@ -16,10 +16,30 @@ session="_popup_all_agents"
 
 inner="$(tmux display-message -p '#{client_name}' 2>/dev/null)" || inner=""
 outer="${TMUX_MENU_CLIENT:-$inner}"
+seen_clients=()
+while [[ -n "$outer" ]]; do
+	for seen in "${seen_clients[@]}"; do
+		if [[ "$seen" == "$outer" ]]; then
+			tmux display-message "agent overview: popup owner cycle"
+			tmux_log error owner_cycle "client=$outer"
+			exit 1
+		fi
+	done
+	seen_clients+=("$outer")
+	outer_session="$(tmux list-clients -F $'#{client_name}\t#{session_name}' |
+		awk -F '\t' -v client="$outer" '$1 == client { print $2; exit }')"
+	if [[ -z "$outer_session" ]]; then
+		outer=""
+		break
+	fi
+	[[ "$outer_session" == popup || "$outer_session" == _popup_* ]] || break
+	key="${outer_session//[^A-Za-z0-9]/_}"
+	outer="$(tmux show-options -gqv "@popup_client_$key")"
+done
 if [[ -z "$outer" ]] || ! tmux list-clients -F '#{client_name}' | grep -qxF "$outer"; then
 	tmux display-message "agent overview: owner client not found"
 	tmux_log warning owner_missing "client=$outer"
-	exit 0
+	exit 1
 fi
 
 if tmux list-clients -t "$session" -F '#{client_name}' 2>/dev/null | grep -q .; then
@@ -27,30 +47,27 @@ if tmux list-clients -t "$session" -F '#{client_name}' 2>/dev/null | grep -q .; 
 	exit 0
 fi
 
-if tmux has-session -t "$session" 2>/dev/null &&
-! error=$(tmux kill-session -t "$session" 2>&1); then
-	if tmux has-session -t "$session" 2>/dev/null; then
-		tmux_log error cleanup_failed "session=$session" "stderr=${error:0:8192}"
-		printf '%s\n' "$error" >&2
-		exit 1
+if tmux has-session -t "$session" 2>/dev/null; then
+	stale_view="$(tmux show-option -qv -t "$session" @agent_dashboard_view 2>/dev/null)" || stale_view=""
+	if [[ -n "$stale_view" ]]; then
+		tmux kill-session -t "$stale_view" 2>/dev/null || true
+	fi
+	if ! error=$(tmux kill-session -t "$session" 2>&1); then
+		if tmux has-session -t "$session" 2>/dev/null; then
+			tmux_log error cleanup_failed "session=$session" "stderr=${error:0:8192}"
+			printf '%s\n' "$error" >&2
+			exit 1
+		fi
 	fi
 fi
 
-mapfile -t windows < <(
-	tmux list-panes -a -F $'#{window_id}\x1f#{@agent_enabled}' 2>/dev/null |
-	awk -F $'\x1f' '$2 == "1" && !seen[$1]++ { print $1 }'
-)
-
-if ((${#windows[@]} == 0)); then
-	tmux display-message "No AI agents"
-	exit 0
-fi
-
 owned_session="$(tmux_log_run new-session -dP -F '#{session_id}' -s "$session" \
-	-e TMUX_AGENT_STATUS=1 \
-	-e TMUX_TITLE_OWNER=agent \
+	-e TMUX_AGENT_STATUS= \
+	-e TMUX_TITLE_OWNER= \
+	-e STATE_COMMAND_NOTIFY= \
+	-e TMUX_AGENT_DASHBOARD=1 \
 	-e TMUX_POPUP_KEEP_OPEN=1 \
-	-e CTRL_C_AS_CLOSE=1)"
+	-e CTRL_C_AS_CLOSE=1 'exec sleep infinity')"
 tmux_log info session_created "session_id=$owned_session" "client=$outer"
 launching=0
 popup_pid=""
@@ -58,40 +75,31 @@ cleanup_overview() {
 	local result=$? level=info
 	((result == 0 || result == 129 || result == 130 || result == 143)) || level=error
 	tmux_log "$level" overview_closed "session_id=$owned_session" "exit_code=$result"
-	if [[ -z "${_TMUX_LOCK_FD:-}" ]]; then
-		tmux_lock __popup_lock__popup_all_agents || return
-	fi
 	if ((launching)); then
-		tmux_log_run kill-session -t "$owned_session" 2>/dev/null || true
 		tmux display-popup -C -c "$outer" 2>/dev/null || true
 		[[ -z "$popup_pid" ]] || wait "$popup_pid" || true
-	elif [[ -z "$(tmux list-clients -t "$owned_session" -F '#{client_name}' 2>/dev/null)" ]]; then
-		tmux_log_run kill-session -t "$owned_session" 2>/dev/null || true
 	fi
 	tmux_unlock
+	"$script_dir/overview-finish" "$owned_session"
 }
 trap cleanup_overview EXIT
 tmux_begin
 tmux_add set-option -t "$session" prefix None
 tmux_add set-option -t "$session" key-table all-agents-root
+tmux_add set-option -t "$session" mouse on
+tmux_add set-option -t "$session" status off
+tmux_add set-option -t "$session" @agent_dashboard_origin "$PWD"
+tmux_add set-option -t "$session" @agent_dashboard_origin_pane "${TMUX_MENU_ORIGIN_PANE:-${TMUX_PANE:-}}"
+tmux_add set-option -t "$session" @agent_dashboard_origin_window "${TMUX_MENU_ORIGIN_WINDOW:-}"
+tmux_add set-option -t "$session" @agent_dashboard_outer "$outer"
 tmux_flush
 
-placeholder="$(tmux list-windows -t "$session" -F '#{window_id}')"
-linked=0
-for window in "${windows[@]}"; do
-	if tmux_log_run link-window -d -s "$window" -t "$session:" 2>/dev/null; then
-		((linked += 1))
-	fi
-done
-
-if ((linked == 0)); then
-	tmux kill-session -t "$session"
-	tmux display-message "No AI agents"
-	exit 0
-fi
-
-tmux_log_run kill-window -t "$placeholder"
-tmux_log info windows_linked "session_id=$owned_session" "placeholder=$placeholder" "count=$linked"
+sidebar="$(tmux display-message -pt "$owned_session:" '#{pane_id}')"
+socket="$(tmux display-message -p '#{socket_path}')"
+dashboard="$(tmux show-option -gqv @agent_dashboard_command)"
+printf -v dashboard_command '%q ' "$dashboard" "$socket" "$owned_session" serve "$sidebar"
+tmux set-window-option -t "$owned_session:" remain-on-exit off
+tmux respawn-pane -k -t "$sidebar" "$dashboard_command"
 
 default_width="$(tmux show-options -gqv @popup_default_width)"
 default_height="$(tmux show-options -gqv @popup_default_height)"
@@ -120,14 +128,6 @@ if [[ -n "$inner" && "$inner" != "$outer" ]]; then
 	done
 fi
 attach=(tmux attach -t "$owned_session")
-last_target="$(tmux show-options -sqv @agent_overview_last)"
-if [[ "$last_target" =~ ^@[0-9]+\.%[0-9]+$ ]] &&
-[[ "$(tmux display-message -pt "$session:$last_target" '#{@agent_enabled}' 2>/dev/null)" == 1 ]]; then
-	attach+=(
-		';' select-window -t "$session:${last_target%%.*}"
-		';' select-pane -t "$session:$last_target"
-	)
-fi
 printf -v attach_command '%q ' "${attach[@]}"
 
 # Keep the lock until attach registers so another opener cannot replace this session.

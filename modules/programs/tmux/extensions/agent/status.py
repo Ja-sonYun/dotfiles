@@ -118,7 +118,7 @@ def update_title(
         "AntigravityStatus",
     }:
         return
-    if event == "UserPromptSubmit" and client != "Codex":
+    if event == "UserPromptSubmit" and client not in {"Codex", "Claude", "Pi"}:
         return
 
     option = "@agent_conversation"
@@ -172,17 +172,35 @@ def update_title(
                 ):
                     title = current["title"]
                     title_known = True
+
+            task = current.get("task", "") if same_session else ""
+            if not isinstance(task, str):
+                task = ""
+            if event == "UserPromptSubmit":
+                prompt = hook_input.get("prompt")
+                if isinstance(prompt, str):
+                    task = next(
+                        (
+                            line.strip()[:240]
+                            for line in prompt.splitlines()
+                            if line.strip()
+                        ),
+                        "",
+                    )
+
             value = {
                 "client": client,
                 "session_id": session_id,
                 "title": title,
                 "title_known": title_known,
+                "task": task,
             }
             if client == "Antigravity":
                 value["run_id"] = os.environ.get("ANTIGRAVITY_RUN_ID", "")
             if value == current:
                 return
             arguments = ["set-option", "-p", "-t", pane, option, json.dumps(value)]
+
         timeout = (
             STATUS_TIMEOUT_SECONDS if deadline is None else deadline - time.monotonic()
         )

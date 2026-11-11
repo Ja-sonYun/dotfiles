@@ -8,6 +8,18 @@ let
   cfg = config.programs.tmux.extensions.agent;
   tmuxRoot = config.programs.tmux.runtime;
   scripts = "${tmuxRoot}/extensions/agent/scripts";
+  dashboardConfig = pkgs.writeText "tmux-agent-dashboard.json" (
+    builtins.toJSON {
+      tmux = lib.getExe config.programs.tmux.package;
+      direnv = lib.getExe pkgs.direnv;
+      menu = toString config.programs.tmux-menu.showScript;
+      colors = cfg.colors.active;
+      inherit (cfg) commands;
+    }
+  );
+  dashboard = pkgs.writeShellScript "tmux-agent-dashboard" ''
+    exec ${lib.getExe pkgs.tmux-agent-dashboard} ${dashboardConfig} "$@"
+  '';
   picker = pkgs.writeShellApplication {
     name = "tmux-agent-picker";
     runtimeInputs = [ config.programs.tmux.package ];
@@ -92,6 +104,12 @@ in
 
   options.programs.tmux.extensions.agent = {
     enable = lib.mkEnableOption "AI agent integration with tmux";
+    dashboardCommand = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = toString dashboard;
+      description = "Agent dashboard command accepting socket, session and action.";
+    };
     commands = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {
@@ -272,6 +290,8 @@ in
 
         setGlobalOptions = {
           "@agent_main_session" = lib.escapeShellArg cfg.mainSession;
+          "@agent_dashboard_command" = lib.escapeShellArg cfg.dashboardCommand;
+          "@agent_overview_finish_command" = lib.escapeShellArg "${scripts}/overview-finish";
         }
         // lib.mapAttrs' (
           state: color: lib.nameValuePair "@agent_count_color_${state}" (lib.escapeShellArg color)

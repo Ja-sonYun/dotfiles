@@ -282,7 +282,7 @@ def move(
     cleanup_copy(record, destination)
 
 
-def run(config: dict, state: dict, persist: Callable[[], None]) -> float | None:
+def run(config: dict, state: dict, persist: Callable[[], None]) -> None:
     now = datetime.now().astimezone()
     first = now.date().replace(day=1)
     monthly_key = now.strftime("%Y.%m")
@@ -403,6 +403,12 @@ def run(config: dict, state: dict, persist: Callable[[], None]) -> float | None:
                 ):
                     matches.append(name)
             completed_download = len(matches) == 1
+            if not completed_download and not (
+                record
+                and record["fingerprint"] == signature
+                and record.get("completedDownload", False)
+            ):
+                continue
             if record is None or record["fingerprint"] != signature:
                 if record and not settle_copy(
                     record, Path(policy["destination"]) / record["month"], persist
@@ -410,7 +416,6 @@ def run(config: dict, state: dict, persist: Callable[[], None]) -> float | None:
                     continue
                 record = {
                     "fingerprint": signature,
-                    "seen": time.time(),
                     "month": record["month"]
                     if record and record["stage"] == "pending"
                     else now.strftime(policy["monthFormat"]),
@@ -419,10 +424,11 @@ def run(config: dict, state: dict, persist: Callable[[], None]) -> float | None:
                 files[path.name] = record
                 persist()
 
-            if record["stage"] in ("ignored", "done", "failed") or (
-                not completed_download and time.time() - record["seen"] < 10
-            ):
+            if record["stage"] in ("ignored", "done", "failed"):
                 continue
+            if not record.get("completedDownload", False):
+                record["completedDownload"] = True
+                persist()
 
             try:
                 if fingerprint(path) != signature:
@@ -470,33 +476,6 @@ def run(config: dict, state: dict, persist: Callable[[], None]) -> float | None:
             records["initialized"] = True
             persist()
 
-    next_scan_in = None
-    for policy in config["policies"]:
-        source = Path(policy["source"])
-        for name, record in state["sources"][str(source)]["files"].items():
-            if record["stage"] != "pending":
-                continue
-            path = source / name
-            if (
-                path.name.startswith(".")
-                or path.suffix.lower() in (*DOWNLOAD_SUFFIXES, ".tmp")
-                or path.is_symlink()
-                or not path.is_file()
-            ):
-                continue
-            try:
-                signature = fingerprint(path)
-            except FileNotFoundError:
-                continue
-            delay = (
-                max(0.0, record["seen"] + 10 - time.time())
-                if signature == record["fingerprint"]
-                else 0.0
-            )
-            if next_scan_in is None or delay < next_scan_in:
-                next_scan_in = delay
-    return next_scan_in
-
 
 def main() -> None:
     def stop(signum: int, frame: object) -> None:
@@ -518,11 +497,8 @@ def main() -> None:
                         record["stage"] = "pending"
             save(path, state)
             print(json.dumps({"event": "resume-complete"}), flush=True)
-        next_scan_in = run(config, state, lambda: save(path, state))
-        response: dict[str, str | float] = {"event": "scan-complete"}
-        if next_scan_in is not None:
-            response["nextScanIn"] = next_scan_in
-        print(json.dumps(response), flush=True)
+        run(config, state, lambda: save(path, state))
+        print(json.dumps({"event": "scan-complete"}), flush=True)
 
 
 if __name__ == "__main__":

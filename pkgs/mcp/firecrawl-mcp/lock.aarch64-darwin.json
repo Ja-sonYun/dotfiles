@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-firecrawl-mcp",
-    "version": "3.38.0",
+    "version": "3.39.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-firecrawl-mcp",
-        "version": "3.38.0",
+        "version": "3.39.0",
         "dependencies": {
-          "firecrawl-mcp": "3.38.0"
+          "firecrawl-mcp": "3.39.0"
         }
       },
       "node_modules/@modelcontextprotocol/core": {
@@ -193,9 +193,9 @@
         }
       },
       "node_modules/firecrawl-mcp": {
-        "version": "3.38.0",
-        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.38.0.tgz",
-        "integrity": "sha512-eEhSgD7u7iWA0xXMm+0xPzP1VVxVDI78PBdWyVcDG2sxC7GrpUoS7YRS2GxGJyf8UvXVwG7j5gQPjbZeQZJzGA==",
+        "version": "3.39.0",
+        "resolved": "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-3.39.0.tgz",
+        "integrity": "sha512-j9lxaJ6ZonHI2JBS4oqW1WWsM6mz3YulOQg9JCNiSJ3TmUUC57iBzw72LekeRD4kTQ3xh90dEzCX0F+rlZKwew==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/server": "2.3.1",
@@ -221,9 +221,9 @@
         }
       },
       "node_modules/follow-redirects": {
-        "version": "1.16.2",
-        "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.2.tgz",
-        "integrity": "sha512-/kVP2U8z596Ia0gwFrwyIeo74ta5aVmSeU1FfAUMAmcEP5EP7zydmag3SLiN64NaRKef3lxsq7i/g7ltJQDGow==",
+        "version": "1.16.3",
+        "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.3.tgz",
+        "integrity": "sha512-toOSoqN6d51Wjf1aOFJYcoVv1aND9rj/CwjLU0Vz40oDuSpWDayCeKe4JpL5NL0WdFvoOOCI3BRo69HahjbR1A==",
         "funding": [
           {
             "type": "individual",
@@ -480,5 +480,5 @@
       }
     }
   },
-  "invalidationHash": "acc16e031a5ea3c620be41fc230eb8e6cd5eb0a94f032841c86a75e1e1845253"
+  "invalidationHash": "4191d1b83e75e034ad2b9308a6c2b6bb9a0d30923fbd916744c41b97c6b7360d"
 }

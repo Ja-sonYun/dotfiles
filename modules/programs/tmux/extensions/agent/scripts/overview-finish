@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$script_dir/../../../scripts/lib/common"
+export TMUX_LOG_COMPONENT=tmux.agent.overview
+
+owned_session="${1:?expected dashboard session id}"
+tmux_lock __popup_lock__popup_all_agents
+tmux has-session -t "$owned_session" 2>/dev/null || exit 0
+clients="$(tmux list-clients -t "$owned_session" -F '#{client_name}')"
+[[ -z "$clients" ]] || exit 0
+
+request="$(tmux show-option -qv -t "$owned_session" @agent_dashboard_menu_request)"
+outer="$(tmux show-option -qv -t "$owned_session" @agent_dashboard_outer)"
+view="$(tmux show-option -qv -t "$owned_session" @agent_dashboard_view)"
+
+if [[ -n "$view" ]] && tmux has-session -t "$view" 2>/dev/null; then
+	if ! tmux_log_run kill-session -t "$view"; then
+		tmux has-session -t "$view" 2>/dev/null && exit 1
+	fi
+fi
+tmux_log_run kill-session -t "$owned_session"
+tmux_unlock
+
+if [[ -n "$request" ]]; then
+	if [[ -z "$outer" ]] || ! tmux list-clients -F '#{client_name}' | grep -qxF "$outer"; then
+		tmux_log error menu_owner_missing "client=$outer"
+		exit 1
+	fi
+	tmux_log_run run-shell -b "$request"
+fi

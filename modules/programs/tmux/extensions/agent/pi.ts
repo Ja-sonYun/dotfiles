@@ -116,6 +116,20 @@ export default function (pi: ExtensionAPI) {
     outcome = "completed";
     return publish(ctx, "UserPromptSubmit");
   });
+  pi.on("message_start", (event, ctx) => {
+    if (event.message.role !== "user") {
+      return;
+    }
+    const content = event.message.content;
+    const prompt =
+      typeof content === "string"
+        ? content
+        : content
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n");
+    return publish(ctx, "UserPromptSubmit", { prompt });
+  });
   pi.on("ui_prompt_start", (_event, ctx) => {
     prompts += 1;
     return publish(ctx, "Notification", { phase: "start" });
