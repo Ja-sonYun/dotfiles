@@ -1,5 +1,4 @@
 import re
-import string
 from typing import Annotated, Self
 
 from pydantic import (
@@ -11,9 +10,6 @@ from pydantic import (
 )
 
 KEYS = {
-    "Enter": "Enter",
-    "Tab": "Tab",
-    "Escape": "Escape",
     "Backspace": "BSpace",
     "Delete": "DC",
     "Up": "Up",
@@ -22,14 +18,6 @@ KEYS = {
     "Right": "Right",
     "Home": "Home",
     "End": "End",
-    "PageUp": "PPage",
-    "PageDown": "NPage",
-    **{f"F{number}": f"F{number}" for number in range(1, 13)},
-    **{
-        f"C-{letter}": f"C-{letter}"
-        for letter in string.ascii_lowercase
-        if letter != "q"
-    },
 }
 
 

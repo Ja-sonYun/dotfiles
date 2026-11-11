@@ -7,9 +7,6 @@
 let
   cfg = config.programs.tmux.extensions.mcp;
   supportedKeys = [
-    "Enter"
-    "Tab"
-    "Escape"
     "Backspace"
     "Delete"
     "Up"
@@ -18,11 +15,7 @@ let
     "Right"
     "Home"
     "End"
-    "PageUp"
-    "PageDown"
-  ]
-  ++ lib.genList (index: "F${toString (index + 1)}") 12
-  ++ map (letter: "C-${letter}") (lib.stringToCharacters "abcdefghijklmnoprstuvwxyz");
+  ];
   configFile = (pkgs.formats.json { }).generate "tmux-mcp.json" {
     inherit (cfg)
       allowedSessionPatterns
@@ -64,11 +57,11 @@ in
       };
     };
     sendKeys = {
-      enable = lib.mkEnableOption "explicitly requested text and key input through tmux MCP";
+      enable = lib.mkEnableOption "explicitly requested shell text preparation and editing through tmux MCP";
       allowedKeys = lib.mkOption {
         type = lib.types.listOf (lib.types.enum supportedKeys);
         default = supportedKeys;
-        description = "Allowed named keys. Ctrl+q and current tmux prefix keys remain prohibited.";
+        description = "Allowed editing keys. Submission keys, control combinations, and current tmux prefix keys remain prohibited. Only the user submits input.";
       };
     };
     redaction = {

@@ -12,6 +12,7 @@
           shortcut = "s";
           command =
             lib.optionalString config.programs.tmux.extensions.sessionCleanup.enable "_tmux-session-cleanup-register subshell && "
+            + lib.optionalString config.programs.tmux.extensions.shell.enable "${config.programs.tmux.extensions.shell.registerCommand} && "
             + "/bin/zsh";
           session = true;
           sessionName = "subshell";

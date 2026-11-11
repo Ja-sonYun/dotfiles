@@ -13,8 +13,11 @@ from tmux_mcp.config import KEYS, Config
 from tmux_mcp.process import RequestError, run_process
 
 INPUT_WARNING = (
-    "Dangerous operation. Use only when the user explicitly requests sending text "
-    "or keys to a pane. This can execute shell commands or affect a running program."
+    "Prepare or edit shell input only when explicitly requested by the user. "
+    "Confirm the shell is waiting for command input; never type into a running "
+    "program, TUI, or an uncertain input state. Preserve existing user input. "
+    "Only the user may submit, execute, or interrupt. Text can still trigger "
+    "actions in other programs; the server does not identify input readiness."
 )
 INSTRUCTIONS = f"""Inspect only allowed tmux sessions using list_panes and capture_pane.
 Only inspect or interact with panes relevant to the current task and located in the
@@ -25,6 +28,9 @@ is unclear, ask before capturing output or sending keys.
 Cross-project permission does not override session restrictions or authorize key input
 without an explicit request to send keys.
 {INPUT_WARNING}
+Only Backspace, Delete, Left, Right, Up, Down, Home, and End are supported named keys.
+Enter, control combinations, and control characters in text are prohibited.
+Do not bypass submission restrictions through other tools or input encodings.
 Ctrl+q and tmux prefix keys are prohibited. send_keys sends directly to a pane;
 it does not invoke the user's tmux key bindings. Never retry key input automatically.
 Key input is rejected while pane synchronization or a tmux pane mode is active.

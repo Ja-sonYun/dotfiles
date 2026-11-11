@@ -7,6 +7,15 @@
 let
   cfg = config.programs.tmux.extensions.shell;
   scripts = "${../..}/extensions/shell/scripts";
+  register = pkgs.writeShellApplication {
+    name = "tmux-subshell-register";
+    runtimeInputs = [ config.programs.tmux.package ];
+    text = ''
+      project="$PWD"
+      [[ "$project" == *';' ]] && project="''${project%;}\\;"
+      exec tmux set-option -t "''${TMUX_PANE:?}" @shell_project "$project"
+    '';
+  };
   picker = pkgs.writeShellApplication {
     name = "tmux-pane-picker";
     runtimeInputs = [
@@ -23,6 +32,12 @@ in
 {
   options.programs.tmux.extensions.shell = {
     enable = lib.mkEnableOption "tmux shell title updates";
+    registerCommand = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${register}/bin/tmux-subshell-register";
+      description = "Register the current directory as the subshell session project.";
+    };
     scripts = lib.mkOption {
       type = lib.types.str;
       readOnly = true;

@@ -145,15 +145,15 @@ lib.mkIf agent.enable {
           k.command = dashboardAction "project-menu #{q:client_name}";
           c.command = dashboardAction "menu #{q:client_name}";
           t.command = dashboardAction "focus sidebar";
-          n.command = dashboardAction "select next";
+          n.command = dashboardAction "cycle next";
           "C-n" = {
             repeat = true;
-            command = dashboardAction "select next";
+            command = dashboardAction "cycle next";
           };
-          p.command = dashboardAction "select previous";
+          p.command = dashboardAction "cycle previous";
           "C-p" = {
             repeat = true;
-            command = dashboardAction "select previous";
+            command = dashboardAction "cycle previous";
           };
           l.command = dashboardAction "select last";
           "0".command = dashboardAction "select 0";
