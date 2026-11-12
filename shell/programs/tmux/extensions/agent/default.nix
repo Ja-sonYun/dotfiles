@@ -130,7 +130,7 @@ lib.mkIf agent.enable {
           "C-q".command = "switch-client -T all-agents-prefix";
           Left.command = ''
             if-shell -F '#{&&:#{==:#{pane_id},#{@agent_dashboard_viewer}},#{!=:#{@agent_dashboard_connected},}}' {
-              run-shell -C 'if-shell -F -t "#{@agent_dashboard_connected}" "##{<=:##{cursor_x},2}" { select-pane -t "#{@agent_dashboard_sidebar}" } { send-keys -t "#{@agent_dashboard_connected}" Left }'
+              run-shell -C 'if-shell -F -t "#{@agent_dashboard_connected}" "##{e|<=|:##{cursor_x},2}" { select-pane -t "#{@agent_dashboard_sidebar}" } { send-keys -t "#{@agent_dashboard_connected}" Left }'
             }
           '';
           menuCtrlC = {

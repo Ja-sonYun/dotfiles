@@ -544,7 +544,7 @@ def main() -> int:
                 pane, enabled, name, in_mode, session = row.split("\x1f")
                 if (
                     enabled != "1"
-                    or name != "codex"
+                    or name not in {"codex", "claude"}
                     or in_mode != "0"
                     or session == "_popup_all_agents"
                 ):
@@ -567,10 +567,9 @@ def main() -> int:
             path = cache_path()
             cache = load(path)
             pane = snapshot(tmux)
-            if (
-                cache.get("owner") == [pane["client"], pane["session"]]
-                and pane["client"] == "Codex"
-            ):
+            if cache.get("owner") == [pane["client"], pane["session"]] and pane[
+                "client"
+            ] in {"Codex", "Claude"}:
                 schedule(path, cache, pane, "screen", status, tmux)
         elif mode == "worker":
             worker(status, rest[0])

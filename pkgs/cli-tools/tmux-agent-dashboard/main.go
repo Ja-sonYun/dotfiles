@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -156,6 +157,15 @@ func (c controller) agents() ([]agent, error) {
 		})
 	}
 	sort.Slice(agents, func(i, j int) bool {
+		left, right := agents[i].Path, agents[j].Path
+		leftLength, rightLength := utf8.RuneCountInString(left), utf8.RuneCountInString(right)
+		if leftLength != rightLength {
+			return leftLength < rightLength
+		}
+		if left != right {
+			return left < right
+		}
+
 		a, _ := strconv.Atoi(strings.TrimPrefix(agents[i].Pane, "%"))
 		b, _ := strconv.Atoi(strings.TrimPrefix(agents[j].Pane, "%"))
 		return a < b
