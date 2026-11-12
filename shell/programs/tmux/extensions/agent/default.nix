@@ -57,6 +57,8 @@ lib.mkIf agent.enable {
     };
 
     tmux = {
+      extensions.agent.judgeEnvironment.TYPESAFE_API_KEY._secret =
+        config.age.secrets.typesafe-api-key.path;
       extensions.agent.commands = [
         {
           command = "agent";
@@ -126,16 +128,20 @@ lib.mkIf agent.enable {
         all-agents-view-root.Any.command = "send-keys";
         all-agents-root = sharedRootBindings // {
           "C-q".command = "switch-client -T all-agents-prefix";
-          Left.command = dashboardAction "focus sidebar";
+          Left.command = ''
+            if-shell -F '#{&&:#{==:#{pane_id},#{@agent_dashboard_viewer}},#{!=:#{@agent_dashboard_connected},}}' {
+              run-shell -C 'if-shell -F -t "#{@agent_dashboard_connected}" "##{<=:##{cursor_x},2}" { select-pane -t "#{@agent_dashboard_sidebar}" } { send-keys -t "#{@agent_dashboard_connected}" Left }'
+            }
+          '';
           menuCtrlC = {
             key = "C-c";
-            command = "detach-client";
+            command = "if-shell -F '#{==:#{pane_id},#{@agent_dashboard_viewer}}' 'send-keys C-c'";
           };
         };
 
         all-agents-prefix = {
           A.command = dashboardAction "focus viewer";
-          "C-c".command = "send-keys C-c";
+          "C-c".command = "if-shell -F '#{==:#{pane_id},#{@agent_dashboard_viewer}}' 'send-keys C-c'";
           d.command = "detach-client";
           f.command = "detach-client";
           "C-f".command = "detach-client";

@@ -7,6 +7,8 @@
   pkg-config,
   flex,
   bison,
+  git,
+  python3,
   zlib,
   radare2,
 }:
@@ -14,40 +16,19 @@ let
   ghidraNative = fetchFromGitHub {
     owner = "radareorg";
     repo = "ghidra-native";
-    rev = "483ae94bcbc661a77667e52f1eff75928cb6aa2e";
-    hash = "sha256-3cig2WwnqUiDugyIKrX+hLGXt39J2P+YOM6/LHMDMyU=";
+    rev = "0.7.2";
+    hash = "sha256-/ubxU2uWUr1brql4K9ydS4z1aH4AJyJw2y7cAPFXczE=";
   };
-  # exact diff_files from subprojects/ghidra-native.wrap (0022 is .disabled)
-  patches = [
-    "0001-space-after-comma"
-    "0002-make-sleigharch-public"
-    "0004-public-fields"
-    "0006-readonly-warning"
-    "0010-null-subflow"
-    "0020-Fix-double-free-crash-when-deinitializing-multiple-X"
-    "0023-Undef-LoadImage-for-windows"
-    "0044-bad-unicode-codepoint"
-    "0055-datatype-clone"
-    "0056-nullderef-workaround"
-    "0080-getparent-flow"
-    "0090-nocasts-warnings"
-    "0091-decompiler-xml-packer"
-    "0092-badvar-segfault"
-    "0093-no-virtual-destructor"
-    "0094-parse-64bit-integers"
-    "0100-CHAR-windows"
-    "ghidra-native"
-  ];
 in
 stdenv.mkDerivation {
   pname = "r2ghidra";
-  version = "6.2.4";
+  version = "6.2.6";
 
   src = fetchFromGitHub {
     owner = "radareorg";
     repo = "r2ghidra";
-    rev = "6.2.4";
-    hash = "sha256-xjrYmvDx1bIFA9RafCsAVa+QJE4zpzCFbtMBC/eFWU8=";
+    rev = "6.2.6";
+    hash = "sha256-ttdU6oHihazZb+RL2cRsWZ2T470O6ECdU7CsZQXAH8g=";
   };
 
   nativeBuildInputs = [
@@ -56,6 +37,8 @@ stdenv.mkDerivation {
     pkg-config
     flex
     bison
+    git
+    python3
   ];
   buildInputs = [
     zlib
@@ -64,12 +47,6 @@ stdenv.mkDerivation {
 
   postPatch = ''
     cp -r --no-preserve=mode ${ghidraNative}/. subprojects/ghidra-native
-    cp -r --no-preserve=mode subprojects/packagefiles/ghidra-native/. subprojects/ghidra-native
-    # case-insensitive APFS: the VERSION file shadows libc++ <version>
-    find subprojects/ghidra-native -type f -iname version -delete
-    ${lib.concatMapStringsSep "\n" (
-      p: "patch -p1 -d subprojects/ghidra-native < subprojects/ghidra-native/patches/${p}.patch"
-    ) patches}
 
     # upstream installs into the read-only radare2 store path; redirect into $out
     substituteInPlace meson.build \

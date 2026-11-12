@@ -7,6 +7,7 @@ import time
 from ai_agent_hooks.hook_input import HookInput, is_proposed_plan, load_hook_input
 
 from diagnostics import log_event
+from judge import observe
 
 STATUS_TIMEOUT_SECONDS = 1.0
 CODEX_SESSION_END_BUDGET_SECONDS = 0.8
@@ -372,6 +373,7 @@ def main() -> int:
         deadline = started + CODEX_SESSION_END_BUDGET_SECONDS
         run_status(sys.argv[1], "idle", deadline)
         update_title(sys.argv[2], hook_input, client, deadline)
+        observe(hook_input, client, "idle", sys.argv[1], sys.argv[2])
         return 0
     update_title(sys.argv[2], hook_input, client)
     if sys.argv[1] == "--statusline":
@@ -379,6 +381,7 @@ def main() -> int:
     state = state_for_event(hook_input, client)
     if state is not None:
         run_status(sys.argv[1], state)
+    observe(hook_input, client, state, sys.argv[1], sys.argv[2])
     return 0
 
 

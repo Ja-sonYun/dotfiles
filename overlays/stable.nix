@@ -8,20 +8,14 @@
     };
 
     # Use stable for commonly broken packages
+    inherit (stable) amber-lang;
     inherit (stable) gitui;
     inherit (stable) jujutsu;
     inherit (stable) swift-format;
+    inherit (stable) taskwarrior3;
     inherit (stable) unar;
     inherit (stable) visidata;
 
     inherit (stable) direnv;
-  };
-
-  prev-packages = final: _prev: rec {
-    prev = import inputs.nixpkgs-prev {
-      system = final.stdenv.hostPlatform.system;
-    };
-
-    inherit (prev) atuin;
   };
 }

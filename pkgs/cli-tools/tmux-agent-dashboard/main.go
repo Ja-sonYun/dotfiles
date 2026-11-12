@@ -86,17 +86,52 @@ func (c controller) set(name, value string) error {
 	return err
 }
 
+type dashboardState struct {
+	View, Viewer, Selected, Connected, Pending string
+}
+
+func (c controller) state() (dashboardState, error) {
+	format := "#{@agent_dashboard_view}\x1f#{@agent_dashboard_viewer}\x1f#{@agent_dashboard_selected}\x1f#{@agent_dashboard_connected}\x1f#{@agent_dashboard_pending}"
+	output, err := c.tmux("display-message", "-p", "-t", c.Session+":", format)
+	if err != nil {
+		return dashboardState{}, err
+	}
+	f := strings.SplitN(output, "\x1f", 5)
+	if len(f) != 5 {
+		return dashboardState{}, errors.New("Invalid dashboard state")
+	}
+	return dashboardState{f[0], f[1], f[2], f[3], f[4]}, nil
+}
+
 func (c controller) agents() ([]agent, error) {
-	format := "#{pane_id}\x1f#{window_id}\x1f#{@agent_session_id}\x1f#{@agent_display_name}\x1f#{@agent_state}\x1f#{@agent_project}\x1f#{@agent_conversation}\x1f#{pane_dead}\x1f#{@agent_name}"
-	output, err := c.tmux("list-panes", "-a", "-f", "#{==:#{@agent_enabled},1}", "-F", format)
+	format := "#{pane_id}\x1f#{window_id}\x1f#{@agent_session_id}\x1f#{@agent_display_name}\x1f#{@agent_state}\x1f#{@agent_project}\x1f#{@agent_conversation}\x1f#{pane_dead}\x1f#{@agent_name}\x1f#{@agent_enabled}\x1f#{session_id}\x1f#{@shell_project}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{window_index}\x1f#{pane_index}"
+	filter := "#{||:#{==:#{@agent_enabled},1},#{!=:#{@shell_project},}}"
+	output, err := c.tmux("list-panes", "-a", "-f", filter, "-F", format)
 	if err != nil {
 		return nil, err
 	}
 	seen := map[string]bool{}
+	shells := map[string][]dashboardPane{}
 	var agents []agent
 	for _, line := range strings.Split(output, "\n") {
-		f := strings.SplitN(line, "\x1f", 9)
-		if len(f) != 9 || seen[f[0]] || f[2] == "" || f[2] == c.Session || f[7] == "1" {
+		f := strings.SplitN(line, "\x1f", 16)
+		if len(f) != 16 || seen[f[0]] || f[7] == "1" {
+			continue
+		}
+		if f[9] != "1" {
+			if f[11] == "" {
+				continue
+			}
+			seen[f[0]] = true
+			window, _ := strconv.Atoi(f[14])
+			pane, _ := strconv.Atoi(f[15])
+			shells[f[11]] = append(shells[f[11]], dashboardPane{
+				Pane: f[0], Window: f[1], Owner: f[10], Path: f[12], Command: f[13],
+				WindowIndex: window, PaneIndex: pane,
+			})
+			continue
+		}
+		if f[2] == "" || f[2] == c.Session {
 			continue
 		}
 		seen[f[0]] = true
@@ -126,38 +161,6 @@ func (c controller) agents() ([]agent, error) {
 		return a < b
 	})
 
-	shells, err := c.subshells()
-	if err != nil {
-		return nil, err
-	}
-	for i := range agents {
-		agents[i].Shells = shells[agents[i].Path]
-	}
-	return agents, nil
-}
-
-func (c controller) subshells() (map[string][]dashboardPane, error) {
-	format := "#{pane_id}\x1f#{window_id}\x1f#{session_id}\x1f#{@shell_project}\x1f#{pane_current_path}\x1f#{pane_current_command}\x1f#{window_index}\x1f#{pane_index}"
-	filter := "#{&&:#{!=:#{@shell_project},},#{&&:#{!=:#{@agent_enabled},1},#{!=:#{pane_dead},1}}}"
-	output, err := c.tmux("list-panes", "-a", "-f", filter, "-F", format)
-	if err != nil {
-		return nil, err
-	}
-	shells := map[string][]dashboardPane{}
-	seen := map[string]bool{}
-	for _, line := range strings.Split(output, "\n") {
-		f := strings.SplitN(line, "\x1f", 8)
-		if len(f) != 8 || seen[f[0]] || f[3] == "" {
-			continue
-		}
-		seen[f[0]] = true
-		window, _ := strconv.Atoi(f[6])
-		pane, _ := strconv.Atoi(f[7])
-		shells[f[3]] = append(shells[f[3]], dashboardPane{
-			Pane: f[0], Window: f[1], Owner: f[2], Path: f[4], Command: f[5],
-			WindowIndex: window, PaneIndex: pane,
-		})
-	}
 	for project, panes := range shells {
 		sort.Slice(panes, func(i, j int) bool {
 			if panes[i].WindowIndex != panes[j].WindowIndex {
@@ -170,7 +173,10 @@ func (c controller) subshells() (map[string][]dashboardPane, error) {
 		}
 		shells[project] = panes
 	}
-	return shells, nil
+	for i := range agents {
+		agents[i].Shells = shells[agents[i].Path]
+	}
+	return agents, nil
 }
 
 func shellQuote(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'" }
@@ -192,6 +198,10 @@ func (c controller) viewerClient() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return c.clientForViewer(pane)
+}
+
+func (c controller) clientForViewer(pane string) (string, error) {
 	tty, err := c.tmux("display-message", "-p", "-t", pane, "#{pane_tty}")
 	if err != nil {
 		return "", err
@@ -209,22 +219,12 @@ func (c controller) viewerClient() (string, error) {
 	return "", errors.New("Viewer is not connected")
 }
 
-func (c controller) connectLocked(entry agent, target dashboardPane, focus bool) error {
-	if focus {
-		if err := c.focus("viewer"); err != nil {
-			return err
-		}
-	}
-
-	view, err := c.option("view")
+func (c controller) connectLocked(state dashboardState, entry agent, target dashboardPane, focus bool) error {
+	client, err := c.clientForViewer(state.Viewer)
 	if err != nil {
 		return err
 	}
-	client, err := c.viewerClient()
-	if err != nil {
-		return err
-	}
-	windows, err := c.tmux("list-windows", "-t", view, "-F", "#{window_id}")
+	windows, err := c.tmux("list-windows", "-t", state.View, "-F", "#{window_id}")
 	if err != nil {
 		return err
 	}
@@ -235,32 +235,24 @@ func (c controller) connectLocked(entry agent, target dashboardPane, focus bool)
 		}
 	}
 	if !linked {
-		if _, err := c.tmux("link-window", "-d", "-s", target.Owner+":"+target.Window, "-t", view+":"); err != nil {
+		if _, err := c.tmux("link-window", "-d", "-s", target.Owner+":"+target.Window, "-t", state.View+":"); err != nil {
 			return err
 		}
 	}
-	if _, err := c.tmux("switch-client", "-E", "-c", client, "-t", view+":"+target.Window+"."+target.Pane); err != nil {
-		return err
+	args := []string{"switch-client", "-E", "-c", client, "-t", state.View + ":" + target.Window + "." + target.Pane}
+	if focus {
+		args = append(args, ";", "select-pane", "-t", state.Viewer)
 	}
-	previous, err := c.option("selected")
-	if err != nil {
-		return err
+	if state.Selected != entry.Pane {
+		args = append(args, ";", "set-option", "-t", c.Session, "@agent_dashboard_previous", state.Selected)
 	}
-	if previous != entry.Pane {
-		if err := c.set("previous", previous); err != nil {
-			return err
-		}
-	}
-	if err := c.set("selected", entry.Pane); err != nil {
-		return err
-	}
-	if err := c.set("connected", target.Pane); err != nil {
-		return err
-	}
-	if _, err := c.tmux("set-option", "-s", "@agent_overview_last", entry.Window+"."+entry.Pane); err != nil {
-		return err
-	}
-	return nil
+	args = append(args,
+		";", "set-option", "-t", c.Session, "@agent_dashboard_selected", entry.Pane,
+		";", "set-option", "-t", c.Session, "@agent_dashboard_connected", target.Pane,
+		";", "set-option", "-s", "@agent_overview_last", entry.Window+"."+entry.Pane,
+	)
+	_, err = c.tmux(args...)
+	return err
 }
 
 func (c controller) focus(which string) error {
@@ -299,7 +291,7 @@ func (c controller) copyMode(pageUp bool) error {
 	return c.focus("viewer")
 }
 
-func (c controller) selectAgent(selection, pane string, initial bool) error {
+func (c controller) selectAgent(selection string, initial, focus bool) error {
 	lock, err := c.lock()
 	if err != nil {
 		return err
@@ -313,16 +305,16 @@ func (c controller) selectAgent(selection, pane string, initial bool) error {
 	if len(agents) == 0 {
 		return nil
 	}
-	current, err := c.option("selected")
+	state, err := c.state()
 	if err != nil {
 		return err
 	}
-	if initial && current != "" {
+	if initial && state.Selected != "" {
 		return nil
 	}
 	index := 0
 	for i, entry := range agents {
-		if entry.Pane == current {
+		if entry.Pane == state.Selected {
 			index = i
 		}
 	}
@@ -345,12 +337,7 @@ func (c controller) selectAgent(selection, pane string, initial bool) error {
 		if strings.HasPrefix(selection, "%") {
 			for _, entry := range agents {
 				if entry.Pane == selection {
-					for _, target := range entry.targets() {
-						if pane == target.Pane || (pane == "" && target.Pane == entry.Pane) {
-							return c.connectLocked(entry, target, true)
-						}
-					}
-					return errors.New("Pane exited")
+					return c.connectLocked(state, entry, entry.dashboardPane, focus)
 				}
 			}
 			return errors.New("Agent exited")
@@ -364,7 +351,7 @@ func (c controller) selectAgent(selection, pane string, initial bool) error {
 		}
 	}
 	index = (index%len(agents) + len(agents)) % len(agents)
-	return c.connectLocked(agents[index], agents[index].dashboardPane, true)
+	return c.connectLocked(state, agents[index], agents[index].dashboardPane, focus)
 }
 
 func (c controller) cycle(direction string) error {
@@ -378,22 +365,18 @@ func (c controller) cycle(direction string) error {
 	if err != nil {
 		return err
 	}
-	selected, err := c.option("selected")
-	if err != nil {
-		return err
-	}
-	connected, err := c.option("connected")
+	state, err := c.state()
 	if err != nil {
 		return err
 	}
 	for _, entry := range agents {
-		if entry.Pane != selected {
+		if entry.Pane != state.Selected {
 			continue
 		}
 		targets := entry.targets()
 		index := 0
 		for i, target := range targets {
-			if target.Pane == connected {
+			if target.Pane == state.Connected {
 				index = i
 			}
 		}
@@ -403,7 +386,7 @@ func (c controller) cycle(direction string) error {
 			index++
 		}
 		index = (index + len(targets)) % len(targets)
-		return c.connectLocked(entry, targets[index], true)
+		return c.connectLocked(state, entry, targets[index], true)
 	}
 	return nil
 }
@@ -602,17 +585,24 @@ type snapshot struct {
 	Parent, Connected, Error string
 	Ready                    bool
 }
-type actionResult struct{ Err error }
+type actionResult struct {
+	Err   error
+	Pane  string
+	Focus bool
+}
+type focusResult struct{ Err error }
 type tick struct{}
 
 type model struct {
 	Controller               controller
 	Agents                   []agent
-	Selected, Cursor         string
+	Selected, Pending        string
 	Parent, Connected, Error string
 	Width, Height, Offset    int
 	Busy                     bool
+	PendingFocus             bool
 	Initial                  string
+	Ready                    bool
 	Started                  bool
 	Focused                  bool
 }
@@ -628,32 +618,26 @@ func (m model) refresh() tea.Msg {
 	if err != nil {
 		return snapshot{Error: err.Error()}
 	}
-	pending, err := m.Controller.option("pending")
+	state, err := m.Controller.state()
 	if err != nil {
 		return snapshot{Error: err.Error()}
 	}
-	if pending != "" {
+	if state.Pending != "" {
 		for _, entry := range agents {
-			if entry.Pane == pending {
-				if err := m.Controller.connectLocked(entry, entry.dashboardPane, true); err != nil {
+			if entry.Pane == state.Pending {
+				if err := m.Controller.connectLocked(state, entry, entry.dashboardPane, true); err != nil {
 					return snapshot{Error: err.Error()}
 				}
 				if err := m.Controller.set("pending", ""); err != nil {
 					return snapshot{Error: err.Error()}
 				}
+				state.Selected, state.Connected = entry.Pane, entry.Pane
 				break
 			}
 		}
 	}
 
-	parent, err := m.Controller.option("selected")
-	if err != nil {
-		return snapshot{Error: err.Error()}
-	}
-	connected, err := m.Controller.option("connected")
-	if err != nil {
-		return snapshot{Error: err.Error()}
-	}
+	parent, connected := state.Selected, state.Connected
 	if parent != "" {
 		found := false
 		for _, entry := range agents {
@@ -666,7 +650,7 @@ func (m model) refresh() tea.Msg {
 					}
 				}
 				if !paneExists {
-					if err := m.Controller.connectLocked(entry, entry.dashboardPane, false); err != nil {
+					if err := m.Controller.connectLocked(state, entry, entry.dashboardPane, false); err != nil {
 						return snapshot{Error: err.Error()}
 					}
 					connected = entry.Pane
@@ -684,7 +668,7 @@ func (m model) refresh() tea.Msg {
 
 	ready := true
 	if !m.Started {
-		_, err := m.Controller.viewerClient()
+		_, err := m.Controller.clientForViewer(state.Viewer)
 		ready = err == nil
 	}
 	return snapshot{Agents: agents, Parent: parent, Connected: connected, Ready: ready}
@@ -700,15 +684,17 @@ func (m model) index() int {
 	return 0
 }
 
-func (m model) visibleAgents() int { return max(0, (m.Height-7)/3) }
+func (m model) visibleAgents() int { return max(0, (m.Height-6)/4) }
 
-func (m model) targetIndex(entry agent) int {
-	for i, target := range entry.targets() {
-		if target.Pane == m.Cursor {
-			return i
-		}
+func (m *model) startPending() tea.Cmd {
+	if !m.Ready || m.Busy || m.Pending == "" {
+		return nil
 	}
-	return 0
+	pane, focus := m.Pending, m.PendingFocus
+	m.Pending, m.PendingFocus = "", false
+	m.Started, m.Busy = true, true
+	controller := m.Controller
+	return func() tea.Msg { return actionResult{controller.selectAgent(pane, false, false), pane, focus} }
 }
 
 func (m *model) scrollToSelection() {
@@ -724,10 +710,6 @@ func (m *model) scrollToSelection() {
 
 func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	index := m.index()
-	targetIndex := 0
-	if len(m.Agents) > 0 {
-		targetIndex = m.targetIndex(m.Agents[index])
-	}
 	move := 0
 	connect := false
 	switch msg := message.(type) {
@@ -741,10 +723,11 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.refresh
 	case snapshot:
 		m.Error = msg.Error
+		m.Ready = msg.Error == "" && msg.Ready
 		if msg.Error == "" {
 			m.Agents = msg.Agents
-			if !m.Focused && msg.Parent != "" {
-				m.Selected, m.Cursor = msg.Parent, msg.Connected
+			if !m.Focused && !m.Busy && m.Pending == "" && msg.Parent != "" {
+				m.Selected = msg.Parent
 			}
 			m.Parent, m.Connected = msg.Parent, msg.Connected
 			if msg.Connected != "" {
@@ -753,15 +736,17 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			index = m.index()
 			if len(m.Agents) > 0 {
 				m.Selected = m.Agents[index].Pane
-				m.Cursor = m.Agents[index].targets()[m.targetIndex(m.Agents[index])].Pane
 			} else {
-				m.Selected, m.Cursor = "", ""
+				m.Selected, m.Pending = "", ""
 				m.Offset = 0
 			}
 		}
 		m.scrollToSelection()
 		next := tea.Tick(time.Second, func(time.Time) tea.Msg { return tick{} })
-		if !m.Started && msg.Error == "" && msg.Ready && len(m.Agents) > 0 {
+		if pending := m.startPending(); pending != nil {
+			return m, tea.Batch(next, pending)
+		}
+		if !m.Started && m.Ready && len(m.Agents) > 0 {
 			m.Started, m.Busy = true, true
 			entry := m.Agents[0]
 			for _, candidate := range m.Agents {
@@ -770,12 +755,24 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
-			m.Selected, m.Cursor = entry.Pane, entry.Pane
-			return m, tea.Batch(next, func() tea.Msg { return actionResult{m.Controller.selectAgent(entry.Pane, "", true)} })
+			m.Selected = entry.Pane
+			return m, tea.Batch(next, func() tea.Msg {
+				return actionResult{m.Controller.selectAgent(entry.Pane, true, false), entry.Pane, true}
+			})
 		}
 		return m, next
 	case actionResult:
 		m.Busy = false
+		if msg.Err != nil {
+			m.Error = msg.Err.Error()
+		}
+		next := m.startPending()
+		if next == nil && m.Pending == "" && msg.Err == nil && msg.Focus && m.Selected == msg.Pane {
+			controller := m.Controller
+			next = func() tea.Msg { return focusResult{controller.focus("viewer")} }
+		}
+		return m, next
+	case focusResult:
 		if msg.Err != nil {
 			m.Error = msg.Err.Error()
 		}
@@ -787,8 +784,6 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			move = 1
 		case "enter", "right":
 			connect = true
-		case "ctrl+c":
-			return m, tea.Quit
 		}
 	case tea.MouseMsg:
 		switch msg.Button {
@@ -797,41 +792,22 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.MouseButtonWheelDown:
 			move = 1
 		case tea.MouseButtonLeft:
-			if msg.Action == tea.MouseActionPress && msg.Y >= 3 && msg.Y < 3+m.visibleAgents()*3 {
-				candidate := m.Offset + (msg.Y-3)/3
+			if msg.Action == tea.MouseActionPress && msg.Y >= 3 && msg.Y < 3+m.visibleAgents()*4 && (msg.Y-3)%4 < 2 {
+				candidate := m.Offset + (msg.Y-3)/4
 				if candidate < len(m.Agents) {
-					if (msg.Y-3)%3 == 2 {
-						_, tabs := m.tabStrip(m.Agents[candidate], max(0, m.Width-4))
-						for _, tab := range tabs {
-							if msg.X >= tab.Start+2 && msg.X < tab.End+2 {
-								index, targetIndex, connect = candidate, tab.Index, true
-								break
-							}
-						}
-					} else {
-						index, targetIndex, connect = candidate, 0, true
-					}
+					index, connect = candidate, true
 				}
 			}
 		}
 	}
 	if len(m.Agents) > 0 {
-		targetIndex += move
-		if targetIndex < 0 {
-			index = (index + len(m.Agents) - 1) % len(m.Agents)
-			targetIndex = len(m.Agents[index].targets()) - 1
-		} else if targetIndex >= len(m.Agents[index].targets()) {
-			index = (index + 1) % len(m.Agents)
-			targetIndex = 0
-		}
+		index = (index + move + len(m.Agents)) % len(m.Agents)
 		m.Selected = m.Agents[index].Pane
-		m.Cursor = m.Agents[index].targets()[targetIndex].Pane
 		m.scrollToSelection()
-		if connect && !m.Busy {
-			m.Started, m.Busy = true, true
-			entry := m.Agents[index]
-			pane := m.Cursor
-			return m, func() tea.Msg { return actionResult{m.Controller.selectAgent(entry.Pane, pane, false)} }
+		if connect || move != 0 {
+			m.Pending, m.PendingFocus = m.Selected, connect
+			next := m.startPending()
+			return m, next
 		}
 	}
 	return m, nil
@@ -897,13 +873,9 @@ func projectPath(path string) string {
 	return path
 }
 
-type tabSpan struct {
-	Index, Start, End int
-}
-
-func (m model) tabStrip(entry agent, width int) (string, []tabSpan) {
+func (m model) tabStrip(entry agent, width int) string {
 	if width < 1 {
-		return "", nil
+		return ""
 	}
 	targets := entry.targets()
 	labels := make([]string, len(targets))
@@ -914,18 +886,11 @@ func (m model) tabStrip(entry agent, width int) (string, []tabSpan) {
 			label = fmt.Sprintf("%d %s", i, target.Command)
 		}
 		connected := m.Parent == entry.Pane && m.Connected == target.Pane
-		cursor := m.Focused && m.Selected == entry.Pane && m.Cursor == target.Pane
 		if connected {
 			label = "[" + label + "]"
 			anchor = i
 		}
-		if cursor {
-			label = ">" + label
-		}
 		labels[i] = fit(label, max(1, width-2))
-	}
-	if m.Focused && m.Selected == entry.Pane {
-		anchor = m.targetIndex(entry)
 	}
 	start := 0
 	for start < anchor && lipgloss.Width(strings.Join(labels[start:anchor+1], " · ")) > width-2 {
@@ -936,7 +901,6 @@ func (m model) tabStrip(entry agent, width int) (string, []tabSpan) {
 	if start > 0 && width > 2 {
 		row, used = muted.Render("‹ "), 2
 	}
-	var spans []tabSpan
 	for i := start; i < len(targets); i++ {
 		separator := ""
 		if i > start {
@@ -955,14 +919,10 @@ func (m model) tabStrip(entry agent, width int) (string, []tabSpan) {
 		if m.Parent == entry.Pane && m.Connected == targets[i].Pane {
 			style = lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Bold(true)
 		}
-		if m.Focused && m.Selected == entry.Pane && m.Cursor == targets[i].Pane {
-			style = style.Underline(true)
-		}
-		spans = append(spans, tabSpan{Index: i, Start: used, End: used + size})
 		row += style.Render(labels[i])
 		used += size
 	}
-	return row, spans
+	return row
 }
 
 func (m model) View() string {
@@ -998,6 +958,9 @@ func (m model) View() string {
 	}
 
 	for i := m.Offset; i < len(m.Agents) && i < m.Offset+m.visibleAgents(); i++ {
+		if i > m.Offset {
+			rows = append(rows, "")
+		}
 		entry := m.Agents[i]
 		prefix := "  "
 		style := agentStyle(entry.Kind)
@@ -1010,7 +973,7 @@ func (m model) View() string {
 		gap := strings.Repeat(" ", width-lipgloss.Width(name)-lipgloss.Width(state)-2)
 		path := fitPath(projectPath(entry.Path), (width-2)/3)
 		detail := fit(entry.Title, max(0, width-5-lipgloss.Width(path))) + muted.Render(" · "+path)
-		tabs, _ := m.tabStrip(entry, width-2)
+		tabs := m.tabStrip(entry, width-2)
 		rows = append(rows,
 			prefix+style.Render(name)+gap+m.stateStyle(entry.State).Render(state),
 			"  "+detail,
@@ -1090,7 +1053,7 @@ func run() error {
 		if len(args) != 1 {
 			return errors.New("expected selection")
 		}
-		return c.selectAgent(args[0], "", false)
+		return c.selectAgent(args[0], false, true)
 	case "cycle":
 		if len(args) != 1 || (args[0] != "next" && args[0] != "previous") {
 			return errors.New("expected next or previous")

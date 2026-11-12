@@ -8,6 +8,7 @@ let
   tmuxRoot = config.programs.tmux.runtime;
   package = pkgs.callPackage ./package.nix {
     logSocket = if config.programs.logging.enable then config.programs.logging.socketPath else "";
+    judgeEnvironment = config.programs.tmux.extensions.agent.judgeEnvironment;
   };
   command = lib.escapeShellArgs [
     (lib.getExe package)
@@ -72,6 +73,7 @@ in
     })
     (lib.mkIf (config.programs.tmux.extensions.agent.enable && config.programs.ai-agents.enable) {
       programs = {
+        tmux.setGlobalOptions."@agent_judge_command" = lib.escapeShellArg (lib.getExe package);
         ai-agents = {
           hooks =
             (lib.genAttrs [

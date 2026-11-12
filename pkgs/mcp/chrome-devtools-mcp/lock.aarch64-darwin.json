@@ -1,25 +1,25 @@
 {
   "package-lock": {
     "name": "dotfiles-chrome-devtools-mcp",
-    "version": "1.12.0",
+    "version": "1.13.0",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-chrome-devtools-mcp",
-        "version": "1.12.0",
+        "version": "1.13.0",
         "dependencies": {
-          "chrome-devtools-mcp": "1.12.0"
+          "chrome-devtools-mcp": "1.13.0"
         }
       },
       "node_modules/chrome-devtools-mcp": {
-        "version": "1.12.0",
-        "resolved": "https://registry.npmjs.org/chrome-devtools-mcp/-/chrome-devtools-mcp-1.12.0.tgz",
-        "integrity": "sha512-lAGpH0zXT1ZdaPefP1KK/MvxwihOlu7VGQ7p4wbhD9OhN17vUC4KWk/ImUYR9DE4s+7r4r0ySV4xr2OkTa7ZMA==",
+        "version": "1.13.0",
+        "resolved": "https://registry.npmjs.org/chrome-devtools-mcp/-/chrome-devtools-mcp-1.13.0.tgz",
+        "integrity": "sha512-Yf4qhS0+2oo7c+gOySMDHQt4ZL/yKXG2Mxxzjk0gcArINtcQ3tLiQVzAW6g2nsyQzAGhkcLwWWBAtlx3Bg+Spg==",
         "license": "Apache-2.0",
         "bin": {
-          "chrome-devtools": "build/src/bin/chrome-devtools.js",
-          "chrome-devtools-mcp": "build/src/bin/chrome-devtools-mcp.js"
+          "chrome-devtools": "out/Default/gen/src/bin/chrome-devtools.js",
+          "chrome-devtools-mcp": "out/Default/gen/src/bin/chrome-devtools-mcp.js"
         },
         "engines": {
           "node": "^20.19.0 || ^22.12.0 || >=23"
@@ -39,5 +39,5 @@
       }
     }
   },
-  "invalidationHash": "393e0aa1b7b83726bf6390f5bd1738d13a0c534e12d6cbce6bd7035f2be8971d"
+  "invalidationHash": "f9423841879e4946c1ab4a9a25ee6fc8293bf46e6fd50302d6ec1d6328d682d7"
 }

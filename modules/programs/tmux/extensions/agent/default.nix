@@ -104,6 +104,16 @@ in
 
   options.programs.tmux.extensions.agent = {
     enable = lib.mkEnableOption "AI agent integration with tmux";
+    judgeEnvironment = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.oneOf [
+          lib.types.str
+          pkgs.tool.secretValue.type
+        ]
+      );
+      default = { };
+      description = "Jev worker environment, including runtime secret file references.";
+    };
     dashboardCommand = lib.mkOption {
       type = lib.types.str;
       readOnly = true;

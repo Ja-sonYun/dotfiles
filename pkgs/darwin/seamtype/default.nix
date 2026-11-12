@@ -85,6 +85,11 @@ stdenv.mkDerivation (finalAttrs: {
         ""
   '';
 
+  preBuild = ''
+    export DEVELOPER_DIR=${apple-sdk_15}
+    export SDKROOT="$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+  '';
+
   installPhase = ''
     runHook preInstall
 

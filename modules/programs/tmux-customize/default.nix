@@ -173,10 +173,9 @@ let
     )
   );
 
-  envChecks = lib.concatMapStringsSep "\n" (
-    g:
-    ''if [ -n "$(tmux display-message -pt "$session" '#{E:${g.env}}' 2>/dev/null)" ]; then echo ${g.name}; exit 0; fi''
-  ) envGroups;
+  envGroupFormat = lib.foldr (
+    g: fallback: "#{?#{!=:#{E:${g.env}},},${g.name},${fallback}}"
+  ) "" envGroups;
 
   exactCases = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (n: s: "  ${n}) echo ${s.group}; exit 0 ;;") cfg.sessions
@@ -190,7 +189,7 @@ let
     session="$1"
     [ -z "$session" ] && { echo ${cfg.defaultGroup}; exit 0; }
 
-    ${envChecks}
+    [ -n "$2" ] && { echo "$2"; exit 0; }
 
     case "$session" in
     ${exactCases}
@@ -242,20 +241,35 @@ let
     in
     ''
       apply_${gname}() {
-        local session="$1" only_window="$2" win
+        local session="$1" only_window="$2" win windows
         local -a commands=()
-        ${chain "set-option" "$session" sessionFrags}
-        if [ -n "$only_window" ]; then
-          win="$only_window"
-          ${chain "set-window-option" "$win" winFrags}
-        else
-          while IFS= read -r win; do
-            [ -z "$win" ] && continue
-            ${chain "set-window-option" "$win" winFrags}
-          done < <(tmux list-windows -t "$session" -F '#{window_id}' 2>/dev/null)
+        if [ -z "$only_window" ]; then
+          ${chain "set-option" "$session" sessionFrags}
+          unset 'commands[-1]'
+          tmux_log_run "''${commands[@]}" || {
+            group_apply_failed session-options "" "$?"
+            return "$?"
+          }
         fi
-        unset 'commands[-1]'
-        tmux_log_run "''${commands[@]}"
+
+        if [ -n "$only_window" ]; then
+          windows="$only_window"
+        else
+          windows="$(tmux_log_run list-windows -t "$session" -F '#{window_id}')" || {
+            group_apply_failed list-windows "" "$?"
+            return "$?"
+          }
+        fi
+        while IFS= read -r win; do
+          [ -z "$win" ] && continue
+          commands=()
+          ${chain "set-window-option" "$session:$win" winFrags}
+          unset 'commands[-1]'
+          tmux_log_run "''${commands[@]}" || {
+            group_apply_failed window-options "$win" "$?" || return "$?"
+          }
+        done <<< "$windows"
+        return 0
       }
     '';
 
@@ -272,12 +286,42 @@ let
     window="$2"
     event="$3"
     [ -n "$session" ] || exit 0
-    session_name="$(tmux display-message -pt "$session:" '#{session_name}' 2>/dev/null)" || exit 0
+
+    group_apply_failed() {
+      local stage="$1" failed_window="$2" result="$3" windows win
+      if ! tmux has-session -t "$session" 2>/dev/null; then
+        tmux_log info group_apply_target_gone "stage=$stage" "window_id=$failed_window"
+        exit 0
+      fi
+      if [ -n "$failed_window" ]; then
+        if windows="$(tmux list-windows -t "$session" -F '#{window_id}' 2>/dev/null)"; then
+          while IFS= read -r win; do
+            if [ "$win" = "$failed_window" ]; then
+              tmux_log error group_apply_failed "stage=$stage" "window_id=$failed_window" "exit_code=$result"
+              return "$result"
+            fi
+          done <<< "$windows"
+          tmux_log info group_apply_target_gone "stage=$stage" "window_id=$failed_window"
+          return 0
+        fi
+      fi
+      tmux_log error group_apply_failed "stage=$stage" "window_id=$failed_window" "exit_code=$result"
+      return "$result"
+    }
+
+    snapshot="$(tmux_log_run display-message -pt "$session:" ${esc "#{session_name}\n${envGroupFormat}\n#{@tmc_applied}"})" || {
+      group_apply_failed session-state "" "$?"
+      exit "$?"
+    }
+    {
+      IFS= read -r session_name
+      IFS= read -r env_group
+      IFS= read -r applied
+    } <<< "$snapshot"
 
     ${applyFns}
 
-    group="$(${tmcResolveGroup} "$session_name")"
-    applied="$(tmux show-option -qv -t "$session" @tmc_applied)"
+    group="$(${tmcResolveGroup} "$session_name" "$env_group")"
     signature="${
       builtins.hashString "sha256" (builtins.toJSON { inherit (cfg) groups segments separator; })
     }:$group"
@@ -290,7 +334,10 @@ let
     case "$session_name" in
       _popup_*)
         if [ "$group" = ${esc cfg.defaultGroup} ]; then
-          tmux_log_run set-option -t "$session" status off
+          tmux_log_run set-option -t "$session" status off || {
+            group_apply_failed popup-status "" "$?"
+            exit "$?"
+          }
           exit 0
         fi
         ;;
@@ -299,7 +346,9 @@ let
     ${applyCases}
     esac
     result=0
-    tmux_log_run set-option -q -t "$session" @tmc_applied "$signature" || result=$?
+    tmux_log_run set-option -q -t "$session" @tmc_applied "$signature" || {
+      group_apply_failed signature-write "" "$?" || result=$?
+    }
     if [ "$result" -eq 0 ]; then
       tmux_log info group_apply_complete "session_id=$session" "window_id=$window" "hook=$event" "group=$group"
     fi
@@ -405,13 +454,15 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    programs.tmux.setGlobalOptions = defaultStatusOpts;
-    programs.tmux.setWindowOptions = defaultWindowOpts;
+    programs.tmux = {
+      setGlobalOptions = defaultStatusOpts;
+      setWindowOptions = defaultWindowOpts;
 
-    programs.tmux.hooks = {
-      tmcGroupApplyNewSession = applyHook "after-new-session";
-      tmcGroupApplyNewWindow = applyHook "after-new-window";
-      tmcGroupApplyClientSessionChanged = applyHook "client-session-changed";
+      hooks = {
+        tmcGroupApplyNewSession = applyHook "after-new-session";
+        tmcGroupApplyNewWindow = applyHook "after-new-window";
+        tmcGroupApplyClientSessionChanged = applyHook "client-session-changed";
+      };
     };
 
     home.shellAliases = lib.optionalAttrs cfg.launcher.enable { tm = toString tmcTmux; };
