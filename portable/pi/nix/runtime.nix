@@ -17,9 +17,6 @@ pkgs.lib.makeOverridable (
       private = true;
       dependencies = {
         ${spec.name} = version;
-      }
-      // lib.optionalAttrs (version == "1.5.0") {
-        "@modelcontextprotocol/sdk" = "^1.25.2";
       };
     };
     wrapperArgs = lib.concatStringsSep " " (
@@ -57,7 +54,6 @@ pkgs.lib.makeOverridable (
             pkgs.makeWrapper
             pkgs.patch
             pkgs.jq
-            pkgs.typescript
           ];
           meta.platforms = builtins.attrNames spec.versions;
           postInstall = ''
@@ -65,17 +61,6 @@ pkgs.lib.makeOverridable (
             for patchFile in ${../patches}/*.patch; do
               patch --batch --fuzz=0 -p1 -d "$appRoot" < "$patchFile"
             done
-            ${lib.optionalString (version == "1.5.0") ''
-              mkdir -p declarations-helper
-              cp ${./fix-declarations.mts} declarations-helper/fix-declarations.mts
-              ln -s "$out/lib/node_modules/${config.name}/node_modules" declarations-helper/node_modules
-              tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmitOnError \
-                --target ES2022 --module NodeNext --moduleResolution NodeNext --types node \
-                --typeRoots declarations-helper/node_modules/@types --outDir declarations-helper/compiled \
-                declarations-helper/fix-declarations.mts
-              ${pkgs.nodejs_22}/bin/node declarations-helper/compiled/fix-declarations.mjs \
-                "$out/lib/node_modules/${config.name}/node_modules"
-            ''}
             rm -f "$out/bin/pi"
             makeWrapper "${pkgs.nodejs_22}/bin/node" "$out/bin/pi" \
               --add-flags "$appRoot/dist/cli.js" ${wrapperArgs}

@@ -4,7 +4,7 @@
 
 Upstream status is unchecked; remove only when the pinned version no longer needs the workaround.
 
-- [ ] Amber dependencies — [dev shell](flake/development.nix); remove when nixpkgs supplies pkg-config and libgit2.
+- [x] Amber dependencies — [dev shell](flake/development.nix); removed the local pkg-config and libgit2 override.
 - [ ] tmux popup flicker — [patch](overlays/patches/tmux-3.7c-popup-flicker.patch); remove when pinned tmux includes the backported fixes.
 - [ ] yabai macOS 27 support — [patch](pkgs/darwin/yabai/patches/macos-27.patch); remove when upstream supports the host OS.
 - [ ] yabai IPC hang — [patch](pkgs/darwin/yabai/patches/sa-response-deadline.patch); remove when upstream bounds IPC waits safely.
@@ -17,7 +17,7 @@ Upstream status is unchecked; remove only when the pinned version no longer need
 - [ ] r2dec API compatibility — [package](pkgs/radare2/r2dec/default.nix); remove when r2dec supports the selected radare2 API.
 - [ ] rea bundled dependency links — [override](pkgs/mcp/rea/dream2nix.nix); remove when pinned dream2nix installs bundled dependencies without build-directory symlinks.
 - [ ] tupimage tmux image IDs — [patch](portable/vim/nix/terminal-images/shared-tmux-image-ids.patch); remove when upstream safely shares IDs per server.
-- [ ] Pi 1.5.0 adjustments — [runtime](portable/pi/nix/runtime.nix); remove unused SDK/declaration fixes once no supported version needs them.
+- [x] Pi 1.5.0 adjustments — [runtime](portable/pi/nix/runtime.nix); removed unused SDK/declaration fixes and their helper dependency; no supported version uses 1.5.0.
 
 ## Investigate
 

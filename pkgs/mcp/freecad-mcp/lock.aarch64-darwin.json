@@ -3,10 +3,10 @@
     "sources": {
       "annotated-doc": {
         "is_direct": false,
-        "sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
+        "sha256": "361ca0950cc7082f53fa69e9328409f40a62c61e57e0a47e1825a08078a58a53",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/3e/30/e900b21425a860e195f32e37657aa1f7c7f2b1bfb26f03ca209b90933c06/annotated_doc-0.0.5-py3-none-any.whl",
-        "version": "0.0.5"
+        "url": "https://files.pythonhosted.org/packages/cd/f5/3dd85d583e55be76cd02b1fc9bbec771b12d63124b01661d9535ccf8721f/annotated_doc-0.0.6-py3-none-any.whl",
+        "version": "0.0.6"
       },
       "annotated-types": {
         "is_direct": false,
@@ -59,10 +59,10 @@
       },
       "freecad-mcp": {
         "is_direct": false,
-        "sha256": "2bf70ce0baf517ce90e737a665b4cfdfdd93c135fcd3b55f50191c3237c14a67",
+        "sha256": "aa6858fc9bab3ad808dec5a811244f432b159f125eb02f200d74a3698f479ace",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/7e/6d/16c7ee4639010b82a489609ade7550ea29ef62e2dc350085925c2ce189b0/freecad_mcp-0.1.30-py3-none-any.whl",
-        "version": "0.1.30"
+        "url": "https://files.pythonhosted.org/packages/b7/ee/e90910997224c3c4840343d176f93ab6b2d713a0c8370a9b0e84ddd29c5a/freecad_mcp-0.1.31-py3-none-any.whl",
+        "version": "0.1.31"
       },
       "h11": {
         "is_direct": false,
@@ -108,10 +108,10 @@
       },
       "markdown-it-py": {
         "is_direct": false,
-        "sha256": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a",
+        "sha256": "7aa1511a46c39138de78d9eba92ce47e63124d8003fc98b3a351909e04239efa",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl",
-        "version": "4.2.0"
+        "url": "https://files.pythonhosted.org/packages/c9/31/5f0ac2f1a1c67423c995c731a11cd4ad05d081a2be969d74f868bdb9cc70/markdown_it_py-4.3.0-py3-none-any.whl",
+        "version": "4.3.0"
       },
       "mcp": {
         "is_direct": false,
@@ -241,10 +241,10 @@
       },
       "typer": {
         "is_direct": false,
-        "sha256": "afd18929180b706c5e9a239f53c3c8136903553c0c2d460598bbaa924191d4ab",
+        "sha256": "00dbc549c13428bec1be55fe1f4d0fb8c6637a310e4f178ef14abe9534ee7b58",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/19/98/8ef60c7cd773dbab9d276a4c7bff505913a25b61acd8a9ef01ceeb70f554/typer-0.28.0-py3-none-any.whl",
-        "version": "0.28.0"
+        "url": "https://files.pythonhosted.org/packages/05/ff/51969745f31cea6bcd12151e668febcf979656316e67a7755942267c1273/typer-0.29.1-py3-none-any.whl",
+        "version": "0.29.1"
       },
       "typing-extensions": {
         "is_direct": false,
@@ -343,7 +343,7 @@
         "sse-starlette": ["anyio", "starlette"],
         "starlette": ["anyio", "typing-extensions"],
         "truststore": [],
-        "typer": ["annotated-doc", "rich", "shellingham"],
+        "typer": ["annotated-doc", "pydantic", "rich", "shellingham"],
         "typing-extensions": [],
         "typing-inspection": ["typing-extensions"],
         "uvicorn": ["click", "h11"],
@@ -352,8 +352,8 @@
     }
   },
   "freecadAddon": {
-    "url": "https://files.pythonhosted.org/packages/7c/23/3906b0d3fce890311643a81f0012bb1d8c861ef5f0cd2572e95f76704412/freecad_mcp-0.1.30.tar.gz",
-    "sha256": "be5da7ace0d1068547b51f36c4a79ba0e8a2bdf394706bc339128eb773383323"
+    "url": "https://files.pythonhosted.org/packages/d8/2b/ca3e93ef0a87c9117d3d76819c07d445fa3a73b895c3b77dbddfbd234d17/freecad_mcp-0.1.31.tar.gz",
+    "sha256": "43a611d92fa720f9a01c46f6c538340a4a2fce6de4c4d04c57e35e56053a6e1d"
   },
-  "invalidationHash": "9f18e0b59c59de8df79dae15e7f4987351e446bfc1baf124d81100f830fc1df1"
+  "invalidationHash": "cd0b13bab665a031649d4b1368f6231fa7d61020b42adafd4e25c2be29acfda7"
 }

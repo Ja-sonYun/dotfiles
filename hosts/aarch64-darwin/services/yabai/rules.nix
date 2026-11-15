@@ -97,7 +97,7 @@
   }
   {
     label = "Excel";
-    app = "^Excel$";
+    app = "^(Microsoft Excel|Excel)$";
     manage = "on";
     "sub-layer" = "auto";
   }

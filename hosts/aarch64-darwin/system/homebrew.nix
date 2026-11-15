@@ -13,6 +13,7 @@ let
     "ollama"
     "container"
     "diskonaut"
+    "libimobiledevice"
   ]
   ++ (
     if hasTag "gui" then

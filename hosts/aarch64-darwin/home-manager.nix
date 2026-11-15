@@ -17,8 +17,7 @@
     ./programs/freecad
   ]
   ++ lib.optionals (hasTag "gui" && hasTag "ai") [
-    ./services/slack-message-review.nix
-    ./services/slack-thread-summary.nix
+    ./services/slack-ai-integration.nix
   ];
 
   home = {

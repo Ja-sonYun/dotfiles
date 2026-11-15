@@ -8,7 +8,6 @@
     };
 
     # Use stable for commonly broken packages
-    inherit (stable) amber-lang;
     inherit (stable) gitui;
     inherit (stable) jujutsu;
     inherit (stable) swift-format;

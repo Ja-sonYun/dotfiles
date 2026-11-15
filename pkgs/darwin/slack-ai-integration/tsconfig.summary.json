@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.browser.json",
+  "files": ["summary/browser.d.ts", "summary/timeline.ts", "summary/hook.ts"],
+  "include": []
+}

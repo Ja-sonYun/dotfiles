@@ -1,4 +1,3 @@
-import re
 from typing import Annotated, Self
 
 from pydantic import (
@@ -19,14 +18,6 @@ KEYS = {
     "Home": "Home",
     "End": "End",
 }
-
-
-def session_pattern(value: str) -> str:
-    try:
-        re.compile(value)
-    except re.error:
-        raise ValueError("Invalid session pattern.") from None
-    return value
 
 
 def allowed_key(value: str) -> str:
@@ -64,11 +55,6 @@ class RedactionConfig(ConfigModel):
 
 
 class Config(ConfigModel):
-    allowedSessionPatterns: list[Annotated[str, AfterValidator(session_pattern)]] = (
-        Field(
-            default_factory=list,
-        )
-    )
     capture: CaptureConfig = Field(default_factory=CaptureConfig)
     sendKeys: SendKeysConfig = Field(default_factory=SendKeysConfig)
     redaction: RedactionConfig = Field(default_factory=RedactionConfig)

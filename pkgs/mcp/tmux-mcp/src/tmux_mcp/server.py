@@ -19,14 +19,13 @@ INPUT_WARNING = (
     "Only the user may submit, execute, or interrupt. Text can still trigger "
     "actions in other programs; the server does not identify input readiness."
 )
-INSTRUCTIONS = f"""Inspect only allowed tmux sessions using list_panes and capture_pane.
+INSTRUCTIONS = f"""Use list_panes to find the current project's subshell, then capture_pane to inspect it.
 Only inspect or interact with panes relevant to the current task and located in the
 current project directory or its descendants. Determine scope from pane working-directory
 metadata, not session names alone. Access another project only when the user explicitly
 requests access to that project for the current task. If the project root or pane scope
 is unclear, ask before capturing output or sending keys.
-Cross-project permission does not override session restrictions or authorize key input
-without an explicit request to send keys.
+Cross-project permission does not authorize key input without an explicit request to send keys.
 {INPUT_WARNING}
 Only Backspace, Delete, Left, Right, Up, Down, Home, and End are supported named keys.
 Enter, control combinations, and control characters in text are prohibited.
@@ -111,9 +110,6 @@ def key_identity(key: str) -> str:
 class Tmux:
     def __init__(self, config: Config) -> None:
         self.config = config
-        self.patterns = [
-            re.compile(pattern) for pattern in config.allowedSessionPatterns
-        ]
 
     async def command(self, *args: str) -> bytes:
         return await run_process(
@@ -178,22 +174,12 @@ class Tmux:
             },
         )
 
-    def allowed(self, snapshot: Snapshot, pane_id: str) -> bool:
-        memberships = snapshot.panes.get(pane_id, [])
-        return bool(memberships) and all(
-            any(
-                pattern.fullmatch(snapshot.sessions[session_id])
-                for pattern in self.patterns
-            )
-            for session_id, _ in memberships
-        )
-
     async def require_pane(self, pane_id: str) -> Snapshot:
         if re.fullmatch(r"%\d+", pane_id) is None:
             raise RequestError("Use an exact pane ID returned by list_panes.")
         snapshot = await self.snapshot()
-        if not self.allowed(snapshot, pane_id):
-            raise RequestError("Pane is unavailable or outside the allowed sessions.")
+        if not snapshot.panes.get(pane_id):
+            raise RequestError("Pane is unavailable.")
         return snapshot
 
     async def require_input_target(self, pane_id: str) -> Snapshot:
@@ -224,7 +210,7 @@ class Tmux:
         panes: list[Pane] = []
         names: dict[str, str] = {}
         for pane_id, memberships in snapshot.panes.items():
-            if not self.allowed(snapshot, pane_id):
+            if not memberships:
                 continue
 
             fields: dict[str, str] = {}
@@ -271,8 +257,7 @@ class Tmux:
             panes=[
                 pane
                 for pane in panes
-                if self.allowed(current, pane.pane_id)
-                and current.panes[pane.pane_id] == snapshot.panes[pane.pane_id]
+                if current.panes.get(pane.pane_id) == snapshot.panes[pane.pane_id]
                 and all(
                     current.sessions[session_id] == snapshot.sessions[session_id]
                     for session_id, _ in snapshot.panes[pane.pane_id]
@@ -394,13 +379,13 @@ def create_server(config: Config) -> FastMCP:
     )
     server.tool(
         name="list_panes",
-        description="List redacted metadata for panes in allowed sessions. Check cwd against the current task before inspecting output.",
+        description="List redacted metadata for all panes. Prefer the current project's subshell and check cwd before inspecting output.",
         annotations=readonly,
     )(tmux.list_panes)
     server.tool(
         name="capture_pane",
         description=(
-            "Read redacted output from an allowed pane in the current project, "
+            "Read redacted output from a pane in the current project, "
             "or another project explicitly requested by the user. The oldest "
             "available logical line is withheld because its beginning may have "
             "been trimmed from tmux history. offset skips logical lines from the "

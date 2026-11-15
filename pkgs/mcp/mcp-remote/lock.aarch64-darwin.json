@@ -233,9 +233,9 @@
         "license": "MIT"
       },
       "node_modules/encodeurl": {
-        "version": "2.0.1",
-        "resolved": "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.1.tgz",
-        "integrity": "sha512-Ev/hIyePLZtpL98x562lvPtenrUfGr0lfaf44HFZ+hDEwso7ccV9QAZrEVLg0hxNAzygaAFxy2dYaAKKM0G06A==",
+        "version": "2.0.3",
+        "resolved": "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.3.tgz",
+        "integrity": "sha512-mIteYONiEfc4xWf2F1WXovh1c8npzS00vNeiUPdwFF+QlVJni+gNvpQltLMQhob8rew/bWWc/bGTuUr0EUGt0w==",
         "license": "MIT",
         "engines": {
           "node": ">= 0.8"
@@ -1018,5 +1018,5 @@
       }
     }
   },
-  "invalidationHash": "a0a7c26bef4bcee6efd469c880405ccb75c8251716b4bb80b5b581bc652f09c6"
+  "invalidationHash": "e3bc64a5fd364f4c869e8c2cf81e2488293a519643811be8219bb669e13fce5b"
 }

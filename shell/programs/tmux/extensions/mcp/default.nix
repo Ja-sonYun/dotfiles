@@ -2,10 +2,6 @@
 {
   programs.tmux.extensions.mcp = {
     enable = hasTag "ai";
-    allowedSessionPatterns = [
-      "^(main|popup)$"
-      "^_popup_[^_]+_(?:(?:git_)?root_)?subshell_.+$"
-    ];
     capture = {
       defaultLines = 200;
       maxLines = 5000;
@@ -19,8 +15,9 @@
     instructions = ''
       main contains regular project windows. popup is the shared shell popup.
       Project shell popups use the logical name subshell and are scoped to a
-      .root or Git root. Agent popups and All Agents are outside the allowed scope.
-      Inspect pane working directories to choose the current project's shell.
+      .root or Git root. Prefer the current project's subshell and confirm its
+      working directory and session memberships. Linking a subshell into an
+      _agent_dashboard_view_* session does not change which shell it is.
       The user's tmux prefix is Ctrl+q; never send it through this server.
       Ctrl+q t opens the user's pane picker and Ctrl+q k opens the tmux menu.
       Ctrl+h/j/k/l normally navigate tmux panes or Vim. Those client bindings,

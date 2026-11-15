@@ -18,7 +18,6 @@ let
   ];
   configFile = (pkgs.formats.json { }).generate "tmux-mcp.json" {
     inherit (cfg)
-      allowedSessionPatterns
       capture
       sendKeys
       redaction
@@ -28,12 +27,7 @@ let
 in
 {
   options.programs.tmux.extensions.mcp = {
-    enable = lib.mkEnableOption "tmux MCP with redacted output and restricted pane access";
-    allowedSessionPatterns = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Python regular expressions matched against complete session names. Empty denies all panes.";
-    };
+    enable = lib.mkEnableOption "tmux MCP with redacted output and project subshell guidance";
     instructions = lib.mkOption {
       type = lib.types.lines;
       default = "";

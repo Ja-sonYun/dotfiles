@@ -4,6 +4,7 @@
     ./apple-calendar
     ./apple-mcp
     ./mcp-gateway
+    ./codex-connectors-mcp
     ./apple-reminders
     ./activity-history
     ./core

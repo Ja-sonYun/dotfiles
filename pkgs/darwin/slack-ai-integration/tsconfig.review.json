@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.browser.json",
+  "files": [
+    "navigation.ts",
+    "review/browser.d.ts",
+    "review/draft.ts",
+    "review/panel.ts",
+    "review/hook.ts"
+  ],
+  "include": []
+}

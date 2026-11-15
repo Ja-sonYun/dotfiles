@@ -89,10 +89,7 @@ in
       default = pkgs.mkShell {
         inherit (checks.${system}.pre-commit-check) shellHook;
         buildInputs = checks.${system}.pre-commit-check.enabledPackages ++ [
-          (pkgs.amber-lang.overrideAttrs (old: {
-            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.pkg-config ];
-            buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.libgit2 ];
-          }))
+          pkgs.amber-lang
           mkutils.packages.${system}.default
         ];
       };
