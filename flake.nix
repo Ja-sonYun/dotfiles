@@ -99,7 +99,6 @@
 
     server = {
       url = ./infra;
-      flake = false;
     };
   };
 
