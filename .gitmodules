@@ -1,12 +1,12 @@
 [submodule "shell/secrets"]
 	path = shell/secrets
-	url = git@github.com:Ja-sonYun/agenix-secrets.git
+	url = ssh://git@github.com/Ja-sonYun/agenix-secrets.git
 [submodule "hosts/aarch64-darwin/server"]
 	path = infra
-	url = git@github.com:Ja-sonYun/server.git
+	url = ssh://git@github.com/Ja-sonYun/server.git
 [submodule "libs/nixlib"]
 	path = libs/nixlib
-	url = git@github.com:Ja-sonYun/nixlib.git
+	url = ssh://git@github.com/Ja-sonYun/nixlib.git
 [submodule ".mkutils"]
 	path = .mkutils
-	url = git@github.com:Ja-sonYun/mkutils.git
+	url = ssh://git@github.com/Ja-sonYun/mkutils.git
