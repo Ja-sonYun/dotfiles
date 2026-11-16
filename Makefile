@@ -93,7 +93,7 @@ linux-builder-down: ## Stop the linux-builder VM
 
 build: add lock ## Build nix-darwin config
 	@$(MAKE) linux-builder-up
-	$(NIX) build .#darwinConfigurations.$(HOSTNAME).system $(NIX_TRACE_ARGS)
+	$(NIX) build 'git+file:.?submodules=1#darwinConfigurations.$(HOSTNAME).system' $(NIX_TRACE_ARGS)
 
 show-derivations: ## Show derivation details
 	nix show-derivation .#darwinConfigurations.$(HOSTNAME).system
@@ -104,7 +104,7 @@ deploy: ## Deploy nix-darwin config
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) build; \
-	nix run nixpkgs#nh darwin switch .#darwinConfigurations.$(HOSTNAME)
+	nix run nixpkgs#nh darwin switch 'git+file:.?submodules=1#darwinConfigurations.$(HOSTNAME)'
 
 ##@ Virtual Machines
 
