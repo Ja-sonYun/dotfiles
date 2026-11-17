@@ -1,6 +1,7 @@
+{ inputs }:
 {
   custom-packages = final: _prev: {
-    agenix-utils = final.callPackage ../libs/nixlib/pkg/agenix-utils { };
+    agenix-utils = final.callPackage (inputs.nixlib + "/pkg/agenix-utils") { };
 
     antigravity-cli = final.callPackage ../pkgs/ai-agents/antigravity-cli { };
     claude-code = final.callPackage ../pkgs/ai-agents/claude-code { };
@@ -28,7 +29,7 @@
     tmux-agent-dashboard = final.callPackage ../pkgs/cli-tools/tmux-agent-dashboard { };
 
     awsdac = final.callPackage ../pkgs/cloud/awsdac { };
-    cf-tunnel = final.callPackage ../pkgs/cloud/cf-tunnel { };
+    cf-tunnel = final.callPackage ../pkgs/cloud/cf-tunnel { infraSrc = inputs.server; };
 
     dismiss-notifications = final.callPackage ../pkgs/darwin/dismiss-notifications { };
     icalPal = final.callPackage ../pkgs/darwin/icalPal { };

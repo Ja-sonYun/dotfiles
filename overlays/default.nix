@@ -4,4 +4,4 @@
 // (import ./inputs.nix { inherit inputs; })
 // (import ./patches.nix { inherit inputs; })
 // (import ./test-ignores.nix)
-// (import ./custom.nix)
+// (import ./custom.nix { inherit inputs; })

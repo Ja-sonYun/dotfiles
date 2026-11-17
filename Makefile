@@ -31,6 +31,12 @@ ifdef TRACE
 NIX_TRACE_ARGS := --show-trace
 endif
 
+NIX_LOCAL_INPUTS := \
+	--override-input server 'git+file:$(CURDIR)/infra?submodules=1' \
+	--override-input agenix-secrets 'git+file:$(CURDIR)/shell/secrets?submodules=1' \
+	--override-input nixlib 'git+file:$(CURDIR)/libs/nixlib?submodules=1' \
+	--override-input mkutils 'git+file:$(CURDIR)/.mkutils?submodules=1'
+
 ##@ Update
 
 push-secrets: ## Push secrets to git
@@ -70,7 +76,7 @@ install: ## Install nix daemon
 	sh "$$installer" --daemon
 
 deploy: add lock ## Deploy home-manager config
-	$(NIX) build .#homeConfigurations.$(HOSTNAME).activationPackage $(NIX_TRACE_ARGS)
+	$(NIX) build .#homeConfigurations.$(HOSTNAME).activationPackage $(NIX_LOCAL_INPUTS) $(NIX_TRACE_ARGS)
 	./result/activate
 endif
 
@@ -93,10 +99,12 @@ linux-builder-down: ## Stop the linux-builder VM
 
 build: add lock ## Build nix-darwin config
 	@$(MAKE) linux-builder-up
-	$(NIX) build --option eval-cache false 'git+file:.?submodules=1#darwinConfigurations.$(HOSTNAME).system' $(NIX_TRACE_ARGS)
+	$(NIX) build --option eval-cache false \
+		'git+file:.?submodules=1#darwinConfigurations.$(HOSTNAME).system' \
+		$(NIX_LOCAL_INPUTS) $(NIX_TRACE_ARGS)
 
 show-derivations: ## Show derivation details
-	nix show-derivation .#darwinConfigurations.$(HOSTNAME).system
+	nix show-derivation .#darwinConfigurations.$(HOSTNAME).system $(NIX_LOCAL_INPUTS)
 
 deploy: ## Deploy nix-darwin config
 	@set -e; \
@@ -144,7 +152,7 @@ fmt: ## Format nix files
 
 check: ## Run repository checks
 	pre-commit run --all-files
-	nix flake check $(NIX_TRACE_ARGS)
+	nix flake check $(NIX_LOCAL_INPUTS) $(NIX_TRACE_ARGS)
 
 clean: ## Clean nix store
 	nix run nixpkgs#nh clean

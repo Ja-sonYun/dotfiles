@@ -8,86 +8,46 @@
 }:
 let
   cfg = config.services.mcp-gateway;
-  start = pkgs.writeShellScript "mcp-gateway-start" ''
-    exec ${pkgs.mcp-gateway}/bin/mcp-gateway \
-      --credentials "${cfg.credentialsFile}" \
-      --state ${lib.escapeShellArg "${userhome}/Library/Application Support/mcp-gateway"} \
-      --owner-sub ${lib.escapeShellArg cfg.ownerSub} \
-      --firecrawl-key "${cfg.firecrawlKeyFile}" \
-      --n8n-url "${cfg.n8nUrlFile}" \
-      --n8n-key "${cfg.n8nKeyFile}" "$@"
-  '';
+  json = pkgs.formats.json { };
 in
 {
-  options.services.mcp-gateway = {
-    enable = lib.mkEnableOption "the internal OAuth MCP gateway; disabling unloads its agent and preserves OAuth state";
-    credentialsFile = lib.mkOption {
-      type = lib.types.str;
-      description = "Runtime Caddy Google OAuth environment file.";
-    };
-    firecrawlKeyFile = lib.mkOption {
-      type = lib.types.str;
-      description = "Runtime Firecrawl API key file.";
-    };
-    n8nUrlFile = lib.mkOption {
-      type = lib.types.str;
-      description = "Runtime personal n8n API URL file.";
-    };
-    n8nKeyFile = lib.mkOption {
-      type = lib.types.str;
-      description = "Runtime personal n8n API key file.";
-    };
-    ownerSub = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-      description = "Allowed Google subject; empty denies all MCP access and logs authenticated identity for setup.";
-    };
-
-    internalTokenFile = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Runtime bearer token file for the internal MCP listener on port 7366.";
-    };
-  };
-
-  config = {
-    assertions = lib.optionals cfg.enable [
-      {
-        assertion = config.services.apple-mcp.enable;
-        message = "MCP gateway requires services.apple-mcp.enable.";
+  options.services.mcp-gateway.instances = lib.mkOption {
+    default = { };
+    type = lib.types.attrsOf (
+      lib.types.submodule {
+        options = {
+          enable = lib.mkEnableOption "this MCP gateway instance";
+          settings = lib.mkOption {
+            inherit (json) type;
+            description = "Gateway JSON settings. Supply runtime file paths for credentials and tokens.";
+          };
+        };
       }
-    ];
-
-    home-manager.users.${username}.launchd.agents = {
-      mcp-gateway = {
-        inherit (cfg) enable;
-        config = lib.mkIf cfg.enable {
-          ProgramArguments = [ "${start}" ];
-          RunAtLoad = true;
-          KeepAlive = true;
-          ThrottleInterval = 10;
-          LimitLoadToSessionType = "Aqua";
-          StandardOutPath = "${userhome}/Library/Logs/mcp-gateway.log";
-          StandardErrorPath = "${userhome}/Library/Logs/mcp-gateway.log";
-        };
-      };
-
-      mcp-gateway-internal = {
-        enable = cfg.enable && cfg.internalTokenFile != null;
-        config = lib.mkIf (cfg.enable && cfg.internalTokenFile != null) {
-          ProgramArguments = [
-            "${start}"
-            "--internal-token-file"
-            cfg.internalTokenFile
-          ];
-          RunAtLoad = true;
-          KeepAlive = true;
-          ThrottleInterval = 10;
-          LimitLoadToSessionType = "Aqua";
-          StandardOutPath = "${userhome}/Library/Logs/mcp-gateway-internal.log";
-          StandardErrorPath = "${userhome}/Library/Logs/mcp-gateway-internal.log";
-        };
-      };
-    };
+    );
+    description = "Independent MCP gateways with their own listener, authentication and backends.";
   };
+
+  config.home-manager.users.${username}.launchd.agents = lib.mapAttrs' (
+    name: instance:
+    let
+      agentName = "mcp-gateway-${name}";
+      settingsFile = json.generate "${agentName}.json" instance.settings;
+    in
+    lib.nameValuePair agentName {
+      inherit (instance) enable;
+      config = lib.mkIf instance.enable {
+        ProgramArguments = [
+          "${pkgs.mcp-gateway}/bin/mcp-gateway"
+          "--config"
+          "${settingsFile}"
+        ];
+        RunAtLoad = true;
+        KeepAlive = true;
+        ThrottleInterval = 10;
+        LimitLoadToSessionType = "Aqua";
+        StandardOutPath = "${userhome}/Library/Logs/${agentName}.log";
+        StandardErrorPath = "${userhome}/Library/Logs/${agentName}.log";
+      };
+    }
+  ) cfg.instances;
 }

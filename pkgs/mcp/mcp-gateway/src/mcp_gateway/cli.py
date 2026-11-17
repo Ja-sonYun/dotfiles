@@ -1,67 +1,97 @@
 import argparse
 import json
-import logging
 import os
 import secrets
 import tempfile
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Unpack
 
 from cryptography.fernet import Fernet
 from dotenv import dotenv_values
-from fastmcp import Client, FastMCP
-from fastmcp.client.transports import StdioTransport
+from fastmcp import FastMCP
+from fastmcp.client.transports import ClientTransport, StdioTransport
+from fastmcp.client.transports.base import SessionKwargs, TransportOptions
 from fastmcp.server import create_proxy
 from fastmcp.server.auth import AccessToken, AuthContext, TokenVerifier
 from fastmcp.server.auth.providers.google import GoogleProvider
 from fastmcp.server.middleware import AuthMiddleware
 from key_value.aio.stores.disk import DiskStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
+from mcp import ClientSession
+from pydantic import SecretStr, ValidationError
+
+from mcp_gateway.config import BearerAuth, GatewayConfig, HttpBackend
+from mcp_gateway.http_transport import HttpTransport
+
+
+def read_secret(path: Path) -> SecretStr:
+    value = path.read_text().strip()
+    if not value:
+        raise ValueError(f"Secret file is empty: {path}")
+    return SecretStr(value)
+
+
+class FreshStdioTransport(StdioTransport):
+    @asynccontextmanager
+    async def connect_session(
+        self,
+        *,
+        transport_options: TransportOptions | None = None,
+        **session_kwargs: Unpack[SessionKwargs],
+    ) -> AsyncIterator[ClientSession]:
+        transport = StdioTransport(
+            command=self.command,
+            args=self.args,
+            env=self.env,
+            cwd=self.cwd,
+            keep_alive=False,
+            log_file=self.log_file,
+        )
+        async with transport.connect_session(
+            transport_options=transport_options, **session_kwargs
+        ) as session:
+            yield session
 
 
 class BearerTokenVerifier(TokenVerifier):
     def __init__(self, token_file: Path) -> None:
         super().__init__()
-
-        self.expected_token = token_file.read_text().strip()
-        if not self.expected_token:
-            raise ValueError("Internal MCP token must not be empty")
+        self.expected_token = read_secret(token_file)
 
     async def verify_token(self, token: str) -> AccessToken | None:
-        if not secrets.compare_digest(token, self.expected_token):
+        if not secrets.compare_digest(token, self.expected_token.get_secret_value()):
             return None
-        return AccessToken(token=token, client_id="internal", scopes=[])
+        return AccessToken(token=token, client_id="gateway", scopes=[])
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--credentials", type=Path, required=True)
-    parser.add_argument("--state", type=Path, required=True)
-    parser.add_argument("--owner-sub", default="")
-    parser.add_argument("--firecrawl-key", type=Path, required=True)
-    parser.add_argument("--n8n-url", type=Path, required=True)
-    parser.add_argument("--n8n-key", type=Path, required=True)
-    parser.add_argument("--internal-token-file", type=Path)
-    args = parser.parse_args()
-
-    os.umask(0o077)
-
-    if args.internal_token_file:
+def create_server(settings: GatewayConfig) -> FastMCP:
+    authentication = settings.auth
+    if isinstance(authentication, BearerAuth):
         server = FastMCP(
-            "Internal MCP", auth=BearerTokenVerifier(args.internal_token_file)
+            settings.name,
+            auth=BearerTokenVerifier(authentication.token_file),
+            list_page_size=settings.list_page_size,
         )
     else:
-        credentials = dotenv_values(args.credentials)
-        owner_sub = args.owner_sub
+        credentials = dotenv_values(authentication.credentials_file)
+        client_id = credentials.get(authentication.client_id_key)
+        client_secret = credentials.get(authentication.client_secret_key)
+        if not client_id or not client_secret:
+            raise ValueError("Google OAuth credentials are missing or empty")
+        owner_sub = authentication.owner_sub
 
-        args.state.mkdir(parents=True, exist_ok=True, mode=0o700)
-        key_file = args.state / "keys.json"
+        state = authentication.state_dir
+        state.mkdir(parents=True, exist_ok=True, mode=0o700)
+        key_file = state / "keys.json"
         if not key_file.exists():
             keys = {
                 "storage_key": Fernet.generate_key().decode(),
                 "jwt_signing_key": secrets.token_urlsafe(48),
             }
             with tempfile.NamedTemporaryFile(
-                mode="w", dir=args.state, delete=False
+                mode="w", dir=state, delete=False
             ) as output:
                 json.dump(keys, output)
                 temporary_path = output.name
@@ -70,69 +100,67 @@ def main() -> None:
 
         def owner_only(context: AuthContext) -> bool:
             token = context.token
-            if token is None:
-                return False
-            if not owner_sub:
-                logging.getLogger(__name__).warning(
-                    "MCP access denied during setup: Google email=%r sub=%r",
-                    token.claims.get("email"),
-                    token.claims.get("sub"),
-                )
-                return False
-            return token.claims.get("sub") == owner_sub
+            return token is not None and token.claims.get("sub") == owner_sub
 
         storage = FernetEncryptionWrapper(
-            key_value=DiskStore(directory=str(args.state / "oauth")),
+            key_value=DiskStore(directory=str(state / "oauth")),
             fernet=Fernet(keys["storage_key"].encode()),
         )
         auth = GoogleProvider(
-            client_id=credentials["CADDY_SECURITY_GOOGLE_CLIENT_ID"],
-            client_secret=credentials["CADDY_SECURITY_GOOGLE_CLIENT_SECRET"],
-            base_url="https://mcp.test0.zip",
+            client_id=client_id,
+            client_secret=client_secret,
+            base_url=str(authentication.base_url),
             jwt_signing_key=keys["jwt_signing_key"],
             client_storage=storage,
         )
-        server = FastMCP("Internal MCP", auth=auth)
+        server = FastMCP(
+            settings.name, auth=auth, list_page_size=settings.list_page_size
+        )
         server.add_middleware(AuthMiddleware(auth=owner_only))
 
-    server.mount(
-        create_proxy("http://127.0.0.1:7364/mcp", mode="legacy"),
-        namespace="apple",
-    )
-    server.mount(
-        create_proxy(
-            Client(
-                StdioTransport(
-                    command="firecrawl-mcp",
-                    args=[],
-                    env={
-                        "FIRECRAWL_API_URL": "https://fc.test0.zip",
-                        "FIRECRAWL_API_KEY": args.firecrawl_key.read_text().strip(),
-                    },
-                )
+    for backend in settings.backends:
+        transport: ClientTransport
+        if isinstance(backend, HttpBackend):
+            transport = HttpTransport(
+                str(backend.url),
+                read_secret(backend.bearer_token_file)
+                if backend.bearer_token_file is not None
+                else None,
+                backend.max_sse_event_size,
             )
-        ),
-        namespace="firecrawl",
-    )
-    server.mount(
-        create_proxy(
-            Client(
-                StdioTransport(
-                    command="n8n-mcp",
-                    args=[],
-                    env={
-                        "N8N_API_URL": args.n8n_url.read_text().strip(),
-                        "N8N_API_KEY": args.n8n_key.read_text().strip(),
-                        "MCP_MODE": "stdio",
-                    },
-                )
+        else:
+            environment = backend.env | {
+                name: read_secret(path).get_secret_value()
+                for name, path in backend.env_files.items()
+            }
+            transport = FreshStdioTransport(
+                command=backend.command,
+                args=backend.args,
+                env=environment,
             )
-        ),
-        namespace="n8n_personal",
-    )
+        server.mount(
+            create_proxy(transport, mode=backend.mode), namespace=backend.namespace
+        )
 
+    return server
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=Path, required=True)
+    args = parser.parse_args()
+
+    os.umask(0o077)
+    try:
+        settings = GatewayConfig.model_validate_json(args.config.read_text())
+    except ValidationError as error:
+        parser.error(str(error))
+
+    server = create_server(settings)
     server.run(
         transport="http",
-        host="127.0.0.1",
-        port=7366 if args.internal_token_file else 7365,
+        host=settings.listen.host,
+        port=settings.listen.port,
+        json_response=False,
+        stateless_http=False,
     )
