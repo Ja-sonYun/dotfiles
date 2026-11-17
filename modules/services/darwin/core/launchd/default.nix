@@ -1,5 +1,7 @@
 { lib, ... }:
 {
+  imports = [ ./external-daemons.nix ];
+
   options.launchd.user.agents = lib.mkOption {
     type = lib.types.attrsOf (
       lib.types.submodule (

@@ -93,7 +93,7 @@ linux-builder-down: ## Stop the linux-builder VM
 
 build: add lock ## Build nix-darwin config
 	@$(MAKE) linux-builder-up
-	$(NIX) build 'git+file:.?submodules=1#darwinConfigurations.$(HOSTNAME).system' $(NIX_TRACE_ARGS)
+	$(NIX) build --option eval-cache false 'git+file:.?submodules=1#darwinConfigurations.$(HOSTNAME).system' $(NIX_TRACE_ARGS)
 
 show-derivations: ## Show derivation details
 	nix show-derivation .#darwinConfigurations.$(HOSTNAME).system
@@ -104,7 +104,9 @@ deploy: ## Deploy nix-darwin config
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) build; \
-	nix run nixpkgs#nh darwin switch 'git+file:.?submodules=1#darwinConfigurations.$(HOSTNAME)'
+	built_system=$$(readlink result); \
+	sudo nix-env -p /nix/var/nix/profiles/system --set "$$built_system"; \
+	sudo "$$built_system/sw/bin/darwin-rebuild" activate
 
 ##@ Virtual Machines
 

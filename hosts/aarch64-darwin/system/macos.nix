@@ -1,5 +1,7 @@
 {
   hasTag,
+  hostname,
+  lib,
   pkgs,
   userhome,
   username,
@@ -127,6 +129,10 @@
       };
     };
   };
+
+  launchd.externalDaemons."com.p5sys.jump.connect.service".enable = lib.mkIf (
+    hostname == "Jays-MacBook-Pro-Server"
+  ) true;
 
   power = {
     sleep.computer = if hasTag "server" then "never" else null;
