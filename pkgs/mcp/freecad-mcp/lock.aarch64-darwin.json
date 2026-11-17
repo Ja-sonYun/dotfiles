@@ -59,10 +59,10 @@
       },
       "freecad-mcp": {
         "is_direct": false,
-        "sha256": "aa6858fc9bab3ad808dec5a811244f432b159f125eb02f200d74a3698f479ace",
+        "sha256": "892005fec92677ad810d96d8fcf717b4cf9f0a9ee42cdcb12210e26dfe3ef096",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/b7/ee/e90910997224c3c4840343d176f93ab6b2d713a0c8370a9b0e84ddd29c5a/freecad_mcp-0.1.31-py3-none-any.whl",
-        "version": "0.1.31"
+        "url": "https://files.pythonhosted.org/packages/b8/05/1829e8d5ac816a765ae54716097a1df4c78f46a330fd43e8ee01e01a2e2d/freecad_mcp-0.1.32-py3-none-any.whl",
+        "version": "0.1.32"
       },
       "h11": {
         "is_direct": false,
@@ -73,17 +73,17 @@
       },
       "httpcore2": {
         "is_direct": false,
-        "sha256": "5c4358319f2602d984ad93182c9fee5160f22e9da7babdda870a5e7c4e2dc34f",
+        "sha256": "16051ae2a42f776007543f32de9349a317b23d2cbb4e1456b4bac0e88b87419a",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/af/c2/ce417c397afa5181f0e3c6ff01a4d01639414e1adef08730d97571297151/httpcore2-2.16.0-py3-none-any.whl",
-        "version": "2.16.0"
+        "url": "https://files.pythonhosted.org/packages/2a/e8/009c347feac27f8960605aa98d55ed263b5870dd4fd80b82fd1d00d5716c/httpcore2-2.16.2-py3-none-any.whl",
+        "version": "2.16.2"
       },
       "httpx2": {
         "is_direct": false,
-        "sha256": "fd2c5d7909e8d86fe92d53020c310ca0e4e431b838c207c5754b9bbf0308d49a",
+        "sha256": "f05c13aade4c45dbf1c9060647a1058f0acad62398fad96e741269edb33d46f5",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/7b/3d/2e4bc4fd1ef9770871669adb348d612a6e4786b303a23f9935b81c48dd60/httpx2-2.16.0-py3-none-any.whl",
-        "version": "2.16.0"
+        "url": "https://files.pythonhosted.org/packages/77/de/8c4306a3d6aa2495111986addf33a9e561eff4c47552e4c4b9251160d0ad/httpx2-2.16.2-py3-none-any.whl",
+        "version": "2.16.2"
       },
       "idna": {
         "is_direct": false,
@@ -185,10 +185,10 @@
       },
       "python-multipart": {
         "is_direct": false,
-        "sha256": "8f16c07b36add9da6b2ee87d3efcaf0a45a6de9c3d0a5dd94e9ccf7675a7bc45",
+        "sha256": "ebacd224bd686eee2f9aa1066a657affe07435a185834e05e5235e2e59173e91",
         "type": "url",
-        "url": "https://files.pythonhosted.org/packages/dd/1b/6b1b4164ec734cac911460ab599bfbe46afedd42c5c9627fe4235942c314/python_multipart-0.0.33-py3-none-any.whl",
-        "version": "0.0.33"
+        "url": "https://files.pythonhosted.org/packages/f5/0e/090c52b122d8ec5fa37942c1410fea9cf04ce98bca0c84dde7f0aa11594d/python_multipart-0.0.34-py3-none-any.whl",
+        "version": "0.0.34"
       },
       "referencing": {
         "is_direct": false,
@@ -285,7 +285,14 @@
         "cffi": ["pycparser"],
         "click": [],
         "cryptography": ["cffi"],
-        "freecad-mcp": ["anyio", "certifi", "mcp", "pyjwt", "validators"],
+        "freecad-mcp": [
+          "anyio",
+          "certifi",
+          "mcp",
+          "pydantic",
+          "pyjwt",
+          "validators"
+        ],
         "h11": [],
         "httpcore2": ["h11", "truststore"],
         "httpx2": [
@@ -352,8 +359,8 @@
     }
   },
   "freecadAddon": {
-    "url": "https://files.pythonhosted.org/packages/d8/2b/ca3e93ef0a87c9117d3d76819c07d445fa3a73b895c3b77dbddfbd234d17/freecad_mcp-0.1.31.tar.gz",
-    "sha256": "43a611d92fa720f9a01c46f6c538340a4a2fce6de4c4d04c57e35e56053a6e1d"
+    "url": "https://files.pythonhosted.org/packages/7f/18/bbc504b299a5be2286238dda3981c56a9cfc551aebc80094fc96ddb979cb/freecad_mcp-0.1.32.tar.gz",
+    "sha256": "e3463e4755d00d69c51e7fb3f152944964ca8484efff77e40dd08777af68df35"
   },
-  "invalidationHash": "cd0b13bab665a031649d4b1368f6231fa7d61020b42adafd4e25c2be29acfda7"
+  "invalidationHash": "e7423a570e11568f5311683eec2c20feab6cb85e3b63e422aaae9c312693ea5b"
 }

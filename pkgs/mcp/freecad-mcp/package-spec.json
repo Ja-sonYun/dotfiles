@@ -2,7 +2,7 @@
   "registry": "pypi",
   "name": "freecad-mcp",
   "versions": {
-    "aarch64-darwin": "0.1.31",
+    "aarch64-darwin": "0.1.32",
     "x86_64-linux": "0.1.24"
   }
 }

@@ -154,6 +154,9 @@ run = function(opts)
 			finish("exit " .. request.exitCode)
 			return
 		end
+		if not stdout:match("^%s*%[.*%]%s*$") then
+			return
+		end
 
 		local clean = (stdout or ""):gsub(":inf,", ":0,")
 		local ok, windows = pcall(hs.json.decode, clean)

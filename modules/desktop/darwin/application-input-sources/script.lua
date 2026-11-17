@@ -70,38 +70,56 @@ local watchSiri = logger:wrap("siri_watch_failed", function(application)
 	end
 
 	-- Siri's search panel emits AX events without regular application activation.
-	local element = hs.axuielement.applicationElement(application)
-	module.siriObserver = hs.axuielement.observer.new(application:pid())
-	module.siriObserver:callback(logger:wrap("siri_focus_failed", function(observer, changedElement, notification)
-		if observer ~= module.siriObserver then
-			return
-		end
-		if notification == "AXUIElementDestroyed" and changedElement ~= siriWindow then
-			return
-		end
+	local candidate
+	local ok, err = pcall(function()
+		local element = hs.axuielement.applicationElement(application)
+		candidate = hs.axuielement.observer.new(application:pid())
+		candidate:callback(logger:wrap("siri_focus_failed", function(observer, changedElement, notification)
+			if observer ~= module.siriObserver then
+				return
+			end
+			if notification == "AXUIElementDestroyed" and changedElement ~= siriWindow then
+				return
+			end
 
-		local window = element:attributeValue("AXFocusedWindow")
-		if notification == "AXUIElementDestroyed" and window == changedElement then
-			window = nil
-		end
-		if not window then
-			finishSiri()
-			return
-		end
+			local window = element:attributeValue("AXFocusedWindow")
+			if notification == "AXUIElementDestroyed" and window == changedElement then
+				window = nil
+			end
+			if not window then
+				finishSiri()
+				return
+			end
 
-		if not siriSession then
-			siriSession = {
-				sourceID = hs.keycodes.currentSourceID(),
-				bundleID = activeBundleID,
-				application = application,
-			}
+			if not siriSession then
+				siriSession = {
+					sourceID = hs.keycodes.currentSourceID(),
+					bundleID = activeBundleID,
+					application = application,
+				}
+			end
+			trackSiriWindow(window)
+			selectSource(application, configuration.rules.Siri, "siri_focus")
+		end))
+		candidate:addWatcher(element, "AXFocusedWindowChanged")
+		candidate:addWatcher(element, "AXWindowCreated")
+		candidate:start()
+	end)
+	if not ok then
+		local cleanupError
+		if candidate then
+			local stopped, stopError = pcall(function()
+				candidate:stop()
+			end)
+			if not stopped then
+				cleanupError = stopError
+			end
 		end
-		trackSiriWindow(window)
-		selectSource(application, configuration.rules.Siri, "siri_focus")
-	end))
-	module.siriObserver:addWatcher(element, "AXFocusedWindowChanged")
-	module.siriObserver:addWatcher(element, "AXWindowCreated")
-	module.siriObserver:start()
+		logger:w("siri_watch_failed", { error = err, cleanup_error = cleanupError })
+		return
+	end
+
+	module.siriObserver = candidate
 	siriPID = application:pid()
 end)
 
