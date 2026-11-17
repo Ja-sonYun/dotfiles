@@ -15,7 +15,7 @@ let
       --owner-sub ${lib.escapeShellArg cfg.ownerSub} \
       --firecrawl-key "${cfg.firecrawlKeyFile}" \
       --n8n-url "${cfg.n8nUrlFile}" \
-      --n8n-key "${cfg.n8nKeyFile}"
+      --n8n-key "${cfg.n8nKeyFile}" "$@"
   '';
 in
 {
@@ -42,7 +42,14 @@ in
       default = "";
       description = "Allowed Google subject; empty denies all MCP access and logs authenticated identity for setup.";
     };
+
+    internalTokenFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Runtime bearer token file for the internal MCP listener on port 7366.";
+    };
   };
+
   config = {
     assertions = lib.optionals cfg.enable [
       {
@@ -50,16 +57,36 @@ in
         message = "MCP gateway requires services.apple-mcp.enable.";
       }
     ];
-    home-manager.users.${username}.launchd.agents.mcp-gateway = {
-      inherit (cfg) enable;
-      config = lib.mkIf cfg.enable {
-        ProgramArguments = [ "${start}" ];
-        RunAtLoad = true;
-        KeepAlive = true;
-        ThrottleInterval = 10;
-        LimitLoadToSessionType = "Aqua";
-        StandardOutPath = "${userhome}/Library/Logs/mcp-gateway.log";
-        StandardErrorPath = "${userhome}/Library/Logs/mcp-gateway.log";
+
+    home-manager.users.${username}.launchd.agents = {
+      mcp-gateway = {
+        inherit (cfg) enable;
+        config = lib.mkIf cfg.enable {
+          ProgramArguments = [ "${start}" ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          ThrottleInterval = 10;
+          LimitLoadToSessionType = "Aqua";
+          StandardOutPath = "${userhome}/Library/Logs/mcp-gateway.log";
+          StandardErrorPath = "${userhome}/Library/Logs/mcp-gateway.log";
+        };
+      };
+
+      mcp-gateway-internal = {
+        enable = cfg.enable && cfg.internalTokenFile != null;
+        config = lib.mkIf (cfg.enable && cfg.internalTokenFile != null) {
+          ProgramArguments = [
+            "${start}"
+            "--internal-token-file"
+            cfg.internalTokenFile
+          ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          ThrottleInterval = 10;
+          LimitLoadToSessionType = "Aqua";
+          StandardOutPath = "${userhome}/Library/Logs/mcp-gateway-internal.log";
+          StandardErrorPath = "${userhome}/Library/Logs/mcp-gateway-internal.log";
+        };
       };
     };
   };
