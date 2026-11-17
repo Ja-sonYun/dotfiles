@@ -57,7 +57,7 @@ pkgs.runCommand "pi-configured"
   ''
     mkdir -p "$out/bin"
     makeWrapper ${pkgs.python3}/bin/python "$out/bin/pi-mcp-instructions" \
-      --add-flags ${lib.escapeShellArg (toString ../mcp/instructions.py)}
+      --add-flags ${lib.escapeShellArg "${../mcp/instructions.py}"}
     makeWrapper ${runtime}/bin/pi "$out/bin/pi" \
       --prefix PATH : "$out/bin" \
       --suffix PATH : ${

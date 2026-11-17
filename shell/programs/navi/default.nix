@@ -19,7 +19,7 @@ _: {
         command = "fzf";
         overrides = "--height=40% --layout=reverse";
       };
-      cheats.paths = [ (toString ./cheats) ];
+      cheats.paths = [ "${./cheats}" ];
       shell.command = "zsh";
     };
   };
