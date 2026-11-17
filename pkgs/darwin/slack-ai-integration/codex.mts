@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline";
-import { setTimeout as delay } from "node:timers/promises";
 import { isRecord } from "./contracts.mjs";
 import { start } from "./process.mjs";
 import type { RunningProcess } from "./process.mjs";
@@ -175,51 +174,38 @@ async function readonlyArgs(
     if (failure) return Promise.reject(failure);
     stage = method;
     const id = ++sequence;
-    return new Promise((resolve, reject) => {
+    const started = performance.now();
+    return new Promise<Record<string, unknown>>((resolve, reject) => {
       pending.set(id, { method, resolve, reject });
       server.child.stdin.write(`${JSON.stringify({ id, method, params })}\n`);
-    });
+    }).then(
+      (result) => {
+        log("discovery_request", {
+          method,
+          status: "completed",
+          elapsed_ms: performance.now() - started,
+        });
+        return result;
+      },
+      (error: unknown) => {
+        log("discovery_request", {
+          method,
+          status: signal.aborted ? "cancelled" : "failed",
+          elapsed_ms: performance.now() - started,
+        });
+        // Concurrent requests cannot identify failures through the shared stage.
+        throw new Error(
+          error instanceof Error ? error.message : "Codex discovery failed.",
+          { cause: { method, error } },
+        );
+      },
+    );
   }
   async function pages(method: string): Promise<Record<string, unknown>[]> {
     const result: Record<string, unknown>[] = [];
     let cursor: string | null = null;
     do {
-      let page: Record<string, unknown>;
-      for (let attempt = 1; ; attempt++) {
-        const started = performance.now();
-        try {
-          page = await request(method, { limit: 100, cursor });
-          if (method === "app/list")
-            log("app_list_attempt", {
-              attempt,
-              status: "completed",
-              elapsed_ms: performance.now() - started,
-            });
-          break;
-        } catch (error) {
-          if (method === "app/list")
-            log("app_list_attempt", {
-              attempt,
-              status: signal.aborted ? "cancelled" : "failed",
-              elapsed_ms: performance.now() - started,
-            });
-          signal.throwIfAborted();
-          if (
-            method !== "app/list" ||
-            !(error instanceof Error) ||
-            !isRecord(error.cause) ||
-            error.cause.code !== -32603 ||
-            error.cause.message !==
-              "failed to list apps: Failed to send request"
-          )
-            throw error;
-          if (attempt === 3)
-            throw new Error(`${error.message} (after 3 attempts)`, {
-              cause: error.cause,
-            });
-          await delay(attempt * 500, undefined, { signal });
-        }
-      }
+      const page = await request(method, { limit: 100, cursor });
       if (!Array.isArray(page.data) || !page.data.every(isRecord)) {
         throw new Error("Invalid Codex tool catalog.");
       }
@@ -335,34 +321,66 @@ async function readonlyArgs(
       }
     }
 
-    const [apps, servers] = await Promise.all([
-      pages("app/list"),
+    // Installed apps avoid the unrelated global app directory request.
+    const [installed, servers] = await Promise.all([
+      request("app/installed", { forceRefresh: true }),
       pages("mcpServerStatus/list"),
     ]);
-    for (const app of apps) {
-      if (typeof app.id !== "string" || typeof app.name !== "string") {
-        throw new Error("Invalid Codex app catalog.");
+    if (!Array.isArray(installed.apps) || !installed.apps.every(isRecord)) {
+      throw new Error("Invalid Codex installed app catalog.");
+    }
+    const appIds: string[] = [];
+    for (const app of installed.apps) {
+      if (
+        typeof app.id !== "string" ||
+        typeof app.enabled !== "boolean" ||
+        typeof app.callable !== "boolean"
+      ) {
+        throw new Error("Invalid Codex installed app.");
       }
-      const enabled =
-        ["slack", "notion", "gmail"].includes(app.name.toLowerCase()) &&
-        app.isEnabled === true &&
-        app.isAccessible === true;
+      if (app.enabled && app.callable) appIds.push(app.id);
+    }
+    const apps: Record<string, unknown>[] = [];
+    for (let offset = 0; offset < appIds.length; offset += 100) {
+      const batch = appIds.slice(offset, offset + 100);
+      const details = await request("app/read", {
+        appIds: batch,
+        includeTools: true,
+      });
+      if (
+        !Array.isArray(details.apps) ||
+        !details.apps.every(isRecord) ||
+        !Array.isArray(details.missingAppIds) ||
+        details.missingAppIds.length > 0
+      )
+        throw new Error("Invalid Codex app tools.");
+      for (const id of batch) {
+        const detail = details.apps.find((item) => item.id === id);
+        if (
+          !detail ||
+          typeof detail.name !== "string" ||
+          !Array.isArray(detail.toolSummaries)
+        ) {
+          throw new Error("Codex did not provide the app's tool permissions.");
+        }
+        apps.push(detail);
+      }
+    }
+    for (const app of apps) {
+      if (
+        typeof app.id !== "string" ||
+        typeof app.name !== "string" ||
+        !Array.isArray(app.toolSummaries)
+      ) {
+        throw new Error("Invalid Codex app metadata.");
+      }
+      const enabled = ["slack", "notion", "gmail"].includes(
+        app.name.toLowerCase(),
+      );
       setting(["apps", app.id, "enabled"], enabled);
       if (!enabled) continue;
       setting(["apps", app.id, "default_tools_enabled"], false);
-      const details = await request("app/read", {
-        appIds: [app.id],
-        includeTools: true,
-      });
-      if (!Array.isArray(details.apps))
-        throw new Error("Invalid Codex app tools.");
-      const detail = details.apps.find(
-        (item: unknown) => isRecord(item) && item.id === app.id,
-      );
-      if (!isRecord(detail) || !Array.isArray(detail.toolSummaries)) {
-        throw new Error("Codex did not provide the app's tool permissions.");
-      }
-      for (const tool of detail.toolSummaries) {
+      for (const tool of app.toolSummaries) {
         if (!isRecord(tool) || typeof tool.name !== "string") {
           throw new Error("Invalid Codex app tool.");
         }
@@ -425,6 +443,13 @@ async function readonlyArgs(
       `${key}=${tomlValue(value)}`,
     ]);
   } catch (error) {
+    if (
+      error instanceof Error &&
+      isRecord(error.cause) &&
+      typeof error.cause.method === "string"
+    ) {
+      stage = error.cause.method;
+    }
     const logger = process.env.SLACK_CODEX_LOG_COMMAND;
     if (logger && !signal.aborted) {
       const cause =
@@ -687,7 +712,12 @@ export async function generateWithCodex(
     return result;
   } catch (error) {
     signal.throwIfAborted();
-    if (timeout.aborted) throw new Error("Codex response timed out.");
+    if (timeout.aborted)
+      throw new Error(
+        phase === "discovery"
+          ? "Codex tool discovery timed out."
+          : "Codex response timed out.",
+      );
     throw error;
   } finally {
     if (signal.aborted) status = "cancelled";

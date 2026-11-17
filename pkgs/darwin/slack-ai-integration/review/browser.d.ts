@@ -140,6 +140,8 @@ interface ReviewPanel {
   close(): void;
 }
 interface PendingReview {
+  receivedReviewTurn?: number;
+  receivedClassificationTurn?: number;
   approved?: string;
   sendUnknown?: boolean;
   stale?: boolean;
@@ -184,12 +186,12 @@ interface Window {
     receiveSaved(id: string, turn: number, error?: string): void;
     owner: string;
     pulse(id: string): boolean;
-    receive(id: string, turn: number, result: ReviewResult): void;
+    receive(id: string, turn: number, result: ReviewResult): boolean;
     receiveClassification(
       id: string,
       turn: number,
       result: ClassificationResult,
-    ): void;
+    ): boolean;
     stop(): void;
     open(id: string): Promise<void>;
     close(): void;

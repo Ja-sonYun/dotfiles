@@ -1041,6 +1041,9 @@
       pendingReviews.set(id, {
         ...savedDraft,
         ...(result === undefined ? {} : { result }),
+        ...(saved.phase === "review" && result !== undefined
+          ? { receivedReviewTurn: saved.turn }
+          : {}),
         record,
         args: [],
         elements: saved.projection.elements,
@@ -1680,17 +1683,22 @@
     },
     receive(id, turn, result) {
       const current = pendingReviews.get(id);
-      if (!current || current.turn !== turn || current.phase !== "review")
-        return;
+      if (!current || current.turn !== turn) return false;
+      if (current.receivedReviewTurn === turn) return true;
+      if (current.phase !== "review") return false;
+      current.receivedReviewTurn = turn;
       current.result = result;
       current.busy = false;
       current.ui?.receive(result);
       persist(current, "error" in result ? "failed" : "needs-approval");
+      return true;
     },
     receiveClassification(id, turn, result) {
       const current = pendingReviews.get(id);
-      if (!current || current.turn !== turn || current.phase !== "checking")
-        return;
+      if (!current || current.turn !== turn) return false;
+      if (current.receivedClassificationTurn === turn) return true;
+      if (current.phase !== "checking") return false;
+      current.receivedClassificationTurn = turn;
       current.classification = result;
       current.busy = false;
       if ("error" in result) {
@@ -1710,6 +1718,7 @@
           "Jev returned an invalid message type.",
         );
       }
+      return true;
     },
     stop() {
       stopped = true;

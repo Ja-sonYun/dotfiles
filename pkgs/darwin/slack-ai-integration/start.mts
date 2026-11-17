@@ -584,6 +584,43 @@ async function connect(target: DebugTarget): Promise<void> {
       return;
     }
     let session = reviewSessions.get(request.id);
+    const savedRequest = reviewSnapshots.get(request.id);
+    if (savedRequest && request.turn < savedRequest.turn) return;
+    if (request.kind === "ask" && !session) {
+      if (!existing || existing.view.kind !== "review") return;
+      if (
+        !savedRequest ||
+        savedRequest.workspaceId !== requestWorkspace ||
+        savedRequest.phase !== "review" ||
+        !savedRequest.context ||
+        !["needs-approval", "ready-to-send", "failed"].includes(
+          savedRequest.status,
+        ) ||
+        !["needs-approval", "ready-to-send", "failed"].includes(
+          existing.view.status,
+        )
+      ) {
+        const error = "Review context is unavailable. Start a new review.";
+        updateTask(request.id, { status: "failed", error });
+        await evaluateInWorkspace(
+          `window.__slackMessageReview?.receive(${JSON.stringify(request.id)}, ${JSON.stringify(request.turn)}, ${JSON.stringify({ error })})`,
+          params.executionContextId,
+          requestWorkspace,
+        );
+        return;
+      }
+      session = {
+        id: request.id,
+        original: savedRequest.reviewOriginal,
+        context: savedRequest.context,
+        protectedElements: savedRequest.projection.elements.map(
+          ({ token, label, href }) => ({ token, label, href }),
+        ),
+        history: [],
+        contextId: params.executionContextId,
+      };
+      reviewSessions.set(request.id, session);
+    }
     if (request.kind === "classify" || request.kind === "review") {
       if (
         session &&
@@ -630,9 +667,6 @@ async function connect(target: DebugTarget): Promise<void> {
       session.controller
     )
       return;
-    const savedTurn = reviewSnapshots.get(request.id)?.turn;
-    if (savedTurn !== undefined && request.turn < savedTurn) return;
-    const savedRequest = reviewSnapshots.get(request.id);
     if (savedRequest) savedRequest.turn = request.turn;
     const current = session;
     current.response = undefined;
@@ -712,13 +746,19 @@ async function connect(target: DebugTarget): Promise<void> {
     );
     const receiver =
       request.kind === "classify" ? "receiveClassification" : "receive";
-    current.response = { receiver, turn: request.turn, result };
+    const response: NonNullable<ReviewSession["response"]> = {
+      receiver,
+      turn: request.turn,
+      result,
+    };
+    current.response = response;
     const delivered = await evaluateInWorkspace(
       `window.__slackMessageReview?.${receiver}(${JSON.stringify(request.id)}, ${JSON.stringify(request.turn)}, ${JSON.stringify(result)})`,
       current.contextId,
       requestWorkspace,
     );
-    if (delivered === true) current.response = undefined;
+    if (delivered === true && current.response === response)
+      current.response = undefined;
   }
 
   async function handleTasks(
