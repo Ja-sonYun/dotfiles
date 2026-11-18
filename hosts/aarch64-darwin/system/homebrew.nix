@@ -78,7 +78,6 @@ let
     ++ lib.optionals (hasTag "gui" && hasTag "ai") [
       "chatgpt"
       "claude"
-      "hermes-desktop"
     ];
 
   taps = [

@@ -1,0 +1,177 @@
+--- a/apps/desktop/electron/main.ts
++++ b/apps/desktop/electron/main.ts
+@@ -2613,3 +2613,3 @@
+ function continueFirstRunLocalBootstrap() {
+-  getFirstRunSetupGate().continueLocal()
++  throw new Error('Local setup is disabled in Hermes Light.')
+ }
+@@ -4825,2 +4825,4 @@
+ async function resolveHermesBackend(backendArgs: string[]): Promise<ResolvedHermesBackend> {
++  if (isLightVariant()) return missingLocalBackend(backendArgs)
++
+   const payload = bundledPayload(process.resourcesPath)
+@@ -4995,2 +4997,6 @@
+   //    is a recoverable state the GUI can drive through.
++  return missingLocalBackend(backendArgs)
++}
++
++function missingLocalBackend(backendArgs: string[]): ResolvedHermesBackend {
+   return {
+@@ -5035,2 +5041,4 @@
+ ): Promise<ResolvedHermesBackend> {
++  if (isLightVariant()) throw new Error('Connect Hermes Light to a remote gateway.')
++
+   localBackendLifecycle.assertCanStart()
+@@ -14122,2 +14130,4 @@
+ ipcMain.handle('hermes:bootstrap:repair', async (): Promise<{ ok: boolean; bundled?: boolean; error?: string }> => {
++  if (isLightVariant()) return { ok: false, error: 'remote-only' }
++
+   // A bundled install's payload is immutable and sealed at build time —
+--- a/apps/desktop/src/components/desktop-install-overlay.tsx
++++ b/apps/desktop/src/components/desktop-install-overlay.tsx
+@@ -440,3 +440,7 @@
++  if (state.setupChoice && !state.setupChoice.bundled) {
++    return <FirstRunRemoteSetup />
++  }
++
+   if (remoteOpen) {
+     return <FirstRunRemoteSetup onBack={() => setRemoteOpen(false)} />
+   }
+--- a/apps/desktop/src/components/remote-setup/first-run.tsx
++++ b/apps/desktop/src/components/remote-setup/first-run.tsx
+@@ -12,3 +12,3 @@
+ interface FirstRunRemoteSetupProps {
+-  onBack: () => void
++  onBack?: () => void
+ }
+@@ -32,3 +32,3 @@
+       await window.hermesDesktop.applyConnectionConfig(setup.payload)
+-      onBack()
++      onBack?.()
+     } catch (err) {
+@@ -55,5 +55,7 @@
+         <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
+-          <Button disabled={applying} onClick={onBack} size="sm" variant="ghost">
+-            {copy.backToSetup}
+-          </Button>
++          {onBack && (
++            <Button disabled={applying} onClick={onBack} size="sm" variant="ghost">
++              {copy.backToSetup}
++            </Button>
++          )}
+           <div className="flex items-center gap-2">
+--- a/apps/desktop/src/app/settings/gateway-settings.tsx
++++ b/apps/desktop/src/app/settings/gateway-settings.tsx
+@@ -89,3 +89,3 @@
+   envOverride: false,
+-  mode: 'local',
++  mode: 'remote',
+   remoteAuthMode: 'token',
+@@ -115,3 +115,3 @@
+ 
+-  return { ...EMPTY_STATE, ...defined }
++  return { ...EMPTY_STATE, ...defined, mode: config.mode === 'local' ? 'remote' : config.mode ?? 'remote' }
+ }
+@@ -1062,10 +1062,2 @@
+         <div className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2 min-[72rem]:grid-cols-4">
+-          <ModeCard
+-            active={state.mode === 'local'}
+-            description={g.localDesc}
+-            disabled={state.envOverride}
+-            icon={Monitor}
+-            onSelect={() => setState(current => ({ ...current, mode: 'local' }))}
+-            title={g.localTitle}
+-          />
+           <ModeCard
+--- a/apps/desktop/src/lib/connection-display.ts
++++ b/apps/desktop/src/lib/connection-display.ts
+@@ -9,14 +9,10 @@
+ 
+-/** Local stays anchored; every other gateway has one stable, human-readable order. */
+-export function sortConnectionsForDisplay<T extends Pick<DesktopRegistryConnection, 'id' | 'kind' | 'label'>>(
+-  connections: readonly T[]
+-): T[] {
+-  return [...connections].sort((left, right) => {
+-    const localOrder = Number(right.kind === 'local') - Number(left.kind === 'local')
+-
+-    return (
+-      localOrder ||
+-      connectionLabelCollator.compare(left.label, right.label) ||
+-      connectionLabelCollator.compare(left.id, right.id)
+-    )
++export function sortConnectionsForDisplay<T extends Pick<DesktopRegistryConnection, 'id' | 'kind' | 'label'>>(
++  connections: readonly T[]
++): T[] {
++  return connections.filter(connection => connection.kind !== 'local').sort((left, right) => {
++    return (
++      connectionLabelCollator.compare(left.label, right.label) ||
++      connectionLabelCollator.compare(left.id, right.id)
++    )
+   })
+--- a/apps/desktop/src/app/settings/connections-registry.tsx
++++ b/apps/desktop/src/app/settings/connections-registry.tsx
+@@ -632,3 +632,3 @@
+         <Loader className="mx-auto my-2 size-6 text-(--ui-text-tertiary)" label={t.common.loading} type="rose-curve" />
+-      ) : !registry || registry.connections.length === 0 ? (
++      ) : !registry || sortedConnections.length === 0 ? (
+         <EmptyState title={s.empty} />
+@@ -721,3 +721,3 @@
+-            {(editor.id ? ([editor.kind] as const) : (['local', 'cloud', 'remote', 'ssh'] as const)).map(kind => (
++            {(editor.id ? ([editor.kind] as const) : (['cloud', 'remote', 'ssh'] as const)).map(kind => (
+               <Button
+                 disabled={Boolean(editor.id) || (kind === 'local' && hasLocal)}
+@@ -742,3 +742,2 @@
+           <p className="text-xs text-muted-foreground">{kindMeta[editor.kind].desc}</p>
+-          {!editor.id && hasLocal ? <p className="text-xs text-muted-foreground">{s.localAddHint}</p> : null}
+           {!editor.id && editor.kind === 'cloud' ? (
+--- a/apps/desktop/src/components/boot-failure-overlay.tsx
++++ b/apps/desktop/src/components/boot-failure-overlay.tsx
+@@ -28,1 +27,0 @@
+-  signInLabel,
+@@ -381,6 +380,0 @@
+-  const label = signInLabel(remoteReauth, {
+-    identityProvider: copy.identityProvider,
+-    remoteGateway: copy.signInToRemoteGateway,
+-    withProvider: copy.signInWithProvider
+-  })
+-
+@@ -445,1 +438,1 @@
+-    hint = copy.remoteSignInHint(label)
++    hint = ''
+@@ -470,1 +463,1 @@
+-    hint = copy.cloudDownHint
++    hint = ''
+@@ -473,1 +466,1 @@
+-    hint = copy.remoteFailureHint
++    hint = t.install.remoteSetupDesc
+@@ -544,1 +537,1 @@
+-              {remoteReauth ? copy.remoteDescription : cloudDown ? copy.cloudDownDescription : copy.description}
++              {remoteReauth ? copy.remoteDescription : cloudDown ? copy.cloudDownHint : copy.description}
+@@ -566,3 +559,3 @@
+             <div className="flex flex-wrap gap-2">
+-              {actions.map(action => (
++              {actions.filter(action => action.key !== 'local' && action.key !== 'repair').map(action => (
+                 <Button disabled={Boolean(busy)} key={action.key} onClick={action.onClick} variant={action.variant}>
+--- a/apps/desktop/src/app/chat/composer/controls.tsx
++++ b/apps/desktop/src/app/chat/composer/controls.tsx
+@@ -145,13 +145,9 @@
+     >
+-      {minimal ? null : (
+-        <>
+-          {hideModelPill ? null : (
+-            <>
+-              <ModelPill compact={compactModelPill} disabled={disabled} model={state.model} />
+-              {compactModelPill ? null : <ReasoningPill disabled={disabled} model={state.model} />}
+-            </>
+-          )}
+-          {voiceControls}
+-        </>
+-      )}
++      {hideModelPill ? null : (
++        <>
++          <ModelPill disabled={disabled} model={state.model} />
++          {minimal || compactModelPill ? null : <ReasoningPill disabled={disabled} model={state.model} />}
++        </>
++      )}
++      {minimal ? null : voiceControls}
+       {renderSteerButton(busy, busyAction, onSteer, disabled, c.steer)}

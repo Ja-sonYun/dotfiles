@@ -40,7 +40,7 @@ in
     scriptingAddition.enable = true;
     displayManagement = {
       enable = true;
-      targetDesktopsPerDisplay = 4;
+      targetDesktopsPerDisplay = 6;
     };
   };
 }

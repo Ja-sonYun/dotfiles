@@ -4,6 +4,8 @@
 
 Upstream status is unchecked; remove only when the pinned version no longer needs the workaround.
 
+- [ ] Hermes Light — remove the [desktop patch](pkgs/darwin/hermes-light/remote-client.patch) when upstream enforces remote-only setup and displays the model name in the compact composer.
+- [ ] Hermes Light pnpm dependencies — remove the [package override](pkgs/darwin/hermes-light/default.nix) when the pinned upstream hash matches the aarch64-darwin output.
 - [x] Amber dependencies — [dev shell](flake/development.nix); removed the local pkg-config and libgit2 override.
 - [ ] tmux popup flicker — [patch](overlays/patches/tmux-3.7c-popup-flicker.patch); remove when pinned tmux includes the backported fixes.
 - [ ] yabai macOS 27 support — [patch](pkgs/darwin/yabai/patches/macos-27.patch); remove when upstream supports the host OS.
