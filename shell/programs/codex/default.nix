@@ -7,15 +7,15 @@
 {
   programs.ai-agents.modelMap.codex = {
     xhigh = {
-      model = "gpt-6-astra";
+      model = "gpt-6.2-astra";
       reasoning_effort = "xhigh";
     };
     high = {
-      model = "gpt-6-astra";
+      model = "gpt-6.2-astra";
       reasoning_effort = "medium";
     };
     middle = {
-      model = "gpt-6.1-sol";
+      model = "gpt-6.2-sol";
       reasoning_effort = "xhigh";
     };
     low = {
@@ -56,7 +56,7 @@
             tool_timeout_sec = 330;
           };
 
-      model = "gpt-6-astra";
+      model = "gpt-6.2-astra";
       model_reasoning_effort = "medium";
       plan_mode_reasoning_effort = "high";
       model_verbosity = "low";
