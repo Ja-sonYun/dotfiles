@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-n8n-mcp",
-    "version": "2.103.1",
+    "version": "2.103.2",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-n8n-mcp",
-        "version": "2.103.1",
+        "version": "2.103.2",
         "dependencies": {
-          "n8n-mcp": "2.103.1"
+          "n8n-mcp": "2.103.2"
         }
       },
       "node_modules/@hono/node-server": {
@@ -1188,9 +1188,9 @@
         "license": "MIT"
       },
       "node_modules/n8n-mcp": {
-        "version": "2.103.1",
-        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.103.1.tgz",
-        "integrity": "sha512-EuweH+VOa3hOLM7OnudMdmYJH1vLDckQno6kYdQ+j3a9bdIPGBEgeivZshvn4az25bikvwhAfzDcnmtNfP8pAA==",
+        "version": "2.103.2",
+        "resolved": "https://registry.npmjs.org/n8n-mcp/-/n8n-mcp-2.103.2.tgz",
+        "integrity": "sha512-GigmFX75AKDrWvFGAXdGHMqua1mP8jxM3prR+7sNYG9Bo6LaiO6WHl16BvxL8Gg9nX5Za3iWxpzeUEkak3YTXA==",
         "license": "MIT",
         "dependencies": {
           "@modelcontextprotocol/sdk": "1.30.0",
@@ -1750,9 +1750,9 @@
         }
       },
       "node_modules/sql.js": {
-        "version": "1.16.0",
-        "resolved": "https://registry.npmjs.org/sql.js/-/sql.js-1.16.0.tgz",
-        "integrity": "sha512-q/JOZuJfmVh8Zf8Eo+cMJvtxAWeWBqTfJ6AQYGXZmcaLGHMwhA2niH3fQYHrBtPeOss1ttzHec07K5+rHaMRMw==",
+        "version": "1.17.0",
+        "resolved": "https://registry.npmjs.org/sql.js/-/sql.js-1.17.0.tgz",
+        "integrity": "sha512-HNdo5+2eSTEm7iLcfXUd2mjZX3Oe+5mJ0uDgIpirS7gSLHhZIw9kWDWxNcDVeFGEIBxJlkgo525g0CZJoH8GgA==",
         "license": "MIT"
       },
       "node_modules/statuses": {
@@ -1961,5 +1961,5 @@
       }
     }
   },
-  "invalidationHash": "c0550713bdb80061a02e2dabbc21374ab9648b1e31d47a5b68cd83544f848538"
+  "invalidationHash": "07cb7bec81b9cfcd65f99ae8eeb807b14342b0a99d6d2db396cd8a50c367e973"
 }

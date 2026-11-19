@@ -12,7 +12,7 @@
     };
     high = {
       model = "gpt-6.2-astra";
-      reasoning_effort = "medium";
+      reasoning_effort = "high";
     };
     middle = {
       model = "gpt-6.2-sol";
@@ -57,8 +57,8 @@
           };
 
       model = "gpt-6.2-astra";
-      model_reasoning_effort = "medium";
-      plan_mode_reasoning_effort = "high";
+      model_reasoning_effort = "high";
+      plan_mode_reasoning_effort = "xhigh";
       model_verbosity = "low";
 
       approval_policy = "on-request";
