@@ -1,15 +1,15 @@
 {
   "package-lock": {
     "name": "dotfiles-knip",
-    "version": "6.45.1",
+    "version": "6.46.1",
     "lockfileVersion": 3,
     "requires": true,
     "packages": {
       "": {
         "name": "dotfiles-knip",
-        "version": "6.45.1",
+        "version": "6.46.1",
         "dependencies": {
-          "knip": "6.45.1"
+          "knip": "6.46.1"
         }
       },
       "node_modules/@emnapi/core": {
@@ -480,9 +480,9 @@
         "os": ["win32"]
       },
       "node_modules/@tybys/wasm-util": {
-        "version": "0.10.4",
-        "resolved": "https://registry.npmjs.org/@tybys/wasm-util/-/wasm-util-0.10.4.tgz",
-        "integrity": "sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==",
+        "version": "0.10.5",
+        "resolved": "https://registry.npmjs.org/@tybys/wasm-util/-/wasm-util-0.10.5.tgz",
+        "integrity": "sha512-dOGOPxlaNV+G046mZzN+9C0dAcQZeSKcXiVaM0TYy/LM4ttTmgSBDxYfovcYI8Em3+eAbiAYpvWLOv8+ZVRJKA==",
         "license": "MIT",
         "optional": true,
         "dependencies": {
@@ -553,9 +553,9 @@
         }
       },
       "node_modules/knip": {
-        "version": "6.45.1",
-        "resolved": "https://registry.npmjs.org/knip/-/knip-6.45.1.tgz",
-        "integrity": "sha512-zp3zXKy2cZWiIttdlWU5fisKxVQaLSU6471ej0KGz1GdHdaHxpzTAO/LIyFNc3gU3v1W7LJaqvYumoO3l/u+6A==",
+        "version": "6.46.1",
+        "resolved": "https://registry.npmjs.org/knip/-/knip-6.46.1.tgz",
+        "integrity": "sha512-5/ajqjZfmuv8O74+McrKBOSArKG6tsUgy6yJird36VZh9HiUq75qY4U39uqf9wjchEUOLrStuOZpFP057CZFRw==",
         "funding": [
           {
             "type": "github",
@@ -763,5 +763,5 @@
       }
     }
   },
-  "invalidationHash": "7d803d3bb78071c95b283509d4c1c0de4eb6b75326dd245aaa7648748179fc88"
+  "invalidationHash": "64259ea3885aa12bddf3602ede9929d31f82bc659cad8c27c2990a24f3d06d28"
 }
