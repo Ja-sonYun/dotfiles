@@ -90,9 +90,7 @@ export async function showPermission(
             ).render(width);
           }
 
-          let description = summary.text
-            ? ` · ${previewText(summary.text)}`
-            : ` · ${previewText(request.call.input)}`;
+          let description = "";
           const targetRows: string[] = [];
           const path =
             typeof request.call.input.path === "string"
@@ -221,12 +219,18 @@ export async function showPermission(
         tui.requestRender();
       };
       const selector = new ExtensionSelectorComponent(
-        `Permission: ${stripTerminalSequences(request.actor.name)} (${stripTerminalSequences(request.actor.mode)})`,
+        `Permission: ${stripTerminalSequences(request.actor.name)} (${stripTerminalSequences(request.actor.mode)})` +
+          (request.options.includes("Allow this exact scope for this session")
+            ? " · Exact-call approvals expire on the next user message"
+            : ""),
         request.options,
         finish,
         cancel,
         {
           tui,
+          description: summary.text
+            ? `Action: ${previewText(summary.text)}`
+            : `Original call: ${truncateToWidth(previewText(request.call.input.command ?? request.call.input), 240, "…")}`,
           onToggleToolsExpanded: () => {
             expanded = !expanded;
             update();

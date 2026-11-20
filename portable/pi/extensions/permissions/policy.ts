@@ -1,5 +1,6 @@
-import { existsSync, readdirSync, realpathSync } from "node:fs";
-import { execFile } from "node:child_process";
+import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { opendir } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { createHash } from "node:crypto";
@@ -12,7 +13,7 @@ import {
   resolve,
   sep,
 } from "node:path";
-import type { ShellAnalysis } from "./bash.ts";
+import { commandOperands, type ShellAnalysis } from "./bash.ts";
 
 export type Decision = "allow" | "ask" | "deny";
 export interface Policy {
@@ -42,6 +43,14 @@ export interface Assessment {
   reasons: string[];
   projectRead?: boolean;
   requestScopeExempt?: boolean;
+  binaries?: {
+    name: string;
+    directories: string[];
+    args: string[];
+    reason: string;
+    identity?: string;
+    path?: string;
+  }[];
 }
 
 export function mcpName(server: string, tool: string): string {
@@ -141,6 +150,9 @@ export function fileDecision(
   path: string,
   cwd: string,
   access: "read" | "write",
+  fallback: Decision = access === "read" && policy.defaultRead
+    ? "allow"
+    : "ask",
 ): Decision {
   const lexical = absolute(path, cwd);
   const actual = canonical(lexical);
@@ -159,10 +171,7 @@ export function fileDecision(
       decisions.push(rule.read === "deny" ? "deny" : rule[access]);
     }
   }
-  return strongest(
-    decisions,
-    access === "read" && policy.defaultRead ? "allow" : "ask",
-  );
+  return strongest(decisions, fallback);
 }
 
 export async function assessSearch(
@@ -224,6 +233,303 @@ const resourceTools = [
   "read_mcp_resource",
 ];
 
+function fileArguments(args: (string | null)[]): string[] {
+  const paths: string[] = [];
+  let positional = false;
+  for (const arg of args) {
+    if (!arg) continue;
+    if (positional || !arg.startsWith("-")) paths.push(arg);
+    else if (arg === "--") positional = true;
+    else if (arg.startsWith("--") && arg.includes("=")) {
+      const value = arg.slice(arg.indexOf("=") + 1);
+      if (value) paths.push(value);
+    }
+  }
+  return paths;
+}
+
+async function inspectSearchDirectory(
+  search: string,
+  cwd: string,
+  path: string,
+  readPath: (path: string) => void,
+  signal?: AbortSignal,
+) {
+  const child = spawn(search, ["--files", "--null", "--", path], {
+    cwd,
+    signal,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let diagnostic = false;
+  child.stderr.on("data", () => {
+    diagnostic = true;
+  });
+  const completion = new Promise<void>((done, fail) => {
+    child.on("error", fail);
+    child.on("close", (code) => {
+      if (!diagnostic && (code === 0 || code === 1)) done();
+      else fail(new Error("Search file enumeration failed"));
+    });
+  });
+  const inspect = async () => {
+    let pending = "";
+    const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+    const directories = new Set([path]);
+    for await (const chunk of child.stdout) {
+      const paths = (pending + decoder.decode(chunk, { stream: true })).split(
+        "\0",
+      );
+      pending = paths.pop()!;
+      for (const file of paths) {
+        for (
+          let dir = dirname(file);
+          !directories.has(dir);
+          dir = dirname(dir)
+        ) {
+          directories.add(dir);
+          readPath(dir);
+        }
+        readPath(file);
+      }
+    }
+    if (pending + decoder.decode())
+      throw new Error("Incomplete search file listing");
+  };
+  try {
+    await Promise.all([completion, inspect()]);
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) child.kill();
+  }
+}
+
+export async function assessBash(
+  policy: Policy,
+  call: Call,
+  actor: Actor,
+  shell: ShellAnalysis,
+  projectRoot: string,
+  search: string,
+  signal?: AbortSignal,
+): Promise<Assessment> {
+  if (actor.mode === "plan" || !shell.steps?.length)
+    return assess(policy, call, actor, shell, projectRoot);
+  const steps = shell.steps;
+  const reasons = new Set<string>();
+  const binaries: NonNullable<Assessment["binaries"]> = [];
+  let decision: Decision = "allow";
+  let projectRead = isProjectPath(actor.cwd, projectRoot);
+  const add = (value: Decision, reason: string) => {
+    decision = strongest([decision, value]);
+    reasons.add(`${value}: ${reason}`);
+  };
+  const readPath = (path: string): Decision => {
+    const access = fileDecision(policy, path, actor.cwd, "read");
+    if (access !== "allow") add(access, "read " + path);
+    if (!isProjectPath(path, projectRoot)) {
+      add("ask", "read outside project: " + path);
+    }
+    return access;
+  };
+
+  const readDirectory = async (
+    path: string,
+    recursive: boolean,
+    hidden: boolean,
+  ) => {
+    const pending = [path];
+    while (pending.length) {
+      const directory = pending.pop()!;
+      for await (const entry of await opendir(directory)) {
+        signal?.throwIfAborted();
+        if (!hidden && entry.name.startsWith(".")) continue;
+        const child = join(directory, entry.name);
+        if (readPath(child) !== "deny" && recursive && entry.isDirectory())
+          pending.push(child);
+      }
+    }
+  };
+  let success = [actor.cwd];
+  let failure: string[] = [];
+  let directories = success;
+  let skippedSuccess: string[] = [];
+  let skippedFailure: string[] = [];
+  let uncertainContext = false;
+  for (const [i, step] of steps.entries()) {
+    const [name, ...args] = step.args;
+    if (step.operator !== "|") {
+      directories =
+        step.operator === "&&"
+          ? success
+          : step.operator === "||"
+            ? failure
+            : [...new Set([...success, ...failure])];
+      skippedSuccess = step.operator === "||" ? success : [];
+      skippedFailure = step.operator === "&&" ? failure : [];
+    }
+    if (directories.length > 32)
+      return {
+        decision: "deny",
+        reasons: ["Too many possible working directories to inspect"],
+      };
+    if (step.unresolved) {
+      add("ask", "Unresolved shell step " + (i + 1));
+      for (const cwd of directories) {
+        const part = assess(
+          policy,
+          call,
+          actor,
+          step.unresolved,
+          projectRoot,
+          [],
+          cwd,
+        );
+        decision = strongest([decision, part.decision]);
+        for (const reason of part.reasons) reasons.add(reason);
+      }
+      uncertainContext = true;
+      success = [...new Set([...directories, ...skippedSuccess])];
+      failure = [...new Set([...directories, ...skippedFailure])];
+      continue;
+    }
+    const stdin = step.operator === "|" || step.redirectedStdin === true;
+    const inputs = commandOperands(step.args, stdin);
+    const isCd = name === "cd";
+    if (
+      isCd &&
+      (!inputs || step.operator === "|" || steps[i + 1]?.operator === "|")
+    )
+      uncertainContext = true;
+    if (
+      /^(?:source|\.|exec|builtin|command|eval|set|shopt|hash|unset|export|declare|alias|unalias|enable|pushd|popd|read|readarray|mapfile|let|typeset|readonly|local|trap|getopts|printf)$/.test(
+        name,
+      ) &&
+      i + 1 < steps.length
+    )
+      uncertainContext = true;
+    if (uncertainContext)
+      add("ask", "Shell execution context could not be determined");
+    const matched = policy.commands.rules.filter((rule) =>
+      rule.prefix.every(
+        (token, pos) =>
+          step.args[pos] === token ||
+          (pos === 0 &&
+            rule.decision !== "allow" &&
+            name.split("/").at(-1) === token),
+      ),
+    );
+    const commandReason = `command ${i + 1} ${JSON.stringify(step.args)}`;
+    const commandDecision = strongest(
+      matched.map((rule) => rule.decision),
+      inputs ? "allow" : "ask",
+    );
+    add(commandDecision, commandReason);
+    const supported =
+      /^(?:awk|sed|grep|rg|sort|uniq|cut|ls|du|stat|file|unzip|head|tail|wc|cat|cd)$/;
+    const opaque = shell.uncertain.includes(
+      "Indirect execution or changed shell context: " + name,
+    );
+    const unknown =
+      !inputs &&
+      !supported.test(name) &&
+      (!opaque || name.includes("/")) &&
+      !policy.commands.rules.some(
+        (rule) => rule.prefix[0] === name.split("/").at(-1),
+      );
+    if (!inputs) {
+      projectRead = false;
+      if (supported.test(name) || (opaque && !unknown))
+        add("ask", "Inspect arguments of " + name);
+    }
+    if (
+      !uncertainContext &&
+      unknown &&
+      commandDecision === "ask" &&
+      directories.length > 0
+    ) {
+      binaries.push({
+        name,
+        directories,
+        args,
+        reason: "ask: " + commandReason,
+      });
+    }
+    const destinations = new Set<string>();
+    for (const cwd of directories) {
+      if (!isProjectPath(cwd, projectRoot)) {
+        projectRead = false;
+        if (inputs) add("ask", "Working directory outside project: " + cwd);
+      }
+      const files = [...step.files];
+      if (name === "tee") {
+        for (const path of args.filter((arg) => !arg.startsWith("-")))
+          files.push({ path, access: "write" });
+      }
+      for (const path of inputs?.outputs ?? [])
+        files.push({ path, access: "write" });
+      for (const file of files) {
+        const path = resolve(cwd, file.path);
+        if (file.access === "read") readPath(path);
+        else {
+          projectRead = false;
+          add(
+            strongest(["ask", fileDecision(policy, path, actor.cwd, "write")]),
+            "write " + path,
+          );
+        }
+      }
+      if (step.args.some((arg) => arg.split("/").includes("..")))
+        add("ask", "Parent directory traversal");
+      for (const operand of inputs?.paths ?? fileArguments(args)) {
+        const path = resolve(cwd, operand);
+        if (!inputs) {
+          const access = strongest([
+            fileDecision(policy, path, actor.cwd, "read", "allow"),
+            fileDecision(policy, path, actor.cwd, "write", "allow"),
+          ]);
+          if (access !== "allow")
+            add(access, "Protected file argument: " + path);
+          continue;
+        }
+        if (isCd) destinations.add(path);
+        if (readPath(path) === "deny") continue;
+        if (inputs.kind === "archive") {
+          if (/[*?\\[\]]/.test(operand))
+            add("ask", "Archive pattern: " + operand);
+          if (!statSync(path, { throwIfNoEntry: false })?.isFile()) {
+            readPath(path + ".zip");
+            readPath(path + ".ZIP");
+          }
+        }
+        if (statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
+          if (inputs.kind === "directory" || inputs.kind === "tree") {
+            if (name === "rg")
+              await inspectSearchDirectory(search, cwd, path, readPath, signal);
+            else
+              await readDirectory(
+                path,
+                inputs.kind === "tree",
+                name !== "ls" ||
+                  args.some((arg) => /^-[alh]*a[alh]*$/.test(arg)),
+              );
+          }
+        }
+      }
+    }
+    const next =
+      isCd && inputs && step.operator !== "|" && steps[i + 1]?.operator !== "|"
+        ? destinations
+        : directories;
+    success = [...new Set([...next, ...skippedSuccess])];
+    failure = [...new Set([...directories, ...skippedFailure])];
+  }
+  return {
+    decision,
+    reasons: [...reasons],
+    projectRead: projectRead && decision === "allow",
+    binaries,
+  };
+}
+
 export function assess(
   policy: Policy,
   call: Call,
@@ -231,6 +537,7 @@ export function assess(
   shell?: ShellAnalysis,
   projectRoot?: string,
   allModesServers: string[] = [],
+  shellCwd = actor.cwd,
 ): Assessment {
   const reasons: string[] = [];
   const decisions: Decision[] = [];
@@ -315,7 +622,8 @@ export function assess(
       `${access} ${path} -> ${canonical(absolute(path, actor.cwd))}`,
     );
   } else if (call.toolName === "bash" && shell) {
-    for (const args of shell.commands) {
+    if (projectRoot) add("ask", "Shell context could not be determined");
+    for (const [index, args] of shell.commands.entries()) {
       const matched = policy.commands.rules.filter((rule) =>
         rule.prefix.every(
           (token, i) =>
@@ -333,6 +641,7 @@ export function assess(
         ["rg", "grep", "egrep", "fgrep", "rgrep"].includes(
           args[0]?.split("/").at(-1) ?? "",
         ) &&
+        !shell.stdinGreps?.includes(index) &&
         (!policy.defaultRead ||
           policy.files.rules.some((rule) => rule.read !== "allow"))
       ) {
@@ -341,21 +650,16 @@ export function assess(
           "Bash search file scope is unverified; use the grep tool for checked file selection",
         );
       }
-      for (const arg of args.slice(1)) {
-        if (
-          arg &&
-          !arg.startsWith("-") &&
-          fileDecision(policy, arg, actor.cwd, "read") === "deny"
-        ) {
+      for (const arg of fileArguments(args.slice(1))) {
+        const operand = absolute(arg, shellCwd);
+        if (fileDecision(policy, operand, actor.cwd, "read") === "deny") {
           add("deny", `Denied file argument: ${arg}`);
         }
         if (
-          arg &&
-          !arg.startsWith("-") &&
           !["cat", "head", "tail", "ls", "grep", "rg"].includes(
             args[0] ?? "",
           ) &&
-          fileDecision(policy, arg, actor.cwd, "write") === "deny"
+          fileDecision(policy, operand, actor.cwd, "write") === "deny"
         ) {
           add("deny", `Command may modify a write-protected file: ${arg}`);
         }
@@ -363,7 +667,15 @@ export function assess(
     }
     for (const file of shell.files)
       add(
-        fileDecision(policy, file.path, actor.cwd, file.access),
+        strongest([
+          file.access === "write" ? "ask" : "allow",
+          fileDecision(
+            policy,
+            absolute(file.path, shellCwd),
+            actor.cwd,
+            file.access,
+          ),
+        ]),
         `${file.access} ${file.path}`,
       );
     for (const reason of shell.uncertain) add("ask", reason);

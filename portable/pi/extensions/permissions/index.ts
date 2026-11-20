@@ -1,6 +1,9 @@
 import { parentRequest } from "./child-channel.ts";
 import { RequestContext } from "./request-context.ts";
 import { randomUUID } from "node:crypto";
+import { realpathSync, statSync } from "node:fs";
+import { basename, resolve } from "node:path";
+import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
 import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
 import type {
@@ -13,8 +16,10 @@ import { toolSummaries, type SummaryConfiguration } from "./tool-summaries.ts";
 import {
   absolute,
   assess,
+  assessBash,
   assessSearch,
   canonical,
+  fileDecision,
   normalizeFileCall,
   readonlyTools,
   strongest,
@@ -43,6 +48,49 @@ interface Configuration {
   search: string;
   evaluator: string[];
   summaries: SummaryConfiguration | null;
+}
+
+async function identifyBinary(
+  name: string,
+  directories: string[],
+  signal?: AbortSignal,
+) {
+  if (
+    process.env.BASH_ENV ||
+    process.env["BASH_FUNC_builtin%%"] ||
+    /[\x00-\x1f\x7f]/.test(name) ||
+    name.startsWith("-")
+  )
+    return;
+  let binary: { path: string; identity: string } | undefined;
+  const operations = createLocalBashOperations();
+  const command = "builtin type -p -- '" + name.replaceAll("'", "'\\''") + "'";
+  try {
+    for (const cwd of directories) {
+      const chunks: Buffer[] = [];
+      const result = await operations.exec(command, cwd, {
+        signal,
+        timeout: 2,
+        onData: (data) => chunks.push(Buffer.from(data)),
+      });
+      const output = Buffer.concat(chunks).toString("utf8").replace(/\n$/, "");
+      if (result.exitCode !== 0 || !output || /[\x00-\x1f\x7f]/.test(output))
+        return;
+      const path = realpathSync(resolve(cwd, output));
+      if (/[\x00-\x1f\x7f]/.test(path)) return;
+      const stat = statSync(path, { bigint: true });
+      const identity = [stat.dev, stat.ino, stat.size, stat.ctimeNs].join("/");
+      if (
+        !stat.isFile() ||
+        (binary && (binary.path !== path || binary.identity !== identity))
+      )
+        return;
+      binary = { path, identity };
+    }
+    return binary;
+  } catch {
+    signal?.throwIfAborted();
+  }
 }
 
 async function loadConfig(
@@ -240,8 +288,12 @@ export default function (pi: ExtensionAPI): void {
 
   const presentApproval: Approve = async (approval, signal) => {
     if (!context?.hasUI) return "deny";
+    const binaryOption = approval.binaryPaths?.length
+      ? `Allow this call and trust ${approval.binaryPaths.join(", ")} for this session (all arguments)`
+      : undefined;
     const options = [
       "Deny",
+      ...(binaryOption ? [binaryOption] : []),
       "Allow once",
       ...(approval.sessionAllowed
         ? ["Allow this exact scope for this session"]
@@ -258,6 +310,7 @@ export default function (pi: ExtensionAPI): void {
       },
       approval.summary === undefined ? {} : { text: approval.summary },
     );
+    if (binaryOption && choice === binaryOption) return "binaries";
     return choice === "Allow once"
       ? "once"
       : choice === "Allow this exact scope for this session"
@@ -265,13 +318,25 @@ export default function (pi: ExtensionAPI): void {
         : "deny";
   };
 
-  const approve: Approve = (approval, signal) => {
-    const pending = approvalQueue.then(() =>
-      signal.aborted ? ("deny" as const) : presentApproval(approval, signal),
-    );
-    approvalQueue = pending.catch(() => {});
-    return pending;
-  };
+  const approveWithSummary =
+    (configuration: SummaryConfiguration | null): Approve =>
+    (approval, signal) => {
+      const pending = approvalQueue.then(async () => {
+        if (signal.aborted || !context?.hasUI) return "deny" as const;
+        const summary = configuration
+          ? await summaries.prepare(
+              approval.call,
+              configuration,
+              context,
+              signal,
+              true,
+            )
+          : undefined;
+        return presentApproval({ ...approval, summary }, signal);
+      });
+      approvalQueue = pending.catch(() => {});
+      return pending;
+    };
 
   async function check(
     call: Call,
@@ -300,19 +365,58 @@ export default function (pi: ExtensionAPI): void {
       }
       const summaryContext = context;
       const checkSummary = Boolean(config.summaries && summaryContext?.hasUI);
-      let summary: string | undefined;
       const shell =
         call.toolName === "bash" && typeof call.input.command === "string"
           ? await analyzeBash(call.input.command, config.parser)
           : undefined;
-      const assessment = assess(
-        config.policy,
-        call,
-        actor,
-        shell,
-        context?.cwd,
-        allModesServers(),
-      );
+      const assessment =
+        shell && context?.cwd
+          ? await assessBash(
+              config.policy,
+              call,
+              actor,
+              shell,
+              context.cwd,
+              config.search,
+              signal,
+            )
+          : assess(
+              config.policy,
+              call,
+              actor,
+              shell,
+              context?.cwd,
+              allModesServers(),
+            );
+      if (assessment.decision === "ask") {
+        for (const binary of assessment.binaries ?? []) {
+          const resolved = await identifyBinary(
+            binary.name,
+            binary.directories,
+            signal,
+          );
+          if (!resolved) continue;
+          const matches = config.policy.commands.rules.filter(
+            (rule) =>
+              [resolved.path, basename(resolved.path)].includes(
+                rule.prefix[0],
+              ) &&
+              rule.prefix
+                .slice(1)
+                .every((token, index) => binary.args[index] === token),
+          );
+          const restriction = strongest([
+            fileDecision(config.policy, resolved.path, actor.cwd, "read"),
+            ...matches.map((rule) => rule.decision),
+          ]);
+          if (restriction !== "allow") {
+            assessment.decision = strongest([assessment.decision, restriction]);
+            assessment.reasons.push(
+              `${restriction}: executable ${resolved.path}`,
+            );
+          } else Object.assign(binary, resolved);
+        }
+      }
       if (call.toolName === "grep" && assessment.decision !== "deny") {
         const search = await assessSearch(
           config.policy,
@@ -419,20 +523,12 @@ export default function (pi: ExtensionAPI): void {
           }
           return result;
         },
-        (approval, cancellation) =>
-          approve(
-            { ...approval, ...(summary === undefined ? {} : { summary }) },
-            cancellation,
-          ),
+        approveWithSummary(config.summaries),
         signal,
         async (rules, cancellation) => {
-          if (!checkSummary) return;
-          if (typeof rules.needs_summary !== "boolean") {
-            throw new Error("Summary decision unavailable");
-          }
-          if (!rules.needs_summary) return;
+          if (!checkSummary || rules.needs_summary !== true) return;
           if (config.summaries && summaryContext) {
-            summary = await summaries.prepare(
+            await summaries.prepare(
               call,
               config.summaries,
               summaryContext,
@@ -444,6 +540,26 @@ export default function (pi: ExtensionAPI): void {
       );
       if (!current())
         return { block: true, reason: "Permission context changed" };
+      if (!result) {
+        for (const binary of assessment.binaries ?? []) {
+          if (!binary.identity) continue;
+          const latest = await identifyBinary(
+            binary.name,
+            binary.directories,
+            signal,
+          );
+          if (
+            latest?.identity !== binary.identity ||
+            latest.path !== binary.path
+          )
+            return {
+              block: true,
+              reason: "Executable changed during approval",
+            };
+        }
+        if (!current())
+          return { block: true, reason: "Permission context changed" };
+      }
       return result;
     } catch {
       return {
@@ -498,7 +614,7 @@ export default function (pi: ExtensionAPI): void {
           actor,
           request,
           fingerprint(config),
-          approve,
+          approveWithSummary(config.summaries),
           cancellation,
         );
       }
@@ -587,11 +703,18 @@ export default function (pi: ExtensionAPI): void {
     );
   };
 
-  const resetContext = (_event: unknown, ctx: ExtensionContext) => {
+  let activeSessionId: string | undefined;
+  const resetContext = (event: { type: string }, ctx: ExtensionContext) => {
     cancelBackground();
     context = ctx;
     contextVersion++;
-    session.reset();
+    const sessionId = ctx.sessionManager.getSessionId();
+    if (event.type === "session_tree" && activeSessionId === sessionId) {
+      session.resetRequest();
+    } else {
+      session.reset();
+    }
+    activeSessionId = sessionId;
     requestContext.reset();
     dispatchApprovals.clear();
   };
@@ -615,7 +738,7 @@ export default function (pi: ExtensionAPI): void {
             .filter((part) => part.type === "text")
             .map((part) => part.text)
             .join("\n");
-    session.reset();
+    session.resetRequest();
     requestContext.consume(text, ctx.hasPendingMessages());
   });
   pi.on("tool_call", async (event, ctx) => {

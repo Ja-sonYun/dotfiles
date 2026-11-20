@@ -20,12 +20,13 @@ export interface Approval {
   reasons: string[];
   sessionAllowed: boolean;
   summary?: string;
+  binaryPaths?: string[];
 }
 export type Outcome = { block: true; reason: string } | undefined;
 export type Approve = (
   approval: Approval,
   signal: AbortSignal,
-) => Promise<"once" | "session" | "deny">;
+) => Promise<"once" | "session" | "binaries" | "deny">;
 type Snapshot = (signal: AbortSignal) => Promise<RuleResult>;
 interface RuleRequest {
   key: string;
@@ -43,12 +44,18 @@ export function fingerprint(value: unknown): string {
 
 export class PermissionSession {
   private grants = new Map<string, string>();
+  private binaryGrants = new Map<string, string>();
   private ruleRequests = new Map<string, RuleRequest>();
   private generation = 0;
   private queue: Promise<unknown> = Promise.resolve();
   private controller = new AbortController();
 
   reset(): void {
+    this.binaryGrants.clear();
+    this.resetRequest();
+  }
+
+  resetRequest(): void {
     this.grants.clear();
     this.ruleRequests.clear();
     this.generation++;
@@ -430,6 +437,7 @@ export class PermissionSession {
       actor,
       request,
       assessment.reasons,
+      assessment.binaries?.map((binary) => binary.identity),
     ]);
     if (this.grants.get(key) !== rules.fingerprint) this.grants.delete(key);
     if (!uncertain && this.grants.get(key) === rules.fingerprint)
@@ -440,10 +448,43 @@ export class PermissionSession {
         return { block: true, reason: "Permission context changed" };
       if (!uncertain && this.grants.get(key) === rules.fingerprint)
         return undefined;
-      let choice: "once" | "session" | "deny" = "deny";
+      const pendingBinaries = new Map<
+        string,
+        { path: string; identity: string }
+      >();
+      const covered = new Set<string>();
+      for (const binary of assessment.binaries ?? []) {
+        if (uncertain || !binary.identity || !binary.path) continue;
+        const owner = fingerprint([policyVersion, actor, binary.path]);
+        const identity = fingerprint([binary.identity, rules.fingerprint]);
+        if (this.binaryGrants.get(owner) === identity)
+          covered.add(binary.reason);
+        else {
+          this.binaryGrants.delete(owner);
+          pendingBinaries.set(owner, { path: binary.path, identity });
+        }
+      }
+      const remaining = reasons.filter((reason) => !covered.has(reason));
+      if (
+        !uncertain &&
+        covered.size &&
+        remaining.every((reason) => reason.startsWith("allow:"))
+      )
+        return undefined;
+
+      let choice: Awaited<ReturnType<Approve>> = "deny";
       try {
         choice = await approve(
-          { call, actor, request, reasons, sessionAllowed: !uncertain },
+          {
+            call,
+            actor,
+            request,
+            reasons: remaining,
+            sessionAllowed: !uncertain,
+            binaryPaths: [...pendingBinaries.values()].map(
+              (binary) => binary.path,
+            ),
+          },
           cancellation,
         );
       } catch {
@@ -455,6 +496,10 @@ export class PermissionSession {
         return { block: true, reason: "User approval required or declined" };
       if (choice === "session" && !uncertain)
         this.grants.set(key, rules.fingerprint);
+      if (choice === "binaries" && !uncertain) {
+        for (const [owner, binary] of pendingBinaries)
+          this.binaryGrants.set(owner, binary.identity);
+      }
       return undefined;
     });
     this.queue = pending.catch(() => {});

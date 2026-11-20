@@ -230,8 +230,9 @@ async def evaluate(
         rules = intent_rules
         if not rules and not check_summary:
             return result
+        rule_errors = result.errors if rules else []
         if intent_halted:
-            result.errors.append(
+            rule_errors.append(
                 "Intent checks skipped after an earlier request failure."
             )
             result.halted = True
@@ -241,12 +242,12 @@ async def evaluate(
                 project_instructions, context_path
             )
         except (OSError, TypeError, ValueError) as error:
-            result.errors.append(f"Cannot load inspection context: {error}")
+            rule_errors.append(f"Cannot load inspection context: {error}")
             result.halted = True
             return result
         api_key = os.environ.get("TYPESAFE_API_KEY")
         if not api_key:
-            result.errors.append("TYPESAFE_API_KEY is unavailable.")
+            rule_errors.append("TYPESAFE_API_KEY is unavailable.")
             result.halted = True
             return result
 
@@ -274,7 +275,7 @@ async def evaluate(
             )
             budget = deadline - time.monotonic()
             if result.halted or budget < 0.01:
-                result.errors.append(
+                rule_errors.append(
                     f"Not checked: {names}; time limit or earlier request failure."
                 )
                 result.halted = True
@@ -302,7 +303,7 @@ async def evaluate(
                     if not isinstance(payload, dict):
                         raise TypeError("Redacted request is not an object.")
                     if require_complete_input and payload != json.loads(request):
-                        result.errors.append(
+                        rule_errors.append(
                             f"Masked evidence requires manual inspection: {names}."
                         )
                         continue
@@ -322,12 +323,11 @@ async def evaluate(
                     if include_summary:
                         answer = response.json()["answers"].get("needs_summary")
                         if (
-                            not isinstance(answer, dict)
-                            or answer.get("type") != "choice"
-                            or answer.get("choice") not in {"yes", "no"}
+                            isinstance(answer, dict)
+                            and answer.get("type") == "choice"
+                            and answer.get("choice") in ("yes", "no")
                         ):
-                            raise ValueError("Missing or invalid summary decision.")
-                        result.needs_summary = answer["choice"] == "yes"
+                            result.needs_summary = answer["choice"] == "yes"
             except (
                 TimeoutError,
                 OSError,
@@ -342,7 +342,7 @@ async def evaluate(
                 else:
                     reason = "Invalid response"
                 capture["error"] = traceback.format_exc()
-                result.errors.append(f"{reason}: {names}; no retry was attempted.")
+                rule_errors.append(f"{reason}: {names}; no retry was attempted.")
                 result.halted = True
         return result
     except asyncio.CancelledError:

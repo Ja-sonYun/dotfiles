@@ -51,6 +51,11 @@ in
       default = pkgs.pi;
       description = "Standalone Pi package.";
     };
+    summaries.systemPrompt = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Full system prompt for tool call summaries. Null uses the packaged prompt.";
+    };
     env = lib.mkOption {
       type = lib.types.attrsOf (
         lib.types.either lib.types.str (
@@ -73,6 +78,9 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    programs.pi.env.PI_TOOL_SUMMARY_PROMPT = lib.mkIf (
+      cfg.summaries.systemPrompt != null
+    ) cfg.summaries.systemPrompt;
     home.packages = [ package ];
   };
 }

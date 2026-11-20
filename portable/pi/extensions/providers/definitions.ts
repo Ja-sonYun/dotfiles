@@ -137,15 +137,17 @@ export function loadProviderDefinitions(openAIModelIds: ReadonlySet<string>) {
       };
       const baseUrl = `${resolveSecret(provider.baseUrl)}/v1`;
       const key = resolveSecret(provider.apiKey);
+      const excludedModels = new Set(
+        provider.excludeOpenAIModels ? openAIModelIds : [],
+      );
+      if (id === "lmp") excludedModels.delete("gpt-6-luna");
       const definition = {
         name: provider.name,
         baseUrl,
         apiKey: key,
         api: "openai-completions",
         models: provider.fallbackModels
-          .filter(
-            (id) => !provider.excludeOpenAIModels || !openAIModelIds.has(id),
-          )
+          .filter((modelId) => !excludedModels.has(modelId))
           .map((id) => toModel({ id }, provider)),
         async refreshModels({ signal }: { signal: AbortSignal }) {
           const response = await fetch(`${baseUrl}/models`, {
@@ -162,10 +164,7 @@ export function loadProviderDefinitions(openAIModelIds: ReadonlySet<string>) {
             throw new Error(`${id} model catalog must be an object`);
           }
           return readRawModels(payload.data, `${id}.data`)
-            .filter(
-              (model) =>
-                !provider.excludeOpenAIModels || !openAIModelIds.has(model.id),
-            )
+            .filter((model) => !excludedModels.has(model.id))
             .map((model) => toModel(model, provider));
         },
       } satisfies ProviderConfig;
