@@ -1,7 +1,0 @@
-{
-  "registry": "npm",
-  "name": "@wileai/codex-connectors-mcp",
-  "versions": {
-    "aarch64-darwin": "0.2.0"
-  }
-}

@@ -58,7 +58,6 @@
     mcp-nixos = final.callPackage ../pkgs/mcp/mcp-nixos { };
     mcp-gateway = final.callPackage ../pkgs/mcp/mcp-gateway { };
     mcp-remote = final.callPackage ../pkgs/mcp/mcp-remote { };
-    codex-connectors-mcp = final.callPackage ../pkgs/mcp/codex-connectors-mcp { };
     n8n-mcp = final.callPackage ../pkgs/mcp/n8n-mcp { };
     notify-mcp = final.callPackage ../pkgs/mcp/notify-mcp { };
     rea = final.callPackage ../pkgs/mcp/rea { };
